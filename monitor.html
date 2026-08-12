@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light" data-tv="false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SYNERGIA — Monitor de execuções">
+    <title>SYNERGIA — Monitor de execuções</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .monitor-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}.monitor-kpis .kpi-card{margin:0}
+        .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px;background:var(--syn-neutral)}
+        .status-dot.available{background:var(--syn-success)}.status-dot.partial{background:var(--syn-partial)}.status-dot.unavailable{background:var(--syn-error)}
+        .execution-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.execution-summary>div{padding:12px;border:1px solid var(--syn-border);border-radius:var(--syn-radius);background:var(--syn-bg)}
+        .execution-summary .kpi-label{display:block;margin-bottom:6px}
+        .log-box{font:13px/1.6 var(--syn-font-mono);background:var(--syn-bg);border:1px solid var(--syn-border);border-radius:var(--syn-radius);padding:12px;white-space:pre-wrap;color:var(--syn-text);max-height:210px;overflow:auto}
+        .tv-monitor-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;flex:1;min-height:0}.tv-box{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:var(--syn-radius);padding:18px;overflow:hidden;min-height:0}
+        .tv-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}
+        [data-tv="true"] #tv-panels .data-table{table-layout:fixed;white-space:normal}[data-tv="true"] #tv-panels .data-table th,[data-tv="true"] #tv-panels .data-table td{font-size:clamp(13px,1.15vw,18px);padding:10px 12px}[data-tv="true"] #tv-panels .table-container{overflow:hidden}
+        [data-tv="true"] .app{display:block;width:100%;max-width:100%;height:100dvh}[data-tv="true"] .content{width:100%;max-width:100%;padding:0}
+        @media(max-width:1000px){.monitor-kpis{grid-template-columns:repeat(2,1fr)}.execution-summary{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.monitor-kpis,.execution-summary{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <div class="app" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="Menu principal"></aside>
+        <div class="main-wrapper">
+            <header class="header" id="header" aria-label="Cabeçalho"></header>
+            <div class="tv-header" id="tv-header" aria-hidden="true">
+                <img src="assets/logos/logo-negativa.png" alt="SYNERGIA" class="tv-logo">
+                <span class="tv-title">Monitor de execuções</span>
+                <div class="tv-header-right"><span class="tv-update">Atualizado: <time id="tv-last-update"></time></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit-btn" type="button" onclick="setTVMode(false)" aria-label="Sair do Modo TV">✕ Sair</button></div>
+            </div>
+            <main id="main-content" class="content" role="main">
+                <div class="content-normal" data-tv-hide>
+                    <div class="page-header"><div><h1 class="page-title">Monitor de execuções</h1><p class="page-subtitle">Acompanhe execuções automáticas e manuais, fontes consultadas, tentativas e registros técnicos.</p></div><div class="page-actions"><button class="btn btn-primary" id="new-execution" type="button">Nova execução manual</button></div></div>
+                    <div class="alert alert-info"><div class="alert-content"><strong>Janelas operacionais:</strong> 10:00 e 16:00. Execuções manuais permanecem identificadas no histórico.</div></div>
+                    <section class="monitor-kpis" id="monitor-kpis" aria-label="Resumo das execuções"></section>
+                    <form class="filter-bar" id="execution-filters" aria-label="Filtros das execuções">
+                        <div class="filter-group"><label class="filter-label" for="filter-id">Execução</label><input class="form-input mono" id="filter-id" type="search" placeholder="EX-20260731-006"></div>
+                        <div class="filter-group"><label class="filter-label" for="filter-result">Resultado</label><select class="form-select" id="filter-result"><option value="">Todos</option><option value="concluida">Concluída</option><option value="parcial">Parcial</option><option value="falha">Falha</option><option value="processando">Em andamento</option></select></div>
+                        <div class="filter-group"><label class="filter-label" for="filter-type">Tipo</label><select class="form-select" id="filter-type"><option value="">Todos</option><option value="automatica">Automática</option><option value="manual">Manual</option></select></div>
+                        <div class="filter-group"><label class="filter-label" for="filter-source">Fonte</label><select class="form-select" id="filter-source"><option value="">Todas</option></select></div>
+                        <div class="filter-actions"><button class="btn btn-primary" type="submit">Aplicar</button><button class="btn btn-secondary" id="clear-filters" type="button">Limpar</button></div>
+                    </form>
+                    <section class="card" aria-labelledby="history-title"><div class="card-header"><h2 class="card-title" id="history-title">Histórico de execuções</h2><span class="text-secondary" id="execution-count" aria-live="polite"></span></div><div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Início</th><th>Tipo</th><th>Resultado</th><th>Duração</th><th>Processados</th><th>Tentativa</th><th>Ação</th></tr></thead><tbody id="execution-tbody"></tbody></table></div><div class="table-footer" id="execution-pagination"></div></section>
+                </div>
+
+                <div class="tv-panels" id="tv-panels" data-tv-show aria-label="Painéis do monitor no Modo TV">
+                    <section class="tv-panel active" data-tv-panel="0" aria-label="Execuções recentes"><div id="tv-executions" style="display:flex;flex-direction:column;height:100%;min-height:0"></div></section>
+                    <section class="tv-panel" data-tv-panel="1" aria-label="Saúde das fontes"><div id="tv-sources" style="display:flex;flex-direction:column;height:100%;min-height:0"></div></section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="execution-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="execution-modal-title">
+        <div class="modal" style="max-width:880px"><div class="modal-header"><h2 class="modal-title mono" id="execution-modal-title">Detalhes da execução</h2><button class="modal-close" id="close-execution-modal" type="button" aria-label="Fechar">✕</button></div><div class="modal-body" id="execution-modal-body"></div><div class="modal-footer"><button class="btn btn-secondary" id="close-execution-footer" type="button">Fechar</button><button class="btn btn-primary" id="reprocess-execution" type="button">Reprocessar</button></div></div>
+    </div>
+    <div class="modal-overlay" id="manual-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="manual-title">
+        <form class="modal" id="manual-form"><div class="modal-header"><h2 class="modal-title" id="manual-title">Nova execução manual</h2><button class="modal-close" type="button" data-close-manual aria-label="Fechar">✕</button></div><div class="modal-body"><div class="filter-group"><label class="filter-label" for="manual-source">Escopo</label><select class="form-select" id="manual-source"><option value="ALL_SOURCES">Todas as fontes</option><option value="GERP/OWM">Somente GERP/OWM</option><option value="N-FP">Somente N-FP</option><option value="WO Status">Somente WO Status</option><option value="OQC">Somente OQC</option><option value="TMS">Somente TMS</option></select></div><p class="text-secondary" style="margin-top:16px">A execução será registrada como manual e não substituirá tentativas anteriores.</p></div><div class="modal-footer"><button class="btn btn-secondary" type="button" data-close-manual>Cancelar</button><button class="btn btn-primary" type="submit">Confirmar execução</button></div></form>
+    </div>
+    <div class="modal-overlay" id="modal-confirm" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-confirm-title"><div class="modal"><div class="modal-header"><h2 class="modal-title" id="modal-confirm-title">Confirmação</h2><button class="modal-close" type="button" onclick="hideModal('modal-confirm')" aria-label="Fechar">✕</button></div><div class="modal-body" id="modal-confirm-body"></div><div class="modal-footer"><button class="btn btn-secondary" type="button" onclick="hideModal('modal-confirm')">Cancelar</button><button class="btn btn-primary" type="button" id="modal-confirm-action">Confirmar</button></div></div></div>
+
+    <div class="demo-banner" role="status">Demonstração — dados sintéticos</div><div class="toast-container" id="toast-container" aria-live="polite"></div>
+    <script src="data.js"></script><script src="script.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initApp('monitor');
+        const data = window.SYNERGIA_DATA;
+        const executions = data.executions.map(item => ({...item, sources:item.sources.map(source => ({...source}))}));
+        const pageSize = 6; let page = 1; let filtered = []; let selectedId = null;
+        const safe = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+        const labels = {concluida:'Concluída',parcial:'Concluída com pendências',falha:'Falha',processando:'Em andamento'};
+        const typeLabels = {automatica:'Automática',manual:'Manual'};
+
+        [...new Set(data.sources.map(source => source.name))].sort().forEach(name => document.getElementById('filter-source').insertAdjacentHTML('beforeend', `<option value="${safe(name)}">${safe(name)}</option>`));
+
+        function statusBadge(result) { return getBadgeHTML(result === 'concluida' ? 'success' : result === 'falha' ? 'error' : result === 'processando' ? 'processing' : 'partial', labels[result] || result); }
+        function filterData() {
+            const id = document.getElementById('filter-id').value.trim().toUpperCase(); const result = document.getElementById('filter-result').value; const type = document.getElementById('filter-type').value; const source = document.getElementById('filter-source').value;
+            filtered = executions.filter(item => (!id || item.id.toUpperCase().includes(id)) && (!result || item.result === result) && (!type || item.type === type) && (!source || item.sources.some(entry => entry.name === source || entry.name === 'ALL')));
+            page = 1; renderTable();
+        }
+        function renderKPIs() {
+            const totals = {processando:0,falha:0,parcial:0,concluida:0}; executions.forEach(item => totals[item.result] = (totals[item.result] || 0) + 1);
+            document.getElementById('monitor-kpis').innerHTML = `<div class="kpi-card"><div class="kpi-content"><span class="kpi-label">Execuções registradas</span><strong class="kpi-value">${executions.length}</strong></div></div><div class="kpi-card"><div class="kpi-content"><span class="kpi-label">Em andamento</span><strong class="kpi-value">${totals.processando}</strong></div></div><div class="kpi-card"><div class="kpi-content"><span class="kpi-label">Com pendências</span><strong class="kpi-value">${totals.parcial}</strong></div></div><div class="kpi-card"><div class="kpi-content"><span class="kpi-label">Falhas</span><strong class="kpi-value">${totals.falha}</strong></div></div>`;
+        }
+        function renderTable() {
+            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize)); page = Math.min(page,totalPages); const rows = filtered.slice((page-1)*pageSize,page*pageSize);
+            document.getElementById('execution-count').textContent = `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
+            document.getElementById('execution-tbody').innerHTML = rows.length ? rows.map(item => `<tr><td data-label="ID"><button type="button" class="btn btn-ghost btn-sm mono" data-execution-id="${safe(item.id)}">${safe(item.id)}</button></td><td data-label="Início">${safe(formatDateTime(item.start))}</td><td data-label="Tipo">${safe(typeLabels[item.type] || item.type)}</td><td data-label="Resultado">${statusBadge(item.result)}</td><td data-label="Duração">${safe(item.duration)}</td><td data-label="Processados">${Number(item.processed).toLocaleString('pt-BR')} / ${Number(item.read).toLocaleString('pt-BR')}</td><td data-label="Tentativa">${item.attempt}/${item.totalAttempts}</td><td data-label="Ação"><button class="btn btn-secondary btn-sm" type="button" data-execution-id="${safe(item.id)}" aria-label="Ver detalhes da execução ${safe(item.id)}">Detalhes</button></td></tr>`).join('') : '<tr><td colspan="8">Nenhuma execução corresponde aos filtros.</td></tr>';
+            document.querySelectorAll('[data-execution-id]').forEach(button => button.addEventListener('click', () => openExecution(button.dataset.executionId)));
+            document.getElementById('execution-pagination').innerHTML = `<span class="table-info">${filtered.length ? (page-1)*pageSize+1 : 0}–${Math.min(page*pageSize,filtered.length)} de ${filtered.length}</span><div class="pagination"><button class="btn btn-secondary btn-sm" id="prev-page" type="button" ${page===1?'disabled':''}>Anterior</button><span style="align-self:center;padding:0 8px">${page} / ${totalPages}</span><button class="btn btn-secondary btn-sm" id="next-page" type="button" ${page===totalPages?'disabled':''}>Próxima</button></div>`;
+            document.getElementById('prev-page').addEventListener('click',()=>{page--;renderTable()}); document.getElementById('next-page').addEventListener('click',()=>{page++;renderTable()});
+        }
+        function buildLogs(item) {
+            const lines = [`${formatDateTime(item.start)} | INFO | Início ${item.id} | ${item.params}`]; item.sources.forEach(source => lines.push(`${formatDateTime(item.start)} | ${source.status === 'unavailable' ? 'ERROR' : source.status === 'partial' ? 'WARN' : 'INFO'} | ${source.name} | ${source.detail} | ${source.items.toLocaleString('pt-BR')} registros`)); lines.push(`${formatDateTime(item.end || item.start)} | ${item.result === 'falha' ? 'ERROR' : 'INFO'} | Resultado: ${labels[item.result] || item.result} | Rejeitados: ${item.rejected}`); return lines.join('\n');
+        }
+        function openExecution(id) {
+            const item = executions.find(entry => entry.id === id); if(!item) return; selectedId=id;
+            document.getElementById('execution-modal-title').textContent = item.id;
+            document.getElementById('execution-modal-body').innerHTML = `<div class="execution-summary"><div><span class="kpi-label">Resultado</span><div style="margin-top:6px">${statusBadge(item.result)}</div></div><div><span class="kpi-label">Tipo</span><strong>${safe(typeLabels[item.type])}</strong></div><div><span class="kpi-label">Duração</span><strong>${safe(item.duration)}</strong></div><div><span class="kpi-label">Tentativa</span><strong>${item.attempt}/${item.totalAttempts}</strong></div></div><h3 class="card-title" style="margin:22px 0 10px">Parâmetros e volume</h3><table class="data-table"><tbody><tr><th>Parâmetros</th><td class="mono">${safe(item.params)}</td><th>Lidos</th><td>${item.read.toLocaleString('pt-BR')}</td></tr><tr><th>Processados</th><td>${item.processed.toLocaleString('pt-BR')}</td><th>Rejeitados</th><td>${item.rejected.toLocaleString('pt-BR')}</td></tr></tbody></table><h3 class="card-title" style="margin:22px 0 10px">Fontes consultadas</h3><table class="data-table"><thead><tr><th>Fonte</th><th>Estado</th><th>Itens</th><th>Registro</th></tr></thead><tbody>${item.sources.map(source => `<tr><td>${safe(source.name)}</td><td><span class="status-dot ${safe(source.status)}"></span>${safe(source.status)}</td><td>${source.items.toLocaleString('pt-BR')}</td><td>${safe(source.detail)}</td></tr>`).join('')}</tbody></table><h3 class="card-title" style="margin:22px 0 10px">Log técnico sintético</h3><div class="log-box" tabindex="0" aria-label="Log técnico da execução">${safe(buildLogs(item))}</div><h3 class="card-title" style="margin:22px 0 10px">Histórico de tentativas</h3><p>Tentativa ${item.attempt} de ${item.totalAttempts}, iniciada em ${safe(formatDateTime(item.start))}. O histórico anterior permanece preservado.</p>`;
+            document.getElementById('reprocess-execution').disabled = item.result === 'processando'; showModal('execution-modal'); history.replaceState(null,'',`${location.pathname}?id=${encodeURIComponent(id)}`);
+        }
+        function closeExecution() { hideModal('execution-modal'); selectedId=null; history.replaceState(null,'',location.pathname); }
+        function addSyntheticExecution(params, previous) {
+            const now = new Date(); const stamp = now.toISOString().replace(/[-:TZ.]/g,'').slice(0,14); const sourceName = params === 'ALL_SOURCES' ? 'ALL' : params.replace('RETRY_','');
+            const created = {id:`EX-SIM-${stamp}`,start:now.toISOString(),end:null,duration:'—',type:'manual',result:'processando',attempt:previous ? previous.attempt+1 : 1,totalAttempts:previous ? previous.totalAttempts+1 : 1,read:0,processed:0,rejected:0,sources:[{name:sourceName,status:'available',items:0,detail:'Execução simulada iniciada'}],params:previous ? `RETRY_${previous.id}` : params}; executions.unshift(created); renderKPIs(); filterData(); renderTV(); showToast(`Execução ${created.id} iniciada com dados sintéticos.`, 'success', 4000); return created;
+        }
+        function renderTV() {
+            const compactTV = window.innerHeight < 800; const recent = executions.slice(0,compactTV ? 5 : 6); const totals = {processando:0,falha:0,parcial:0,concluida:0}; executions.forEach(item => totals[item.result]=(totals[item.result]||0)+1);
+            document.getElementById('tv-executions').innerHTML = `<h1 style="font-size:30px;margin:0 0 16px">Execuções recentes</h1><div class="tv-kpis"><div class="kpi-card"><div><span class="kpi-label">Em andamento</span><strong class="kpi-value">${totals.processando}</strong></div></div><div class="kpi-card"><div><span class="kpi-label">Concluídas</span><strong class="kpi-value">${totals.concluida}</strong></div></div><div class="kpi-card"><div><span class="kpi-label">Parciais</span><strong class="kpi-value">${totals.parcial}</strong></div></div><div class="kpi-card"><div><span class="kpi-label">Falhas</span><strong class="kpi-value">${totals.falha}</strong></div></div></div><div class="tv-box" style="flex:1"><table class="data-table"><thead><tr><th>Execução</th><th>Início</th><th>Tipo</th><th>Resultado</th><th>Processados</th><th>Duração</th></tr></thead><tbody>${recent.map(item => `<tr><td class="mono">${safe(item.id)}</td><td>${safe(formatDateTime(item.start))}</td><td>${safe(typeLabels[item.type])}</td><td>${statusBadge(item.result)}</td><td>${item.processed.toLocaleString('pt-BR')}</td><td>${safe(item.duration)}</td></tr>`).join('')}</tbody></table></div>`;
+            const sourceOrder={unavailable:0,partial:1,available:2};const sourceRows=[...data.sources].sort((a,b)=>sourceOrder[a.status]-sourceOrder[b.status]).slice(0,compactTV?4:6).map(source=>`<tr><td><span class="status-dot ${safe(source.status)}"></span>${safe(source.name)}</td><td>${source.status==='available'?'Disponível':source.status==='partial'?'Parcial':'Indisponível'}</td><td>${source.items.toLocaleString('pt-BR')}</td><td>${safe(formatDateTime(source.lastUpdate))}</td><td>${safe(source.detail)}</td></tr>`).join('');
+            document.getElementById('tv-sources').innerHTML=`<h1 style="font-size:30px;margin:0 0 16px">Saúde das fontes</h1><div class="tv-monitor-layout"><div class="tv-box"><table class="data-table"><thead><tr><th>Fonte</th><th>Estado</th><th>Itens</th><th>Atualização</th><th>Registro</th></tr></thead><tbody>${sourceRows}</tbody></table></div><div class="tv-box"><h2 class="card-title">Próximas janelas</h2><div style="font-size:40px;font-weight:700;margin:20px 0">10:00 · 16:00</div><p>Execuções automáticas programadas.</p><hr style="border:0;border-top:1px solid var(--syn-border);margin:28px 0"><h2 class="card-title">Última execução</h2><p class="mono" style="font-size:22px;margin:16px 0 8px">${safe(executions[0].id)}</p>${statusBadge(executions[0].result)}</div></div>`;
+        }
+
+        document.getElementById('execution-filters').addEventListener('submit',event=>{event.preventDefault();filterData()});
+        document.getElementById('clear-filters').addEventListener('click',()=>{document.getElementById('execution-filters').reset();filterData()});
+        ['filter-id','filter-result','filter-type','filter-source'].forEach(id=>document.getElementById(id).addEventListener(id==='filter-id'?'input':'change',filterData));
+        document.getElementById('new-execution').addEventListener('click',()=>showModal('manual-modal'));
+        document.querySelectorAll('[data-close-manual]').forEach(button=>button.addEventListener('click',()=>hideModal('manual-modal')));
+        document.getElementById('manual-form').addEventListener('submit',event=>{event.preventDefault();const params=document.getElementById('manual-source').value;hideModal('manual-modal');addSyntheticExecution(params,null)});
+        document.getElementById('close-execution-modal').addEventListener('click',closeExecution); document.getElementById('close-execution-footer').addEventListener('click',closeExecution);
+        document.getElementById('reprocess-execution').addEventListener('click',()=>{const previous=executions.find(item=>item.id===selectedId);if(!previous)return;confirmAction('Confirmar reprocessamento',`Reprocessar ${safe(previous.id)}? A tentativa anterior permanecerá no histórico.`,()=>{closeExecution();addSyntheticExecution(previous.params,previous)})});
+        document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(document.getElementById('execution-modal').classList.contains('active'))closeExecution();else document.querySelectorAll('.modal-overlay.active').forEach(modal=>hideModal(modal.id));}});
+        new MutationObserver(()=>{if(document.documentElement.getAttribute('data-tv')==='true'){document.querySelectorAll('.modal-overlay.active').forEach(modal=>hideModal(modal.id));selectedId=null;}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-tv']});
+        renderKPIs(); filterData(); renderTV();
+        const initialId=new URLSearchParams(location.search).get('id'); if(initialId&&document.documentElement.getAttribute('data-tv')!=='true') openExecution(initialId);
+    });
+    </script>
+</body>
+</html>

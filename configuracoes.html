@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light" data-tv="false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SYNERGIA — Configurações do sistema">
+    <title>SYNERGIA — Configurações</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+            width: 100%;
+            max-width: none;
+            align-items: stretch;
+        }
+        .settings-grid > .card {
+            min-width: 0;
+            margin-bottom: 0;
+        }
+        .settings-grid > .card:last-child {
+            grid-column: 1 / -1;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--syn-border);
+        }
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+        .settings-info {
+            flex: 1;
+        }
+        .settings-control {
+            margin-left: 24px;
+            min-width: 150px;
+        }
+        .settings-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .settings-desc {
+            font-size: 13px;
+            color: var(--syn-text-secondary);
+        }
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--syn-neutral-bg);
+            transition: .4s;
+            border-radius: 24px;
+            border: 1px solid var(--syn-border);
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--syn-primary);
+            border-color: var(--syn-primary);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .locked-card {
+            position: relative;
+            opacity: 0.7;
+        }
+        .locked-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.4);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(1px);
+            border-radius: var(--syn-radius);
+        }
+        [data-theme="dark"] .locked-overlay {
+            background: rgba(0,0,0,0.4);
+        }
+        @media (max-width: 1023px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            .settings-grid > .card:last-child {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <div class="app" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="Menu principal"></aside>
+        <div class="main-wrapper">
+            <header class="header" id="header" aria-label="Cabeçalho"></header>
+            <main id="main-content" class="content" role="main">
+                <div class="content-normal" data-tv-hide>
+                    
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Configurações</h1>
+                            <p class="page-subtitle">Preferências de visualização e comportamento do sistema.</p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                        <img src="assets/icons/shield.svg" alt="" aria-hidden="true" style="width: 24px; height: 24px;">
+                        <div class="alert-content"><strong>Acesso restrito</strong> — funcionalidades sujeitas à autorização do administrador</div>
+                    </div>
+
+                    <div class="settings-grid">
+                        
+                        <!-- Aparência -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Aparência</h2>
+                            </div>
+                            <div class="card-body" style="padding: 0 24px;">
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Tema</div>
+                                        <div class="settings-desc">Escolha entre o modo claro e escuro.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-theme" aria-label="Tema da interface">
+                                            <option value="light">Claro</option>
+                                            <option value="dark">Escuro</option>
+                                            <option value="auto">Automático</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Densidade da interface</div>
+                                        <div class="settings-desc">Ajuste o espaçamento dos elementos.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-density" aria-label="Densidade da interface">
+                                            <option value="compact">Compacta</option>
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="comfortable">Confortável</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Tamanho da fonte</div>
+                                        <div class="settings-desc">Ajuste o tamanho base do texto.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-font-size" aria-label="Tamanho da fonte">
+                                            <option value="small">Pequena</option>
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="large">Grande</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modo TV -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Modo TV</h2>
+                            </div>
+                            <div class="card-body" style="padding: 0 24px;">
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Habilitar Modo TV</div>
+                                        <div class="settings-desc">Ativa a exibição em tela cheia com rotação de telas.</div>
+                                    </div>
+                                    <div class="settings-control" style="display: flex; justify-content: flex-end;">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="setting-tv" aria-label="Habilitar Modo TV">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Intervalo de rotação</div>
+                                        <div class="settings-desc">Tempo em segundos para cada tela.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-tv-interval" aria-label="Intervalo de rotação do Modo TV">
+                                            <option value="10000">10s</option>
+                                            <option value="15000" selected>15s</option>
+                                            <option value="20000">20s</option>
+                                            <option value="30000">30s</option>
+                                            <option value="60000">60s</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Página inicial</div>
+                                        <div class="settings-desc">Qual tela exibir primeiro.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-tv-start" aria-label="Página inicial do Modo TV">
+                                            <option value="index.html" selected>Dashboard</option>
+                                            <option value="pendencias.html">Pendências</option>
+                                            <option value="monitor.html">Monitor</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Atualização da interface -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Atualização da interface</h2>
+                            </div>
+                            <div class="card-body" style="padding: 0 24px;">
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Atualização automática</div>
+                                        <div class="settings-desc">Recarregar os dados periodicamente.</div>
+                                    </div>
+                                    <div class="settings-control" style="display: flex; justify-content: flex-end;">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked id="setting-auto-refresh" aria-label="Ativação da atualização automática">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Intervalo de atualização</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-refresh-interval" aria-label="Intervalo de atualização automática">
+                                            <option value="30000">30s</option>
+                                            <option value="60000" selected>1min</option>
+                                            <option value="300000">5min</option>
+                                            <option value="600000">10min</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Notificações pop-up (Toasts)</div>
+                                        <div class="settings-desc">Exibir mensagens temporárias no canto da tela.</div>
+                                    </div>
+                                    <div class="settings-control" style="display: flex; justify-content: flex-end;">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked id="setting-toasts" aria-label="Exibir notificações temporárias">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dados e visualização -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Dados e visualização</h2>
+                            </div>
+                            <div class="card-body" style="padding: 0 24px;">
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Período padrão</div>
+                                        <div class="settings-desc">Filtro de data padrão para listas.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-period" aria-label="Período padrão das listas">
+                                            <option value="today">Hoje</option>
+                                            <option value="7days" selected>Últimos 7 dias</option>
+                                            <option value="month">Este mês</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Itens por página</div>
+                                        <div class="settings-desc">Paginação de tabelas.</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" id="setting-page-size" aria-label="Itens exibidos por página">
+                                            <option value="5">5</option>
+                                            <option value="10" selected>10</option>
+                                            <option value="15">15</option>
+                                            <option value="20">20</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Exibir banner de demonstração</div>
+                                        <div class="settings-desc">Mostra a faixa indicando dados sintéticos.</div>
+                                    </div>
+                                    <div class="settings-control" style="display: flex; justify-content: flex-end;">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked id="setting-demo-banner" aria-label="Exibir banner de demonstração">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parâmetros operacionais (Locked) -->
+                        <div class="card locked-card">
+                            <div class="locked-overlay">
+                                <div style="text-align: center; max-width: 300px; padding: 24px; background: var(--syn-bg-card); border-radius: var(--syn-radius); box-shadow: var(--syn-shadow-lg);">
+                                    <img src="assets/icons/shield.svg" alt="" style="width: 32px; height: 32px; margin-bottom: 12px; opacity: 0.8;">
+                                    <p style="font-size: 13px; margin-bottom: 16px;">Os parâmetros operacionais (fontes, horários de execução, regras de consolidação) dependem de autorização do administrador do sistema.</p>
+                                    <button class="btn btn-primary btn-sm" onclick="showToast('Solicitação de acesso enviada', 'success', 3000)">Solicitar acesso</button>
+                                </div>
+                            </div>
+                            <div class="card-header">
+                                <h2 class="card-title">Parâmetros operacionais</h2>
+                            </div>
+                            <div class="card-body" style="padding: 0 24px;">
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Configuração de Fontes</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" disabled><option>Bloqueado</option></select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Horários de execução da pipeline</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" disabled><option>Bloqueado</option></select>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="settings-info">
+                                        <div class="settings-label">Regras de consolidação</div>
+                                    </div>
+                                    <div class="settings-control">
+                                        <select class="form-select" disabled><option>Bloqueado</option></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="demo-banner" role="status">Demonstração — dados sintéticos</div>
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const SETTINGS_KEY = 'synergia-settings';
+        const defaultSettings = {theme:'auto',density:'normal',fontSize:'normal',tvInterval:'15000',tvStart:'index.html',autoRefresh:true,refreshInterval:'60000',toasts:true,period:'7days',pageSize:'10',demoBanner:true};
+        function readSettings(){try{return {...defaultSettings,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}}catch(_){return {...defaultSettings}}}
+        function saveSettings(settings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));document.documentElement.dataset.density=settings.density;document.documentElement.dataset.fontSize=settings.fontSize;document.querySelector('.demo-banner').style.display=settings.demoBanner?'block':'none'}
+        function syncSettingsForm(settings){
+            document.getElementById('setting-theme').value=settings.theme;
+            document.getElementById('setting-density').value=settings.density;
+            document.getElementById('setting-font-size').value=settings.fontSize;
+            document.getElementById('setting-tv-interval').value=settings.tvInterval;
+            document.getElementById('setting-tv-start').value=settings.tvStart;
+            document.getElementById('setting-auto-refresh').checked=settings.autoRefresh;
+            document.getElementById('setting-refresh-interval').value=settings.refreshInterval;
+            document.getElementById('setting-toasts').checked=settings.toasts;
+            document.getElementById('setting-period').value=settings.period;
+            document.getElementById('setting-page-size').value=settings.pageSize;
+            document.getElementById('setting-demo-banner').checked=settings.demoBanner;
+        }
+        document.addEventListener('DOMContentLoaded',()=>{
+            initApp('configuracoes');
+            let settings=readSettings();syncSettingsForm(settings);saveSettings(settings);
+            const bind=(id,key,kind='value')=>document.getElementById(id).addEventListener('change',event=>{settings[key]=kind==='checked'?event.target.checked:event.target.value;saveSettings(settings);showToast('Preferência salva neste navegador.','success',1800)});
+            bind('setting-density','density');bind('setting-font-size','fontSize');bind('setting-tv-interval','tvInterval');bind('setting-tv-start','tvStart');bind('setting-auto-refresh','autoRefresh','checked');bind('setting-refresh-interval','refreshInterval');bind('setting-toasts','toasts','checked');bind('setting-period','period');bind('setting-page-size','pageSize');bind('setting-demo-banner','demoBanner','checked');
+            document.getElementById('setting-theme').addEventListener('change',event=>{settings.theme=event.target.value;saveSettings(settings);setTheme(settings.theme)});
+            document.getElementById('setting-tv').addEventListener('change',event=>{if(event.target.checked){localStorage.setItem('synergia-tv-interval',settings.tvInterval);localStorage.setItem('synergia-tv','true');location.href=settings.tvStart}else{setTVMode(false)}});
+        });
+    </script>
+</body>
+</html>

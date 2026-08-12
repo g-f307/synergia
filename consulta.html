@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light" data-tv="false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SYNERGIA — Consulta por Workorder, lote ou serial">
+    <title>SYNERGIA — Consulta por lote/Workorder</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .query-types,.query-line,.recent-list,.summary-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+        .query-line{margin-top:16px}.query-line .form-input{flex:1;min-width:220px}
+        .result-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(270px,1fr);gap:24px}
+        .metric-strip{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:12px}
+        .metric{padding:14px;border:1px solid var(--syn-border);border-radius:var(--syn-radius);background:var(--syn-bg)}
+        .metric strong{display:block;font:700 clamp(20px,2vw,30px)/1 var(--syn-font-heading);margin-top:6px}
+        .detail-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}.detail-list dd{margin:3px 0 0;font-weight:600}
+        .empty-state{padding:56px 24px;text-align:center;color:var(--syn-text-secondary)}
+        .tv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}
+        .tv-columns{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;min-height:0;flex:1}
+        .tv-card{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:var(--syn-radius);padding:18px;min-height:0;overflow:hidden}
+        [data-tv="true"] #tv-panels .data-table{table-layout:fixed;white-space:normal}
+        [data-tv="true"] #tv-panels .data-table th,[data-tv="true"] #tv-panels .data-table td{padding:10px 12px;font-size:clamp(13px,1.15vw,18px)}
+        [data-tv="true"] #tv-panels .table-container{overflow:hidden}
+        [data-tv="true"] #tv-panels .kpi-card{padding:16px;margin:0}
+        [data-tv="true"] .app{display:block;width:100%;max-width:100%;height:100dvh}[data-tv="true"] .content{width:100%;max-width:100%;padding:0}
+        @media(max-width:1100px){.result-layout{grid-template-columns:1fr}.metric-strip{grid-template-columns:repeat(3,1fr)}}
+        @media(max-width:767px){.metric-strip{grid-template-columns:repeat(2,1fr)}.detail-list{grid-template-columns:1fr}.query-line{align-items:stretch}.query-line .btn{flex:1}}
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <div class="app" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="Menu principal"></aside>
+        <div class="main-wrapper">
+            <header class="header" id="header" aria-label="Cabeçalho"></header>
+            <div class="tv-header" id="tv-header" aria-hidden="true">
+                <img src="assets/logos/logo-negativa.png" alt="SYNERGIA" class="tv-logo">
+                <span class="tv-title">Consulta operacional</span>
+                <div class="tv-header-right">
+                    <span class="tv-update">Atualizado: <time id="tv-last-update"></time></span>
+                    <span class="tv-clock" id="tv-clock"></span>
+                    <button class="tv-exit-btn" type="button" onclick="setTVMode(false)" aria-label="Sair do Modo TV">✕ Sair</button>
+                </div>
+            </div>
+            <main id="main-content" class="content" role="main">
+                <div class="content-normal" data-tv-hide>
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Consulta por lote/Workorder</h1>
+                            <p class="page-subtitle">Localize uma Workorder, lote ou serial e acompanhe quantidades, qualidade, estoque e pendências.</p>
+                        </div>
+                    </div>
+
+                    <section class="card" aria-labelledby="search-title">
+                        <div class="card-body">
+                            <h2 id="search-title" class="card-title">Critério de consulta</h2>
+                            <div class="query-types" role="group" aria-label="Tipo de identificador" style="margin-top:16px">
+                                <button class="btn btn-primary btn-sm" type="button" data-query-mode="workorder" aria-pressed="true">Workorder</button>
+                                <button class="btn btn-secondary btn-sm" type="button" data-query-mode="lot" aria-pressed="false">Lote</button>
+                                <button class="btn btn-secondary btn-sm" type="button" data-query-mode="serial" aria-pressed="false">Serial</button>
+                            </div>
+                            <form id="query-form" class="query-line" role="search">
+                                <label class="filter-label" for="query-input" id="query-label">Número da Workorder</label>
+                                <input id="query-input" type="search" class="form-input mono" autocomplete="off" placeholder="Ex.: WO-10293" required>
+                                <button class="btn btn-primary" type="submit">Consultar</button>
+                                <button class="btn btn-secondary" type="button" id="clear-query">Limpar</button>
+                            </form>
+                            <div class="recent-list" id="recent-list" aria-label="Buscas recentes" style="margin-top:14px"></div>
+                        </div>
+                    </section>
+
+                    <div id="query-feedback" class="alert alert-info" role="status" aria-live="polite" hidden></div>
+                    <section id="result-area" aria-live="polite" aria-label="Resultado da consulta"></section>
+                </div>
+
+                <div class="tv-panels" id="tv-panels" data-tv-show aria-label="Painéis da consulta no Modo TV">
+                    <section class="tv-panel active" data-tv-panel="0" aria-label="Resumo da Workorder">
+                        <div id="tv-summary" style="display:flex;flex-direction:column;height:100%;min-height:0"></div>
+                    </section>
+                    <section class="tv-panel" data-tv-panel="1" aria-label="Seriais e pendências">
+                        <div id="tv-details" style="display:flex;flex-direction:column;height:100%;min-height:0"></div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="demo-banner" role="status">Demonstração — dados sintéticos</div>
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initApp('consulta');
+        const data = window.SYNERGIA_DATA;
+        const form = document.getElementById('query-form');
+        const input = document.getElementById('query-input');
+        const resultArea = document.getElementById('result-area');
+        const feedback = document.getElementById('query-feedback');
+        let mode = 'workorder';
+        let currentWO = null;
+
+        const labels = {
+            workorder: ['Número da Workorder', 'Ex.: WO-10293'],
+            lot: ['Número do lote', 'Ex.: 4587'],
+            serial: ['Número serial', 'Ex.: SN-507ARLD12345']
+        };
+        const statusLabels = {pendente:'Pendente',concluida:'Concluída',divergencia:'Divergência',bloqueada:'Bloqueada',em_analise:'Em análise'};
+        const priorityLabels = {critica:'Crítica',alta:'Alta',media:'Média',baixa:'Baixa'};
+        const fmt = n => n === null || n === undefined ? 'Não informado' : Number(n).toLocaleString('pt-BR');
+        const formatISODate = value => { const [year,month,day] = String(value).split('-'); return year && month && day ? `${day}/${month}/${year}` : 'Não informado'; };
+        const safe = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+        function setMode(nextMode, focus = true) {
+            mode = nextMode;
+            document.querySelectorAll('[data-query-mode]').forEach(button => {
+                const active = button.dataset.queryMode === mode;
+                button.className = `btn ${active ? 'btn-primary' : 'btn-secondary'} btn-sm`;
+                button.setAttribute('aria-pressed', String(active));
+            });
+            document.getElementById('query-label').textContent = labels[mode][0];
+            input.placeholder = labels[mode][1];
+            if (focus) input.focus();
+        }
+
+        function findResult(rawValue) {
+            const query = rawValue.trim().toUpperCase();
+            if (!query) return null;
+            if (mode === 'serial') {
+                const serial = data.serials.find(item => item.serialNumber.toUpperCase() === query);
+                if (!serial) return null;
+                return { workorder: data.workorders.find(item => item.id === serial.workorder), serial };
+            }
+            const key = mode === 'lot' ? 'lot' : 'id';
+            const workorder = data.workorders.find(item => String(item[key]).toUpperCase() === query);
+            return workorder ? { workorder, serial: null } : null;
+        }
+
+        function addRecent(value) {
+            let recent = JSON.parse(localStorage.getItem('synergia-recent-searches') || '[]');
+            recent = [{mode,value}, ...recent.filter(item => item.value !== value)].slice(0, 5);
+            localStorage.setItem('synergia-recent-searches', JSON.stringify(recent));
+            renderRecent();
+        }
+
+        function renderRecent() {
+            const recent = JSON.parse(localStorage.getItem('synergia-recent-searches') || '[]');
+            const container = document.getElementById('recent-list');
+            container.innerHTML = recent.length ? '<span class="text-secondary" style="font-size:13px">Buscas recentes:</span>' + recent.map(item => `<button type="button" class="btn btn-ghost btn-sm mono" data-recent-mode="${safe(item.mode)}" data-recent-value="${safe(item.value)}">${safe(item.value)}</button>`).join('') : '<span class="text-secondary" style="font-size:13px">As consultas recentes aparecerão aqui.</span>';
+            container.querySelectorAll('[data-recent-value]').forEach(button => button.addEventListener('click', () => {
+                setMode(button.dataset.recentMode, false); input.value = button.dataset.recentValue; runQuery();
+            }));
+        }
+
+        function badgeForWO(wo) {
+            return getBadgeHTML(wo.status, statusLabels[wo.status] || wo.status);
+        }
+
+        function renderResult(wo, selectedSerial) {
+            currentWO = wo;
+            const serials = data.serials.filter(item => item.workorder === wo.id);
+            const pendencies = data.pendencies.filter(item => item.workorder === wo.id && item.status !== 'resolvida');
+            const serialRows = serials.length ? serials.slice(0, 8).map(serial => `<tr${selectedSerial && selectedSerial.serialNumber === serial.serialNumber ? ' class="table-row-selected"' : ''}>
+                <td data-label="Serial" class="mono">${safe(serial.serialNumber)}</td><td data-label="Localização">${safe(serial.location || 'Não informado')}</td>
+                <td data-label="Estoque">${safe(serial.inventoryState)}</td><td data-label="OQC">${getBadgeHTML(serial.oqcApproval === 'Pass' ? 'success' : 'alert', serial.oqcApproval)}</td>
+                <td data-label="Hold">${safe(serial.holdReason || '—')}</td><td data-label="Container" class="mono">${safe(serial.container || 'Não informado')}</td></tr>`).join('') : '<tr><td colspan="6">Nenhum serial individual disponível para esta Workorder.</td></tr>';
+            const pendingRows = pendencies.length ? pendencies.map(item => `<li style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--syn-border)"><span><strong class="mono">${safe(item.id)}</strong><br><span class="text-secondary">${safe(item.reason)}</span></span><a class="btn btn-secondary btn-sm" href="detalhe-pendencia.html?id=${encodeURIComponent(item.id)}">Detalhes</a></li>`).join('') : '<li>Nenhuma pendência aberta.</li>';
+
+            resultArea.innerHTML = `
+                <article class="card" aria-labelledby="result-title"><div class="card-header"><div><h2 class="card-title mono" id="result-title" style="font-size:24px">${safe(wo.id)} ${badgeForWO(wo)}</h2><p class="text-secondary" style="margin-top:5px">Lote ${safe(wo.lot)} · ${safe(wo.model)}-${safe(wo.suffix)}</p></div><div class="summary-actions"><span>${getBadgeHTML(wo.priority === 'critica' ? 'error' : wo.priority === 'alta' ? 'alert' : 'info', `Prioridade ${priorityLabels[wo.priority] || wo.priority}`)}</span><a class="btn btn-secondary btn-sm" href="pendencias.html?wo=${encodeURIComponent(wo.id)}">Ver pendências (${pendencies.length})</a></div></div>
+                <div class="card-body"><div class="metric-strip">
+                    <div class="metric"><span class="kpi-label">Planejado</span><strong>${fmt(wo.lotQty)}</strong></div><div class="metric"><span class="kpi-label">Produzido</span><strong>${fmt(wo.produced)}</strong></div><div class="metric"><span class="kpi-label">Recebido</span><strong>${fmt(wo.received)}</strong></div><div class="metric"><span class="kpi-label">Liberado</span><strong>${fmt(wo.released)}</strong></div><div class="metric"><span class="kpi-label">OQC Pending</span><strong>${fmt(wo.oqcPending)}</strong></div><div class="metric"><span class="kpi-label">Hold</span><strong>${fmt(wo.hold)}</strong></div>
+                </div></div></article>
+                <div class="result-layout"><div>
+                    <section class="card" aria-labelledby="flow-title"><div class="card-header"><h3 class="card-title" id="flow-title">Consolidação da Workorder</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Indicador</th><th>Quantidade</th><th>Referência</th></tr></thead><tbody>
+                    <tr><td>Pendência de produção</td><td>${fmt(wo.pendingProduction)}</td><td>Planejado − produzido</td></tr><tr><td>OQC Pass</td><td>${fmt(wo.oqcPass)}</td><td>Qualidade</td></tr><tr><td>OQC Pending</td><td>${fmt(wo.oqcPending)}</td><td>Qualidade</td></tr><tr><td>Seriais on-hand</td><td>${fmt(wo.snOnHand)}</td><td>Estoque</td></tr><tr><td>Rework</td><td>${fmt(wo.rework)}</td><td>Produção/qualidade</td></tr><tr><td>Ship Block</td><td>${fmt(wo.shipBlock)}</td><td>Logística</td></tr></tbody></table></div></section>
+                    <section class="card" aria-labelledby="serial-title"><div class="card-header"><h3 class="card-title" id="serial-title">Seriais disponíveis (${serials.length})</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Serial</th><th>Localização</th><th>Estoque</th><th>OQC</th><th>Hold</th><th>Container</th></tr></thead><tbody>${serialRows}</tbody></table></div></section>
+                </div><aside>
+                    <section class="card" aria-labelledby="context-title"><div class="card-header"><h3 class="card-title" id="context-title">Contexto rastreável</h3></div><div class="card-body"><dl class="detail-list"><div><dt class="kpi-label">Fonte</dt><dd>${safe(wo.source)}</dd></div><div><dt class="kpi-label">Evidência</dt><dd>${safe(formatISODate(wo.evidenceDate))}</dd></div><div><dt class="kpi-label">Planta/linha</dt><dd>${safe(wo.plant)} / ${safe(wo.line)}</dd></div><div><dt class="kpi-label">Localização</dt><dd>${safe(wo.location || 'Não informado')}</dd></div><div><dt class="kpi-label">Estoque</dt><dd>${safe(wo.inventoryState)}</dd></div><div><dt class="kpi-label">Container</dt><dd class="mono">${safe(wo.container || 'Não informado')}</dd></div><div><dt class="kpi-label">Motivo do hold</dt><dd>${safe(wo.holdReason || 'Não informado')}</dd></div><div><dt class="kpi-label">OTD1</dt><dd>${wo.otd1 === null ? 'Não informado' : safe(wo.otd1)}</dd></div></dl></div></section>
+                    <section class="card" aria-labelledby="pending-title"><div class="card-header"><h3 class="card-title" id="pending-title">Pendências associadas</h3></div><div class="card-body"><ul style="list-style:none;padding:0;margin:0">${pendingRows}</ul></div></section>
+                </aside></div>`;
+            renderTV(wo, serials, pendencies);
+        }
+
+        function renderTV(wo, serials, pendencies) {
+            const metrics = [['Planejado',wo.lotQty],['Produzido',wo.produced],['Liberado',wo.released],['OQC Pending',wo.oqcPending]];
+            document.getElementById('tv-summary').innerHTML = `<h1 style="font-size:30px;margin:0 0 16px" class="mono">${safe(wo.id)} · Lote ${safe(wo.lot)} ${badgeForWO(wo)}</h1><div class="tv-grid">${metrics.map(([label,value]) => `<div class="kpi-card"><div class="kpi-content"><span class="kpi-label">${label}</span><strong class="kpi-value">${fmt(value)}</strong></div></div>`).join('')}</div><div class="tv-columns"><div class="tv-card"><h2 class="card-title">Situação consolidada</h2><table class="data-table" style="margin-top:12px"><tbody><tr><th>Modelo</th><td>${safe(wo.model)}-${safe(wo.suffix)}</td></tr><tr><th>Hold</th><td>${fmt(wo.hold)} · ${safe(wo.holdReason || 'sem motivo informado')}</td></tr><tr><th>On-hand</th><td>${fmt(wo.snOnHand)}</td></tr><tr><th>Container</th><td class="mono">${safe(wo.container || 'Não informado')}</td></tr></tbody></table></div><div class="tv-card"><h2 class="card-title">Rastreabilidade</h2><table class="data-table" style="margin-top:12px"><tbody><tr><th>Fonte</th><td>${safe(wo.source)}</td></tr><tr><th>Atualização</th><td>${safe(formatISODate(wo.evidenceDate))}</td></tr><tr><th>Prioridade</th><td>${safe(priorityLabels[wo.priority])}</td></tr><tr><th>Pendências</th><td>${pendencies.length}</td></tr></tbody></table></div></div>`;
+            const tvRowLimit = window.innerHeight < 800 ? 4 : 5;
+            const tvSerialRows = serials.slice(0,tvRowLimit).map(item => `<tr><td class="mono">${safe(item.serialNumber)}</td><td>${safe(item.location || 'Não informado')}</td><td>${safe(item.oqcApproval)}</td><td>${safe(item.holdReason || '—')}</td><td class="mono">${safe(item.container || '—')}</td></tr>`).join('') || '<tr><td colspan="5">Não há seriais individualizados.</td></tr>';
+            const tvPendingRows = pendencies.slice(0,tvRowLimit).map(item => `<tr><td class="mono">${safe(item.id)}</td><td>${safe(item.reason)}</td><td>${safe(item.responsible)}</td><td>${getImpactBadge(item.impact)}</td></tr>`).join('') || '<tr><td colspan="4">Nenhuma pendência aberta.</td></tr>';
+            document.getElementById('tv-details').innerHTML = `<h1 style="font-size:30px;margin:0 0 16px">Seriais e pendências · <span class="mono">${safe(wo.id)}</span></h1><div class="tv-columns"><div class="tv-card"><h2 class="card-title">Seriais (${serials.length})</h2><table class="data-table" style="margin-top:12px"><thead><tr><th>Serial</th><th>Local</th><th>OQC</th><th>Hold</th><th>Container</th></tr></thead><tbody>${tvSerialRows}</tbody></table></div><div class="tv-card"><h2 class="card-title">Pendências abertas (${pendencies.length})</h2><table class="data-table" style="margin-top:12px"><thead><tr><th>ID</th><th>Motivo</th><th>Área</th><th>Impacto</th></tr></thead><tbody>${tvPendingRows}</tbody></table></div></div>`;
+        }
+
+        function renderDefaultTV() {
+            const fallback = data.workorders.find(item => item.status !== 'concluida') || data.workorders[0];
+            renderTV(fallback, data.serials.filter(item => item.workorder === fallback.id), data.pendencies.filter(item => item.workorder === fallback.id && item.status !== 'resolvida'));
+        }
+
+        function runQuery() {
+            const value = input.value.trim();
+            const found = findResult(value);
+            feedback.hidden = true;
+            if (!found || !found.workorder) {
+                currentWO = null;
+                resultArea.innerHTML = `<div class="card"><div class="empty-state"><h2 class="card-title" style="margin-bottom:10px">Nenhum resultado encontrado</h2><p>Revise o identificador ou altere o tipo de consulta. Os dados desta demonstração são sintéticos.</p></div></div>`;
+                feedback.className = 'alert alert-warning'; feedback.innerHTML = `<div class="alert-content">Não foi localizado registro para <strong class="mono">${safe(value || 'consulta vazia')}</strong>.</div>`; feedback.hidden = false;
+                input.focus(); return;
+            }
+            renderResult(found.workorder, found.serial);
+            addRecent(value.toUpperCase());
+            const params = new URLSearchParams(); params.set(mode === 'workorder' ? 'wo' : mode, value.toUpperCase()); history.replaceState(null, '', `${location.pathname}?${params}`);
+            feedback.className = 'alert alert-info'; feedback.innerHTML = `<div class="alert-content">Resultado sintético consolidado para <strong class="mono">${safe(value.toUpperCase())}</strong>.</div>`; feedback.hidden = false;
+            document.getElementById('result-title')?.focus?.();
+        }
+
+        document.querySelectorAll('[data-query-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.queryMode)));
+        form.addEventListener('submit', event => { event.preventDefault(); runQuery(); });
+        document.getElementById('clear-query').addEventListener('click', () => { input.value=''; resultArea.innerHTML=''; feedback.hidden=true; history.replaceState(null,'',location.pathname); input.focus(); });
+        renderRecent(); renderDefaultTV();
+
+        const params = new URLSearchParams(location.search);
+        const initial = params.get('serial') ? ['serial',params.get('serial')] : params.get('lot') ? ['lot',params.get('lot')] : params.get('wo') ? ['workorder',params.get('wo')] : params.get('q') ? ['workorder',params.get('q')] : null;
+        if (initial) { setMode(initial[0], false); input.value = initial[1]; runQuery(); }
+        else { input.value='WO-10293'; runQuery(); }
+
+        const globalSearch = document.querySelector('.header-search input');
+        if (globalSearch) globalSearch.addEventListener('keydown', event => { if(event.key === 'Enter'){ event.preventDefault(); setMode('workorder',false); input.value=globalSearch.value; runQuery(); } });
+    });
+    </script>
+</body>
+</html>

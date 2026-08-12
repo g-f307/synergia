@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light" data-tv="false">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SYNERGIA — Relatórios consolidados">
+    <title>SYNERGIA — Relatórios</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+        .report-card{margin:0;box-shadow:none}.report-meta{display:grid;gap:8px;font-size:13px;margin:14px 0}
+        .report-meta>div{display:flex;justify-content:space-between;gap:12px}.report-meta dt{color:var(--syn-text-secondary)}
+        .report-actions{display:flex;gap:8px}.report-actions>*{flex:1;justify-content:center}
+        .tv-report-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0;flex:1}
+        .tv-report-layout .card{margin:0;min-height:0}.tv-report-list{display:grid;gap:12px}
+        .tv-report-item{display:grid;grid-template-columns:1.4fr .7fr .7fr;gap:16px;align-items:center;padding:16px;border:1px solid var(--syn-border);border-radius:var(--syn-radius)}
+        @media(max-width:767px){.report-grid{grid-template-columns:1fr}.report-actions{flex-wrap:wrap}.filter-bar>*{min-width:100%}}
+        @media(max-height:800px){[data-tv="true"] .tv-report-item{padding:10px}[data-tv="true"] .card-body{padding:14px}}
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <div class="app" id="app">
+        <aside class="sidebar" id="sidebar" aria-label="Menu principal"></aside>
+        <div class="main-wrapper">
+            <header class="header" id="header" aria-label="Cabeçalho"></header>
+            <div class="tv-header" id="tv-header" aria-hidden="true">
+                <img src="assets/logos/logo-negativa.png" alt="SYNERGIA" class="tv-logo">
+                <span class="tv-title">Relatórios e resultados</span>
+                <div class="tv-header-right"><span class="tv-update">Atualizado: <time id="tv-last-update"></time></span><span class="tv-clock" id="tv-clock"></span><button class="tv-exit-btn" onclick="setTVMode(false)">✕ Sair</button></div>
+            </div>
+            <main id="main-content" class="content">
+                <div class="content-normal" data-tv-hide>
+                    <div class="page-header">
+                        <div><h1 class="page-title">Relatórios</h1><p class="page-subtitle">Resultados consolidados prontos para conferência humana e comunicação.</p></div>
+                        <div class="page-actions"><button class="btn btn-secondary" id="refresh-reports"><img src="assets/icons/refresh.svg" alt="" aria-hidden="true" width="16"> Atualizar</button></div>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom:24px">
+                        <div class="filter-group"><label class="filter-label" for="filter-period">Período</label><select class="form-select" id="filter-period"><option value="all">Todos</option><option value="today">31/07/2026</option><option value="previous">30/07/2026</option></select></div>
+                        <div class="filter-group"><label class="filter-label" for="filter-type">Tipo</label><select class="form-select" id="filter-type"><option value="all">Todos</option><option value="consolidado">Consolidado</option><option value="oqc_summary">Sumário OQC</option><option value="pendencias">Pendências</option></select></div>
+                        <div class="filter-group"><label class="filter-label" for="filter-status">Situação</label><select class="form-select" id="filter-status"><option value="all">Todas</option><option value="gerado">Gerado</option><option value="pendente">Pendente</option><option value="erro">Erro</option></select></div>
+                        <div class="filter-group" style="flex:1"><label class="filter-label" for="filter-search">Identificador ou título</label><input class="form-input" id="filter-search" placeholder="Ex.: REL-20260731 ou OQC"></div>
+                        <div class="filter-actions"><button class="btn btn-secondary" id="clear-reports">Limpar</button><button class="btn btn-primary" id="apply-reports">Aplicar</button></div>
+                    </div>
+                    <div class="alert alert-warning" id="review-alert"><div class="alert-content"><strong>Revisão necessária.</strong> Relatórios com dados parciais devem ser conferidos antes da comunicação.</div></div>
+                    <section class="card" aria-labelledby="available-title"><div class="card-header"><h2 class="card-title" id="available-title">Relatórios disponíveis</h2><span id="report-count" class="badge badge-info"></span></div><div class="card-body"><div class="report-grid" id="report-grid"></div><div id="report-empty" class="empty-state" hidden>Nenhum relatório corresponde aos filtros.</div></div></section>
+                    <section class="card" aria-labelledby="history-title"><div class="card-header"><h2 class="card-title" id="history-title">Histórico recente</h2></div><div class="card-body" style="padding:0"><div class="table-container"><table class="data-table"><thead><tr><th>Relatório</th><th>Tipo</th><th>Data e hora</th><th>Execução</th><th>Dados</th><th>Situação</th><th>Ações</th></tr></thead><tbody id="reports-table"></tbody></table><div class="table-footer" id="reports-pagination"></div></div></div></section>
+                </div>
+                <div class="tv-panels" id="tv-panels" data-tv-show>
+                    <section class="tv-panel active" data-tv-panel="0">
+                        <div class="tv-report-layout">
+                            <div class="card"><div class="card-header"><h2 class="card-title">Últimos relatórios</h2><span class="badge badge-partial">Revisão humana</span></div><div class="card-body tv-report-list" id="tv-report-list"></div></div>
+                            <div class="card"><div class="card-header"><h2 class="card-title">Situação das saídas</h2></div><div class="card-body" id="tv-report-status"></div></div>
+                        </div>
+                    </section>
+                    <section class="tv-panel" data-tv-panel="1">
+                        <div class="card" style="height:100%;margin:0"><div class="card-header"><h2 class="card-title">Sumário OQC — itens prioritários</h2><span class="badge badge-alert">Dados sintéticos</span></div><div class="card-body" style="padding:0"><div class="table-container"><table class="data-table"><thead><tr><th>Workorder</th><th>Lote</th><th>Produzido</th><th>OQC pendente</th><th>Hold</th><th>Motivo</th><th>OTD1</th><th>Container</th></tr></thead><tbody id="tv-oqc-table"></tbody></table></div></div></div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="demo-banner" role="status">Demonstração — dados sintéticos</div>
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    <script src="data.js"></script><script src="script.js"></script>
+    <script>
+        const typeLabels={consolidado:'Consolidado',oqc_summary:'Sumário OQC',pendencias:'Pendências'};
+        const statusLabels={gerado:'Gerado',pendente:'Pendente',erro:'Erro'};
+        let filteredReports=[];let reportPage=1;const reportPageSize=5;
+        function reportBadge(status){return getBadgeHTML(status==='gerado'?'success':status==='erro'?'error':'attention',statusLabels[status]||status)}
+        function exportReport(id){showToast(`Exportação simulada de ${id} preparada. Nenhum dado real foi enviado.`,'success',3500)}
+        function reportCard(r){const action=r.status==='erro'?`<a class="btn btn-secondary btn-sm" href="visualizar-relatorio.html?id=${r.id}">Ver falha</a>`:`<a class="btn btn-primary btn-sm" href="visualizar-relatorio.html?id=${r.id}">Visualizar</a>`;return `<article class="card report-card"><div class="card-body"><div style="display:flex;align-items:flex-start;gap:12px"><img src="assets/icons/report.svg" alt="" width="32"><div style="flex:1"><h3 style="font-size:16px;margin:0">${r.title}</h3><span class="mono text-secondary">${r.id}</span></div>${reportBadge(r.status)}</div><dl class="report-meta"><div><dt>Tipo</dt><dd>${typeLabels[r.type]}</dd></div><div><dt>Gerado em</dt><dd>${formatDateTime(r.datetime)}</dd></div><div><dt>Execução</dt><dd class="mono">${r.execution||'Não iniciada'}</dd></div><div><dt>Dados</dt><dd>${r.dataStatus==='parcial'?getBadgeHTML('partial','Parciais'):getBadgeHTML('success','Completos')}</dd></div></dl><div class="report-actions">${action}<button class="btn btn-secondary btn-sm" onclick="exportReport('${r.id}')" ${r.status!=='gerado'?'disabled':''}>Exportar</button></div></div></article>`}
+        function renderReports(){const grid=document.getElementById('report-grid'),tbody=document.getElementById('reports-table');grid.innerHTML=filteredReports.slice(0,3).map(reportCard).join('');document.getElementById('report-empty').hidden=filteredReports.length!==0;document.getElementById('report-count').textContent=`${filteredReports.length} resultado${filteredReports.length===1?'':'s'}`;const start=(reportPage-1)*reportPageSize;tbody.innerHTML=filteredReports.slice(start,start+reportPageSize).map(r=>`<tr><td data-label="Relatório" class="mono">${r.id}</td><td data-label="Tipo">${typeLabels[r.type]}</td><td data-label="Data e hora">${formatDateTime(r.datetime)}</td><td data-label="Execução">${r.execution?`<a href="monitor.html?id=${r.execution}" class="mono">${r.execution}</a>`:'—'}</td><td data-label="Dados">${r.dataStatus==='parcial'?getBadgeHTML('partial','Parciais'):getBadgeHTML('success','Completos')}</td><td data-label="Situação">${reportBadge(r.status)}</td><td data-label="Ações">${r.status==='pendente'?'<span class="text-secondary">Aguardando</span>':`<a href="visualizar-relatorio.html?id=${r.id}">Detalhes</a>`}${r.status==='gerado'?` <button class="btn btn-ghost btn-sm" onclick="exportReport('${r.id}')">Exportar</button>`:''}</td></tr>`).join('');renderPagination('reports-pagination',filteredReports.length,reportPage,reportPageSize,'changeReportPage')}
+        function changeReportPage(page){reportPage=page;renderReports()}
+        function applyReportFilters(){const period=document.getElementById('filter-period').value,type=document.getElementById('filter-type').value,status=document.getElementById('filter-status').value,q=document.getElementById('filter-search').value.trim().toLowerCase();filteredReports=SYNERGIA_DATA.reports.filter(r=>(period==='all'||(period==='today'?r.datetime.startsWith('2026-07-31'):r.datetime.startsWith('2026-07-30')))&&(type==='all'||r.type===type)&&(status==='all'||r.status===status)&&(!q||`${r.id} ${r.title}`.toLowerCase().includes(q)));reportPage=1;renderReports();showToast(`${filteredReports.length} relatório(s) encontrado(s).`,'info')}
+        function clearReportFilters(){['filter-period','filter-type','filter-status'].forEach(id=>document.getElementById(id).selectedIndex=0);document.getElementById('filter-search').value='';filteredReports=[...SYNERGIA_DATA.reports];reportPage=1;renderReports()}
+        function renderTV(){const latest=SYNERGIA_DATA.reports.slice(0,4);document.getElementById('tv-report-list').innerHTML=latest.map(r=>`<div class="tv-report-item"><div><strong>${r.title}</strong><div class="mono text-secondary">${r.id}</div></div><div>${reportBadge(r.status)}</div><div>${r.dataStatus==='parcial'?getBadgeHTML('partial','Parcial'):getBadgeHTML('success','Completo')}</div></div>`).join('');const counts={gerado:0,pendente:0,erro:0,parcial:0};SYNERGIA_DATA.reports.forEach(r=>{counts[r.status]++;if(r.dataStatus==='parcial')counts.parcial++});document.getElementById('tv-report-status').innerHTML=`<div class="kpi-grid" style="grid-template-columns:1fr 1fr"><div class="kpi-card"><div class="kpi-label">Gerados</div><div class="kpi-value">${counts.gerado}</div></div><div class="kpi-card"><div class="kpi-label">Pendentes</div><div class="kpi-value">${counts.pendente}</div></div><div class="kpi-card"><div class="kpi-label">Com erro</div><div class="kpi-value">${counts.erro}</div></div><div class="kpi-card"><div class="kpi-label">Dados parciais</div><div class="kpi-value">${counts.parcial}</div></div></div><div class="alert alert-warning" style="margin-top:18px"><div class="alert-content"><strong>Comunicação bloqueada:</strong> os relatórios parciais dependem de revisão humana.</div></div>`;document.getElementById('tv-oqc-table').innerHTML=SYNERGIA_DATA.workorders.filter(w=>w.oqcPending||w.hold).sort((a,b)=>(a.otd1??99)-(b.otd1??99)).slice(0,7).map(w=>`<tr><td class="mono">${w.id}</td><td class="mono">${w.lot}</td><td>${w.produced}</td><td>${w.oqcPending}</td><td>${w.hold}</td><td>${w.holdReason||'Não informado'}</td><td>${w.otd1??'—'}</td><td class="mono">${w.container||'—'}</td></tr>`).join('')}
+        document.addEventListener('DOMContentLoaded',()=>{initApp('relatorios');filteredReports=[...SYNERGIA_DATA.reports];renderReports();renderTV();document.getElementById('apply-reports').addEventListener('click',applyReportFilters);document.getElementById('clear-reports').addEventListener('click',clearReportFilters);document.getElementById('refresh-reports').addEventListener('click',()=>showToast('Lista atualizada com os dados sintéticos locais.','success'));document.getElementById('filter-search').addEventListener('keydown',e=>{if(e.key==='Enter')applyReportFilters()})});
+    </script>
+</body>
+</html>
