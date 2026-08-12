@@ -1,4 +1,4 @@
-# SYNERGIA — protótipo navegável
+# SYNERGIA - protótipo navegável
 
 Protótipo frontend da solução SYNERGIA para validação de fluxos, conteúdo e interface. Todos os registros são sintéticos, permanecem no navegador e não representam informações operacionais reais.
 
