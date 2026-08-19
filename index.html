@@ -767,7 +767,7 @@
                     <!-- Bottom Section -->
                     <div class="card" style="margin-top: 24px;">
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3 class="card-title">Pendências prioritárias</h3>
+                            <h3 class="card-title">Pendências ativas mais antigas</h3>
                             <a href="pendencias.html" class="btn btn-secondary btn-sm">Ver todas</a>
                         </div>
                         <div class="table-container" style="border: none;">
@@ -897,7 +897,7 @@
 
                         <div class="tv-pendencies-layout">
                             <article class="card tv-card">
-                                <div class="card-header"><h2 class="card-title" id="tv-pendencies-title">Pendências prioritárias</h2><span class="badge badge-alert">Top 6</span></div>
+                                <div class="card-header"><h2 class="card-title" id="tv-pendencies-title">Pendências ativas mais antigas</h2><span class="badge badge-alert">Top 6</span></div>
                                 <div class="table-container tv-panel-table">
                                     <table class="data-table" aria-describedby="tv-pendencies-summary">
                                         <colgroup>
@@ -914,7 +914,7 @@
                                 <div class="tv-summary-card"><span>Unidades em hold</span><strong id="tv-summary-hold">--</strong></div>
                                 <div class="tv-summary-card"><span>OQC pendente</span><strong id="tv-summary-oqc">--</strong></div>
                                 <div class="tv-summary-card"><span>Containers afetados</span><strong id="tv-summary-containers">--</strong></div>
-                                <div class="tv-summary-card"><span>Risco OTD1</span><strong id="tv-summary-otd1">--</strong></div>
+                                <div class="tv-summary-card"><span>Integração OTD</span><strong id="tv-summary-otd1">--</strong></div>
                             </div>
                         </div>
                     </section>
@@ -1095,15 +1095,7 @@
         }
 
         function dashboardSortPendencies(pendencies) {
-            var priority = { critica: 0, alta: 1, media: 2, baixa: 3 };
-            var impact = { critico: 0, alto: 1, medio: 2, baixo: 3 };
             return pendencies.slice().sort(function (a, b) {
-                var byPriority = (priority[a.priority] === undefined ? 9 : priority[a.priority]) -
-                    (priority[b.priority] === undefined ? 9 : priority[b.priority]);
-                if (byPriority !== 0) return byPriority;
-                var byImpact = (impact[a.impact] === undefined ? 9 : impact[a.impact]) -
-                    (impact[b.impact] === undefined ? 9 : impact[b.impact]);
-                if (byImpact !== 0) return byImpact;
                 return new Date(a.datetime) - new Date(b.datetime);
             });
         }
@@ -1522,7 +1514,10 @@
                             '</td><td class="mono">' +
                             dashboardEscape((pendency.lot || '--') + ' / ' +
                             (pendency.workorder || '--')) + '</td><td>' +
-                            dashboardEscape(pendency.reason) + '</td><td>' +
+                            dashboardEscape(pendency.reason) + '<br><small class="text-secondary">' +
+                            dashboardEscape(pendency.category === 'post_release_hold' ? 'Hold pós-liberação' : 'Liberação') +
+                            ' · ' + dashboardEscape(pendency.workorderType || '--') + ' · ' +
+                            dashboardEscape(pendency.organization || '--') + '</small></td><td>' +
                             dashboardEscape(pendency.source || '--') + '</td><td>' +
                             dashboardImpactBadge(pendency.impact) + '</td><td>' +
                             dashboardEscape(pendency.responsible || '--') + '</td><td>' +
@@ -1583,7 +1578,7 @@
             dashboardSetText('tv-summary-hold', dashboardNumber(hold));
             dashboardSetText('tv-summary-oqc', dashboardNumber(oqcPending));
             dashboardSetText('tv-summary-containers', dashboardNumber(containers.size));
-            dashboardSetText('tv-summary-otd1', dashboardNumber(otdRisk));
+            dashboardSetText('tv-summary-otd1', window.SYNERGIA_DATA.meta.otdIntegrationStatus === 'planned' ? 'Dependente' : dashboardNumber(otdRisk));
             dashboardSetText('tv-pendencies-summary', ' · ' + metrics.open + ' abertas · ' +
                 metrics.critical + ' críticas · ' + metrics.analysing + ' em análise');
 

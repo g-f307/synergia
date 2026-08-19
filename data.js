@@ -120,3 +120,98 @@ window.SYNERGIA_DATA = {
         { type: 'overdue', severity: 'error', message: 'Pendência P-0035 com prazo OTD1 em risco (WO-10302).', link: 'pendencias.html', linkText: 'Verificar' }
     ]
 };
+
+/* Complemento do cenário validado em 13/08. Todos os registros continuam sintéticos. */
+(() => {
+    const data = window.SYNERGIA_DATA;
+    data.meta.otdIntegrationStatus = 'planned';
+    data.meta.otdIntegrationLabel = 'Integração OTD dependente de disponibilização';
+
+    const workorderContext = {
+        'WO-10293': ['Normal', 'NW1', 'pre_release', 'HOLD', '2026-07-30T09:18:00', 'Q-01', 'Divergência de estoque em validação.', 'pendente'],
+        'WO-10294': ['Normal', 'NW1', null, 'PASS', '2026-07-30T14:12:00', 'Q-02', 'Lote liberado integralmente.', 'enviado'],
+        'WO-10295': ['PQ', 'NW2', 'post_release_hold', 'HOLD', '2026-07-30T13:42:00', 'Q-03', 'Hold registrado após liberação parcial.', 'pendente'],
+        'WO-10296': ['PM', 'NW1', 'pre_release', 'HOLD', '2026-07-31T08:31:00', 'Q-04', 'Aguardando decisão de qualidade.', 'pendente'],
+        'WO-10297': ['Normal', 'NW3', 'pre_release', 'PENDING', null, null, 'Inspeção ainda não registrada.', 'nao_aplicavel'],
+        'WO-10298': ['PQ', 'NW2', 'post_release_hold', 'HOLD', '2026-07-29T11:20:00', 'Q-02', 'Saldo retido para análise complementar.', 'pendente'],
+        'WO-10299': ['Normal', 'NW3', null, 'PASS', '2026-07-28T15:04:00', 'Q-01', 'Lote liberado integralmente.', 'enviado'],
+        'WO-10300': ['PM', 'NW1', 'pre_release', 'HOLD', '2026-07-31T07:04:00', 'Q-05', 'Serial não localizado na conferência.', 'pendente'],
+        'WO-10301': ['Normal', 'NW2', null, 'PASS', '2026-07-27T16:10:00', 'Q-04', 'Lote liberado integralmente.', 'enviado'],
+        'WO-10302': ['PQ', 'NW1', 'post_release_hold', 'HOLD', '2026-07-30T09:29:00', 'Q-03', 'Carga retida após decisão total.', 'pendente'],
+        'WO-10303': ['PM', 'NW3', 'pre_release', 'PENDING', null, null, 'Inspeção ainda não registrada.', 'nao_aplicavel'],
+        'WO-10304': ['Normal', 'NW1', 'pre_release', 'HOLD', '2026-07-31T09:54:00', 'Q-02', 'Cinco unidades aguardam decisão.', 'pendente'],
+        'WO-10305': ['PQ', 'NW2', 'pre_release', 'PENDING', null, null, 'Coleta incompleta impede consolidação.', 'nao_aplicavel'],
+        'WO-10306': ['Normal', 'NW3', null, 'PASS', '2026-07-29T16:11:00', 'Q-05', 'Lote liberado integralmente.', 'enviado'],
+        'WO-10307': ['PM', 'NW2', 'post_release_hold', 'HOLD', '2026-07-30T10:23:00', 'Q-01', 'Saldo mantido em long term hold.', 'pendente']
+    };
+    data.workorders = data.workorders.map(workorder => {
+        const context = workorderContext[workorder.id];
+        const retainedQty = Math.max(0, Number(workorder.received || 0) - Number(workorder.released || 0));
+        return {
+            ...workorder,
+            source: workorder.source === 'OQC' ? 'GMES/OQC' : workorder.source,
+            workorderType: context[0], organization: context[1], pendencyCategory: context[2],
+            oqcDecision: context[3], judgeDate: context[4], judgeUser: context[5],
+            qualityRemark: context[6], erpUploadStatus: context[7],
+            releasedQty: Number(workorder.released || 0), retainedQty,
+            cutoffReference: retainedQty ? `CUT-${workorder.lot}` : null
+        };
+    });
+    const workorders = Object.fromEntries(data.workorders.map(item => [item.id, item]));
+
+    data.sources = data.sources.map(source => source.name === 'OQC'
+        ? {...source, name: 'GMES/OQC', detail: 'Decisão Total com registros sintéticos parciais'} : source);
+    data.serials = data.serials.map(serial => ({
+        ...serial,
+        source: serial.source === 'OQC' ? 'GMES/OQC' : serial.source,
+        organization: workorders[serial.workorder]?.organization || 'NW1'
+    }));
+    data.executions = data.executions.map(execution => ({
+        ...execution,
+        sources: execution.sources.map(source => source.name === 'OQC'
+            ? {...source, name: 'GMES/OQC'} : source)
+    }));
+
+    const categories = ['pre_release', 'post_release_hold', 'pre_release', 'post_release_hold', 'post_release_hold', 'pre_release', 'post_release_hold'];
+    data.pendencies = data.pendencies.slice(0, 7).map((pendency, index) => {
+        const workorder = workorders[pendency.workorder];
+        const reason = pendency.id === 'P-0035' ? 'Carga retida após liberação' : pendency.reason;
+        const description = pendency.id === 'P-0035' ? 'Hold pós-liberação requer acompanhamento operacional.' : pendency.description;
+        return {
+            ...pendency, reason, description,
+            source: pendency.source === 'OQC' ? 'GMES/OQC' : pendency.source,
+            category: categories[index], organization: workorder.organization,
+            workorderType: workorder.workorderType, oqcDecision: workorder.oqcDecision,
+            judgeDate: workorder.judgeDate, judgeUser: workorder.judgeUser,
+            qualityRemark: workorder.qualityRemark, erpUploadStatus: workorder.erpUploadStatus,
+            releasedQty: workorder.releasedQty, retainedQty: workorder.retainedQty,
+            cutoffReference: workorder.cutoffReference,
+            emailEligible: pendency.impact === 'critico' || pendency.priority === 'critica'
+        };
+    });
+    const additional = [
+        ['P-0038','WO-10305','Coleta incompleta da base WO Status','WO Status','Produção','alto','pre_release','2026-07-30T18:00:00'],
+        ['P-0039','WO-10307','Saldo mantido em long term hold','N-FP','Qualidade','alto','post_release_hold','2026-07-28T16:00:00'],
+        ['P-0040','WO-10300','Decisão Total sem envio ao ERP','GMES/OQC','Qualidade','medio','pre_release','2026-07-30T08:00:00'],
+        ['P-0041','WO-10296','Quantidade retida sem referência de corte','GMES/OQC','Logística','alto','post_release_hold','2026-07-27T12:00:00']
+    ];
+    additional.forEach(([id, woId, reason, source, responsible, impact, category, datetime]) => {
+        const wo = workorders[woId];
+        data.pendencies.push({
+            id, workorder: woId, lot: wo.lot, model: wo.model, reason, source,
+            affectedQty: wo.retainedQty || null, aging: '3 dias', impact, priority: impact === 'alto' ? 'alta' : 'media',
+            otd1: wo.otd1, responsible, container: wo.container, status: 'aberta', datetime,
+            partialData: true, description: reason, history: [{date: datetime, text: 'Pendência identificada', icon: 'alert'}],
+            relatedExecution: 'EX-20260731-006', estimatedRelease: null, sortingStatus: 'pending', evidence: null,
+            actions: ['Validar informação na origem'], category, organization: wo.organization,
+            workorderType: wo.workorderType, oqcDecision: wo.oqcDecision, judgeDate: wo.judgeDate,
+            judgeUser: wo.judgeUser, qualityRemark: wo.qualityRemark, erpUploadStatus: wo.erpUploadStatus,
+            releasedQty: wo.releasedQty, retainedQty: wo.retainedQty, cutoffReference: wo.cutoffReference,
+            emailEligible: false
+        });
+    });
+    data.alerts = data.alerts.map(alert => ({
+        ...alert,
+        message: alert.message.replace('fonte OQC', 'fonte GMES/OQC').replace('prazo OTD1 em risco', 'hold pós-liberação requer acompanhamento')
+    }));
+})();

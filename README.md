@@ -17,8 +17,8 @@ Depois, acesse `http://localhost:8000`. Também é possível abrir `index.html` 
 - `index.html`: visão geral, indicadores, fontes, prioridades e execução manual simulada;
 - `consulta.html`: busca efetiva nos dados sintéticos por Workorder, lote ou serial;
 - `monitor.html`: execuções, filtros, logs, tentativas e reprocessamento simulado;
-- `pendencias.html`: fila filtrável, paginação e seleção acessível;
-- `detalhe-pendencia.html`: contexto rastreável, histórico, área responsável e ações simuladas;
+- `pendencias.html`: fila de itens ativos ordenada por antiguidade, com filtros por categoria, organização e tipo de Workorder;
+- `detalhe-pendencia.html`: contexto rastreável, Decisão Total do GMES/OQC, liberação parcial, histórico e ações simuladas;
 - `relatorios.html`: catálogo filtrável, estados, histórico e exportação simulada;
 - `visualizar-relatorio.html`: resumo, Workorders, sumário OQC e prioridades;
 - `configuracoes.html`: preferências locais de tema, densidade, fonte, atualização e Modo TV.
@@ -46,6 +46,12 @@ As páginas com conteúdo operacional próprio apresentam painéis dedicados. Ca
 ## Dados e segurança
 
 `data.js` contém somente exemplos sintéticos. O protótipo:
+
+- distingue Workorders Normal, PQ e PM e organizações sintéticas NW1, NW2 e NW3;
+- separa pendências de liberação de holds identificados após a liberação;
+- registra resultado, data, identificador sintético do julgador, observação e envio ao ERP da Decisão Total;
+- demonstra quantidade liberada, quantidade retida e referência de corte;
+- identifica a integração OTD como dependente de disponibilização, sem usá-la como ordenação principal;
 
 - não possui backend;
 - não chama APIs ou serviços externos;
