@@ -32,12 +32,12 @@ def validate_migrations() -> None:
 
 
 def validate_synthetic_data() -> None:
-    files = [path for path in SYNTHETIC_DATA.iterdir() if path.name != ".gitkeep"]
     supported = {".csv", ".json"}
-    unsupported = [path for path in files if path.suffix.lower() not in supported]
-    if unsupported:
-        names = ", ".join(path.name for path in unsupported)
-        raise ValueError(f"Formatos sintéticos não suportados: {names}")
+    files = [
+        path
+        for path in SYNTHETIC_DATA.rglob("*")
+        if path.is_file() and path.suffix.lower() in supported
+    ]
 
     for path in files:
         if path.suffix.lower() == ".json":
