@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
-import sqlite3
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,15 +12,22 @@ SYNTHETIC_DATA = ROOT / "data" / "synthetic"
 
 def validate_migrations() -> None:
     migrations = sorted(MIGRATIONS.glob("*.sql"))
-    connection = sqlite3.connect(":memory:")
-    try:
-        for migration in migrations:
-            sql = migration.read_text(encoding="utf-8").strip()
-            if not sql:
-                raise ValueError(f"Migration vazia: {migration.relative_to(ROOT)}")
-            connection.executescript(sql)
-    finally:
-        connection.close()
+    if not migrations:
+        raise ValueError("Nenhuma migration SQL foi encontrada")
+
+    for migration in migrations:
+        sql = migration.read_text(encoding="utf-8").strip()
+        if not sql:
+            raise ValueError(f"Migration vazia: {migration.relative_to(ROOT)}")
+        subprocess.run(
+            [
+                "psql",
+                "--set=ON_ERROR_STOP=1",
+                "--single-transaction",
+                f"--file={migration}",
+            ],
+            check=True,
+        )
     print(f"Migrations SQL validadas: {len(migrations)}")
 
 
