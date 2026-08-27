@@ -1,5 +1,12 @@
-from app.main import health
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+client = TestClient(app)
 
 
 def test_health_returns_service_status() -> None:
-    assert health() == {"status": "ok", "service": "synergia-api"}
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "service": "synergia-api"}
