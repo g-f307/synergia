@@ -20,7 +20,7 @@ from openpyxl import load_workbook
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
-from app.validation import validate_file
+from app.validation import failed_validation_report, validate_file
 
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -254,6 +254,16 @@ def storage_root() -> Path:
     return root
 
 
+def configured_organizations() -> set[str] | None:
+    configured = os.getenv("VALID_ORGANIZATION_CODES")
+    if configured is None:
+        return None
+    values = {
+        value.strip().upper() for value in configured.split(",") if value.strip()
+    }
+    return values or None
+
+
 def _validate(path: Path, extension: str) -> None:
     try:
         if extension == ".json":
@@ -407,7 +417,22 @@ async def upload_import(
                     "execution_id": execution_id,
                 },
             ) from exc
-        report = validate_file(destination, extension, source.value)
+        try:
+            report = validate_file(
+                destination,
+                extension,
+                source.value,
+                configured_organizations(),
+            )
+        except Exception:
+            logger.exception(
+                "import_validation_read_failed execution_id=%s", execution_id
+            )
+            report = failed_validation_report(
+                source.value,
+                "validation_read_error",
+                "Falha inesperada durante a leitura do arquivo",
+            )
         report.update(
             execution_id=execution_id,
             file_name=safe_name,

@@ -270,3 +270,28 @@ def test_validation_report_endpoint_and_blocked_execution(api) -> None:
     assert report["issues"][0]["file_name"] == "invalid.csv"
     assert (storage / "n_fp" / execution_id / "original.csv").exists()
     assert (storage / "n_fp" / execution_id / "validation-report.json").exists()
+
+
+def test_malformed_csv_finishes_with_persisted_blocking_report(api) -> None:
+    client, repository, storage = api
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "validator"},
+        files={
+            "file": (
+                "malformed.csv",
+                b'workorder_number,status\nWO-1,"unterminated\n',
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    execution_id = response.json()["execution_id"]
+    assert repository.get(execution_id)["status"] == "validation_failed"
+    report = client.get(f"/imports/{execution_id}/validation-report").json()
+    assert report["blocking"] is True
+    assert report["issues"][0]["code"] == "read_error"
+    assert report["issues"][0]["row"] == 2
+    assert (storage / "n_fp" / execution_id / "original.csv").exists()
+    assert (storage / "n_fp" / execution_id / "validation-report.json").exists()

@@ -8,7 +8,7 @@ teste e jamais devem ser usadas como base para corrigir dados de origem.
 | --- | --- | --- |
 | `missing-required-column.csv` | N-FP | cabeçalho obrigatório ausente/alterado |
 | `empty-data.csv` | N-FP | arquivo sem linhas de dados |
-| `invalid-values.csv` | N-FP | Workorder ausente, quantidade e data inválidas, organização desconhecida |
+| `invalid-values.csv` | N-FP | Workorder ausente, quantidade e data inválidas; organização desconhecida quando o catálogo configurado não contém `UNKNOWN` |
 | `duplicate-serial.csv` | OWM | serial duplicado |
 | `formula-errors.csv` | N-FP | `#VALUE!` e referência `#REF!` preservados |
 | `unmatched-key.csv` | TMS | chave de Workorder sem correspondência |

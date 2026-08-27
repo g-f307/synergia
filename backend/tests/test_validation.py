@@ -40,7 +40,13 @@ def write_csv(tmp_path, content: str):
     ],
 )
 def test_minimum_validation_scenarios(tmp_path, content, source, codes):
-    report = validate_file(write_csv(tmp_path, content), ".csv", source)
+    known_organizations = {"OWM"} if "unknown_organization" in codes else None
+    report = validate_file(
+        write_csv(tmp_path, content),
+        ".csv",
+        source,
+        known_organizations,
+    )
     actual = {issue["code"] for issue in report["issues"]}
     assert codes <= actual
     assert all(
@@ -74,3 +80,40 @@ def test_warning_does_not_block_valid_rows(tmp_path):
     assert report["warning_count"] == 1
     assert report["error_count"] == 0
     assert report["blocking"] is False
+
+
+def test_malformed_csv_after_header_becomes_blocking_read_error(tmp_path):
+    report = validate_file(
+        write_csv(tmp_path, 'workorder_number,status\nWO-1,"unterminated\n'),
+        ".csv",
+        "N-FP",
+    )
+
+    assert report["blocking"] is True
+    assert report["issues"] == [
+        {
+            "severity": "error",
+            "code": "read_error",
+            "sheet": "CSV",
+            "row": 2,
+            "column": None,
+            "reason": "CSV malformado durante a leitura",
+        }
+    ]
+
+
+def test_configured_business_organization_is_valid(tmp_path):
+    report = validate_file(
+        write_csv(
+            tmp_path,
+            "workorder_number,organization_code\nWO-1,ORG-001\n",
+        ),
+        ".csv",
+        "OWM",
+        {"ORG-001", "LG"},
+    )
+
+    assert report["valid"] is True
+    assert not any(
+        issue["code"] == "unknown_organization" for issue in report["issues"]
+    )

@@ -21,6 +21,8 @@ Configure a conexão e, opcionalmente, o diretório controlado de evidências:
 ```bash
 export DATABASE_URL=postgresql://synergia:synergia-local-only@localhost:5432/synergia
 export IMPORT_STORAGE_DIR=/var/lib/synergia/imports
+# Opcional: catálogo oficial, separado por vírgulas
+export VALID_ORGANIZATION_CODES=ORG-001,LG
 ```
 
 Envie XLSX, CSV ou JSON informando uma das fontes permitidas e o usuário (ou
@@ -54,6 +56,11 @@ execução. Cada ocorrência informa arquivo, aba, linha, coluna, severidade,
 código e motivo. Erros de Excel (`#VALUE!`, `#REF!` etc.) são lidos com as
 fórmulas habilitadas e nunca convertidos em zero. Exemplos inválidos e seu uso
 estão documentados em `data/synthetic/README.md`.
+
+A organização somente é classificada como desconhecida quando
+`VALID_ORGANIZATION_CODES` está configurada. Sem um catálogo oficial, o campo
+continua sujeito à validação de presença e formato, mas não é comparado com
+nomes de sistemas ou com uma lista fixa.
 
 Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
 `409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo

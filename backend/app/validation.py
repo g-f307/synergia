@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -59,7 +60,14 @@ SCHEMAS = {
 
 FORMULA_ERRORS = ("#VALUE!", "#REF!", "#DIV/0!", "#NAME?", "#NUM!", "#N/A", "#NULL!")
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
-KNOWN_ORGANIZATIONS = {"N-FP", "OWM", "GMES", "OQC", "TMS"}
+
+
+class DataReadError(Exception):
+    def __init__(self, reason: str, *, sheet: str, row: int | None = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.sheet = sheet
+        self.row = row
 
 
 def _header(value: Any) -> str:
@@ -92,7 +100,15 @@ def _read(
     tables: list[tuple[str, list[str], list[list[Any]]]] = []
     if extension == ".csv":
         with path.open(encoding="utf-8-sig", newline="") as stream:
-            values = list(csv.reader(stream))
+            reader = csv.reader(stream, strict=True)
+            try:
+                values = list(reader)
+            except csv.Error as exc:
+                raise DataReadError(
+                    "CSV malformado durante a leitura",
+                    sheet="CSV",
+                    row=reader.line_num or None,
+                ) from exc
         if values:
             tables.append(("CSV", values[0], values[1:]))
     elif extension == ".json":
@@ -152,9 +168,55 @@ def _valid_date(value: Any) -> bool:
     return False
 
 
-def validate_file(path: Path, extension: str, source: str) -> dict[str, Any]:
+def _report(
+    source: str, row_count: int, issues: list[dict[str, Any]]
+) -> dict[str, Any]:
+    errors = sum(item["severity"] == "error" for item in issues)
+    warnings = sum(item["severity"] == "warning" for item in issues)
+    return {
+        "source": source,
+        "valid": errors == 0,
+        "blocking": errors > 0,
+        "row_count": row_count,
+        "error_count": errors,
+        "warning_count": warnings,
+        "issues": issues,
+    }
+
+
+def failed_validation_report(
+    source: str,
+    code: str,
+    reason: str,
+    *,
+    sheet: str | None = None,
+    row: int | None = None,
+) -> dict[str, Any]:
+    return _report(source, 0, [_issue(code, reason, sheet=sheet, row=row)])
+
+
+def validate_file(
+    path: Path,
+    extension: str,
+    source: str,
+    known_organizations: Collection[str] | None = None,
+) -> dict[str, Any]:
     schema = SCHEMAS[source]
-    tables, issues = _read(path, extension)
+    allowed_organizations = (
+        {value.strip().upper() for value in known_organizations}
+        if known_organizations is not None
+        else None
+    )
+    try:
+        tables, issues = _read(path, extension)
+    except DataReadError as exc:
+        return failed_validation_report(
+            source,
+            "read_error",
+            exc.reason,
+            sheet=exc.sheet,
+            row=exc.row,
+        )
     seen_serials: dict[str, tuple[str, int]] = {}
     row_count = 0
     if not tables:
@@ -315,8 +377,9 @@ def validate_file(path: Path, extension: str, source: str) -> dict[str, Any]:
                     seen_serials[serial_key] = (sheet, offset)
             organization = record.get("organization_code")
             if (
-                organization not in (None, "")
-                and str(organization).strip().upper() not in KNOWN_ORGANIZATIONS
+                allowed_organizations is not None
+                and organization not in (None, "")
+                and str(organization).strip().upper() not in allowed_organizations
             ):
                 issues.append(
                     _issue(
@@ -349,14 +412,4 @@ def validate_file(path: Path, extension: str, source: str) -> dict[str, Any]:
 
     if row_count == 0 and not any(item["code"] == "empty_file" for item in issues):
         issues.append(_issue("empty_file", "Arquivo não contém linhas de dados"))
-    errors = sum(item["severity"] == "error" for item in issues)
-    warnings = sum(item["severity"] == "warning" for item in issues)
-    return {
-        "source": source,
-        "valid": errors == 0,
-        "blocking": errors > 0,
-        "row_count": row_count,
-        "error_count": errors,
-        "warning_count": warnings,
-        "issues": issues,
-    }
+    return _report(source, row_count, issues)
