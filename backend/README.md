@@ -40,6 +40,18 @@ conteúdo do arquivo:
 curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36
 ```
 
+Consulte as ocorrências estruturais e semânticas da mesma execução:
+
+```bash
+curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36/validation-report
+```
+
+O relatório informa arquivo, aba (quando aplicável), linha, coluna, código,
+motivo e severidade. Ocorrências `error` deixam a execução em `blocked` e
+impedem sua consolidação; ocorrências `warning` permanecem visíveis sem impedir
+uma execução `completed`. Valores de erro de fórmula, como `#VALUE!` e `#REF!`,
+são registrados e nunca convertidos em zero.
+
 Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
 `409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo
 vazio ou estruturalmente inválido retorna `422`, e extensão não suportada
@@ -50,6 +62,9 @@ O arquivo aceito é preservado byte a byte em
 `<IMPORT_STORAGE_DIR>/<fonte>/<execution_id>/original.<extensão>`. A API e os
 logs não expõem seu conteúdo nem o caminho absoluto. Em desenvolvimento, o
 diretório padrão é `data/imports/`, ignorado pelo Git.
+
+Um exemplo intencionalmente bloqueado está documentado em
+`data/synthetic/invalid/README.md`.
 
 A especificação OpenAPI interativa está em `http://localhost:8000/docs` e o
 documento JSON em `http://localhost:8000/openapi.json`.

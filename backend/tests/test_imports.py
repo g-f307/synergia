@@ -16,6 +16,7 @@ class MemoryRepository:
     def __init__(self) -> None:
         self.executions: dict[str, dict] = {}
         self.hashes: dict[str, str] = {}
+        self.issues: dict[str, list[dict]] = {}
 
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -54,6 +55,12 @@ class MemoryRepository:
         self.executions[execution_id].update(
             status="completed", finished_at=datetime.now(UTC)
         )
+
+    def save_validation_issues(self, execution_id: str, issues: list[dict]) -> None:
+        self.issues[execution_id] = issues
+
+    def get_validation_issues(self, execution_id: str) -> list[dict]:
+        return self.issues.get(execution_id, [])
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
         execution = self.executions[execution_id]
@@ -94,8 +101,8 @@ def api(tmp_path, monkeypatch):
 def xlsx_bytes() -> bytes:
     workbook = Workbook()
     sheet = workbook.active
-    sheet.append(["workorder", "status"])
-    sheet.append(["WO-0001", "open"])
+    sheet.append(["workorder_number", "planned_quantity", "status"])
+    sheet.append(["WO-0001", 10, "open"])
     stream = BytesIO()
     workbook.save(stream)
     return stream.getvalue()
@@ -104,10 +111,22 @@ def xlsx_bytes() -> bytes:
 @pytest.mark.parametrize(
     ("filename", "content", "content_type"),
     [
-        ("entrada.csv", b"workorder,status\nWO-0001,open\n", "text/csv"),
+        (
+            "entrada.csv",
+            b"workorder_number,planned_quantity,status\nWO-0001,10,open\n",
+            "text/csv",
+        ),
         (
             "entrada.json",
-            json.dumps([{"workorder": "WO-0001"}]).encode(),
+            json.dumps(
+                [
+                    {
+                        "workorder_number": "WO-0001",
+                        "planned_quantity": 10,
+                        "status": "open",
+                    }
+                ]
+            ).encode(),
             "application/json",
         ),
         (

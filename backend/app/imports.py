@@ -20,6 +20,8 @@ from openpyxl import load_workbook
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
+from app.validation import validate_file
+
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
 
@@ -47,6 +49,25 @@ class ImportStatus(BaseModel):
     duplicate_of_execution_id: str | None = None
 
 
+class ValidationIssueResponse(BaseModel):
+    code: str
+    severity: str
+    message: str
+    file_name: str
+    sheet: str | None = None
+    row: int | None = None
+    column: str | None = None
+
+
+class ValidationReport(BaseModel):
+    execution_id: str
+    status: str
+    blocking: bool
+    error_count: int
+    warning_count: int
+    issues: list[ValidationIssueResponse]
+
+
 class ImportRepository(Protocol):
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -65,6 +86,10 @@ class ImportRepository(Protocol):
     ) -> str | None: ...
 
     def mark_completed(self, execution_id: str) -> None: ...
+
+    def save_validation_issues(self, execution_id: str, issues: list[dict]) -> None: ...
+
+    def get_validation_issues(self, execution_id: str) -> list[dict]: ...
 
     def abort_claim(self, execution_id: str, reason: str) -> None: ...
 
@@ -155,6 +180,45 @@ class PostgresImportRepository:
                 """,
                 (execution_id,),
             )
+
+    def save_validation_issues(self, execution_id: str, issues: list[dict]) -> None:
+        if not issues:
+            return
+        with self._connect() as connection:
+            connection.executemany(
+                """
+                INSERT INTO synergia.validation_issues
+                    (execution_id, code, severity, message, file_name,
+                     sheet_name, row_number, column_name)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    (
+                        execution_id,
+                        issue["code"],
+                        issue["severity"],
+                        issue["message"],
+                        issue["file_name"],
+                        issue["sheet"],
+                        issue["row"],
+                        issue["column"],
+                    )
+                    for issue in issues
+                ],
+            )
+
+    def get_validation_issues(self, execution_id: str) -> list[dict]:
+        with self._connect() as connection:
+            return connection.execute(
+                """
+                SELECT code, severity, message, file_name, sheet_name AS sheet,
+                       row_number AS row, column_name AS column
+                FROM synergia.validation_issues
+                WHERE execution_id = %s
+                ORDER BY id
+                """,
+                (execution_id,),
+            ).fetchall()
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
         with self._connect() as connection:
@@ -379,9 +443,21 @@ async def upload_import(
                     "execution_id": execution_id,
                 },
             ) from exc
-        repository.mark_completed(execution_id)
+        issues = validate_file(destination, extension, source.value, safe_name)
+        repository.save_validation_issues(execution_id, issues)
+        blocking = any(issue["severity"] == "error" for issue in issues)
+        if blocking:
+            repository.finish(execution_id, "blocked", "validation_failed")
+            logger.warning(
+                "import_blocked execution_id=%s errors=%d warnings=%d",
+                execution_id,
+                sum(issue["severity"] == "error" for issue in issues),
+                sum(issue["severity"] == "warning" for issue in issues),
+            )
+        else:
+            repository.mark_completed(execution_id)
         logger.info(
-            "import_completed execution_id=%s size_bytes=%d", execution_id, size_bytes
+            "import_validated execution_id=%s size_bytes=%d", execution_id, size_bytes
         )
     except HTTPException:
         raise
@@ -413,3 +489,30 @@ def get_import(
             status_code=404, detail="Execução de importação não encontrada"
         )
     return ImportStatus.model_validate(result)
+
+
+@router.get(
+    "/{execution_id}/validation-report",
+    response_model=ValidationReport,
+    summary="Consultar o relatório de validação de uma importação",
+)
+def get_validation_report(
+    execution_id: str,
+    repository: ImportRepository = Depends(get_repository),
+) -> ValidationReport:
+    execution = repository.get(execution_id)
+    if execution is None:
+        raise HTTPException(
+            status_code=404, detail="Execução de importação não encontrada"
+        )
+    issues = repository.get_validation_issues(execution_id)
+    errors = sum(issue["severity"] == "error" for issue in issues)
+    warnings = sum(issue["severity"] == "warning" for issue in issues)
+    return ValidationReport(
+        execution_id=execution_id,
+        status=execution["status"],
+        blocking=errors > 0,
+        error_count=errors,
+        warning_count=warnings,
+        issues=[ValidationIssueResponse.model_validate(issue) for issue in issues],
+    )
