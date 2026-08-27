@@ -40,6 +40,21 @@ conteúdo do arquivo:
 curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36
 ```
 
+Cada arquivo aceito passa pelo esquema da fonte. Um erro impeditivo preserva o
+arquivo e conclui a execução com `status=validation_failed`, impedindo que ela
+seja usada pela consolidação. Avisos permanecem no relatório sem bloquear. Para
+visualizar todas as ocorrências:
+
+```bash
+curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36/validation-report
+```
+
+O relatório também é preservado como `validation-report.json` no diretório da
+execução. Cada ocorrência informa arquivo, aba, linha, coluna, severidade,
+código e motivo. Erros de Excel (`#VALUE!`, `#REF!` etc.) são lidos com as
+fórmulas habilitadas e nunca convertidos em zero. Exemplos inválidos e seu uso
+estão documentados em `data/synthetic/README.md`.
+
 Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
 `409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo
 vazio ou estruturalmente inválido retorna `422`, e extensão não suportada

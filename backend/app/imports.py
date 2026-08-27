@@ -20,6 +20,8 @@ from openpyxl import load_workbook
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
+from app.validation import validate_file
+
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
 
@@ -47,6 +49,18 @@ class ImportStatus(BaseModel):
     duplicate_of_execution_id: str | None = None
 
 
+class ValidationReport(BaseModel):
+    execution_id: str
+    source: ImportSource
+    file_name: str
+    valid: bool
+    blocking: bool
+    row_count: int
+    error_count: int
+    warning_count: int
+    issues: list[dict]
+
+
 class ImportRepository(Protocol):
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -65,6 +79,8 @@ class ImportRepository(Protocol):
     ) -> str | None: ...
 
     def mark_completed(self, execution_id: str) -> None: ...
+
+    def mark_validation_failed(self, execution_id: str) -> None: ...
 
     def abort_claim(self, execution_id: str, reason: str) -> None: ...
 
@@ -151,6 +167,18 @@ class PostgresImportRepository:
                 """
                 UPDATE synergia.executions
                 SET status = 'completed', finished_at = now(), updated_at = now()
+                WHERE id = %s
+                """,
+                (execution_id,),
+            )
+
+    def mark_validation_failed(self, execution_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE synergia.executions
+                SET status = 'validation_failed', failure_reason = 'validation_failed',
+                    finished_at = now(), updated_at = now()
                 WHERE id = %s
                 """,
                 (execution_id,),
@@ -379,9 +407,30 @@ async def upload_import(
                     "execution_id": execution_id,
                 },
             ) from exc
-        repository.mark_completed(execution_id)
+        report = validate_file(destination, extension, source.value)
+        report.update(
+            execution_id=execution_id,
+            file_name=safe_name,
+        )
+        for issue in report["issues"]:
+            issue["file_name"] = safe_name
+        report_path = destination.parent / "validation-report.json"
+        report_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+        if report["blocking"]:
+            repository.mark_validation_failed(execution_id)
+            logger.warning(
+                "import_validation_blocked execution_id=%s errors=%d warnings=%d",
+                execution_id,
+                report["error_count"],
+                report["warning_count"],
+            )
+        else:
+            repository.mark_completed(execution_id)
         logger.info(
-            "import_completed execution_id=%s size_bytes=%d", execution_id, size_bytes
+            "import_processed execution_id=%s size_bytes=%d", execution_id, size_bytes
         )
     except HTTPException:
         raise
@@ -413,3 +462,27 @@ def get_import(
             status_code=404, detail="Execução de importação não encontrada"
         )
     return ImportStatus.model_validate(result)
+
+
+@router.get(
+    "/{execution_id}/validation-report",
+    response_model=ValidationReport,
+    summary="Visualizar o relatório de validação da execução",
+)
+def get_validation_report(
+    execution_id: str,
+    repository: ImportRepository = Depends(get_repository),
+) -> ValidationReport:
+    execution = repository.get(execution_id)
+    if execution is None:
+        raise HTTPException(
+            status_code=404, detail="Execução de importação não encontrada"
+        )
+    source = ImportSource(execution["source"])
+    report_path = storage_root() / source.name / execution_id / "validation-report.json"
+    if not report_path.is_file():
+        raise HTTPException(
+            status_code=404, detail="Relatório de validação não disponível"
+        )
+    with report_path.open(encoding="utf-8") as stream:
+        return ValidationReport.model_validate(json.load(stream))

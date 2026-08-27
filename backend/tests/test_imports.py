@@ -55,6 +55,13 @@ class MemoryRepository:
             status="completed", finished_at=datetime.now(UTC)
         )
 
+    def mark_validation_failed(self, execution_id: str) -> None:
+        self.executions[execution_id].update(
+            status="validation_failed",
+            failure_reason="validation_failed",
+            finished_at=datetime.now(UTC),
+        )
+
     def abort_claim(self, execution_id: str, reason: str) -> None:
         execution = self.executions[execution_id]
         if execution["sha256"]:
@@ -243,3 +250,23 @@ def test_logs_trace_identifiers_without_file_contents(api, caplog) -> None:
     assert response.status_code == 201
     assert response.json()["execution_id"] in caplog.text
     assert "CONFIDENTIAL-WO-VALUE" not in caplog.text
+
+
+def test_validation_report_endpoint_and_blocked_execution(api) -> None:
+    client, _, storage = api
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "validator"},
+        files={"file": ("invalid.csv", b"status\nopen\n", "text/csv")},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "validation_failed"
+    execution_id = response.json()["execution_id"]
+    report_response = client.get(f"/imports/{execution_id}/validation-report")
+    assert report_response.status_code == 200
+    report = report_response.json()
+    assert report["blocking"] is True
+    assert report["issues"][0]["file_name"] == "invalid.csv"
+    assert (storage / "n_fp" / execution_id / "original.csv").exists()
+    assert (storage / "n_fp" / execution_id / "validation-report.json").exists()
