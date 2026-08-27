@@ -3,5 +3,6 @@ __pycache__/
 .env
 .venv/
 .pytest_cache/
+backend/reports/
 .DS_Store
 Thumbs.db

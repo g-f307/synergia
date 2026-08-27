@@ -84,5 +84,10 @@ ignorado pelo Git e não deve conter credenciais reais compartilhadas.
 ## Integração contínua
 
 O workflow `.github/workflows/ci.yml` valida Pull Requests e pushes para
-`main`, executando `npm ci`, build e testes Angular, testes FastAPI e
-`docker compose config`.
+`main`. Ele executa lint, testes com relatórios e build do Angular e FastAPI,
+valida migrations, dados sintéticos e Docker Compose e confirma, somente para
+leitura, que o protótipo permanece disponível na branch `prototype-pages`.
+
+As migrations SQL em `database/migrations/` são aplicadas sequencialmente em
+um banco temporário durante a CI. Os dados sintéticos aceitos em
+`data/synthetic/` são arquivos JSON válidos ou CSV com cabeçalho preenchido.
