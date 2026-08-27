@@ -43,7 +43,9 @@ uvicorn app.main:app --reload
 ```
 
 A API ficará disponível em `http://localhost:8000`; o endpoint de saúde é
-`GET /health`.
+`GET /health`. Uploads rastreáveis são feitos em `POST /imports` e consultados
+em `GET /imports/{execution_id}`; exemplos e configuração estão em
+`backend/README.md`.
 
 Testes:
 
