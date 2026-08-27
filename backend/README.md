@@ -62,6 +62,17 @@ A organização somente é classificada como desconhecida quando
 continua sujeito à validação de presença e formato, mas não é comparado com
 nomes de sistemas ou com uma lista fixa.
 
+Arquivos aprovados também geram `normalized-data.json`. O resultado mantém os
+valores originais, os valores internos e a transformação aplicada por campo,
+e pode ser consultado por:
+
+```bash
+curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36/normalized-data
+```
+
+Os registros são persistidos em `synergia.normalized_records`. O mapeamento de
+colunas, estados e flags OQC está em `docs/normalization.md`.
+
 Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
 `409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo
 vazio ou estruturalmente inválido retorna `422`, e extensão não suportada

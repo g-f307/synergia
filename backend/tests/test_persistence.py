@@ -12,6 +12,7 @@ def test_creates_all_operational_entities() -> None:
         "executions",
         "holds",
         "lots",
+        "normalized_records",
         "oqc_decisions",
         "organizations",
         "pending_items",

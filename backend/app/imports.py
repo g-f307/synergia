@@ -18,8 +18,10 @@ import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from openpyxl import load_workbook
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
+from app.normalization import normalize_file
 from app.validation import failed_validation_report, validate_file
 
 logger = logging.getLogger("synergia.imports")
@@ -61,6 +63,16 @@ class ValidationReport(BaseModel):
     issues: list[dict]
 
 
+class NormalizationResult(BaseModel):
+    execution_id: str
+    source: ImportSource
+    file_name: str
+    record_count: int
+    warning_count: int
+    issues: list[dict]
+    records: list[dict]
+
+
 class ImportRepository(Protocol):
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -81,6 +93,10 @@ class ImportRepository(Protocol):
     def mark_completed(self, execution_id: str) -> None: ...
 
     def mark_validation_failed(self, execution_id: str) -> None: ...
+
+    def save_normalized_records(
+        self, execution_id: str, records: list[dict]
+    ) -> None: ...
 
     def abort_claim(self, execution_id: str, reason: str) -> None: ...
 
@@ -184,6 +200,38 @@ class PostgresImportRepository:
                 (execution_id,),
             )
 
+    def save_normalized_records(self, execution_id: str, records: list[dict]) -> None:
+        with self._connect() as connection:
+            source_file = connection.execute(
+                """
+                SELECT id FROM synergia.source_files WHERE execution_id = %s
+                """,
+                (execution_id,),
+            ).fetchone()
+            if source_file is None:
+                raise RuntimeError("Arquivo da execução não encontrado")
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO synergia.normalized_records
+                        (execution_id, source_file_id, sheet_name, row_number,
+                         normalized_values, original_values, transformations)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    [
+                        (
+                            execution_id,
+                            source_file["id"],
+                            record["sheet"],
+                            record["row"],
+                            Jsonb(record["values"]),
+                            Jsonb(record["original_values"]),
+                            Jsonb(record["transformations"]),
+                        )
+                        for record in records
+                    ],
+                )
+
     def abort_claim(self, execution_id: str, reason: str) -> None:
         with self._connect() as connection:
             connection.execute(
@@ -258,9 +306,7 @@ def configured_organizations() -> set[str] | None:
     configured = os.getenv("VALID_ORGANIZATION_CODES")
     if configured is None:
         return None
-    values = {
-        value.strip().upper() for value in configured.split(",") if value.strip()
-    }
+    values = {value.strip().upper() for value in configured.split(",") if value.strip()}
     return values or None
 
 
@@ -453,7 +499,32 @@ async def upload_import(
                 report["warning_count"],
             )
         else:
-            repository.mark_completed(execution_id)
+            try:
+                normalized = normalize_file(destination, extension, source.value)
+                normalized.update(
+                    execution_id=execution_id,
+                    file_name=safe_name,
+                )
+                normalized_path = destination.parent / "normalized-data.json"
+                normalized_path.write_text(
+                    json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                repository.save_normalized_records(execution_id, normalized["records"])
+                repository.mark_completed(execution_id)
+            except Exception as exc:
+                repository.finish(execution_id, "failed", "normalization_error")
+                logger.exception(
+                    "import_normalization_failed execution_id=%s", execution_id
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "code": "normalization_error",
+                        "message": "Não foi possível normalizar o arquivo validado",
+                        "execution_id": execution_id,
+                    },
+                ) from exc
         logger.info(
             "import_processed execution_id=%s size_bytes=%d", execution_id, size_bytes
         )
@@ -511,3 +582,29 @@ def get_validation_report(
         )
     with report_path.open(encoding="utf-8") as stream:
         return ValidationReport.model_validate(json.load(stream))
+
+
+@router.get(
+    "/{execution_id}/normalized-data",
+    response_model=NormalizationResult,
+    summary="Visualizar os dados normalizados da execução",
+)
+def get_normalized_data(
+    execution_id: str,
+    repository: ImportRepository = Depends(get_repository),
+) -> NormalizationResult:
+    execution = repository.get(execution_id)
+    if execution is None:
+        raise HTTPException(
+            status_code=404, detail="Execução de importação não encontrada"
+        )
+    source = ImportSource(execution["source"])
+    normalized_path = (
+        storage_root() / source.name / execution_id / "normalized-data.json"
+    )
+    if not normalized_path.is_file():
+        raise HTTPException(
+            status_code=404, detail="Dados normalizados não disponíveis"
+        )
+    with normalized_path.open(encoding="utf-8") as stream:
+        return NormalizationResult.model_validate(json.load(stream))

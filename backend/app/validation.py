@@ -74,6 +74,10 @@ def _header(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
 
 
+def _identifier_key(value: Any) -> str:
+    return re.sub(r"\s+", "", str(value).strip()).upper()
+
+
 def _issue(
     code: str,
     reason: str,
@@ -345,7 +349,7 @@ def validate_file(
             for field in ("workorder_number", "serial_number"):
                 value = record.get(field)
                 if value not in (None, "") and not IDENTIFIER_RE.fullmatch(
-                    str(value).strip()
+                    _identifier_key(value)
                 ):
                     issues.append(
                         _issue(
@@ -358,7 +362,7 @@ def validate_file(
                     )
             serial = record.get("serial_number")
             if serial not in (None, ""):
-                serial_key = str(serial).strip().upper()
+                serial_key = _identifier_key(serial)
                 if serial_key in seen_serials:
                     first_sheet, first_row = seen_serials[serial_key]
                     issues.append(

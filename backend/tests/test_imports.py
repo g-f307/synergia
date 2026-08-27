@@ -16,6 +16,7 @@ class MemoryRepository:
     def __init__(self) -> None:
         self.executions: dict[str, dict] = {}
         self.hashes: dict[str, str] = {}
+        self.normalized_records: dict[str, list[dict]] = {}
 
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -61,6 +62,9 @@ class MemoryRepository:
             failure_reason="validation_failed",
             finished_at=datetime.now(UTC),
         )
+
+    def save_normalized_records(self, execution_id: str, records: list[dict]) -> None:
+        self.normalized_records[execution_id] = records
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
         execution = self.executions[execution_id]
@@ -295,3 +299,32 @@ def test_malformed_csv_finishes_with_persisted_blocking_report(api) -> None:
     assert report["issues"][0]["row"] == 2
     assert (storage / "n_fp" / execution_id / "original.csv").exists()
     assert (storage / "n_fp" / execution_id / "validation-report.json").exists()
+
+
+def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
+    client, repository, storage = api
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "normalizer"},
+        files={
+            "file": (
+                "normalizable.csv",
+                b"Work Order,planned_date,status\n wo - 0001 ,27/08/2026,Aberto\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    execution_id = response.json()["execution_id"]
+    normalized_response = client.get(f"/imports/{execution_id}/normalized-data")
+    assert normalized_response.status_code == 200
+    normalized = normalized_response.json()
+    assert normalized["records"][0]["values"]["workorder_number"] == "WO-0001"
+    assert normalized["records"][0]["values"]["planned_date"] == "2026-08-27"
+    assert normalized["records"][0]["values"]["status"] == "open"
+    assert (
+        normalized["records"][0]["original_values"]["workorder_number"] == " wo - 0001 "
+    )
+    assert repository.normalized_records[execution_id] == normalized["records"]
+    assert (storage / "n_fp" / execution_id / "normalized-data.json").exists()
