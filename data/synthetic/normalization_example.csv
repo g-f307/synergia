@@ -1,0 +1,2 @@
+Work Order,Demand ID,Serial,Lote,Modelo,Organização,Container,planned_date,Estado,OQC
+ wo - 001 ,000000000000000000123,SER - 9, lot 7 , model x , org-001 ,0000456,27/08/2026,Aberto,Sim
