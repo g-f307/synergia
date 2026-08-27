@@ -1,0 +1,16 @@
+{
+  "execution_id": "exec-example-001",
+  "source_file": {
+    "file_name": "WO Status.xlsx",
+    "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "workorder_number": "00001234",
+  "lot_number": "LOT-0001",
+  "serial_number": "SER-0001",
+  "container_number": "0000456",
+  "received_quantity": 10,
+  "released_quantity": 6,
+  "pending_quantity": 3,
+  "retained_quantity": 1,
+  "partially_released": true
+}
