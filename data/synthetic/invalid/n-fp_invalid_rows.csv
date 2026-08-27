@@ -1,0 +1,6 @@
+workorder_number,planned_quantity,status,planned_date,serial_number,organization,reference_workorder_number
+WO-SYN-0001,dez,open,2026-99-40,SERIAL-1,N-FP,WO-NOT-FOUND
+,10,open,2026-08-27,SERIAL-1,UNKNOWN,
+WO-SYN-0003,#VALUE!,open,2026-08-27,SERIAL-3,N-FP,
+WO-SYN-0004,#REF!,open,2026-08-27,SERIAL 4,N-FP,
+,,,,,,
