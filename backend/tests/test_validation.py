@@ -26,7 +26,7 @@ def write_csv(tmp_path, content: str):
             "OWM",
             {"duplicate_serial"},
         ),
-        ("workorder_number,serial_number\nWO-1,SER 1\n", "OWM", {"invalid_identifier"}),
+        ("workorder_number,serial_number\nWO-1,SER@1\n", "OWM", {"invalid_identifier"}),
         ("workorder_number,status\nWO-1,#VALUE!\n", "N-FP", {"invalid_formula"}),
         ("workorder_number,status\nWO-1,#REF!\n", "N-FP", {"broken_reference"}),
         ("workorder_number,workorder_reference\nWO-1,WO-9\n", "TMS", {"unmatched_key"}),
@@ -80,6 +80,20 @@ def test_warning_does_not_block_valid_rows(tmp_path):
     assert report["warning_count"] == 1
     assert report["error_count"] == 0
     assert report["blocking"] is False
+
+
+def test_equivalent_identifier_spacing_is_accepted_before_normalization(tmp_path):
+    report = validate_file(
+        write_csv(
+            tmp_path,
+            "workorder_number,serial_number\n wo - 0001 , SER - 1 \n",
+        ),
+        ".csv",
+        "OWM",
+    )
+
+    assert report["valid"] is True
+    assert not any(issue["code"] == "invalid_identifier" for issue in report["issues"])
 
 
 def test_malformed_csv_after_header_becomes_blocking_read_error(tmp_path):
