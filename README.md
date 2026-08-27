@@ -1,90 +1,88 @@
-# SYNERGIA - protótipo navegável
+# SYNERGIA
 
-Protótipo frontend da solução SYNERGIA para validação de fluxos, conteúdo e interface. Todos os registros são sintéticos, permanecem no navegador e não representam informações operacionais reais.
-
-## Execução
-
-Não há build nem dependências de execução. A partir da pasta `synergia`, use uma das opções:
-
-```bash
-python3 -m http.server 8000
-```
-
-Depois, acesse `http://localhost:8000`. Também é possível abrir `index.html` diretamente, embora um servidor local produza comportamento mais próximo de uma implantação web.
-
-## Telas e fluxos
-
-- `index.html`: visão geral, indicadores, fontes, prioridades e execução manual simulada;
-- `consulta.html`: busca efetiva nos dados sintéticos por Workorder, lote ou serial;
-- `monitor.html`: execuções, filtros, logs, tentativas e reprocessamento simulado;
-- `pendencias.html`: fila de itens ativos ordenada por antiguidade, com filtros por categoria, organização e tipo de Workorder;
-- `detalhe-pendencia.html`: contexto rastreável, Decisão Total do GMES/OQC, liberação parcial, histórico e ações simuladas;
-- `relatorios.html`: catálogo filtrável, estados, histórico e exportação simulada;
-- `visualizar-relatorio.html`: resumo, Workorders, sumário OQC e prioridades;
-- `configuracoes.html`: preferências locais de tema, densidade, fonte, atualização e Modo TV.
-
-Parâmetros como `?wo=WO-10293`, `?id=P-0035`, `?id=EX-20260731-006` e `?id=REL-20260731-01` permitem abrir diretamente um registro relacionado.
-
-## Modo TV
-
-O botão de TV ativa uma apresentação de tela cheia, sem rolagem e com alternância automática entre painéis. Os controles não essenciais são removidos, as informações críticas são ampliadas e o ciclo pausa temporariamente quando há interação. A preferência fica armazenada no navegador.
-
-As páginas com conteúdo operacional próprio apresentam painéis dedicados. Caso o Modo TV seja solicitado em uma página sem painel apropriado, o protótipo abre o Dashboard com segurança em vez de apresentar uma tela vazia.
-
-## Acessibilidade e responsividade
-
-- modos claro e escuro, com detecção da preferência do sistema;
-- navegação por teclado e foco visível;
-- link para pular ao conteúdo;
-- labels associados aos controles;
-- modais com gerenciamento de foco e fechamento por `Escape`;
-- estados comunicados por texto, ícone e cor;
-- suporte a `prefers-reduced-motion`;
-- reorganização de cards, filtros e tabelas para desktop, tablet e celular;
-- tipografia LGEI e JetBrains Mono fornecida localmente.
-
-## Dados e segurança
-
-`data.js` contém somente exemplos sintéticos. O protótipo:
-
-- distingue Workorders Normal, PQ e PM e organizações sintéticas NW1, NW2 e NW3;
-- separa pendências de liberação de holds identificados após a liberação;
-- registra resultado, data, identificador sintético do julgador, observação e envio ao ERP da Decisão Total;
-- demonstra quantidade liberada, quantidade retida e referência de corte;
-- identifica a integração OTD como dependente de disponibilização, sem usá-la como ordenação principal;
-
-- não possui backend;
-- não chama APIs ou serviços externos;
-- não contém credenciais, tokens ou dados pessoais;
-- não envia e-mails, mensagens ou arquivos;
-- não executa decisões automáticas;
-- não utiliza inteligência artificial;
-- não altera sistemas de origem.
-
-Exportação, reprocessamento, execução sob demanda e mudança de responsável são demonstrações locais. A interface informa explicitamente essas simulações.
+Sistema em desenvolvimento para automação e consolidação de indicadores de
+suprimentos. A primeira etapa utiliza Angular, FastAPI, PostgreSQL, arquivos
+manuais e dados sintéticos; integrações RPA serão incorporadas posteriormente.
 
 ## Estrutura
 
-- `styles.css`: design system, temas, responsividade e Modo TV;
-- `script.js`: navegação, ícones, preferências, modais, paginação e utilitários;
-- `data.js`: conjunto sintético compartilhado;
-- `assets/`: fontes, assinaturas e iconografia oficial;
-- `tests/smoke_ui.py`: verificação opcional de renderização, console, imagens, acessibilidade básica, overflow e fluxos funcionais.
+- `frontend-angular/`: aplicação web Angular;
+- `backend/`: API FastAPI;
+- `database/`: migrations e documentação do modelo persistente;
+- `data/synthetic/`: massas sintéticas controladas;
+- `docker-compose.yml`: PostgreSQL para desenvolvimento local.
 
-## Validação opcional
+## Protótipo navegável
 
-Com Python, Selenium, Chromium e ChromeDriver disponíveis:
+O protótipo estático aprovado não é duplicado na `main`. Ele permanece em:
+
+- branch `prototype-pages`;
+- tag `prototype-v1.0`;
+- GitHub Pages: <https://g-f307.github.io/synergia/>.
+
+## Pré-requisitos
+
+- Node.js 20.19, 22.12 ou versão posterior compatível com Angular 20;
+- Python 3.11 ou superior;
+- Docker com Docker Compose.
+
+## PostgreSQL
 
 ```bash
-python3 tests/smoke_ui.py
+docker compose up -d postgres
 ```
 
-O teste renderiza todas as páginas em desktop e celular, verifica o Modo TV entre 1920×1080 e 1024×640 — incluindo larguras equivalentes a zoom elevado —, exercita oito fluxos centrais e mede marca/contraste nos temas claro e escuro. As capturas são gravadas em `/tmp/synergia-ui-smoke`.
+## Backend
 
-## Limitações deliberadas
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload
+```
 
-- persistência limitada ao `localStorage` do navegador;
-- exportações geram apenas confirmação visual;
-- logs e evidências são representações sintéticas;
-- integrações corporativas, autenticação e permissões reais dependem da implementação futura;
-- os resultados devem continuar sujeitos à revisão humana.
+A API ficará disponível em `http://localhost:8000`; o endpoint de saúde é
+`GET /health`.
+
+Testes:
+
+```bash
+cd backend
+pytest
+```
+
+## Frontend Angular
+
+```bash
+cd frontend-angular
+npm install
+npm start
+```
+
+O frontend ficará disponível em `http://localhost:4200` e consultará o endpoint
+de saúde da API.
+
+O endereço da API utilizado pelo Angular é definido em
+`frontend-angular/src/environments/environment.ts`. O `.env` da raiz é
+reservado aos serviços de backend e infraestrutura; aplicações Angular não
+carregam esse arquivo automaticamente.
+
+Build e testes:
+
+```bash
+cd frontend-angular
+npm run build
+npm test -- --watch=false
+```
+
+## Configuração
+
+Copie `.env.example` para `.env` apenas no ambiente local. O arquivo `.env` é
+ignorado pelo Git e não deve conter credenciais reais compartilhadas.
+
+## Integração contínua
+
+O workflow `.github/workflows/ci.yml` valida Pull Requests e pushes para
+`main`, executando `npm ci`, build e testes Angular, testes FastAPI e
+`docker compose config`.
