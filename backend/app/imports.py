@@ -52,9 +52,7 @@ class ImportRepository(Protocol):
         self, execution_id: str, source: str, actor_type: str, actor: str
     ) -> None: ...
 
-    def find_execution_by_hash(self, digest: str) -> str | None: ...
-
-    def complete(
+    def claim_file(
         self,
         execution_id: str,
         *,
@@ -64,7 +62,11 @@ class ImportRepository(Protocol):
         digest: str,
         media_type: str | None,
         storage_key: str,
-    ) -> None: ...
+    ) -> str | None: ...
+
+    def mark_completed(self, execution_id: str) -> None: ...
+
+    def abort_claim(self, execution_id: str, reason: str) -> None: ...
 
     def finish(
         self,
@@ -97,19 +99,7 @@ class PostgresImportRepository:
                 (execution_id, source, actor_type, actor),
             )
 
-    def find_execution_by_hash(self, digest: str) -> str | None:
-        with self._connect() as connection:
-            row = connection.execute(
-                """
-                SELECT execution_id
-                FROM synergia.source_files
-                WHERE content_hash = %s
-                """,
-                (digest,),
-            ).fetchone()
-        return row["execution_id"] if row else None
-
-    def complete(
+    def claim_file(
         self,
         execution_id: str,
         *,
@@ -119,14 +109,16 @@ class PostgresImportRepository:
         digest: str,
         media_type: str | None,
         storage_key: str,
-    ) -> None:
+    ) -> str | None:
         with self._connect() as connection:
-            connection.execute(
+            inserted = connection.execute(
                 """
                 INSERT INTO synergia.source_files
                     (execution_id, file_name, extension, content_hash, media_type,
                      size_bytes, storage_key)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (content_hash) DO NOTHING
+                RETURNING execution_id
                 """,
                 (
                     execution_id,
@@ -137,7 +129,24 @@ class PostgresImportRepository:
                     size_bytes,
                     storage_key,
                 ),
-            )
+            ).fetchone()
+            if inserted:
+                return None
+
+            duplicate = connection.execute(
+                """
+                SELECT execution_id
+                FROM synergia.source_files
+                WHERE content_hash = %s
+                """,
+                (digest,),
+            ).fetchone()
+            if duplicate is None:
+                raise RuntimeError("Conflito de hash sem execução original")
+            return duplicate["execution_id"]
+
+    def mark_completed(self, execution_id: str) -> None:
+        with self._connect() as connection:
             connection.execute(
                 """
                 UPDATE synergia.executions
@@ -145,6 +154,22 @@ class PostgresImportRepository:
                 WHERE id = %s
                 """,
                 (execution_id,),
+            )
+
+    def abort_claim(self, execution_id: str, reason: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "DELETE FROM synergia.source_files WHERE execution_id = %s",
+                (execution_id,),
+            )
+            connection.execute(
+                """
+                UPDATE synergia.executions
+                SET status = 'failed', failure_reason = %s,
+                    finished_at = now(), updated_at = now()
+                WHERE id = %s
+                """,
+                (reason, execution_id),
             )
 
     def finish(
@@ -250,6 +275,7 @@ def _error(
         409: {"description": "Arquivo duplicado por SHA-256"},
         415: {"description": "Extensão não suportada"},
         422: {"description": "Arquivo vazio, inválido ou requisição inválida"},
+        500: {"description": "Falha ao preservar o arquivo no storage"},
     },
 )
 async def upload_import(
@@ -303,7 +329,20 @@ async def upload_import(
         if size_bytes == 0:
             _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
         content_hash = digest.hexdigest()
-        duplicate_of = repository.find_execution_by_hash(content_hash)
+        _validate(temp_path, extension)
+        destination = (
+            storage_root() / source.name / execution_id / f"original{extension}"
+        )
+        storage_key = str(destination.relative_to(storage_root()))
+        duplicate_of = repository.claim_file(
+            execution_id,
+            file_name=safe_name,
+            extension=extension[1:],
+            size_bytes=size_bytes,
+            digest=content_hash,
+            media_type=file.content_type,
+            storage_key=storage_key,
+        )
         if duplicate_of:
             repository.finish(execution_id, "duplicate", "duplicate_file", duplicate_of)
             logger.info(
@@ -320,23 +359,27 @@ async def upload_import(
                     "duplicate_of_execution_id": duplicate_of,
                 },
             )
-        _validate(temp_path, extension)
-        destination = (
-            storage_root() / source.name / execution_id / f"original{extension}"
-        )
-        destination.parent.mkdir(parents=True, exist_ok=False)
-        shutil.move(temp_path, destination)
-        temp_path = None
-        storage_key = str(destination.relative_to(storage_root()))
-        repository.complete(
-            execution_id,
-            file_name=safe_name,
-            extension=extension[1:],
-            size_bytes=size_bytes,
-            digest=content_hash,
-            media_type=file.content_type,
-            storage_key=storage_key,
-        )
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=False)
+            shutil.move(temp_path, destination)
+            temp_path = None
+        except OSError as exc:
+            destination.unlink(missing_ok=True)
+            try:
+                destination.parent.rmdir()
+            except OSError:
+                pass
+            repository.abort_claim(execution_id, "storage_error")
+            logger.exception("import_storage_failed execution_id=%s", execution_id)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "code": "storage_error",
+                    "message": "Não foi possível preservar o arquivo",
+                    "execution_id": execution_id,
+                },
+            ) from exc
+        repository.mark_completed(execution_id)
         logger.info(
             "import_completed execution_id=%s size_bytes=%d", execution_id, size_bytes
         )

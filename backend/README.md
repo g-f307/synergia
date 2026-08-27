@@ -40,7 +40,8 @@ conteúdo do arquivo:
 curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36
 ```
 
-Duplicidades por SHA-256 retornam `409` e indicam a execução original. Arquivo
+Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
+`409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo
 vazio ou estruturalmente inválido retorna `422`, e extensão não suportada
 retorna `415`. Todas essas respostas incluem um ID consultável quando a fonte
 e o ator já foram aceitos.

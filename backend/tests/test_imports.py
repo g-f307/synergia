@@ -36,20 +36,32 @@ class MemoryRepository:
             "duplicate_of_execution_id": None,
         }
 
-    def find_execution_by_hash(self, digest: str) -> str | None:
-        return self.hashes.get(digest)
-
-    def complete(self, execution_id: str, **metadata) -> None:
+    def claim_file(self, execution_id: str, **metadata) -> str | None:
+        duplicate_of = self.hashes.get(metadata["digest"])
+        if duplicate_of:
+            return duplicate_of
         execution = self.executions[execution_id]
         execution.update(
-            status="completed",
             file_name=metadata["file_name"],
             extension=metadata["extension"],
             size_bytes=metadata["size_bytes"],
             sha256=metadata["digest"],
-            finished_at=datetime.now(UTC),
         )
         self.hashes[metadata["digest"]] = execution_id
+        return None
+
+    def mark_completed(self, execution_id: str) -> None:
+        self.executions[execution_id].update(
+            status="completed", finished_at=datetime.now(UTC)
+        )
+
+    def abort_claim(self, execution_id: str, reason: str) -> None:
+        execution = self.executions[execution_id]
+        if execution["sha256"]:
+            self.hashes.pop(execution["sha256"], None)
+        execution.update(
+            status="failed", failure_reason=reason, finished_at=datetime.now(UTC)
+        )
 
     def finish(
         self,
@@ -162,7 +174,7 @@ def test_rejects_empty_and_invalid_files(api, filename, content, reason) -> None
 
 
 def test_identifies_duplicate_by_hash_and_exposes_both_statuses(api) -> None:
-    client, _, _ = api
+    client, _, storage = api
     request = {
         "data": {"source": "GMES/OQC", "imported_by": "test-user"},
         "files": {"file": ("first.csv", b"id\n1\n", "text/csv")},
@@ -180,6 +192,30 @@ def test_identifies_duplicate_by_hash_and_exposes_both_statuses(api) -> None:
     assert detail["duplicate_of_execution_id"] == first.json()["execution_id"]
     duplicate_status = client.get(f"/imports/{detail['execution_id']}").json()
     assert duplicate_status["status"] == "duplicate"
+    assert not (storage / "owm" / detail["execution_id"]).exists()
+    assert len(list(storage.glob("**/original.csv"))) == 1
+
+
+def test_storage_failure_releases_hash_claim_and_removes_artifacts(
+    api, monkeypatch
+) -> None:
+    client, repository, storage = api
+
+    def fail_move(*_args, **_kwargs) -> None:
+        raise OSError("synthetic storage failure")
+
+    monkeypatch.setattr("app.imports.shutil.move", fail_move)
+    response = client.post(
+        "/imports",
+        data={"source": "OWM", "technical_origin": "fixture"},
+        files={"file": ("entry.csv", b"id\n1\n", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    execution_id = response.json()["detail"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert repository.hashes == {}
+    assert not list(storage.glob("**/original.csv"))
 
 
 def test_requires_actor_and_returns_not_found(api) -> None:
