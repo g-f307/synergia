@@ -63,6 +63,11 @@ npm start
 O frontend ficará disponível em `http://localhost:4200` e consultará o endpoint
 de saúde da API.
 
+O endereço da API utilizado pelo Angular é definido em
+`frontend-angular/src/environments/environment.ts`. O `.env` da raiz é
+reservado aos serviços de backend e infraestrutura; aplicações Angular não
+carregam esse arquivo automaticamente.
+
 Build e testes:
 
 ```bash
@@ -75,3 +80,9 @@ npm test -- --watch=false
 
 Copie `.env.example` para `.env` apenas no ambiente local. O arquivo `.env` é
 ignorado pelo Git e não deve conter credenciais reais compartilhadas.
+
+## Integração contínua
+
+O workflow `.github/workflows/ci.yml` valida Pull Requests e pushes para
+`main`, executando `npm ci`, build e testes Angular, testes FastAPI e
+`docker compose config`.
