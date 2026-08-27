@@ -4,10 +4,18 @@
     <h1 id="page-title">{{ title }}</h1>
     <p>Estrutura inicial do frontend Angular integrada à API FastAPI.</p>
 
-    @if (health$ | async; as health) {
-      <p class="status status--ok">API disponível: {{ health.service }}</p>
-    } @else {
-      <p class="status status--offline">API indisponível em http://localhost:8000</p>
+    @if (healthState$ | async; as health) {
+      @switch (health.state) {
+        @case ('loading') {
+          <p class="status status--loading">Verificando disponibilidade da API…</p>
+        }
+        @case ('available') {
+          <p class="status status--ok">API disponível: {{ health.service }}</p>
+        }
+        @case ('unavailable') {
+          <p class="status status--offline">API indisponível</p>
+        }
+      }
     }
   </section>
 </main>

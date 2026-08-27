@@ -39,6 +39,11 @@
   color: #065f46;
 }
 
+.status--loading {
+  background: #e0f7fa;
+  color: #006064;
+}
+
 .status--offline {
   background: #fef2f2;
   color: #991b1b;
