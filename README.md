@@ -1,4 +1,13 @@
-# SYNERGIA - protótipo navegável
+# SYNERGIA - protótipo navegável e sistema em desenvolvimento
+
+## Linhas do projeto
+
+- `prototype-pages`: versão estática congelada e publicada no GitHub Pages.
+- `main`: desenvolvimento do sistema Angular, FastAPI e PostgreSQL.
+
+O protótipo permanece na raiz para preservar sua execução e seus caminhos
+relativos. A nova aplicação Angular fica em `frontend-angular/` e não altera a
+publicação estática.
 
 Protótipo frontend da solução SYNERGIA para validação de fluxos, conteúdo e interface. Todos os registros são sintéticos, permanecem no navegador e não representam informações operacionais reais.
 
