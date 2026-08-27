@@ -57,7 +57,7 @@ jobs:
       - name: Executar lint
         run: ruff check .
       - name: Executar testes
-        run: pytest -q --junitxml=reports/pytest.xml
+        run: pytest -q -m "not integration" --junitxml=reports/pytest.xml
       - name: Validar build Python
         run: python -m compileall -q app
       - name: Publicar relatório FastAPI
@@ -96,10 +96,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - name: Instalar dependências de persistência
+        run: pip install -r backend/requirements-dev.txt
       - name: Confirmar disponibilidade do PostgreSQL
         run: pg_isready
       - name: Validar migrations e dados sintéticos
         run: python scripts/validate_project_assets.py
+      - name: Executar testes de persistência
+        env:
+          DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci
+        run: pytest -q -m integration backend/tests/test_persistence.py
       - name: Validar Docker Compose
         run: docker compose config
 
