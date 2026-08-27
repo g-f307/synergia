@@ -71,11 +71,33 @@ jobs:
   project-data:
     name: Banco e dados sintéticos
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: synergia_ci
+          POSTGRES_USER: synergia
+          POSTGRES_PASSWORD: synergia-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U synergia -d synergia_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: synergia_ci
+      PGUSER: synergia
+      PGPASSWORD: synergia-ci-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Confirmar disponibilidade do PostgreSQL
+        run: pg_isready
       - name: Validar migrations e dados sintéticos
         run: python scripts/validate_project_assets.py
       - name: Validar Docker Compose

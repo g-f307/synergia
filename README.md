@@ -88,6 +88,8 @@ O workflow `.github/workflows/ci.yml` valida Pull Requests e pushes para
 valida migrations, dados sintéticos e Docker Compose e confirma, somente para
 leitura, que o protótipo permanece disponível na branch `prototype-pages`.
 
-As migrations SQL em `database/migrations/` são aplicadas sequencialmente em
-um banco temporário durante a CI. Os dados sintéticos aceitos em
+As migrations SQL em `database/migrations/` são aplicadas, em ordem pelo nome,
+em um PostgreSQL 16 temporário durante a CI. A validação falha quando não há
+migrations ou quando qualquer arquivo contém SQL inválido para PostgreSQL.
+Os dados sintéticos aceitos em
 `data/synthetic/` são arquivos JSON válidos ou CSV com cabeçalho preenchido.
