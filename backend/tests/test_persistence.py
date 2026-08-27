@@ -130,3 +130,122 @@ def test_persists_traceable_partial_release_and_reprocessing() -> None:
                 "exec-001",
             )
         connection.rollback()
+
+
+def test_rejects_incompatible_workorder_lot_and_serial_hierarchies() -> None:
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO synergia.executions (id) VALUES ('exec-integrity');"
+            )
+            cursor.execute(
+                """
+                INSERT INTO synergia.source_files
+                    (execution_id, file_name, content_hash)
+                VALUES ('exec-integrity', 'integrity.xlsx', %s)
+                RETURNING id;
+                """,
+                ("b" * 64,),
+            )
+            source_file_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.workorders
+                    (workorder_number, execution_id, source_file_id)
+                VALUES
+                    ('WO-A', 'exec-integrity', %s),
+                    ('WO-B', 'exec-integrity', %s)
+                RETURNING id;
+                """,
+                (source_file_id, source_file_id),
+            )
+            workorder_a, workorder_b = (row[0] for row in cursor.fetchall())
+            cursor.execute(
+                """
+                INSERT INTO synergia.lots
+                    (lot_number, workorder_id, execution_id, source_file_id)
+                VALUES ('LOT-B', %s, 'exec-integrity', %s)
+                RETURNING id;
+                """,
+                (workorder_b, source_file_id),
+            )
+            lot_b = cursor.fetchone()[0]
+
+            with pytest.raises(psycopg.errors.ForeignKeyViolation):
+                with connection.transaction():
+                    cursor.execute(
+                        """
+                        INSERT INTO synergia.serials (
+                            serial_number, workorder_id, lot_id,
+                            execution_id, source_file_id
+                        ) VALUES ('SER-INVALID', %s, %s, 'exec-integrity', %s);
+                        """,
+                        (workorder_a, lot_b, source_file_id),
+                    )
+
+            cursor.execute(
+                """
+                INSERT INTO synergia.serials (
+                    serial_number, workorder_id, lot_id,
+                    execution_id, source_file_id
+                ) VALUES ('SER-B', %s, %s, 'exec-integrity', %s)
+                RETURNING id;
+                """,
+                (workorder_b, lot_b, source_file_id),
+            )
+            serial_b = cursor.fetchone()[0]
+
+            incompatible_inserts = (
+                """
+                INSERT INTO synergia.holds (
+                    serial_id, workorder_id, execution_id, source_file_id
+                ) VALUES (%s, %s, 'exec-integrity', %s);
+                """,
+                """
+                INSERT INTO synergia.pending_items (
+                    serial_id, workorder_id, execution_id, source_file_id,
+                    category
+                ) VALUES (%s, %s, 'exec-integrity', %s, 'release');
+                """,
+                """
+                INSERT INTO synergia.oqc_decisions (
+                    serial_id, workorder_id, execution_id, source_file_id,
+                    decision_state
+                ) VALUES (%s, %s, 'exec-integrity', %s, 'pending');
+                """,
+            )
+            for statement in incompatible_inserts:
+                with pytest.raises(psycopg.errors.ForeignKeyViolation):
+                    with connection.transaction():
+                        cursor.execute(
+                            statement,
+                            (serial_b, workorder_a, source_file_id),
+                        )
+        connection.rollback()
+
+
+def test_rejects_same_sha256_with_different_letter_case() -> None:
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO synergia.executions (id) VALUES ('exec-hash');"
+            )
+            cursor.execute(
+                """
+                INSERT INTO synergia.source_files
+                    (execution_id, file_name, content_hash)
+                VALUES ('exec-hash', 'lower.xlsx', %s);
+                """,
+                ("abcdef12" * 8,),
+            )
+            with pytest.raises(psycopg.errors.CheckViolation):
+                with connection.transaction():
+                    cursor.execute(
+                        """
+                        INSERT INTO synergia.source_files
+                            (execution_id, file_name, content_hash)
+                        VALUES ('exec-hash', 'upper.xlsx', %s);
+                        """,
+                        ("ABCDEF12" * 8,),
+                    )
+        connection.rollback()
