@@ -16,7 +16,7 @@ CREATE TABLE synergia.source_files (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     file_name text NOT NULL,
-    content_hash text NOT NULL CHECK (content_hash ~ '^[0-9a-fA-F]{64}$'),
+    content_hash text NOT NULL CHECK (content_hash ~ '^[0-9a-f]{64}$'),
     media_type text,
     size_bytes bigint CHECK (size_bytes IS NULL OR size_bytes >= 0),
     imported_at timestamptz NOT NULL DEFAULT now(),
@@ -63,7 +63,8 @@ CREATE TABLE synergia.lots (
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     source_file_id bigint NOT NULL REFERENCES synergia.source_files(id),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (workorder_id, lot_number)
+    UNIQUE (workorder_id, lot_number),
+    UNIQUE (id, workorder_id)
 );
 
 CREATE TABLE synergia.serials (
@@ -71,17 +72,21 @@ CREATE TABLE synergia.serials (
     serial_number text NOT NULL,
     container_number text,
     workorder_id bigint NOT NULL REFERENCES synergia.workorders(id),
-    lot_id bigint REFERENCES synergia.lots(id),
+    lot_id bigint,
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     source_file_id bigint NOT NULL REFERENCES synergia.source_files(id),
     updated_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (serial_number),
-    UNIQUE NULLS NOT DISTINCT (container_number, serial_number)
+    UNIQUE NULLS NOT DISTINCT (container_number, serial_number),
+    UNIQUE (id, workorder_id),
+    UNIQUE NULLS NOT DISTINCT (id, lot_id, workorder_id),
+    FOREIGN KEY (lot_id, workorder_id)
+        REFERENCES synergia.lots(id, workorder_id)
 );
 
 CREATE TABLE synergia.holds (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    serial_id bigint REFERENCES synergia.serials(id),
+    serial_id bigint,
     workorder_id bigint NOT NULL REFERENCES synergia.workorders(id),
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     source_file_id bigint NOT NULL REFERENCES synergia.source_files(id),
@@ -91,28 +96,36 @@ CREATE TABLE synergia.holds (
     post_release boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CHECK (post_release)
+    CHECK (post_release),
+    FOREIGN KEY (serial_id, workorder_id)
+        REFERENCES synergia.serials(id, workorder_id)
 );
 
 CREATE TABLE synergia.oqc_decisions (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     workorder_id bigint NOT NULL REFERENCES synergia.workorders(id),
-    lot_id bigint REFERENCES synergia.lots(id),
-    serial_id bigint REFERENCES synergia.serials(id),
+    lot_id bigint,
+    serial_id bigint,
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     source_file_id bigint NOT NULL REFERENCES synergia.source_files(id),
     decision_state text NOT NULL
         CHECK (decision_state IN ('pending', 'approved', 'partially_approved', 'rejected', 'not_applicable')),
     reason text,
     decided_at timestamptz,
-    updated_at timestamptz NOT NULL DEFAULT now()
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    FOREIGN KEY (lot_id, workorder_id)
+        REFERENCES synergia.lots(id, workorder_id),
+    FOREIGN KEY (serial_id, workorder_id)
+        REFERENCES synergia.serials(id, workorder_id),
+    FOREIGN KEY (serial_id, lot_id, workorder_id)
+        REFERENCES synergia.serials(id, lot_id, workorder_id)
 );
 
 CREATE TABLE synergia.pending_items (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     workorder_id bigint NOT NULL REFERENCES synergia.workorders(id),
-    lot_id bigint REFERENCES synergia.lots(id),
-    serial_id bigint REFERENCES synergia.serials(id),
+    lot_id bigint,
+    serial_id bigint,
     execution_id text NOT NULL REFERENCES synergia.executions(id),
     source_file_id bigint NOT NULL REFERENCES synergia.source_files(id),
     category text NOT NULL,
@@ -120,7 +133,13 @@ CREATE TABLE synergia.pending_items (
     status text NOT NULL DEFAULT 'open'
         CHECK (status IN ('open', 'resolved', 'cancelled')),
     created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    FOREIGN KEY (lot_id, workorder_id)
+        REFERENCES synergia.lots(id, workorder_id),
+    FOREIGN KEY (serial_id, workorder_id)
+        REFERENCES synergia.serials(id, workorder_id),
+    FOREIGN KEY (serial_id, lot_id, workorder_id)
+        REFERENCES synergia.serials(id, lot_id, workorder_id)
 );
 
 CREATE TABLE synergia.audit_events (
