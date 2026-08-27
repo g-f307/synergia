@@ -30,9 +30,10 @@ python scripts/validate_project_assets.py
 - quantidades são não negativas e a liberação parcial exige quantidade
   liberada maior que zero e menor que a recebida.
 
-O arquivo original não é armazenado nesta versão. Permanecem somente nome,
-tipo, tamanho e hash. Retenção de arquivos e logs continua como decisão de
-governança pendente.
+O arquivo original aceito é preservado em diretório controlado. O banco mantém
+nome, extensão, tipo, tamanho, SHA-256 e somente a chave relativa de
+armazenamento. A execução registra fonte, ator, início, fim, estado, motivo de
+falha e eventual execução original em caso de duplicidade.
 
 ## Diagrama entidade-relacionamento
 
