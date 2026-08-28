@@ -220,13 +220,19 @@ def _normalize_value(field: str, value: Any) -> tuple[Any, str, str | None]:
     return _json_value(value), "preserve_value", None
 
 
-def normalize_file(path: Path, extension: str, source: str) -> dict[str, Any]:
+def normalize_tables(
+    tables: list[tuple[str, list[Any], list[list[Any]]]],
+    source: str,
+    eligible_rows: set[tuple[str, int]] | None = None,
+) -> dict[str, Any]:
     records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
-    for sheet, raw_headers, rows in _read_tables(path, extension):
+    for sheet, raw_headers, rows in tables:
         headers = [normalize_column_name(header) for header in raw_headers]
         for row_number, row in enumerate(rows, 2):
             if not any(value not in (None, "") for value in row):
+                continue
+            if eligible_rows is not None and (sheet, row_number) not in eligible_rows:
                 continue
             values: dict[str, Any] = {}
             originals: dict[str, Any] = {}
@@ -276,3 +282,7 @@ def normalize_file(path: Path, extension: str, source: str) -> dict[str, Any]:
         "issues": issues,
         "records": records,
     }
+
+
+def normalize_file(path: Path, extension: str, source: str) -> dict[str, Any]:
+    return normalize_tables(list(_read_tables(path, extension)), source)

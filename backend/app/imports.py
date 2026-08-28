@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import logging
@@ -16,14 +15,12 @@ from uuid import uuid4
 
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from openpyxl import load_workbook
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.errors import ErrorResponse
-from app.normalization import normalize_file
-from app.validation import failed_validation_report, validate_file
+from app.pipeline import read_source, run_pipeline
 
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -74,6 +71,15 @@ class NormalizationResult(BaseModel):
     records: list[dict]
 
 
+class PipelineSummary(BaseModel):
+    rows_read: int
+    valid_records: int
+    rejected_records: int
+    normalized_records: int
+    errors: int
+    warnings: int
+
+
 class ImportRepository(Protocol):
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -98,6 +104,8 @@ class ImportRepository(Protocol):
     def save_normalized_records(
         self, execution_id: str, records: list[dict]
     ) -> None: ...
+
+    def commit_pipeline(self, execution_id: str, result: dict) -> None: ...
 
     def abort_claim(self, execution_id: str, reason: str) -> None: ...
 
@@ -233,6 +241,150 @@ class PostgresImportRepository:
                     ],
                 )
 
+    def commit_pipeline(self, execution_id: str, result: dict) -> None:
+        """Persist every pipeline output in one database transaction."""
+        with self._connect() as connection:
+            source_file = connection.execute(
+                """
+                SELECT id FROM synergia.source_files
+                WHERE execution_id = %s FOR UPDATE
+                """,
+                (execution_id,),
+            ).fetchone()
+            if source_file is None:
+                raise RuntimeError("Arquivo da execução não encontrado")
+            source_file_id = source_file["id"]
+            rejected = {
+                (issue.get("sheet"), issue.get("row"))
+                for issue in result["issues"]
+                if issue["severity"] == "error" and issue["scope"] == "record"
+            }
+            imported_ids: dict[tuple[str, int], int] = {}
+            for record in result["imported_records"]:
+                key = (record["sheet"], record["row"])
+                row = connection.execute(
+                    """
+                    INSERT INTO synergia.imported_records
+                        (execution_id, source_file_id, sheet_name, row_number,
+                         original_values, processing_status)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        execution_id,
+                        source_file_id,
+                        record["sheet"],
+                        record["row"],
+                        Jsonb(record["original_values"]),
+                        (
+                            "rejected"
+                            if result["blocking"] or key in rejected
+                            else "valid"
+                        ),
+                    ),
+                ).fetchone()
+                imported_ids[key] = row["id"]
+            for issue in result["issues"]:
+                key = (issue.get("sheet"), issue.get("row"))
+                connection.execute(
+                    """
+                    INSERT INTO synergia.pipeline_issues
+                        (execution_id, source_file_id, imported_record_id, scope,
+                         severity, code, sheet_name, row_number, column_name,
+                         reason, details)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        execution_id,
+                        source_file_id,
+                        imported_ids.get(key),
+                        issue["scope"],
+                        issue["severity"],
+                        issue["code"],
+                        issue.get("sheet"),
+                        issue.get("row"),
+                        issue.get("column"),
+                        issue["reason"],
+                        Jsonb(
+                            {
+                                key: value
+                                for key, value in issue.items()
+                                if key
+                                not in {
+                                    "severity",
+                                    "code",
+                                    "sheet",
+                                    "row",
+                                    "column",
+                                    "reason",
+                                    "scope",
+                                }
+                            }
+                        ),
+                    ),
+                )
+            for record in result["normalized_records"]:
+                connection.execute(
+                    """
+                    INSERT INTO synergia.normalized_records
+                        (execution_id, source_file_id, imported_record_id,
+                         sheet_name, row_number, normalized_values,
+                         original_values, transformations)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        execution_id,
+                        source_file_id,
+                        imported_ids[(record["sheet"], record["row"])],
+                        record["sheet"],
+                        record["row"],
+                        Jsonb(record["values"]),
+                        Jsonb(record["original_values"]),
+                        Jsonb(record["transformations"]),
+                    ),
+                )
+            summary = result["summary"]
+            connection.execute(
+                """
+                INSERT INTO synergia.pipeline_summaries
+                    (execution_id, source_file_id, rows_read, valid_records,
+                     rejected_records, normalized_records, error_count, warning_count)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    execution_id,
+                    source_file_id,
+                    summary["rows_read"],
+                    summary["valid_records"],
+                    summary["rejected_records"],
+                    summary["normalized_records"],
+                    summary["errors"],
+                    summary["warnings"],
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO synergia.audit_events
+                    (execution_id, source_file_id, entity_type, entity_id,
+                     event_type, payload)
+                VALUES (%s, %s, 'execution', %s, 'pipeline_finished', %s)
+                """,
+                (execution_id, source_file_id, execution_id, Jsonb(summary)),
+            )
+            connection.execute(
+                """
+                UPDATE synergia.executions
+                SET status = %s, failure_reason = %s, finished_at = now(),
+                    updated_at = now()
+                WHERE id = %s
+                """,
+                (
+                    result["status"],
+                    "validation_failed" if result["blocking"] else None,
+                    execution_id,
+                ),
+            )
+
     def abort_claim(self, execution_id: str, reason: str) -> None:
         with self._connect() as connection:
             connection.execute(
@@ -311,29 +463,69 @@ def configured_organizations() -> set[str] | None:
     return values or None
 
 
-def _validate(path: Path, extension: str) -> None:
+def _write_pipeline_artifacts(directory: Path, pipeline: dict) -> None:
+    summary = pipeline["summary"]
+    report = {
+        "execution_id": pipeline["execution_id"],
+        "source": pipeline["source"],
+        "file_name": pipeline["file_name"],
+        "valid": summary["errors"] == 0,
+        "blocking": pipeline["blocking"],
+        "row_count": summary["rows_read"],
+        "error_count": summary["errors"],
+        "warning_count": summary["warnings"],
+        "issues": pipeline["issues"],
+    }
+    normalized = {
+        "execution_id": pipeline["execution_id"],
+        "source": pipeline["source"],
+        "file_name": pipeline["file_name"],
+        "record_count": summary["normalized_records"],
+        "warning_count": summary["warnings"],
+        "issues": [
+            issue for issue in pipeline["issues"] if issue["severity"] == "warning"
+        ],
+        "records": pipeline["normalized_records"],
+    }
+    artifacts = {
+        "validation-report.json": json.dumps(
+            report, ensure_ascii=False, indent=2, default=str
+        )
+        + "\n",
+        "pipeline-summary.json": json.dumps(summary, ensure_ascii=False, indent=2)
+        + "\n",
+    }
+    if normalized["record_count"] or not pipeline["blocking"]:
+        artifacts["normalized-data.json"] = (
+            json.dumps(normalized, ensure_ascii=False, indent=2) + "\n"
+        )
+
+    temporary: list[tuple[Path, Path]] = []
+    targets = [directory / name for name in artifacts]
     try:
-        if extension == ".json":
-            with path.open(encoding="utf-8") as stream:
-                json.load(stream)
-        elif extension == ".csv":
-            with path.open(encoding="utf-8-sig", newline="") as stream:
-                rows = csv.reader(stream)
-                header = next(rows, None)
-                if not header or not any(cell.strip() for cell in header):
-                    raise ValueError("CSV sem cabeçalho")
-        else:
-            with path.open("rb") as stream:
-                workbook = load_workbook(stream, read_only=True, data_only=True)
-                if not workbook.sheetnames:
-                    raise ValueError("XLSX sem planilhas")
-                workbook.close()
-    except (UnicodeError, csv.Error, json.JSONDecodeError, OSError, ValueError) as exc:
-        raise ValueError(f"arquivo {extension[1:].upper()} inválido") from exc
-    except Exception as exc:
-        if extension == ".xlsx":
-            raise ValueError("arquivo XLSX inválido") from exc
+        for name, content in artifacts.items():
+            with NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=directory, delete=False
+            ) as stream:
+                stream.write(content)
+                temporary.append((Path(stream.name), directory / name))
+        for temp_path, target in temporary:
+            temp_path.replace(target)
+    except Exception:
+        for temp_path, _ in temporary:
+            temp_path.unlink(missing_ok=True)
+        for target in targets:
+            target.unlink(missing_ok=True)
         raise
+
+
+def _remove_pipeline_artifacts(directory: Path) -> None:
+    for name in (
+        "validation-report.json",
+        "pipeline-summary.json",
+        "normalized-data.json",
+    ):
+        (directory / name).unlink(missing_ok=True)
 
 
 def _error(
@@ -423,7 +615,7 @@ async def upload_import(
         if size_bytes == 0:
             _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
         content_hash = digest.hexdigest()
-        _validate(temp_path, extension)
+        tables, read_issues = read_source(temp_path, extension, source.value)
         destination = (
             storage_root() / source.name / execution_id / f"original{extension}"
         )
@@ -474,67 +666,30 @@ async def upload_import(
                 },
             ) from exc
         try:
-            report = validate_file(
-                destination,
-                extension,
-                source.value,
-                configured_organizations(),
+            run_pipeline(
+                execution_id=execution_id,
+                file_name=safe_name,
+                source=source.value,
+                repository=repository,
+                tables=tables,
+                read_issues=read_issues,
+                known_organizations=configured_organizations(),
+                prepare_commit=lambda result: _write_pipeline_artifacts(
+                    destination.parent, result
+                ),
             )
-        except Exception:
-            logger.exception(
-                "import_validation_read_failed execution_id=%s", execution_id
-            )
-            report = failed_validation_report(
-                source.value,
-                "validation_read_error",
-                "Falha inesperada durante a leitura do arquivo",
-            )
-        report.update(
-            execution_id=execution_id,
-            file_name=safe_name,
-        )
-        for issue in report["issues"]:
-            issue["file_name"] = safe_name
-        report_path = destination.parent / "validation-report.json"
-        report_path.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2, default=str) + "\n",
-            encoding="utf-8",
-        )
-        if report["blocking"]:
-            repository.mark_validation_failed(execution_id)
-            logger.warning(
-                "import_validation_blocked execution_id=%s errors=%d warnings=%d",
-                execution_id,
-                report["error_count"],
-                report["warning_count"],
-            )
-        else:
-            try:
-                normalized = normalize_file(destination, extension, source.value)
-                normalized.update(
-                    execution_id=execution_id,
-                    file_name=safe_name,
-                )
-                normalized_path = destination.parent / "normalized-data.json"
-                normalized_path.write_text(
-                    json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8",
-                )
-                repository.save_normalized_records(execution_id, normalized["records"])
-                repository.mark_completed(execution_id)
-            except Exception as exc:
-                repository.finish(execution_id, "failed", "normalization_error")
-                logger.exception(
-                    "import_normalization_failed execution_id=%s", execution_id
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail={
-                        "code": "normalization_error",
-                        "message": "Não foi possível normalizar o arquivo validado",
-                        "execution_id": execution_id,
-                    },
-                ) from exc
+        except Exception as exc:
+            _remove_pipeline_artifacts(destination.parent)
+            repository.finish(execution_id, "failed", "pipeline_error")
+            logger.exception("import_pipeline_failed execution_id=%s", execution_id)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "code": "pipeline_error",
+                    "message": "Não foi possível processar o arquivo",
+                    "execution_id": execution_id,
+                },
+            ) from exc
         logger.info(
             "import_processed execution_id=%s size_bytes=%d", execution_id, size_bytes
         )
@@ -623,3 +778,26 @@ def get_normalized_data(
         )
     with normalized_path.open(encoding="utf-8") as stream:
         return NormalizationResult.model_validate(json.load(stream))
+
+
+@router.get(
+    "/{execution_id}/pipeline-summary",
+    response_model=PipelineSummary,
+    summary="Visualizar as contagens do pipeline integrado",
+    responses={404: {"model": ErrorResponse, "description": "Resumo não encontrado"}},
+)
+def get_pipeline_summary(
+    execution_id: str,
+    repository: ImportRepository = Depends(get_repository),
+) -> PipelineSummary:
+    execution = repository.get(execution_id)
+    if execution is None:
+        raise HTTPException(
+            status_code=404, detail="Execução de importação não encontrada"
+        )
+    source = ImportSource(execution["source"])
+    summary_path = storage_root() / source.name / execution_id / "pipeline-summary.json"
+    if not summary_path.is_file():
+        raise HTTPException(status_code=404, detail="Resumo do pipeline não disponível")
+    with summary_path.open(encoding="utf-8") as stream:
+        return PipelineSummary.model_validate(json.load(stream))
