@@ -95,3 +95,11 @@ Workorder, proveniência por valor, ausências e divergências. O algoritmo,
 precedência das fontes e comparação com a massa equivalente à `WO Status.xlsx`
 estão documentados em `docs/consolidation.md`. A disponibilização por API e as
 regras automáticas OQC permanecem separadas nas respectivas etapas do projeto.
+
+## Regras de negócio
+
+O resultado consolidado pode ser classificado por
+`app.business_rules.classify`. O motor mantém categorias simultâneas, fila ativa
+por antiguidade, histórico por execução e a evidência de cada regra aplicada.
+O catálogo e as decisões de classificação estão documentados em
+`docs/business-rules.md`.

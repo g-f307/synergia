@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "thresholds": {
+    "long_term_hold_days": 30,
+    "aging_days": 7,
+    "aging_priority_bonus": 10,
+    "container_priority_bonus": 5
+  },
+  "rules": {
+    "oqc_pass": {
+      "description": "Decisão OQC aprovada ou liberada",
+      "priority": 0,
+      "responsible_area": "Qualidade"
+    },
+    "oqc_pending": {
+      "description": "Decisão OQC ainda pendente",
+      "priority": 40,
+      "responsible_area": "Qualidade"
+    },
+    "oqc_hold": {
+      "description": "Retenção OQC ativa",
+      "priority": 80,
+      "responsible_area": "Qualidade"
+    },
+    "long_term_hold": {
+      "description": "Retenção ativa acima do limite configurado",
+      "priority": 90,
+      "responsible_area": "Qualidade"
+    },
+    "rework": {
+      "description": "Item direcionado para retrabalho",
+      "priority": 70,
+      "responsible_area": "Produção"
+    },
+    "ship_block": {
+      "description": "Embarque explicitamente bloqueado",
+      "priority": 100,
+      "responsible_area": "Logística"
+    },
+    "pre_release_pending": {
+      "description": "Pendência registrada antes de qualquer liberação",
+      "priority": 50,
+      "responsible_area": "Suprimentos"
+    },
+    "post_release_hold": {
+      "description": "Hold registrado após liberação parcial ou integral",
+      "priority": 60,
+      "responsible_area": "Qualidade"
+    },
+    "aging": {
+      "description": "Pendência ativa acima do limite de aging",
+      "priority": 30,
+      "responsible_area": "Suprimentos"
+    },
+    "container_impact": {
+      "description": "Pendência com impacto identificável em container",
+      "priority": 20,
+      "responsible_area": "Logística"
+    },
+    "missing_reason": {
+      "description": "Pendência sem razão informada",
+      "priority": 10,
+      "responsible_area": "Qualidade"
+    },
+    "source_divergence": {
+      "description": "Fontes apresentam informações incompatíveis",
+      "priority": 85,
+      "responsible_area": "Governança de Dados"
+    }
+  }
+}

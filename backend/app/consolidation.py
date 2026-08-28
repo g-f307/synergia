@@ -23,6 +23,25 @@ QUANTITY_FIELDS = (
     "pending_quantity",
     "retained_quantity",
 )
+CLASSIFICATION_FIELDS = (
+    "status",
+    "oqc_flag",
+    "hold_flag",
+    "rework_flag",
+    "ship_block_flag",
+    "reason",
+    "hold_reason",
+    "pending_reason",
+    "event_at",
+    "created_at",
+    "decided_at",
+    "inspection_date",
+    "released_at",
+    "resolved_at",
+    "active",
+    "responsible_organization",
+    "responsible_area",
+)
 QUANTITY_SOURCE_PRIORITY = {
     "planned_quantity": ("N-FP", "GMES/OQC", "OWM", "TMS"),
     "produced_quantity": ("GMES/OQC", "N-FP", "OWM", "TMS"),
@@ -181,6 +200,38 @@ def _identifier_values(
             seen.add(text)
             values.append(text)
     return sorted(values), origins
+
+
+def _classification_facts(
+    records: Sequence[Mapping[str, Any]], workorder: str
+) -> list[dict[str, Any]]:
+    facts: list[dict[str, Any]] = []
+    for record in records:
+        values = record.get("values", {})
+        if not isinstance(values, Mapping):
+            continue
+        observed = {
+            field: values.get(field)
+            for field in CLASSIFICATION_FIELDS
+            if _nonempty(values.get(field)) or values.get(field) is False
+        }
+        if not observed:
+            continue
+        facts.append(
+            {
+                "source": record.get("source"),
+                "execution_id": record.get("execution_id"),
+                "source_file_id": record.get("source_file_id"),
+                "sheet": record.get("sheet"),
+                "row": record.get("row"),
+                "workorder_number": workorder,
+                "lot_number": values.get("lot_number"),
+                "serial_number": values.get("serial_number"),
+                "container_number": values.get("container_number"),
+                **observed,
+            }
+        )
+    return facts
 
 
 def _quantity_observations(
@@ -342,6 +393,7 @@ def _consolidate_workorder(
             "container_numbers": identifiers["container_number"],
             "organization_codes": identifiers["organization_code"],
             "workorder_types": identifiers["workorder_type"],
+            "classification_facts": _classification_facts(records, workorder),
             **quantities,
             "partially_released": partial_release,
             "selected_quantity_sources": selected_quantity_sources,
