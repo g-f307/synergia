@@ -1,59 +1,40 @@
-# FrontendAngular
+# Frontend Angular
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+Frontend oficial do SYNERGIA, implementado em Angular 20. Os contratos são
+consumidos exclusivamente pela API FastAPI; esta aplicação não acessa o banco
+ou os arquivos importados diretamente.
 
-## Development server
+## Desenvolvimento
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Instale exatamente as versões do lockfile e inicie o servidor:
 
 ```bash
-ng generate component component-name
+npm ci
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+A aplicação fica em <http://localhost:4200>. O endereço da API está em
+`src/environments/environment.ts` e, no ambiente local, aponta para
+`http://localhost:8000`.
+
+## Validação
 
 ```bash
-ng generate --help
+npm run lint
+npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
+npm run build
 ```
 
-## Building
+O build de produção é gerado em `dist/frontend-angular/`. A CI usa Node.js
+22.12 e executa os três comandos acima em todo PR para `main`.
 
-To build the project run:
+## Limites atuais
 
-```bash
-ng build
-```
+Não há framework end-to-end configurado nesta etapa. Playwright/RPA está
+planejado e sua adoção exige issue e configuração próprias. O protótipo
+estático publicado em `prototype-pages` é uma referência separada e não faz
+parte deste diretório.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Consulte a [arquitetura](../docs/architecture.md) e a
+[reconstrução do ambiente](../docs/local-environment.md) para o contexto
+completo.

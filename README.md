@@ -6,11 +6,22 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 
 ## Estrutura
 
-- `frontend-angular/`: aplicação web Angular;
-- `backend/`: API FastAPI;
-- `database/`: migrations e documentação do modelo persistente;
-- `data/synthetic/`: massas sintéticas controladas;
-- `docker-compose.yml`: PostgreSQL para desenvolvimento local.
+- [`frontend-angular/`](frontend-angular/): aplicação web Angular;
+- [`backend/`](backend/): API FastAPI;
+- [`database/`](database/): migrations e documentação do modelo persistente;
+- [`data/synthetic/`](data/synthetic/): massas sintéticas controladas;
+- [`docker-compose.yml`](docker-compose.yml): PostgreSQL local.
+
+## Documentação e governança
+
+O README é o ponto de entrada. Os detalhes vigentes ficam em:
+
+- [arquitetura implementada e componentes planejados](docs/architecture.md);
+- [matriz de rastreabilidade das issues #1 a #10](docs/traceability-matrix.md);
+- [convenções de versionamento](docs/versioning.md);
+- [reconstrução completa do ambiente local](docs/local-environment.md);
+- [contratos da API](docs/api-contracts.md);
+- [guia de contribuição, Definition of Ready e Definition of Done](CONTRIBUTING.md).
 
 ## Protótipo navegável
 
@@ -25,6 +36,10 @@ O protótipo estático aprovado não é duplicado na `main`. Ele permanece em:
 - Node.js 20.19, 22.12 ou versão posterior compatível com Angular 20;
 - Python 3.11 ou superior;
 - Docker com Docker Compose.
+
+Para reconstruir banco, backend e frontend desde um clone, use o procedimento
+reproduzível em [docs/local-environment.md](docs/local-environment.md). As
+seções abaixo são apenas uma referência rápida.
 
 ## PostgreSQL
 
@@ -45,7 +60,7 @@ uvicorn app.main:app --reload
 A API ficará disponível em `http://localhost:8000`; o endpoint de saúde é
 `GET /health`. Uploads rastreáveis são feitos em `POST /imports` e consultados
 em `GET /imports/{execution_id}`; exemplos e configuração estão em
-`backend/README.md`.
+[`backend/README.md`](backend/README.md).
 
 Testes:
 
@@ -58,7 +73,7 @@ pytest
 
 ```bash
 cd frontend-angular
-npm install
+npm ci
 npm start
 ```
 
