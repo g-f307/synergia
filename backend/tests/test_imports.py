@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
@@ -19,6 +21,8 @@ class MemoryRepository:
         self.executions: dict[str, dict] = {}
         self.hashes: dict[str, str] = {}
         self.normalized_records: dict[str, list[dict]] = {}
+        self.files: dict[str, list[dict]] = {}
+        self.next_file_id = 1
 
     def start(
         self, execution_id: str, source: str, actor_type: str, actor: str
@@ -38,20 +42,27 @@ class MemoryRepository:
             "failure_reason": None,
             "duplicate_of_execution_id": None,
         }
+        self.files[execution_id] = []
 
-    def claim_file(self, execution_id: str, **metadata) -> str | None:
+    def claim_file(
+        self, execution_id: str, **metadata
+    ) -> tuple[int | None, str | None]:
         duplicate_of = self.hashes.get(metadata["digest"])
         if duplicate_of:
-            return duplicate_of
+            return None, duplicate_of
+        source_file_id = self.next_file_id
+        self.next_file_id += 1
+        self.files[execution_id].append({"id": source_file_id, **metadata})
         execution = self.executions[execution_id]
-        execution.update(
-            file_name=metadata["file_name"],
-            extension=metadata["extension"],
-            size_bytes=metadata["size_bytes"],
-            sha256=metadata["digest"],
-        )
+        if execution["file_name"] is None:
+            execution.update(
+                file_name=metadata["file_name"],
+                extension=metadata["extension"],
+                size_bytes=metadata["size_bytes"],
+                sha256=metadata["digest"],
+            )
         self.hashes[metadata["digest"]] = execution_id
-        return None
+        return source_file_id, None
 
     def mark_completed(self, execution_id: str) -> None:
         self.executions[execution_id].update(
@@ -78,8 +89,9 @@ class MemoryRepository:
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
         execution = self.executions[execution_id]
-        if execution["sha256"]:
-            self.hashes.pop(execution["sha256"], None)
+        for metadata in self.files[execution_id]:
+            self.hashes.pop(metadata["digest"], None)
+        self.files[execution_id] = []
         execution.update(
             status="failed", failure_reason=reason, finished_at=datetime.now(UTC)
         )
@@ -387,7 +399,79 @@ def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
     assert normalized["processing"]["execution_id"] == execution_id
     assert normalized["processing"]["rule_catalog_version"] == "1.0.0"
     assert normalized["processing"]["summary"]["consolidated_workorders"] == 1
+    provenance = normalized["processing"]["consolidation"]["workorders"][0][
+        "provenance"
+    ]["workorder_number"][0]
+    assert provenance["source_file_id"] == repository.files[execution_id][0]["id"]
     assert (storage / "n_fp" / execution_id / "normalized-data.json").exists()
+
+
+def test_multisource_upload_consolidates_precedence_and_divergence(
+    tmp_path, monkeypatch
+) -> None:
+    repository = MemoryRepository()
+    app.dependency_overrides[get_repository] = lambda: repository
+    monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path))
+
+    async def request() -> tuple[httpx.Response, dict]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            response = await client.post(
+                "/imports",
+                data={"source": ["N-FP", "OWM"], "imported_by": "batch"},
+                files=[
+                    (
+                        "file",
+                        (
+                            "plan.csv",
+                            b"workorder,planned_quantity\nWO-MULTI,10\n",
+                            "text/csv",
+                        ),
+                    ),
+                    (
+                        "file",
+                        (
+                            "receiving.csv",
+                            b"workorder,planned_quantity,received_quantity,"
+                            b"released_quantity\nWO-MULTI,12,10,6\n",
+                            "text/csv",
+                        ),
+                    ),
+                ],
+            )
+            execution_id = response.json()["execution_id"]
+            normalized = (
+                await client.get(f"/imports/{execution_id}/normalized-data")
+            ).json()
+            return response, normalized
+
+    try:
+        response, normalized = asyncio.run(request())
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    execution_id = response.json()["execution_id"]
+    processing = normalized["processing"]
+    workorder = processing["consolidation"]["workorders"][0]
+    source_file_ids = {
+        origin["source_file_id"]
+        for origin in workorder["provenance"]["planned_quantity"]
+    }
+
+    assert workorder["planned_quantity"] == 10
+    assert workorder["selected_quantity_sources"]["planned_quantity"] == "N-FP"
+    assert workorder["partially_released"] is True
+    assert len(source_file_ids) == 2
+    assert None not in source_file_ids
+    assert source_file_ids == {item["id"] for item in repository.files[execution_id]}
+    assert processing["summary"]["eligible_normalized_records"] == 2
+    assert processing["summary"]["classifications_by_rule"]["source_divergence"] == 1
+    assert (tmp_path / "n_fp" / execution_id / "normalized-data.json").exists()
+    assert (tmp_path / "n_fp" / execution_id / "original-1.csv").exists()
+    assert (tmp_path / "owm" / execution_id / "original-2.csv").exists()
 
 
 def test_pipeline_exposes_partial_summary_and_keeps_valid_rows(api) -> None:

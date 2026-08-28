@@ -20,13 +20,23 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
             cursor.execute(
                 """
                 INSERT INTO synergia.source_files
-                    (execution_id, file_name, content_hash)
-                VALUES ('exec-processing-db', 'processing.csv', %s)
+                    (execution_id, source, file_name, content_hash)
+                VALUES ('exec-processing-db', 'N-FP', 'plan.csv', %s)
                 RETURNING id;
                 """,
                 ("c" * 64,),
             )
             source_file_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.source_files
+                    (execution_id, source, file_name, content_hash)
+                VALUES ('exec-processing-db', 'OWM', 'receiving.csv', %s)
+                RETURNING id;
+                """,
+                ("d" * 64,),
+            )
+            receiving_file_id = cursor.fetchone()[0]
             cursor.execute(
                 """
                 INSERT INTO synergia.normalized_records (
@@ -42,11 +52,24 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
             )
             cursor.execute(
                 """
-                SELECT e.source, n.execution_id, n.source_file_id,
+                INSERT INTO synergia.normalized_records (
+                    execution_id, source_file_id, sheet_name, row_number,
+                    normalized_values, original_values
+                ) VALUES (
+                    'exec-processing-db', %s, 'CSV', 2,
+                    '{"workorder_number": "WO-DB", "planned_quantity": 4}',
+                    '{"workorder": "WO-DB", "planned_quantity": 4}'
+                );
+                """,
+                (receiving_file_id,),
+            )
+            cursor.execute(
+                """
+                SELECT sf.source, n.execution_id, n.source_file_id,
                        n.sheet_name, n.row_number, n.normalized_values,
                        n.original_values, n.transformations
                 FROM synergia.normalized_records n
-                JOIN synergia.executions e ON e.id = n.execution_id
+                JOIN synergia.source_files sf ON sf.id = n.source_file_id
                 WHERE n.execution_id = 'exec-processing-db';
                 """
             )
@@ -76,10 +99,17 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
                 workorder["provenance"]["planned_quantity"][0]["source_file_id"]
                 == source_file_id
             )
+            assert {
+                item["source_file_id"]
+                for item in workorder["provenance"]["planned_quantity"]
+            } == {source_file_id, receiving_file_id}
             assert result["summary"]["consolidated_quantities"]["planned_quantity"] == {
                 "known_workorders": 1,
                 "total": 3,
             }
+            assert (
+                result["summary"]["classifications_by_rule"]["source_divergence"] == 1
+            )
         connection.rollback()
 
 
@@ -308,9 +338,7 @@ def test_rejects_incompatible_workorder_lot_and_serial_hierarchies() -> None:
 def test_rejects_same_sha256_with_different_letter_case() -> None:
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO synergia.executions (id) VALUES ('exec-hash');"
-            )
+            cursor.execute("INSERT INTO synergia.executions (id) VALUES ('exec-hash');")
             cursor.execute(
                 """
                 INSERT INTO synergia.source_files
