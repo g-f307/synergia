@@ -157,7 +157,7 @@ def test_rejects_unsupported_extension_and_keeps_failure_trace(api) -> None:
     )
 
     assert response.status_code == 415
-    execution_id = response.json()["detail"]["execution_id"]
+    execution_id = response.json()["error"]["details"]["execution_id"]
     status_response = client.get(f"/imports/{execution_id}")
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "failed"
@@ -181,7 +181,7 @@ def test_rejects_empty_and_invalid_files(api, filename, content, reason) -> None
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["code"] == reason
+    assert response.json()["error"]["code"] == reason
 
 
 def test_identifies_duplicate_by_hash_and_exposes_both_statuses(api) -> None:
@@ -199,7 +199,7 @@ def test_identifies_duplicate_by_hash_and_exposes_both_statuses(api) -> None:
 
     assert first.status_code == 201
     assert second.status_code == 409
-    detail = second.json()["detail"]
+    detail = second.json()["error"]["details"]
     assert detail["duplicate_of_execution_id"] == first.json()["execution_id"]
     duplicate_status = client.get(f"/imports/{detail['execution_id']}").json()
     assert duplicate_status["status"] == "duplicate"
@@ -223,7 +223,7 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     )
 
     assert response.status_code == 500
-    execution_id = response.json()["detail"]["execution_id"]
+    execution_id = response.json()["error"]["details"]["execution_id"]
     assert repository.get(execution_id)["status"] == "failed"
     assert repository.hashes == {}
     assert not list(storage.glob("**/original.csv"))
@@ -237,7 +237,10 @@ def test_requires_actor_and_returns_not_found(api) -> None:
         files={"file": ("entry.json", b"{}", "application/json")},
     )
     assert missing_actor.status_code == 422
-    assert client.get("/imports/unknown").status_code == 404
+    assert missing_actor.json()["error"]["code"] == "missing_actor"
+    not_found = client.get("/imports/unknown")
+    assert not_found.status_code == 404
+    assert not_found.json()["error"]["code"] == "not_found"
 
 
 def test_logs_trace_identifiers_without_file_contents(api, caplog) -> None:

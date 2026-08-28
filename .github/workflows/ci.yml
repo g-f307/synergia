@@ -107,7 +107,10 @@ jobs:
       - name: Executar testes de persistência
         env:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci
-        run: pytest -q -m integration backend/tests/test_persistence.py
+        run: >-
+          pytest -q -m integration
+          backend/tests/test_persistence.py
+          backend/tests/test_query_persistence.py
       - name: Validar Docker Compose
         run: docker compose config
 
