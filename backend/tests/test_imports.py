@@ -251,6 +251,47 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     assert not list(storage.glob("**/original.csv"))
 
 
+def test_second_file_claim_failure_rolls_back_prepared_batch(
+    api, monkeypatch
+) -> None:
+    client, repository, storage = api
+    original_claim = repository.claim_file
+    claim_count = 0
+
+    def fail_second_claim(execution_id: str, **metadata):
+        nonlocal claim_count
+        claim_count += 1
+        if claim_count == 2:
+            raise RuntimeError("synthetic second claim failure")
+        return original_claim(execution_id, **metadata)
+
+    monkeypatch.setattr(repository, "claim_file", fail_second_claim)
+    response = client.post(
+        "/imports",
+        data={"source": ["N-FP", "OWM"], "imported_by": "test-user"},
+        files=[
+            (
+                "file",
+                ("plan.csv", b"workorder\nWO-1\n", "text/csv"),
+            ),
+            (
+                "file",
+                ("receiving.csv", b"workorder\nWO-1\n", "text/csv"),
+            ),
+        ],
+    )
+
+    assert response.status_code == 500
+    error = response.json()["error"]
+    assert error["code"] == "preparation_error"
+    execution_id = error["details"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert repository.get(execution_id)["failure_reason"] == "preparation_error"
+    assert repository.files[execution_id] == []
+    assert repository.hashes == {}
+    assert not list(storage.glob("**/original-*"))
+
+
 def test_artifact_failure_does_not_commit_pipeline(api, monkeypatch) -> None:
     client, repository, storage = api
     original_replace = Path.replace

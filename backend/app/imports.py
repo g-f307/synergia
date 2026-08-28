@@ -777,6 +777,19 @@ async def upload_import(
         if pipeline_inputs:
             repository.abort_claim(execution_id, "invalid_file")
         _error(repository, execution_id, 422, "invalid_file", str(exc))
+    except Exception as exc:
+        for destination in destinations:
+            destination.unlink(missing_ok=True)
+        repository.abort_claim(execution_id, "preparation_error")
+        logger.exception("import_preparation_failed execution_id=%s", execution_id)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "preparation_error",
+                "message": "Não foi possível preparar os arquivos",
+                "execution_id": execution_id,
+            },
+        ) from exc
     finally:
         for item_file in file:
             await item_file.close()
