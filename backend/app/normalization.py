@@ -65,6 +65,9 @@ IDENTIFIER_FIELDS = frozenset(NORMALIZATION_RULES["identifier_fields"])
 DATE_FIELDS = frozenset(NORMALIZATION_RULES["date_fields"])
 STATE_MAP: dict[str, str] = NORMALIZATION_RULES["state_map"]
 OQC_FLAG_MAP: dict[str, bool] = NORMALIZATION_RULES["oqc_flag_map"]
+BOOLEAN_FIELDS = frozenset(
+    {"active", "hold_flag", "rework_flag", "ship_block_flag"}
+)
 
 
 def _without_accents(value: str) -> str:
@@ -205,6 +208,13 @@ def _normalize_value(field: str, value: Any) -> tuple[Any, str, str | None]:
     if field == "oqc_flag":
         normalized, known = normalize_oqc_flag(value)
         return normalized, "oqc_flag_mapping", None if known else "unknown_oqc_flag"
+    if field in BOOLEAN_FIELDS:
+        normalized, known = normalize_oqc_flag(value)
+        return (
+            normalized,
+            "boolean_flag_mapping",
+            None if known else "unknown_boolean_flag",
+        )
     if isinstance(value, str):
         return value.strip(), "trim_whitespace", None
     return _json_value(value), "preserve_value", None
