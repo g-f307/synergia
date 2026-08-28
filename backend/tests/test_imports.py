@@ -384,6 +384,9 @@ def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
         normalized["records"][0]["original_values"]["workorder_number"] == " wo - 0001 "
     )
     assert repository.normalized_records[execution_id] == normalized["records"]
+    assert normalized["processing"]["execution_id"] == execution_id
+    assert normalized["processing"]["rule_catalog_version"] == "1.0.0"
+    assert normalized["processing"]["summary"]["consolidated_workorders"] == 1
     assert (storage / "n_fp" / execution_id / "normalized-data.json").exists()
 
 

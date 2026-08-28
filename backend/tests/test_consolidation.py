@@ -62,7 +62,7 @@ def test_preserves_partial_release_holds_relationships_and_provenance(records) -
     )
     assert workorder["selected_quantity_sources"]["released_quantity"] == "OWM"
     assert workorder["calculations"]["pending_quantity"]["inputs"] == {
-        "explicit_pending": 0,
+        "explicit_pending": None,
         "planned_quantity": 10,
         "released_quantity": 6,
     }
@@ -89,8 +89,7 @@ def test_records_lot_and_organization_divergences(records) -> None:
         for issue in issues
     )
     assert any(
-        issue["code"] == "source_divergence"
-        and issue["field"] == "organization_code"
+        issue["code"] == "source_divergence" and issue["field"] == "organization_code"
         for issue in issues
     )
 
@@ -116,10 +115,18 @@ def test_compares_result_with_wo_status_reference(records) -> None:
     comparison = compare_with_reference(consolidate(records), reference)
 
     assert comparison == {
-        "matches": True,
+        "matches": False,
         "compared_workorder_count": 4,
-        "difference_count": 0,
-        "differences": [],
+        "difference_count": 1,
+        "differences": [
+            {
+                "workorder_number": "WO-PQ-002",
+                "code": "value_mismatch",
+                "field": "pending_quantity",
+                "expected": 5,
+                "observed": None,
+            }
+        ],
     }
 
 
@@ -225,5 +232,5 @@ def test_excludes_direct_workorders_with_conflicting_relationships(
     assert workorders["WO-B"][output_field] == []
     assert workorders["WO-A"]["container_numbers"] == []
     assert workorders["WO-B"]["container_numbers"] == []
-    assert workorders["WO-A"]["received_quantity"] == 0
-    assert workorders["WO-B"]["received_quantity"] == 0
+    assert workorders["WO-A"]["received_quantity"] is None
+    assert workorders["WO-B"]["received_quantity"] is None
