@@ -84,6 +84,24 @@ def test_column_mapping_and_result_are_reproducible(tmp_path):
     assert first == second
 
 
+def test_normalizes_explicit_business_rule_flags(tmp_path):
+    path = write_csv(
+        tmp_path,
+        "workorder_number,hold_flag,rework_flag,ship_block_flag,ativo\n"
+        "WO-1,Sim,Não,true,false\n",
+    )
+
+    result = normalize_file(path, ".csv", "OWM")
+
+    assert result["records"][0]["values"] == {
+        "workorder_number": "WO-1",
+        "hold_flag": True,
+        "rework_flag": False,
+        "ship_block_flag": True,
+        "active": False,
+    }
+
+
 def test_declarative_rules_are_loaded_from_json():
     rules = load_normalization_rules()
 

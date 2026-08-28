@@ -54,6 +54,12 @@ def test_preserves_partial_release_holds_relationships_and_provenance(records) -
     assert workorder["container_numbers"] == ["CONT-PM-001"]
     assert workorder["serial_numbers"] == ["SER-PM-001", "SER-PM-002"]
     assert workorder["organization_codes"] == ["ORG-001", "ORG-002"]
+    assert any(
+        fact.get("status") == "rejected"
+        and fact["source"] == "OWM"
+        and fact["serial_number"] == "SER-PM-001"
+        for fact in workorder["classification_facts"]
+    )
     assert workorder["selected_quantity_sources"]["released_quantity"] == "OWM"
     assert workorder["calculations"]["pending_quantity"]["inputs"] == {
         "explicit_pending": 0,

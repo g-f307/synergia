@@ -1,0 +1,140 @@
+{
+  "workorders": [
+    {
+      "workorder_number": "WO-RULES-001",
+      "organization_codes": ["ORG-001"],
+      "received_quantity": 10,
+      "released_quantity": 5,
+      "partially_released": true,
+      "classification_facts": [
+        {
+          "source": "GMES/OQC",
+          "execution_id": "exec-rules",
+          "source_file_id": 1,
+          "sheet": "OQC",
+          "row": 2,
+          "workorder_number": "WO-RULES-001",
+          "lot_number": "LOT-001",
+          "serial_number": "SER-PASS",
+          "container_number": "CONT-001",
+          "status": "oqc_pass",
+          "reason": "Inspection approved",
+          "decided_at": "2026-08-25",
+          "released_at": "2026-06-30"
+        },
+        {
+          "source": "GMES/OQC",
+          "execution_id": "exec-rules",
+          "source_file_id": 1,
+          "sheet": "OQC",
+          "row": 3,
+          "workorder_number": "WO-RULES-001",
+          "lot_number": "LOT-001",
+          "serial_number": "SER-HOLD",
+          "container_number": "CONT-001",
+          "status": "oqc_hold",
+          "reason": "Dimensional analysis",
+          "created_at": "2026-07-01"
+        },
+        {
+          "source": "GMES/OQC",
+          "execution_id": "exec-rules",
+          "source_file_id": 1,
+          "sheet": "OQC",
+          "row": 4,
+          "workorder_number": "WO-RULES-001",
+          "lot_number": "LOT-002",
+          "status": "oqc_pending",
+          "reason": "Awaiting inspection",
+          "created_at": "2026-08-20"
+        },
+        {
+          "source": "OWM",
+          "execution_id": "exec-rules",
+          "source_file_id": 2,
+          "sheet": "Receiving",
+          "row": 2,
+          "workorder_number": "WO-RULES-001",
+          "serial_number": "SER-REWORK",
+          "status": "rework",
+          "reason": "Assembly correction",
+          "created_at": "2026-08-24"
+        },
+        {
+          "source": "TMS",
+          "execution_id": "exec-rules",
+          "source_file_id": 3,
+          "sheet": "Shipping",
+          "row": 2,
+          "workorder_number": "WO-RULES-001",
+          "serial_number": "SER-BLOCK",
+          "container_number": "CONT-002",
+          "status": "ship_block",
+          "created_at": "2026-08-26"
+        },
+        {
+          "source": "OWM",
+          "execution_id": "exec-rules",
+          "source_file_id": 2,
+          "sheet": "Receiving",
+          "row": 3,
+          "workorder_number": "WO-RULES-001",
+          "serial_number": "SER-CLOSED",
+          "status": "hold",
+          "reason": "Resolved inspection",
+          "created_at": "2026-08-01",
+          "resolved_at": "2026-08-10",
+          "active": false
+        }
+      ]
+    },
+    {
+      "workorder_number": "WO-PRE-002",
+      "organization_codes": ["ORG-002"],
+      "received_quantity": 4,
+      "released_quantity": 0,
+      "partially_released": false,
+      "classification_facts": [
+        {
+          "source": "GMES/OQC",
+          "execution_id": "exec-rules",
+          "source_file_id": 1,
+          "sheet": "OQC",
+          "row": 5,
+          "workorder_number": "WO-PRE-002",
+          "status": "oqc_pending",
+          "reason": "Quality review",
+          "created_at": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "workorder_number": "WO-ORG-003",
+      "organization_codes": ["ORG-003", "ORG-004"],
+      "received_quantity": 2,
+      "released_quantity": 0,
+      "partially_released": false,
+      "classification_facts": [
+        {
+          "source": "OWM",
+          "execution_id": "exec-rules",
+          "source_file_id": 2,
+          "sheet": "Receiving",
+          "row": 4,
+          "workorder_number": "WO-ORG-003",
+          "status": "hold",
+          "reason": "Source organization conflict",
+          "created_at": "2026-08-27"
+        }
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "code": "source_divergence",
+      "workorder_number": "WO-ORG-003",
+      "field": "organization_code",
+      "values": ["ORG-003", "ORG-004"]
+    }
+  ]
+}
