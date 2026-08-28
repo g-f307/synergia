@@ -1,0 +1,162 @@
+[
+  {
+    "source": "N-FP",
+    "execution_id": "exec-plan",
+    "source_file_id": 1,
+    "sheet": "Plano",
+    "row": 2,
+    "values": {
+      "workorder_number": "WO-NORMAL-001",
+      "demand_id": "DEM-001",
+      "model": "MODEL-A",
+      "organization_code": "ORG-001",
+      "workorder_type": "NORMAL",
+      "planned_quantity": 10
+    }
+  },
+  {
+    "source": "GMES/OQC",
+    "execution_id": "exec-production",
+    "source_file_id": 2,
+    "sheet": "Production",
+    "row": 2,
+    "values": {
+      "workorder_number": "WO-NORMAL-001",
+      "lot_number": "LOT-001",
+      "produced_quantity": 10
+    }
+  },
+  {
+    "source": "OWM",
+    "execution_id": "exec-receiving",
+    "source_file_id": 3,
+    "sheet": "Receiving",
+    "row": 2,
+    "values": {
+      "workorder_number": "WO-NORMAL-001",
+      "lot_number": "LOT-001",
+      "serial_number": "SER-001",
+      "received_quantity": 10,
+      "released_quantity": 10
+    }
+  },
+  {
+    "source": "TMS",
+    "execution_id": "exec-shipping",
+    "source_file_id": 4,
+    "sheet": "Shipping",
+    "row": 2,
+    "values": {
+      "serial_number": "SER-001",
+      "container_number": "CONT-001"
+    }
+  },
+  {
+    "source": "N-FP",
+    "execution_id": "exec-plan",
+    "source_file_id": 1,
+    "sheet": "Plano",
+    "row": 3,
+    "values": {
+      "workorder_number": "WO-PQ-002",
+      "demand_id": "DEM-002",
+      "model": "MODEL-PQ",
+      "organization_code": "ORG-001",
+      "workorder_type": "PQ",
+      "planned_quantity": 5
+    }
+  },
+  {
+    "source": "N-FP",
+    "execution_id": "exec-plan",
+    "source_file_id": 1,
+    "sheet": "Plano",
+    "row": 4,
+    "values": {
+      "workorder_number": "WO-PM-003",
+      "demand_id": "DEM-003",
+      "model": "MODEL-PM",
+      "organization_code": "ORG-001",
+      "workorder_type": "PM",
+      "planned_quantity": 10
+    }
+  },
+  {
+    "source": "GMES/OQC",
+    "execution_id": "exec-production",
+    "source_file_id": 2,
+    "sheet": "Production",
+    "row": 3,
+    "values": {
+      "workorder_number": "WO-PM-003",
+      "lot_number": "LOT-PM-A",
+      "serial_number": "SER-PM-001",
+      "organization_code": "ORG-001",
+      "produced_quantity": 8
+    }
+  },
+  {
+    "source": "OWM",
+    "execution_id": "exec-receiving",
+    "source_file_id": 3,
+    "sheet": "Receiving",
+    "row": 3,
+    "values": {
+      "workorder_number": "WO-PM-003",
+      "lot_number": "LOT-PM-B",
+      "serial_number": "SER-PM-001",
+      "organization_code": "ORG-002",
+      "received_quantity": 8,
+      "released_quantity": 6,
+      "retained_quantity": 1,
+      "status": "rejected"
+    }
+  },
+  {
+    "source": "TMS",
+    "execution_id": "exec-shipping",
+    "source_file_id": 4,
+    "sheet": "Shipping",
+    "row": 3,
+    "values": {
+      "serial_number": "SER-PM-001",
+      "container_number": "CONT-PM-001"
+    }
+  },
+  {
+    "source": "OWM",
+    "execution_id": "exec-receiving",
+    "source_file_id": 3,
+    "sheet": "Receiving",
+    "row": 4,
+    "values": {
+      "workorder_number": "WO-PM-003",
+      "lot_number": "LOT-PM-B",
+      "serial_number": "SER-PM-002"
+    }
+  },
+  {
+    "source": "TMS",
+    "execution_id": "exec-shipping",
+    "source_file_id": 4,
+    "sheet": "Shipping",
+    "row": 4,
+    "values": {
+      "serial_number": "SER-PM-002",
+      "container_number": "CONT-PM-001",
+      "hold_flag": true
+    }
+  },
+  {
+    "source": "TMS",
+    "execution_id": "exec-shipping",
+    "source_file_id": 4,
+    "sheet": "Shipping",
+    "row": 5,
+    "values": {
+      "workorder_number": "WO-SERIAL-004",
+      "serial_number": "SER-SEM-WO",
+      "container_number": "CONT-ORPHAN"
+    }
+  }
+]
