@@ -24,6 +24,10 @@
     "container": "container_number",
     "container_number": "container_number",
     "numero_container": "container_number",
+    "tipo_workorder": "workorder_type",
+    "tipo_de_workorder": "workorder_type",
+    "workorder_type": "workorder_type",
+    "wo_type": "workorder_type",
     "oqc": "oqc_flag",
     "oqc_flag": "oqc_flag",
     "status_oqc": "oqc_flag",
@@ -40,7 +44,8 @@
     "lot_number",
     "model",
     "organization_code",
-    "container_number"
+    "container_number",
+    "workorder_type"
   ],
   "date_fields": [
     "date",
