@@ -77,6 +77,7 @@ def test_unknown_state_and_oqc_flag_are_signaled(tmp_path):
 
 def test_column_mapping_and_result_are_reproducible(tmp_path):
     assert normalize_column_name("  Identificador da Demanda ") == "demand_id"
+    assert normalize_column_name("Tipo de Workorder") == "workorder_type"
     path = write_csv(tmp_path, "Work Order,Estado\nWO-1,Pendente\n")
     first = normalize_file(path, ".csv", "TMS")
     second = normalize_file(path, ".csv", "TMS")

@@ -10,6 +10,8 @@ teste e jamais devem ser usadas como base para corrigir dados de origem.
 | `empty-data.csv` | N-FP | arquivo sem linhas de dados |
 | `invalid-values.csv` | N-FP | Workorder ausente, quantidade e data inválidas; organização desconhecida quando o catálogo configurado não contém `UNKNOWN` |
 | `duplicate-serial.csv` | OWM | serial duplicado |
+| `consolidation_records.json` | todas | consolidação completa, parcial, inexistente, PQ, PM, lote e organização divergentes |
+| `wo-status-reference.csv` | referência | resultado esperado equivalente à `WO Status.xlsx` para a massa sintética |
 | `formula-errors.csv` | N-FP | `#VALUE!` e referência `#REF!` preservados |
 | `unmatched-key.csv` | TMS | chave de Workorder sem correspondência |
 

@@ -86,3 +86,12 @@ diretório padrão é `data/imports/`, ignorado pelo Git.
 
 A especificação OpenAPI interativa está em `http://localhost:8000/docs` e o
 documento JSON em `http://localhost:8000/openapi.json`.
+
+## Consolidação
+
+Registros normalizados podem ser cruzados pelo serviço
+`app.consolidation.consolidate`. O resultado mantém uma única entrada por
+Workorder, proveniência por valor, ausências e divergências. O algoritmo,
+precedência das fontes e comparação com a massa equivalente à `WO Status.xlsx`
+estão documentados em `docs/consolidation.md`. A disponibilização por API e as
+regras automáticas OQC permanecem separadas nas respectivas etapas do projeto.
