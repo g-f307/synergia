@@ -118,70 +118,137 @@ def run_pipeline(
     repository: PipelineRepository,
     tables: list[tuple[str, list[str], list[list[Any]]]],
     read_issues: list[dict[str, Any]],
+    source_file_id: int,
     classified_at: str,
     known_organizations: Collection[str] | None = None,
     prepare_commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Import, validate and normalize one stored file, then commit atomically."""
-    validation = validate_tables(tables, source, known_organizations, read_issues)
+    return run_pipeline_batch(
+        execution_id=execution_id,
+        inputs=[
+            {
+                "file_name": file_name,
+                "source": source,
+                "source_file_id": source_file_id,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        ],
+        repository=repository,
+        classified_at=classified_at,
+        known_organizations=known_organizations,
+        prepare_commit=prepare_commit,
+    )
 
-    imported = _imported_records(tables, source)
-    issues = validation["issues"]
-    structural_blocked = any(
-        issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
-        for issue in issues
-    )
-    rejected_rows = {
-        (issue["sheet"], issue["row"])
-        for issue in issues
-        if issue["severity"] == "error" and (issue.get("row") or 0) > 1
-    }
-    eligible_rows = (
-        set()
-        if structural_blocked
-        else {(record["sheet"], record["row"]) for record in imported} - rejected_rows
-    )
-    normalized = normalize_tables(tables, source, eligible_rows)
-    normalized_records = [
-        {**record, "execution_id": execution_id} for record in normalized["records"]
-    ]
+
+def run_pipeline_batch(
+    *,
+    execution_id: str,
+    inputs: list[dict[str, Any]],
+    repository: PipelineRepository,
+    classified_at: str,
+    known_organizations: Collection[str] | None = None,
+    prepare_commit: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Process every source file from one execution without rereading originals."""
+    imported_records: list[dict[str, Any]] = []
+    normalized_records: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    blocked_files: set[int] = set()
+    valid_records = 0
+    rejected_records = 0
+
+    for item in inputs:
+        source = str(item["source"])
+        file_name = str(item["file_name"])
+        source_file_id = int(item["source_file_id"])
+        tables = item["tables"]
+        validation = validate_tables(
+            tables, source, known_organizations, item["read_issues"]
+        )
+        imported = [
+            {
+                **record,
+                "execution_id": execution_id,
+                "source_file_id": source_file_id,
+                "file_name": file_name,
+            }
+            for record in _imported_records(tables, source)
+        ]
+        file_issues = validation["issues"]
+        structural_blocked = any(
+            issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
+            for issue in file_issues
+        )
+        if structural_blocked:
+            blocked_files.add(source_file_id)
+        rejected_rows = {
+            (issue["sheet"], issue["row"])
+            for issue in file_issues
+            if issue["severity"] == "error" and (issue.get("row") or 0) > 1
+        }
+        eligible_rows = (
+            set()
+            if structural_blocked
+            else {(record["sheet"], record["row"]) for record in imported}
+            - rejected_rows
+        )
+        normalized = normalize_tables(tables, source, eligible_rows)
+        normalized_records.extend(
+            {
+                **record,
+                "execution_id": execution_id,
+                "source_file_id": source_file_id,
+                "file_name": file_name,
+            }
+            for record in normalized["records"]
+        )
+        for issue in [*file_issues, *normalized["issues"]]:
+            issue["file_name"] = file_name
+            issue["source"] = source
+            issue["source_file_id"] = source_file_id
+            issue["scope"] = (
+                "record"
+                if (issue.get("row") or 0) > 1
+                else "structure"
+                if issue["code"] in STRUCTURAL_ISSUES
+                else "file"
+            )
+            issues.append(issue)
+        imported_records.extend(imported)
+        valid_records += len(eligible_rows)
+        rejected_records += len(imported) if structural_blocked else len(rejected_rows)
+
     processing = process_normalized_records(
         normalized_records,
         execution_id=execution_id,
         classified_at=classified_at,
     )
-    issues = [*issues, *normalized["issues"]]
-    for issue in issues:
-        issue["file_name"] = file_name
-        issue["scope"] = (
-            "record"
-            if (issue.get("row") or 0) > 1
-            else "structure"
-            if issue["code"] in STRUCTURAL_ISSUES
-            else "file"
-        )
-
     error_count = sum(issue["severity"] == "error" for issue in issues)
     warning_count = sum(issue["severity"] == "warning" for issue in issues)
     summary = {
-        "rows_read": len(imported),
-        "valid_records": len(eligible_rows),
-        "rejected_records": (
-            len(imported) if structural_blocked else len(rejected_rows)
-        ),
-        "normalized_records": normalized["record_count"],
+        "rows_read": len(imported_records),
+        "valid_records": valid_records,
+        "rejected_records": rejected_records,
+        "normalized_records": len(normalized_records),
         "errors": error_count,
         "warnings": warning_count,
     }
-    status = "validation_failed" if structural_blocked else "completed"
+    status = "validation_failed" if blocked_files else "completed"
+    sources = list(dict.fromkeys(str(item["source"]) for item in inputs))
+    file_names = [str(item["file_name"]) for item in inputs]
     result = {
         "execution_id": execution_id,
-        "source": source,
-        "file_name": file_name,
+        "source": sources[0],
+        "sources": sources,
+        "file_name": file_names[0],
+        "file_names": file_names,
         "status": status,
-        "blocking": structural_blocked,
+        "blocking": bool(blocked_files),
+        "blocked_source_file_ids": sorted(blocked_files),
         "summary": summary,
-        "imported_records": imported,
+        "imported_records": imported_records,
         "issues": issues,
         "normalized_records": normalized_records,
         "processing": processing,

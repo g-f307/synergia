@@ -20,7 +20,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.errors import ErrorResponse
-from app.pipeline import read_source, run_pipeline
+from app.pipeline import read_source, run_pipeline_batch
 
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -96,7 +96,8 @@ class ImportRepository(Protocol):
         digest: str,
         media_type: str | None,
         storage_key: str,
-    ) -> str | None: ...
+        source: str,
+    ) -> tuple[int | None, str | None]: ...
 
     def mark_completed(self, execution_id: str) -> None: ...
 
@@ -151,19 +152,21 @@ class PostgresImportRepository:
         digest: str,
         media_type: str | None,
         storage_key: str,
-    ) -> str | None:
+        source: str,
+    ) -> tuple[int | None, str | None]:
         with self._connect() as connection:
             inserted = connection.execute(
                 """
                 INSERT INTO synergia.source_files
-                    (execution_id, file_name, extension, content_hash, media_type,
-                     size_bytes, storage_key)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (execution_id, source, file_name, extension, content_hash,
+                     media_type, size_bytes, storage_key)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (content_hash) DO NOTHING
-                RETURNING execution_id
+                RETURNING id
                 """,
                 (
                     execution_id,
+                    source,
                     file_name,
                     extension,
                     digest,
@@ -173,7 +176,7 @@ class PostgresImportRepository:
                 ),
             ).fetchone()
             if inserted:
-                return None
+                return inserted["id"], None
 
             duplicate = connection.execute(
                 """
@@ -185,7 +188,7 @@ class PostgresImportRepository:
             ).fetchone()
             if duplicate is None:
                 raise RuntimeError("Conflito de hash sem execução original")
-            return duplicate["execution_id"]
+            return None, duplicate["execution_id"]
 
     def mark_completed(self, execution_id: str) -> None:
         with self._connect() as connection:
@@ -245,24 +248,32 @@ class PostgresImportRepository:
     def commit_pipeline(self, execution_id: str, result: dict) -> None:
         """Persist every pipeline output in one database transaction."""
         with self._connect() as connection:
-            source_file = connection.execute(
+            source_files = connection.execute(
                 """
                 SELECT id FROM synergia.source_files
                 WHERE execution_id = %s FOR UPDATE
                 """,
                 (execution_id,),
-            ).fetchone()
-            if source_file is None:
+            ).fetchall()
+            if not source_files:
                 raise RuntimeError("Arquivo da execução não encontrado")
-            source_file_id = source_file["id"]
+            source_file_ids = {row["id"] for row in source_files}
+            primary_source_file_id = min(source_file_ids)
             rejected = {
-                (issue.get("sheet"), issue.get("row"))
+                (
+                    issue.get("source_file_id"),
+                    issue.get("sheet"),
+                    issue.get("row"),
+                )
                 for issue in result["issues"]
                 if issue["severity"] == "error" and issue["scope"] == "record"
             }
-            imported_ids: dict[tuple[str, int], int] = {}
+            imported_ids: dict[tuple[int, str, int], int] = {}
             for record in result["imported_records"]:
-                key = (record["sheet"], record["row"])
+                source_file_id = record["source_file_id"]
+                if source_file_id not in source_file_ids:
+                    raise RuntimeError("Arquivo não pertence à execução")
+                key = (source_file_id, record["sheet"], record["row"])
                 row = connection.execute(
                     """
                     INSERT INTO synergia.imported_records
@@ -286,7 +297,8 @@ class PostgresImportRepository:
                 ).fetchone()
                 imported_ids[key] = row["id"]
             for issue in result["issues"]:
-                key = (issue.get("sheet"), issue.get("row"))
+                source_file_id = issue["source_file_id"]
+                key = (source_file_id, issue.get("sheet"), issue.get("row"))
                 connection.execute(
                     """
                     INSERT INTO synergia.pipeline_issues
@@ -325,6 +337,7 @@ class PostgresImportRepository:
                     ),
                 )
             for record in result["normalized_records"]:
+                source_file_id = record["source_file_id"]
                 connection.execute(
                     """
                     INSERT INTO synergia.normalized_records
@@ -336,7 +349,7 @@ class PostgresImportRepository:
                     (
                         execution_id,
                         source_file_id,
-                        imported_ids[(record["sheet"], record["row"])],
+                        imported_ids[(source_file_id, record["sheet"], record["row"])],
                         record["sheet"],
                         record["row"],
                         Jsonb(record["values"]),
@@ -354,7 +367,7 @@ class PostgresImportRepository:
                 """,
                 (
                     execution_id,
-                    source_file_id,
+                    primary_source_file_id,
                     summary["rows_read"],
                     summary["valid_records"],
                     summary["rejected_records"],
@@ -370,7 +383,12 @@ class PostgresImportRepository:
                      event_type, payload)
                 VALUES (%s, %s, 'execution', %s, 'pipeline_finished', %s)
                 """,
-                (execution_id, source_file_id, execution_id, Jsonb(summary)),
+                (
+                    execution_id,
+                    primary_source_file_id,
+                    execution_id,
+                    Jsonb(summary),
+                ),
             )
             connection.execute(
                 """
@@ -433,6 +451,8 @@ class PostgresImportRepository:
                 FROM synergia.executions e
                 LEFT JOIN synergia.source_files sf ON sf.execution_id = e.id
                 WHERE e.id = %s
+                ORDER BY sf.id
+                LIMIT 1
                 """,
                 (execution_id,),
             ).fetchone()
@@ -564,8 +584,10 @@ def _error(
     },
 )
 async def upload_import(
-    source: Annotated[ImportSource, Form(description="Sistema de origem do arquivo")],
-    file: Annotated[UploadFile, File(description="Arquivo XLSX, CSV ou JSON")],
+    source: Annotated[
+        list[ImportSource], Form(description="Sistema de origem de cada arquivo")
+    ],
+    file: Annotated[list[UploadFile], File(description="Arquivos XLSX, CSV ou JSON")],
     imported_by: Annotated[str | None, Form(description="Usuário responsável")] = None,
     technical_origin: Annotated[
         str | None, Form(description="Identificador da origem técnica")
@@ -573,6 +595,23 @@ async def upload_import(
     repository: ImportRepository = Depends(get_repository),
 ) -> ImportStatus:
     execution_id = str(uuid4())
+    if not source or len(source) != len(file):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "source_file_mismatch",
+                "message": "Informe uma fonte para cada arquivo",
+            },
+        )
+    file_names = [Path(item.filename or "").name for item in file]
+    if len(file_names) != len(set(file_names)):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "duplicate_file_name",
+                "message": "Os nomes dos arquivos devem ser únicos na execução",
+            },
+        )
     actor_type, actor = (
         ("user", imported_by.strip())
         if imported_by and imported_by.strip()
@@ -588,101 +627,135 @@ async def upload_import(
                 "message": "Informe imported_by ou technical_origin",
             },
         )
-    repository.start(execution_id, source.value, actor_type, actor)
-    logger.info("import_started execution_id=%s source=%s", execution_id, source.value)
+    repository.start(execution_id, source[0].value, actor_type, actor)
+    logger.info(
+        "import_started execution_id=%s sources=%s",
+        execution_id,
+        ",".join(item.value for item in source),
+    )
 
-    safe_name = Path(file.filename or "").name
-    extension = Path(safe_name).suffix.lower()
-    if extension not in {".xlsx", ".csv", ".json"}:
-        _error(
-            repository,
-            execution_id,
-            415,
-            "unsupported_extension",
-            "Extensão não suportada",
-        )
-
-    temp_path: Path | None = None
+    temp_paths: list[Path] = []
+    destinations: list[Path] = []
+    pipeline_inputs: list[dict] = []
     try:
-        digest = hashlib.sha256()
-        size_bytes = 0
-        with NamedTemporaryFile(
-            delete=False, dir=storage_root(), suffix=".upload"
-        ) as temp:
-            temp_path = Path(temp.name)
-            while chunk := await file.read(1024 * 1024):
-                size_bytes += len(chunk)
-                digest.update(chunk)
-                temp.write(chunk)
-        if size_bytes == 0:
-            _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
-        content_hash = digest.hexdigest()
-        tables, read_issues = read_source(temp_path, extension, source.value)
-        destination = (
-            storage_root() / source.name / execution_id / f"original{extension}"
-        )
-        storage_key = str(destination.relative_to(storage_root()))
-        duplicate_of = repository.claim_file(
-            execution_id,
-            file_name=safe_name,
-            extension=extension[1:],
-            size_bytes=size_bytes,
-            digest=content_hash,
-            media_type=file.content_type,
-            storage_key=storage_key,
-        )
-        if duplicate_of:
-            repository.finish(execution_id, "duplicate", "duplicate_file", duplicate_of)
-            logger.info(
-                "import_duplicate execution_id=%s duplicate_of=%s",
+        for index, (item_source, item_file) in enumerate(
+            zip(source, file, strict=True), 1
+        ):
+            safe_name = Path(item_file.filename or "").name
+            extension = Path(safe_name).suffix.lower()
+            if extension not in {".xlsx", ".csv", ".json"}:
+                for stored in destinations:
+                    stored.unlink(missing_ok=True)
+                if pipeline_inputs:
+                    repository.abort_claim(execution_id, "unsupported_extension")
+                _error(
+                    repository,
+                    execution_id,
+                    415,
+                    "unsupported_extension",
+                    "Extensão não suportada",
+                )
+            digest = hashlib.sha256()
+            size_bytes = 0
+            with NamedTemporaryFile(
+                delete=False, dir=storage_root(), suffix=".upload"
+            ) as temp:
+                temp_path = Path(temp.name)
+                temp_paths.append(temp_path)
+                while chunk := await item_file.read(1024 * 1024):
+                    size_bytes += len(chunk)
+                    digest.update(chunk)
+                    temp.write(chunk)
+            if size_bytes == 0:
+                for stored in destinations:
+                    stored.unlink(missing_ok=True)
+                if pipeline_inputs:
+                    repository.abort_claim(execution_id, "empty_file")
+                _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
+            tables, read_issues = read_source(temp_path, extension, item_source.value)
+            stored_name = (
+                f"original{extension}"
+                if len(file) == 1
+                else f"original-{index}{extension}"
+            )
+            destination = storage_root() / item_source.name / execution_id / stored_name
+            storage_key = str(destination.relative_to(storage_root()))
+            source_file_id, duplicate_of = repository.claim_file(
                 execution_id,
-                duplicate_of,
-            )
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "duplicate_file",
-                    "message": "Arquivo já importado",
-                    "execution_id": execution_id,
-                    "duplicate_of_execution_id": duplicate_of,
-                },
-            )
-        try:
-            destination.parent.mkdir(parents=True, exist_ok=False)
-            shutil.move(temp_path, destination)
-            temp_path = None
-        except OSError as exc:
-            destination.unlink(missing_ok=True)
-            try:
-                destination.parent.rmdir()
-            except OSError:
-                pass
-            repository.abort_claim(execution_id, "storage_error")
-            logger.exception("import_storage_failed execution_id=%s", execution_id)
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "code": "storage_error",
-                    "message": "Não foi possível preservar o arquivo",
-                    "execution_id": execution_id,
-                },
-            ) from exc
-        try:
-            run_pipeline(
-                execution_id=execution_id,
+                source=item_source.value,
                 file_name=safe_name,
-                source=source.value,
+                extension=extension[1:],
+                size_bytes=size_bytes,
+                digest=digest.hexdigest(),
+                media_type=item_file.content_type,
+                storage_key=storage_key,
+            )
+            if duplicate_of:
+                for stored in destinations:
+                    stored.unlink(missing_ok=True)
+                repository.abort_claim(execution_id, "duplicate_file")
+                if duplicate_of != execution_id:
+                    repository.finish(
+                        execution_id, "duplicate", "duplicate_file", duplicate_of
+                    )
+                logger.info(
+                    "import_duplicate execution_id=%s duplicate_of=%s",
+                    execution_id,
+                    duplicate_of,
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "duplicate_file",
+                        "message": "Arquivo já importado",
+                        "execution_id": execution_id,
+                        "duplicate_of_execution_id": duplicate_of,
+                    },
+                )
+            if source_file_id is None:
+                raise RuntimeError("Arquivo reservado sem identificador")
+            try:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(temp_path, destination)
+            except OSError as exc:
+                destination.unlink(missing_ok=True)
+                for stored in destinations:
+                    stored.unlink(missing_ok=True)
+                repository.abort_claim(execution_id, "storage_error")
+                logger.exception("import_storage_failed execution_id=%s", execution_id)
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "code": "storage_error",
+                        "message": "Não foi possível preservar o arquivo",
+                        "execution_id": execution_id,
+                    },
+                ) from exc
+            temp_paths.remove(temp_path)
+            destinations.append(destination)
+            pipeline_inputs.append(
+                {
+                    "file_name": safe_name,
+                    "source": item_source.value,
+                    "source_file_id": source_file_id,
+                    "tables": tables,
+                    "read_issues": read_issues,
+                }
+            )
+        try:
+            artifact_directory = destinations[0].parent
+            run_pipeline_batch(
+                execution_id=execution_id,
+                inputs=pipeline_inputs,
                 repository=repository,
-                tables=tables,
-                read_issues=read_issues,
                 classified_at=datetime.now(UTC).isoformat(),
                 known_organizations=configured_organizations(),
                 prepare_commit=lambda result: _write_pipeline_artifacts(
-                    destination.parent, result
+                    artifact_directory, result
                 ),
             )
         except Exception as exc:
-            _remove_pipeline_artifacts(destination.parent)
+            _remove_pipeline_artifacts(destinations[0].parent)
             repository.finish(execution_id, "failed", "pipeline_error")
             logger.exception("import_pipeline_failed execution_id=%s", execution_id)
             raise HTTPException(
@@ -694,15 +767,20 @@ async def upload_import(
                 },
             ) from exc
         logger.info(
-            "import_processed execution_id=%s size_bytes=%d", execution_id, size_bytes
+            "import_processed execution_id=%s file_count=%d", execution_id, len(file)
         )
     except HTTPException:
         raise
     except ValueError as exc:
+        for destination in destinations:
+            destination.unlink(missing_ok=True)
+        if pipeline_inputs:
+            repository.abort_claim(execution_id, "invalid_file")
         _error(repository, execution_id, 422, "invalid_file", str(exc))
     finally:
-        await file.close()
-        if temp_path is not None:
+        for item_file in file:
+            await item_file.close()
+        for temp_path in temp_paths:
             temp_path.unlink(missing_ok=True)
 
     result = repository.get(execution_id)
