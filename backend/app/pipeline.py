@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from app.normalization import normalize_column_name, normalize_tables
+from app.processing import process_normalized_records
 from app.validation import (
     DataReadError,
     failed_validation_report,
@@ -117,6 +118,7 @@ def run_pipeline(
     repository: PipelineRepository,
     tables: list[tuple[str, list[str], list[list[Any]]]],
     read_issues: list[dict[str, Any]],
+    classified_at: str,
     known_organizations: Collection[str] | None = None,
     prepare_commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
@@ -140,6 +142,14 @@ def run_pipeline(
         else {(record["sheet"], record["row"]) for record in imported} - rejected_rows
     )
     normalized = normalize_tables(tables, source, eligible_rows)
+    normalized_records = [
+        {**record, "execution_id": execution_id} for record in normalized["records"]
+    ]
+    processing = process_normalized_records(
+        normalized_records,
+        execution_id=execution_id,
+        classified_at=classified_at,
+    )
     issues = [*issues, *normalized["issues"]]
     for issue in issues:
         issue["file_name"] = file_name
@@ -173,7 +183,8 @@ def run_pipeline(
         "summary": summary,
         "imported_records": imported,
         "issues": issues,
-        "normalized_records": normalized["records"],
+        "normalized_records": normalized_records,
+        "processing": processing,
     }
     if prepare_commit is not None:
         prepare_commit(result)

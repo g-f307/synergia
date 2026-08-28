@@ -6,7 +6,7 @@ import logging
 import os
 import shutil
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -69,6 +69,7 @@ class NormalizationResult(BaseModel):
     warning_count: int
     issues: list[dict]
     records: list[dict]
+    processing: dict | None = None
 
 
 class PipelineSummary(BaseModel):
@@ -486,6 +487,7 @@ def _write_pipeline_artifacts(directory: Path, pipeline: dict) -> None:
             issue for issue in pipeline["issues"] if issue["severity"] == "warning"
         ],
         "records": pipeline["normalized_records"],
+        "processing": pipeline["processing"],
     }
     artifacts = {
         "validation-report.json": json.dumps(
@@ -673,6 +675,7 @@ async def upload_import(
                 repository=repository,
                 tables=tables,
                 read_issues=read_issues,
+                classified_at=datetime.now(UTC).isoformat(),
                 known_organizations=configured_organizations(),
                 prepare_commit=lambda result: _write_pipeline_artifacts(
                     destination.parent, result
