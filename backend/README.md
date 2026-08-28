@@ -73,6 +73,34 @@ curl http://localhost:8000/imports/72a15cf7-f1d1-4df4-ad73-7a79ef98ae36/normaliz
 Os registros são persistidos em `synergia.normalized_records`. O mapeamento de
 colunas, estados e flags OQC está em `docs/normalization.md`.
 
+## Pipeline integrado
+
+Após o armazenamento, o serviço `app.pipeline.run_pipeline` seleciona o
+importador da fonte e lê o arquivo uma única vez. A representação importada é
+validada em memória; somente linhas sem erros impeditivos são normalizadas.
+Erros de uma linha não interrompem linhas independentes, enquanto erros de
+estrutura (por exemplo, coluna obrigatória ausente) bloqueiam o arquivo.
+
+Importados, rejeições, avisos, normalizados, resumo e evento de auditoria são
+confirmados em uma única transação. O vínculo rastreável é:
+
+`execution_id → source_file_id → imported_record_id → normalized_record`
+
+Cada registro também conserva aba, linha, valores originais e transformações.
+As contagens podem ser consultadas em
+`GET /imports/{execution_id}/pipeline-summary`. Exemplo:
+
+```json
+{
+  "rows_read": 3,
+  "valid_records": 2,
+  "rejected_records": 1,
+  "normalized_records": 2,
+  "errors": 1,
+  "warnings": 1
+}
+```
+
 Duplicidades por SHA-256 são reservadas atomicamente no PostgreSQL, retornam
 `409` mesmo sob uploads concorrentes e indicam a execução original. Arquivo
 vazio ou estruturalmente inválido retorna `422`, e extensão não suportada
