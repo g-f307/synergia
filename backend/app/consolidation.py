@@ -100,7 +100,7 @@ def _provenance(record: Mapping[str, Any], field: str, value: Any) -> dict[str, 
 
 def _index_unique(
     records: Sequence[Mapping[str, Any]], field: str
-) -> tuple[dict[str, str], set[str]]:
+) -> tuple[dict[str, str], set[str], dict[str, set[str]]]:
     candidates: dict[str, set[str]] = defaultdict(set)
     for record in records:
         workorder = _value(record, "workorder_number")
@@ -115,7 +115,40 @@ def _index_unique(
             if len(values) == 1
         },
         ambiguous,
+        candidates,
     )
+
+
+def _relationship_conflicts(
+    record: Mapping[str, Any],
+    candidates: Mapping[str, Mapping[str, set[str]]],
+) -> list[dict[str, Any]]:
+    direct = _value(record, "workorder_number")
+    if not _nonempty(direct):
+        return []
+    workorder = str(direct)
+    conflicts: list[dict[str, Any]] = []
+    for field in ("demand_id", "serial_number", "lot_number"):
+        identifier = _value(record, field)
+        if not _nonempty(identifier):
+            continue
+        related = candidates[field].get(str(identifier), set()) - {workorder}
+        if related:
+            conflicts.append(
+                {
+                    "code": "conflicting_relationship",
+                    "source": record.get("source"),
+                    "execution_id": record.get("execution_id"),
+                    "source_file_id": record.get("source_file_id"),
+                    "sheet": record.get("sheet"),
+                    "row": record.get("row"),
+                    "workorder_number": workorder,
+                    "field": field,
+                    "value": str(identifier),
+                    "conflicting_workorders": sorted(related),
+                }
+            )
+    return conflicts
 
 
 def _resolve_workorder(
@@ -374,12 +407,20 @@ def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         )
     indexes: dict[str, dict[str, str]] = {}
     ambiguous: dict[str, set[str]] = {}
+    candidates: dict[str, dict[str, set[str]]] = {}
     for field in ("demand_id", "serial_number", "lot_number"):
-        indexes[field], ambiguous[field] = _index_unique(ordered, field)
+        indexes[field], ambiguous[field], candidates[field] = _index_unique(
+            ordered, field
+        )
 
     grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     unmatched: list[dict[str, Any]] = []
+    relationship_conflicts: list[dict[str, Any]] = []
     for record in ordered:
+        record_conflicts = _relationship_conflicts(record, candidates)
+        if record_conflicts:
+            relationship_conflicts.extend(record_conflicts)
+            continue
         workorder = _resolve_workorder(record, indexes)
         if workorder is None:
             unmatched.append(
@@ -406,7 +447,11 @@ def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         grouped[workorder].append(record)
 
     workorders: list[dict[str, Any]] = []
-    issues: list[dict[str, Any]] = [*duplicate_issues, *unmatched]
+    issues: list[dict[str, Any]] = [
+        *duplicate_issues,
+        *relationship_conflicts,
+        *unmatched,
+    ]
     for workorder in sorted(grouped):
         consolidated, workorder_issues = _consolidate_workorder(
             workorder, grouped[workorder]
@@ -425,6 +470,7 @@ def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     return {
         "workorder_count": len(workorders),
         "duplicate_record_count": len(duplicate_issues),
+        "conflicting_relationship_count": len(relationship_conflicts),
         "unmatched_record_count": len(unmatched),
         "issue_count": len(issues),
         "workorders": workorders,

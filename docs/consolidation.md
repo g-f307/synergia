@@ -18,6 +18,12 @@ Relações ambíguas não são escolhidas silenciosamente. O registro permanece
 fora da consolidação com `unmatched_record`, e a chave recebe
 `ambiguous_relationship`.
 
+Mesmo quando o registro informa `workorder_number`, Demand ID, serial e lote
+são comparados com todas as relações observadas. Se qualquer identificador
+também estiver associado a outra Workorder, os registros contraditórios não
+entram em nenhuma Workorder e recebem `conflicting_relationship`. A ocorrência
+preserva a proveniência, a chave conflitante e todas as Workorders relacionadas.
+
 ## Quantidades
 
 Registros da mesma fonte e Workorder são somados. Quando mais de uma fonte

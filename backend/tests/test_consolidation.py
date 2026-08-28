@@ -151,3 +151,73 @@ def test_registers_record_without_any_resolvable_relationship() -> None:
     assert result["workorder_count"] == 0
     assert result["unmatched_record_count"] == 1
     assert result["issues"][0]["code"] == "unmatched_record"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "output_field"),
+    [
+        ("serial_number", "SER-CONFLICT", "serial_numbers"),
+        ("lot_number", "LOT-CONFLICT", "lot_numbers"),
+        ("demand_id", "DEM-CONFLICT", "demand_ids"),
+    ],
+)
+def test_excludes_direct_workorders_with_conflicting_relationships(
+    field: str, value: str, output_field: str
+) -> None:
+    records = [
+        {
+            "source": "N-FP",
+            "execution_id": "exec-base",
+            "source_file_id": 1,
+            "sheet": "Plan",
+            "row": 2,
+            "values": {"workorder_number": "WO-A", "planned_quantity": 1},
+        },
+        {
+            "source": "N-FP",
+            "execution_id": "exec-base",
+            "source_file_id": 1,
+            "sheet": "Plan",
+            "row": 3,
+            "values": {"workorder_number": "WO-B", "planned_quantity": 1},
+        },
+        {
+            "source": "OWM",
+            "execution_id": "exec-known",
+            "source_file_id": 2,
+            "sheet": "Known",
+            "row": 2,
+            "values": {"workorder_number": "WO-B", field: value},
+        },
+        {
+            "source": "TMS",
+            "execution_id": "exec-conflict",
+            "source_file_id": 3,
+            "sheet": "Conflict",
+            "row": 2,
+            "values": {
+                "workorder_number": "WO-A",
+                field: value,
+                "container_number": "MUST-NOT-CONTAMINATE",
+                "received_quantity": 99,
+            },
+        },
+    ]
+
+    result = consolidate(records)
+    workorders = by_workorder(result)
+    conflicts = [
+        issue
+        for issue in result["issues"]
+        if issue["code"] == "conflicting_relationship" and issue["field"] == field
+    ]
+
+    assert result["workorder_count"] == 2
+    assert result["conflicting_relationship_count"] == 2
+    assert {issue["workorder_number"] for issue in conflicts} == {"WO-A", "WO-B"}
+    assert workorders["WO-A"][output_field] == []
+    assert workorders["WO-B"][output_field] == []
+    assert workorders["WO-A"]["container_numbers"] == []
+    assert workorders["WO-B"]["container_numbers"] == []
+    assert workorders["WO-A"]["received_quantity"] == 0
+    assert workorders["WO-B"]["received_quantity"] == 0
