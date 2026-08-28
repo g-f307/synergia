@@ -75,9 +75,9 @@ colunas, estados e flags OQC está em `docs/normalization.md`.
 
 ## Pipeline integrado
 
-Após o armazenamento, o serviço `app.pipeline.run_pipeline` seleciona o
-importador da fonte e lê o arquivo uma única vez. A representação importada é
-validada em memória; somente linhas sem erros impeditivos são normalizadas.
+O importador lê o arquivo uma única vez e entrega sua representação tabular ao
+serviço `app.pipeline.run_pipeline`. A representação importada é validada em
+memória; somente linhas sem erros impeditivos são normalizadas.
 Erros de uma linha não interrompem linhas independentes, enquanto erros de
 estrutura (por exemplo, coluna obrigatória ausente) bloqueiam o arquivo.
 
@@ -87,6 +87,12 @@ confirmados em uma única transação. O vínculo rastreável é:
 `execution_id → source_file_id → imported_record_id → normalized_record`
 
 Cada registro também conserva aba, linha, valores originais e transformações.
+Os normalizados elegíveis recebem o `execution_id` atual e seguem, sem nova
+leitura do original, para `app.processing.process_normalized_records`. Essa
+etapa consolida Workorders, lotes, seriais e organizações e então executa o
+catálogo versionado de regras. O resultado e seu resumo ficam no objeto
+`processing` de `normalized-data.json`; sua persistência operacional definitiva
+permanece fora desta etapa.
 As contagens podem ser consultadas em
 `GET /imports/{execution_id}/pipeline-summary`. Exemplo:
 
@@ -132,8 +138,8 @@ Registros normalizados podem ser cruzados pelo serviço
 `app.consolidation.consolidate`. O resultado mantém uma única entrada por
 Workorder, proveniência por valor, ausências e divergências. O algoritmo,
 precedência das fontes e comparação com a massa equivalente à `WO Status.xlsx`
-estão documentados em `docs/consolidation.md`. A disponibilização por API e as
-regras automáticas OQC permanecem separadas nas respectivas etapas do projeto.
+estão documentados em `docs/consolidation.md`. O pipeline chama esse serviço
+automaticamente apenas com registros normalizados elegíveis da execução atual.
 
 ## Regras de negócio
 

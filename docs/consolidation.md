@@ -37,14 +37,39 @@ totais divergentes continuam registrados em `source_divergence`:
 | Recebida, liberada, pendente e hold | OWM, GMES/OQC, TMS, N-FP |
 
 A quantidade pendente é o maior valor entre a pendência explícita e
-`planejada - liberada`, nunca menor que zero. A quantidade em hold usa o valor
+`planejada - liberada`, nunca menor que zero, quando os dois operandos estão
+presentes. Quantidades ausentes permanecem `null`: ausência de liberação, por
+exemplo, não equivale a uma liberação igual a zero. A quantidade em hold usa o valor
 explícito `retained_quantity` e pode contar seriais marcados explicitamente com
 `hold_flag=true` ou estado `hold`/`retained`. Um estado `rejected` não é
 convertido em hold, pois essa classificação pertence às regras da etapa
 seguinte.
 
 `partially_released` é verdadeiro somente quando a quantidade liberada é maior
-que zero e menor que a recebida.
+que zero e menor que a recebida. Se uma dessas quantidades estiver ausente, o
+resultado também permanece `null`.
+
+## Integração ao pipeline
+
+`app.processing.process_normalized_records` aceita somente registros cujo
+`execution_id` seja igual ao da execução em processamento. O pipeline fornece
+diretamente os objetos gerados pela normalização; XLSX, CSV e JSON não são
+reabertos nesta etapa. Uma falha de conteúdo em uma Workorder gera
+`workorder_processing_failed` e não impede a consolidação das demais.
+
+Exemplo de proveniência de um campo consolidado:
+
+```json
+{
+  "source": "N-FP",
+  "execution_id": "exec-2026-001",
+  "source_file_id": 2,
+  "sheet": "Plano",
+  "row": 7,
+  "field": "planned_quantity",
+  "value": 10
+}
+```
 
 ## Auditoria e reprodutibilidade
 

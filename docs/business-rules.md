@@ -8,8 +8,23 @@ fontes, não libera materiais e não toma decisões em nome das áreas responsá
 
 Prioridades, áreas e limites ficam em
 `backend/app/model/business_rules.json`. Cada evento informa `rule_id`, versão,
-descrição, evidência e fatores de prioridade, permitindo consultar exatamente a
-regra aplicada.
+descrição, justificativa, evidência e fatores de prioridade, permitindo consultar
+exatamente a regra aplicada. `rule_evaluations` também registra regras que não
+foram acionadas, com resultado `not_matched` e a mesma versão do catálogo.
+
+Exemplo de classificação aplicada:
+
+```json
+{
+  "rule_id": "oqc_hold",
+  "rule_catalog_version": "1.0.0",
+  "state": "active",
+  "workorder_number": "WO-001",
+  "entity_type": "serial",
+  "entity_id": "SER-001",
+  "justification": "Aguardando decisão da Qualidade"
+}
+```
 
 | Regra | Gatilho | Área padrão |
 | --- | --- | --- |
@@ -30,6 +45,8 @@ Os limites de 30 e 7 dias estão declarados no catálogo, não no algoritmo.
 Quando há datas disponíveis, a data do evento é comparada com `released_at`
 para separar pendência anterior e hold posterior. Sem datas, o motor usa a
 quantidade liberada como evidência de fallback e mantém essa decisão rastreável.
+Se a quantidade estiver ausente, não presume zero nem cria classificação
+pré-liberação sem outra evidência.
 
 ## Categorias simultâneas e fila ativa
 
