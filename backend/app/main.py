@@ -1,9 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.errors import install_error_handlers
 from app.imports import router as imports_router
+from app.queries import router as queries_router
 
-app = FastAPI(title="SYNERGIA API", version="0.1.0")
+app = FastAPI(
+    title="SYNERGIA API",
+    version="0.2.0",
+    description=(
+        "Contratos estáveis para importação, acompanhamento, consultas, "
+        "pendências e reprocessamento do SYNERGIA."
+    ),
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,7 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+install_error_handlers(app)
 app.include_router(imports_router)
+app.include_router(queries_router)
 
 
 @app.get("/health", tags=["system"])

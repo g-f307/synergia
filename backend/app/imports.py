@@ -21,6 +21,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
+from app.errors import ErrorResponse
 from app.normalization import normalize_file
 from app.validation import failed_validation_report, validate_file
 
@@ -356,10 +357,16 @@ def _error(
     status_code=status.HTTP_201_CREATED,
     summary="Enviar e registrar um arquivo de entrada",
     responses={
-        409: {"description": "Arquivo duplicado por SHA-256"},
-        415: {"description": "Extensão não suportada"},
-        422: {"description": "Arquivo vazio, inválido ou requisição inválida"},
-        500: {"description": "Falha ao preservar o arquivo no storage"},
+        409: {"model": ErrorResponse, "description": "Arquivo duplicado por SHA-256"},
+        415: {"model": ErrorResponse, "description": "Extensão não suportada"},
+        422: {
+            "model": ErrorResponse,
+            "description": "Arquivo vazio, inválido ou requisição inválida",
+        },
+        500: {
+            "model": ErrorResponse,
+            "description": "Falha ao preservar o arquivo no storage",
+        },
     },
 )
 async def upload_import(
@@ -382,7 +389,10 @@ async def upload_import(
     if not actor:
         raise HTTPException(
             status_code=422,
-            detail="Informe imported_by ou technical_origin",
+            detail={
+                "code": "missing_actor",
+                "message": "Informe imported_by ou technical_origin",
+            },
         )
     repository.start(execution_id, source.value, actor_type, actor)
     logger.info("import_started execution_id=%s source=%s", execution_id, source.value)
@@ -547,6 +557,7 @@ async def upload_import(
     "/{execution_id}",
     response_model=ImportStatus,
     summary="Consultar o estado de uma importação",
+    responses={404: {"model": ErrorResponse, "description": "Execução não encontrada"}},
 )
 def get_import(
     execution_id: str,
@@ -564,6 +575,9 @@ def get_import(
     "/{execution_id}/validation-report",
     response_model=ValidationReport,
     summary="Visualizar o relatório de validação da execução",
+    responses={
+        404: {"model": ErrorResponse, "description": "Relatório não encontrado"}
+    },
 )
 def get_validation_report(
     execution_id: str,
@@ -588,6 +602,7 @@ def get_validation_report(
     "/{execution_id}/normalized-data",
     response_model=NormalizationResult,
     summary="Visualizar os dados normalizados da execução",
+    responses={404: {"model": ErrorResponse, "description": "Dados não encontrados"}},
 )
 def get_normalized_data(
     execution_id: str,
