@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.pipeline import run_pipeline
+from app.pipeline import read_source, run_pipeline
 
 
 class RecordingRepository:
@@ -23,13 +23,14 @@ def run_csv(
     path = tmp_path / "input.csv"
     path.write_text(content, encoding="utf-8")
     repository = RecordingRepository()
+    tables, read_issues = read_source(path, ".csv", source)
     result = run_pipeline(
         execution_id="exec-pipeline",
         file_name="input.csv",
-        path=path,
-        extension=".csv",
         source=source,
         repository=repository,
+        tables=tables,
+        read_issues=read_issues,
         known_organizations=organizations,
     )
     return result, repository
@@ -54,7 +55,8 @@ def test_valid_file_runs_all_stages_and_preserves_traceability(tmp_path) -> None
     imported = result["imported_records"][0]
     normalized = result["normalized_records"][0]
     assert (imported["sheet"], imported["row"]) == (
-        normalized["sheet"], normalized["row"]
+        normalized["sheet"],
+        normalized["row"],
     )
     assert normalized["values"]["workorder_number"] == "0000123"
     assert normalized["values"]["serial_number"] == "0000456"
@@ -126,6 +128,7 @@ def test_unexpected_normalization_failure_does_not_commit(
     path = tmp_path / "input.csv"
     path.write_text("workorder\nWO-1\n", encoding="utf-8")
     repository = RecordingRepository()
+    tables, read_issues = read_source(path, ".csv", "N-FP")
 
     def fail_normalization(*_args, **_kwargs):
         raise RuntimeError("synthetic failure")
@@ -135,10 +138,33 @@ def test_unexpected_normalization_failure_does_not_commit(
         run_pipeline(
             execution_id="exec-failure",
             file_name="input.csv",
-            path=path,
-            extension=".csv",
             source="N-FP",
             repository=repository,
+            tables=tables,
+            read_issues=read_issues,
+        )
+
+    assert repository.commits == []
+
+
+def test_artifact_failure_does_not_commit_pipeline(tmp_path) -> None:
+    path = tmp_path / "input.csv"
+    path.write_text("workorder\nWO-1\n", encoding="utf-8")
+    tables, read_issues = read_source(path, ".csv", "N-FP")
+    repository = RecordingRepository()
+
+    def fail_artifacts(_result: dict) -> None:
+        raise OSError("synthetic artifact failure")
+
+    with pytest.raises(OSError, match="synthetic artifact failure"):
+        run_pipeline(
+            execution_id="exec-artifact-failure",
+            file_name="input.csv",
+            source="N-FP",
+            repository=repository,
+            tables=tables,
+            read_issues=read_issues,
+            prepare_commit=fail_artifacts,
         )
 
     assert repository.commits == []

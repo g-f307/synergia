@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
 
+from app import pipeline
 from app.imports import get_repository
 from app.main import app
 
@@ -70,9 +72,7 @@ class MemoryRepository:
         self.normalized_records[execution_id] = result["normalized_records"]
         self.executions[execution_id].update(
             status=result["status"],
-            failure_reason=(
-                "validation_failed" if result["blocking"] else None
-            ),
+            failure_reason=("validation_failed" if result["blocking"] else None),
             finished_at=datetime.now(UTC),
         )
 
@@ -237,6 +237,50 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     assert repository.get(execution_id)["status"] == "failed"
     assert repository.hashes == {}
     assert not list(storage.glob("**/original.csv"))
+
+
+def test_artifact_failure_does_not_commit_pipeline(api, monkeypatch) -> None:
+    client, repository, storage = api
+    original_replace = Path.replace
+
+    def fail_summary(self: Path, target: Path) -> Path:
+        if Path(target).name == "pipeline-summary.json":
+            raise OSError("synthetic artifact failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_summary)
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "test-user"},
+        files={"file": ("entry.csv", b"workorder\nWO-1\n", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    execution_id = response.json()["error"]["details"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert execution_id not in repository.normalized_records
+    assert not list((storage / "n_fp" / execution_id).glob("*.json"))
+
+
+def test_original_file_is_interpreted_only_once(api, monkeypatch) -> None:
+    client, _, _ = api
+    original_read = pipeline.read_tables
+    calls = 0
+
+    def counting_read(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original_read(*args, **kwargs)
+
+    monkeypatch.setattr("app.pipeline.read_tables", counting_read)
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "test-user"},
+        files={"file": ("entry.csv", b"workorder\nWO-1\n", "text/csv")},
+    )
+
+    assert response.status_code == 201
+    assert calls == 1
 
 
 def test_requires_actor_and_returns_not_found(api) -> None:
