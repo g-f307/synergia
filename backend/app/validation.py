@@ -158,6 +158,9 @@ def _read(
     return tables, issues
 
 
+read_tables = _read
+
+
 def _valid_date(value: Any) -> bool:
     if isinstance(value, date | datetime):
         return True
@@ -199,11 +202,11 @@ def failed_validation_report(
     return _report(source, 0, [_issue(code, reason, sheet=sheet, row=row)])
 
 
-def validate_file(
-    path: Path,
-    extension: str,
+def validate_tables(
+    tables: list[tuple[str, list[str], list[list[Any]]]],
     source: str,
     known_organizations: Collection[str] | None = None,
+    initial_issues: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     schema = SCHEMAS[source]
     allowed_organizations = (
@@ -211,16 +214,7 @@ def validate_file(
         if known_organizations is not None
         else None
     )
-    try:
-        tables, issues = _read(path, extension)
-    except DataReadError as exc:
-        return failed_validation_report(
-            source,
-            "read_error",
-            exc.reason,
-            sheet=exc.sheet,
-            row=exc.row,
-        )
+    issues = list(initial_issues or [])
     seen_serials: dict[str, tuple[str, int]] = {}
     row_count = 0
     if not tables:
@@ -417,3 +411,22 @@ def validate_file(
     if row_count == 0 and not any(item["code"] == "empty_file" for item in issues):
         issues.append(_issue("empty_file", "Arquivo não contém linhas de dados"))
     return _report(source, row_count, issues)
+
+
+def validate_file(
+    path: Path,
+    extension: str,
+    source: str,
+    known_organizations: Collection[str] | None = None,
+) -> dict[str, Any]:
+    try:
+        tables, issues = read_tables(path, extension)
+    except DataReadError as exc:
+        return failed_validation_report(
+            source,
+            "read_error",
+            exc.reason,
+            sheet=exc.sheet,
+            row=exc.row,
+        )
+    return validate_tables(tables, source, known_organizations, issues)
