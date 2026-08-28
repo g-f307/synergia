@@ -167,7 +167,7 @@ def _fact_categories(
         categories.add("rework")
     if ship_block:
         categories.add("ship_block")
-    released = int(workorder.get("released_quantity", 0) or 0)
+    released = workorder.get("released_quantity")
     if active and (pending or hold):
         if release_date is not None:
             if occurred_date < release_date:
@@ -176,7 +176,7 @@ def _fact_categories(
                 categories.add("post_release_hold")
         elif released == 0:
             categories.add("pre_release_pending")
-        elif hold:
+        elif released is not None and hold:
             categories.add("post_release_hold")
     if active and actionable and age_days >= thresholds["aging_days"]:
         categories.add("aging")
@@ -308,6 +308,7 @@ def _event(
         "rule_catalog_version": catalog["version"],
         "rule_id": rule_id,
         "rule_description": rule["description"],
+        "justification": _reason(fact) or rule["description"],
         "state": "active" if active else "closed",
         "workorder_number": workorder_number,
         "entity_type": entity_type,
@@ -388,6 +389,7 @@ def _divergence_events(
                 "rule_catalog_version": catalog["version"],
                 "rule_id": "source_divergence",
                 "rule_description": rule["description"],
+                "justification": rule["description"],
                 "state": "active",
                 "workorder_number": workorder_number,
                 "entity_type": "workorder",
@@ -568,6 +570,7 @@ def classify(
         for item in consolidation.get("workorders", [])
     }
     current: list[dict[str, Any]] = []
+    evaluations: list[dict[str, Any]] = []
     for workorder_number in sorted(workorders):
         workorder = workorders[workorder_number]
         facts = sorted(
@@ -599,6 +602,26 @@ def classify(
                 release_date=release_date,
                 catalog=catalog,
             )
+            for rule_id in sorted(REQUIRED_RULES - {"source_divergence"}):
+                matched = rule_id in categories
+                evaluations.append(
+                    {
+                        "workorder_number": workorder_number,
+                        "source": fact.get("source"),
+                        "execution_id": fact.get("execution_id"),
+                        "source_file_id": fact.get("source_file_id"),
+                        "sheet": fact.get("sheet"),
+                        "row": fact.get("row"),
+                        "rule_id": rule_id,
+                        "rule_catalog_version": catalog["version"],
+                        "result": "matched" if matched else "not_matched",
+                        "justification": (
+                            catalog["rules"][rule_id]["description"]
+                            if matched
+                            else "A evidência não satisfez os critérios da regra"
+                        ),
+                    }
+                )
             for rule_id in sorted(categories):
                 event = _event(
                     rule_id=rule_id,
@@ -611,9 +634,7 @@ def classify(
                     container_counts=counts,
                     catalog=catalog,
                 )
-                event["partially_released"] = bool(
-                    workorder.get("partially_released", False)
-                )
+                event["partially_released"] = workorder.get("partially_released")
                 current.append(event)
     divergence_events, divergence_report = _divergence_events(
         consolidation,
@@ -623,6 +644,25 @@ def classify(
         catalog=catalog,
     )
     current.extend(divergence_events)
+    for workorder_number in sorted(workorders):
+        matched = any(
+            issue.get("workorder_number") == workorder_number
+            and issue.get("code") in DIVERGENCE_CODES
+            for issue in consolidation.get("issues", [])
+        )
+        evaluations.append(
+            {
+                "workorder_number": workorder_number,
+                "rule_id": "source_divergence",
+                "rule_catalog_version": catalog["version"],
+                "result": "matched" if matched else "not_matched",
+                "justification": (
+                    catalog["rules"]["source_divergence"]["description"]
+                    if matched
+                    else "Nenhuma divergência entre fontes foi identificada"
+                ),
+            }
+        )
     current.sort(key=lambda item: item["classification_id"])
     active = _active_queue(current, run_id)
     history = deepcopy(previous_history or [])
@@ -634,6 +674,7 @@ def classify(
         "active_items": active,
         "entities": _entity_summary(current),
         "current_classifications": current,
+        "rule_evaluations": evaluations,
         "history": history,
         "divergence_report": divergence_report,
     }
