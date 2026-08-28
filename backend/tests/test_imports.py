@@ -66,6 +66,16 @@ class MemoryRepository:
     def save_normalized_records(self, execution_id: str, records: list[dict]) -> None:
         self.normalized_records[execution_id] = records
 
+    def commit_pipeline(self, execution_id: str, result: dict) -> None:
+        self.normalized_records[execution_id] = result["normalized_records"]
+        self.executions[execution_id].update(
+            status=result["status"],
+            failure_reason=(
+                "validation_failed" if result["blocking"] else None
+            ),
+            finished_at=datetime.now(UTC),
+        )
+
     def abort_claim(self, execution_id: str, reason: str) -> None:
         execution = self.executions[execution_id]
         if execution["sha256"]:
@@ -331,3 +341,32 @@ def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
     )
     assert repository.normalized_records[execution_id] == normalized["records"]
     assert (storage / "n_fp" / execution_id / "normalized-data.json").exists()
+
+
+def test_pipeline_exposes_partial_summary_and_keeps_valid_rows(api) -> None:
+    client, _, _ = api
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "technical_origin": "pipeline-test"},
+        files={
+            "file": (
+                "partial.csv",
+                b"workorder,planned_quantity\nWO-1,10\nWO-2,invalid\nWO-3,2\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    execution_id = response.json()["execution_id"]
+    summary = client.get(f"/imports/{execution_id}/pipeline-summary").json()
+    assert summary == {
+        "rows_read": 3,
+        "valid_records": 2,
+        "rejected_records": 1,
+        "normalized_records": 2,
+        "errors": 1,
+        "warnings": 0,
+    }
+    normalized = client.get(f"/imports/{execution_id}/normalized-data").json()
+    assert [record["row"] for record in normalized["records"]] == [2, 4]
