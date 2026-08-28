@@ -137,24 +137,27 @@ def _read(
                 )
             )
     else:
-        workbook = load_workbook(path, read_only=True, data_only=False)
-        try:
-            for worksheet in workbook.worksheets:
-                values = [list(row) for row in worksheet.iter_rows(values_only=True)]
-                if not values or not any(
-                    value not in (None, "") for value in values[0]
-                ):
-                    issues.append(
-                        _issue(
-                            "empty_sheet",
-                            "Aba vazia ou sem cabeçalho",
-                            sheet=worksheet.title,
+        with path.open("rb") as stream:
+            workbook = load_workbook(stream, read_only=True, data_only=False)
+            try:
+                for worksheet in workbook.worksheets:
+                    values = [
+                        list(row) for row in worksheet.iter_rows(values_only=True)
+                    ]
+                    if not values or not any(
+                        value not in (None, "") for value in values[0]
+                    ):
+                        issues.append(
+                            _issue(
+                                "empty_sheet",
+                                "Aba vazia ou sem cabeçalho",
+                                sheet=worksheet.title,
+                            )
                         )
-                    )
-                    continue
-                tables.append((worksheet.title, values[0], values[1:]))
-        finally:
-            workbook.close()
+                        continue
+                    tables.append((worksheet.title, values[0], values[1:]))
+            finally:
+                workbook.close()
     return tables, issues
 
 

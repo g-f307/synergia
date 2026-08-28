@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from openpyxl import Workbook
 
 from app.pipeline import read_source, run_pipeline
 
@@ -168,3 +169,18 @@ def test_artifact_failure_does_not_commit_pipeline(tmp_path) -> None:
         )
 
     assert repository.commits == []
+
+
+def test_reads_xlsx_from_temporary_path_without_xlsx_suffix(tmp_path) -> None:
+    path = tmp_path / "upload.upload"
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["workorder", "status"])
+    worksheet.append(["WO-1", "open"])
+    workbook.save(path)
+    workbook.close()
+
+    tables, read_issues = read_source(path, ".xlsx", "N-FP")
+
+    assert read_issues == []
+    assert tables == [("Sheet", ["workorder", "status"], [["WO-1", "open"]])]
