@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -48,6 +48,32 @@ IMPORTERS: dict[str, SourceImporter] = {
 }
 
 
+def read_source(
+    path: Path,
+    extension: str,
+    source: str,
+    importers: dict[str, SourceImporter] | None = None,
+) -> tuple[list[tuple[str, list[str], list[list[Any]]]], list[dict[str, Any]]]:
+    """Read a source file once and convert recoverable read errors into issues."""
+    importer = (importers or IMPORTERS).get(source)
+    if importer is None:
+        raise ValueError(f"Fonte sem importador configurado: {source}")
+
+    try:
+        return importer.read(path, extension)
+    except DataReadError as exc:
+        report = failed_validation_report(
+            source, "read_error", exc.reason, sheet=exc.sheet, row=exc.row
+        )
+        return [], report["issues"]
+    except (json.JSONDecodeError, UnicodeError, OSError) as exc:
+        raise ValueError(f"arquivo {extension[1:].upper()} inválido") from exc
+    except Exception as exc:
+        if extension == ".xlsx":
+            raise ValueError("arquivo XLSX inválido") from exc
+        raise
+
+
 def _original_value(value: Any) -> Any:
     if value is None or isinstance(value, str | int | float | bool):
         return value
@@ -74,9 +100,7 @@ def _imported_records(
                     "row": row_number,
                     "original_values": {
                         field: (
-                            _original_value(row[index])
-                            if index < len(row)
-                            else None
+                            _original_value(row[index]) if index < len(row) else None
                         )
                         for index, field in enumerate(fields)
                     },
@@ -89,35 +113,15 @@ def run_pipeline(
     *,
     execution_id: str,
     file_name: str,
-    path: Path,
-    extension: str,
     source: str,
     repository: PipelineRepository,
+    tables: list[tuple[str, list[str], list[list[Any]]]],
+    read_issues: list[dict[str, Any]],
     known_organizations: Collection[str] | None = None,
-    importers: dict[str, SourceImporter] | None = None,
+    prepare_commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Import, validate and normalize one stored file, then commit atomically."""
-    importer = (importers or IMPORTERS).get(source)
-    if importer is None:
-        raise ValueError(f"Fonte sem importador configurado: {source}")
-
-    try:
-        tables, read_issues = importer.read(path, extension)
-        validation = validate_tables(
-            tables, source, known_organizations, read_issues
-        )
-    except DataReadError as exc:
-        tables = []
-        validation = failed_validation_report(
-            source, "read_error", exc.reason, sheet=exc.sheet, row=exc.row
-        )
-    except (json.JSONDecodeError, UnicodeError, OSError):
-        tables = []
-        validation = failed_validation_report(
-            source,
-            "read_error",
-            "Não foi possível ler o conteúdo do arquivo",
-        )
+    validation = validate_tables(tables, source, known_organizations, read_issues)
 
     imported = _imported_records(tables, source)
     issues = validation["issues"]
@@ -133,8 +137,7 @@ def run_pipeline(
     eligible_rows = (
         set()
         if structural_blocked
-        else {(record["sheet"], record["row"]) for record in imported}
-        - rejected_rows
+        else {(record["sheet"], record["row"]) for record in imported} - rejected_rows
     )
     normalized = normalize_tables(tables, source, eligible_rows)
     issues = [*issues, *normalized["issues"]]
@@ -172,5 +175,7 @@ def run_pipeline(
         "issues": issues,
         "normalized_records": normalized["records"],
     }
+    if prepare_commit is not None:
+        prepare_commit(result)
     repository.commit_pipeline(execution_id, result)
     return result
