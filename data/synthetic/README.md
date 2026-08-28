@@ -12,6 +12,7 @@ teste e jamais devem ser usadas como base para corrigir dados de origem.
 | `duplicate-serial.csv` | OWM | serial duplicado |
 | `consolidation_records.json` | todas | consolidação completa, parcial, inexistente, PQ, PM, lote e organização divergentes |
 | `wo-status-reference.csv` | referência | resultado esperado equivalente à `WO Status.xlsx` para a massa sintética |
+| `rules_scenarios.json` | consolidação | catálogo completo de classificações, fila ativa, histórico e divergência |
 | `formula-errors.csv` | N-FP | `#VALUE!` e referência `#REF!` preservados |
 | `unmatched-key.csv` | TMS | chave de Workorder sem correspondência |
 

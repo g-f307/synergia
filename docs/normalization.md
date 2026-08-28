@@ -23,6 +23,8 @@ falha explícita. Os algoritmos de transformação permanecem em Python.
 | Datas | nome canônico terminado em `_date` ou `_at` | `planned_date`, `received_at` | ISO 8601 |
 | Estado | `status` | `status`, `state`, `estado`, `shipment status` | tabela de estados abaixo |
 | Flag OQC | `oqc_flag` | `oqc`, `oqc flag`, `status oqc` | booleano |
+| Flags de regra | `hold_flag`, `rework_flag`, `ship_block_flag`, `active` | nomes canônicos ou `ativo` | booleano |
+| Responsáveis | `responsible_organization`, `responsible_area` | `organização responsável`, `área responsável` | texto preservado |
 
 Identificadores permanecem como texto. Strings numéricas preservam zeros à
 esquerda e valores recebidos em notação científica são expandidos para a
