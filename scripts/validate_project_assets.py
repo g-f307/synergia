@@ -2,12 +2,33 @@ from __future__ import annotations
 
 import csv
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "database" / "migrations"
 SYNTHETIC_DATA = ROOT / "data" / "synthetic"
+
+
+def psql_command() -> list[str]:
+    if shutil.which("psql"):
+        return ["psql"]
+    if not shutil.which("docker"):
+        raise RuntimeError("psql e Docker Compose não estão disponíveis")
+    return [
+        "docker",
+        "compose",
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "--username",
+        os.getenv("PGUSER", "synergia"),
+        "--dbname",
+        os.getenv("PGDATABASE", "synergia"),
+    ]
 
 
 def validate_migrations() -> None:
@@ -21,11 +42,11 @@ def validate_migrations() -> None:
             raise ValueError(f"Migration vazia: {migration.relative_to(ROOT)}")
         subprocess.run(
             [
-                "psql",
+                *psql_command(),
                 "--set=ON_ERROR_STOP=1",
                 "--single-transaction",
-                f"--file={migration}",
             ],
+            input=sql.encode("utf-8"),
             check=True,
         )
     print(f"Migrations SQL validadas: {len(migrations)}")
