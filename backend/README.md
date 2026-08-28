@@ -35,6 +35,19 @@ curl -X POST http://localhost:8000/imports \
   -F 'file=@entrada.csv'
 ```
 
+Para consolidar fontes diferentes na mesma execução, repita `source` e `file`
+na mesma ordem. Cada arquivo recebe seu próprio `source_file_id` antes da
+normalização e todos os normalizados elegíveis seguem juntos para a consolidação:
+
+```bash
+curl -X POST http://localhost:8000/imports \
+  -F 'source=N-FP' -F 'file=@plano.csv' \
+  -F 'source=OWM' -F 'file=@recebimento.csv' \
+  -F 'source=GMES/OQC' -F 'file=@qualidade.xlsx' \
+  -F 'source=TMS' -F 'file=@embarque.json' \
+  -F 'imported_by=operador.local'
+```
+
 A resposta `201` contém o `execution_id`. Consulte o estado sem acessar o
 conteúdo do arquivo:
 
@@ -87,7 +100,7 @@ confirmados em uma única transação. O vínculo rastreável é:
 `execution_id → source_file_id → imported_record_id → normalized_record`
 
 Cada registro também conserva aba, linha, valores originais e transformações.
-Os normalizados elegíveis recebem o `execution_id` atual e seguem, sem nova
+Os normalizados elegíveis recebem o `execution_id` e o `source_file_id` reais e seguem, sem nova
 leitura do original, para `app.processing.process_normalized_records`. Essa
 etapa consolida Workorders, lotes, seriais e organizações e então executa o
 catálogo versionado de regras. O resultado e seu resumo ficam no objeto

@@ -57,6 +57,12 @@ diretamente os objetos gerados pela normalização; XLSX, CSV e JSON não são
 reabertos nesta etapa. Uma falha de conteúdo em uma Workorder gera
 `workorder_processing_failed` e não impede a consolidação das demais.
 
+O endpoint de importação pode receber vários pares `source`/`file` no mesmo
+pedido. O repositório reserva todos os arquivos sob um único `execution_id` e
+devolve seus IDs antes do processamento. Assim, a precedência e a detecção de
+divergências usam o caminho real da API, e não apenas chamadas diretas ao
+serviço em memória.
+
 Exemplo de proveniência de um campo consolidado:
 
 ```json
