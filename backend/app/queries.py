@@ -10,6 +10,7 @@ from uuid import uuid4
 import psycopg
 from fastapi import APIRouter, Depends, Query, status
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator
 
 from app.business_rules import RULE_CATALOG
@@ -574,21 +575,18 @@ class PostgresQueryRepository:
                 """
                 INSERT INTO synergia.audit_events
                     (execution_id, entity_type, entity_id, event_type, payload)
-                VALUES (
-                    %s, 'execution', %s, 'reprocessing_requested',
-                    jsonb_build_object(
-                        'previous_execution_id', %s,
-                        'root_execution_id', %s,
-                        'attempt', %s
-                    )
-                )
+                VALUES (%s, 'execution', %s, 'reprocessing_requested', %s)
                 """,
                 (
                     new_execution_id,
                     new_execution_id,
-                    execution_id,
-                    original["root_id"],
-                    attempt,
+                    Jsonb(
+                        {
+                            "previous_execution_id": execution_id,
+                            "root_execution_id": original["root_id"],
+                            "attempt": attempt,
+                        }
+                    ),
                 ),
             )
         return {
