@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import logging
@@ -16,13 +15,12 @@ from uuid import uuid4
 
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from openpyxl import load_workbook
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.errors import ErrorResponse
-from app.pipeline import run_pipeline
+from app.pipeline import read_source, run_pipeline
 
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -307,15 +305,22 @@ class PostgresImportRepository:
                         issue.get("row"),
                         issue.get("column"),
                         issue["reason"],
-                        Jsonb({
-                            key: value
-                            for key, value in issue.items()
-                            if key
-                            not in {
-                                "severity", "code", "sheet", "row", "column",
-                                "reason", "scope",
+                        Jsonb(
+                            {
+                                key: value
+                                for key, value in issue.items()
+                                if key
+                                not in {
+                                    "severity",
+                                    "code",
+                                    "sheet",
+                                    "row",
+                                    "column",
+                                    "reason",
+                                    "scope",
+                                }
                             }
-                        }),
+                        ),
                     ),
                 )
             for record in result["normalized_records"]:
@@ -347,9 +352,13 @@ class PostgresImportRepository:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    execution_id, source_file_id, summary["rows_read"],
-                    summary["valid_records"], summary["rejected_records"],
-                    summary["normalized_records"], summary["errors"],
+                    execution_id,
+                    source_file_id,
+                    summary["rows_read"],
+                    summary["valid_records"],
+                    summary["rejected_records"],
+                    summary["normalized_records"],
+                    summary["errors"],
                     summary["warnings"],
                 ),
             )
@@ -454,29 +463,69 @@ def configured_organizations() -> set[str] | None:
     return values or None
 
 
-def _validate(path: Path, extension: str) -> None:
+def _write_pipeline_artifacts(directory: Path, pipeline: dict) -> None:
+    summary = pipeline["summary"]
+    report = {
+        "execution_id": pipeline["execution_id"],
+        "source": pipeline["source"],
+        "file_name": pipeline["file_name"],
+        "valid": summary["errors"] == 0,
+        "blocking": pipeline["blocking"],
+        "row_count": summary["rows_read"],
+        "error_count": summary["errors"],
+        "warning_count": summary["warnings"],
+        "issues": pipeline["issues"],
+    }
+    normalized = {
+        "execution_id": pipeline["execution_id"],
+        "source": pipeline["source"],
+        "file_name": pipeline["file_name"],
+        "record_count": summary["normalized_records"],
+        "warning_count": summary["warnings"],
+        "issues": [
+            issue for issue in pipeline["issues"] if issue["severity"] == "warning"
+        ],
+        "records": pipeline["normalized_records"],
+    }
+    artifacts = {
+        "validation-report.json": json.dumps(
+            report, ensure_ascii=False, indent=2, default=str
+        )
+        + "\n",
+        "pipeline-summary.json": json.dumps(summary, ensure_ascii=False, indent=2)
+        + "\n",
+    }
+    if normalized["record_count"] or not pipeline["blocking"]:
+        artifacts["normalized-data.json"] = (
+            json.dumps(normalized, ensure_ascii=False, indent=2) + "\n"
+        )
+
+    temporary: list[tuple[Path, Path]] = []
+    targets = [directory / name for name in artifacts]
     try:
-        if extension == ".json":
-            with path.open(encoding="utf-8") as stream:
-                json.load(stream)
-        elif extension == ".csv":
-            with path.open(encoding="utf-8-sig", newline="") as stream:
-                rows = csv.reader(stream)
-                header = next(rows, None)
-                if not header or not any(cell.strip() for cell in header):
-                    raise ValueError("CSV sem cabeçalho")
-        else:
-            with path.open("rb") as stream:
-                workbook = load_workbook(stream, read_only=True, data_only=True)
-                if not workbook.sheetnames:
-                    raise ValueError("XLSX sem planilhas")
-                workbook.close()
-    except (UnicodeError, csv.Error, json.JSONDecodeError, OSError, ValueError) as exc:
-        raise ValueError(f"arquivo {extension[1:].upper()} inválido") from exc
-    except Exception as exc:
-        if extension == ".xlsx":
-            raise ValueError("arquivo XLSX inválido") from exc
+        for name, content in artifacts.items():
+            with NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=directory, delete=False
+            ) as stream:
+                stream.write(content)
+                temporary.append((Path(stream.name), directory / name))
+        for temp_path, target in temporary:
+            temp_path.replace(target)
+    except Exception:
+        for temp_path, _ in temporary:
+            temp_path.unlink(missing_ok=True)
+        for target in targets:
+            target.unlink(missing_ok=True)
         raise
+
+
+def _remove_pipeline_artifacts(directory: Path) -> None:
+    for name in (
+        "validation-report.json",
+        "pipeline-summary.json",
+        "normalized-data.json",
+    ):
+        (directory / name).unlink(missing_ok=True)
 
 
 def _error(
@@ -566,7 +615,7 @@ async def upload_import(
         if size_bytes == 0:
             _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
         content_hash = digest.hexdigest()
-        _validate(temp_path, extension)
+        tables, read_issues = read_source(temp_path, extension, source.value)
         destination = (
             storage_root() / source.name / execution_id / f"original{extension}"
         )
@@ -617,54 +666,20 @@ async def upload_import(
                 },
             ) from exc
         try:
-            pipeline = run_pipeline(
+            run_pipeline(
                 execution_id=execution_id,
                 file_name=safe_name,
-                path=destination,
-                extension=extension,
                 source=source.value,
                 repository=repository,
+                tables=tables,
+                read_issues=read_issues,
                 known_organizations=configured_organizations(),
+                prepare_commit=lambda result: _write_pipeline_artifacts(
+                    destination.parent, result
+                ),
             )
-            summary = pipeline["summary"]
-            report = {
-                "execution_id": execution_id,
-                "source": source.value,
-                "file_name": safe_name,
-                "valid": summary["errors"] == 0,
-                "blocking": pipeline["blocking"],
-                "row_count": summary["rows_read"],
-                "error_count": summary["errors"],
-                "warning_count": summary["warnings"],
-                "issues": pipeline["issues"],
-            }
-            normalized = {
-                "execution_id": execution_id,
-                "source": source.value,
-                "file_name": safe_name,
-                "record_count": summary["normalized_records"],
-                "warning_count": summary["warnings"],
-                "issues": [
-                    issue
-                    for issue in pipeline["issues"]
-                    if issue["severity"] == "warning"
-                ],
-                "records": pipeline["normalized_records"],
-            }
-            (destination.parent / "validation-report.json").write_text(
-                json.dumps(report, ensure_ascii=False, indent=2, default=str) + "\n",
-                encoding="utf-8",
-            )
-            (destination.parent / "pipeline-summary.json").write_text(
-                json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            if normalized["record_count"] or not pipeline["blocking"]:
-                (destination.parent / "normalized-data.json").write_text(
-                    json.dumps(normalized, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8",
-                )
         except Exception as exc:
+            _remove_pipeline_artifacts(destination.parent)
             repository.finish(execution_id, "failed", "pipeline_error")
             logger.exception("import_pipeline_failed execution_id=%s", execution_id)
             raise HTTPException(
