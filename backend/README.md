@@ -87,6 +87,17 @@ diretório padrão é `data/imports/`, ignorado pelo Git.
 A especificação OpenAPI interativa está em `http://localhost:8000/docs` e o
 documento JSON em `http://localhost:8000/openapi.json`.
 
+## Consultas e reprocessamento
+
+A API disponibiliza contratos para consultar execuções, Workorders, lotes,
+seriais, pendências, histórico, resultado consolidado e indicadores. As listas
+possuem filtros, ordenação determinística e paginação. Todas as falhas usam o
+envelope padronizado `error`.
+
+`POST /executions/{execution_id}/reprocess` cria uma nova tentativa assíncrona
+(`202`) e preserva a execução anterior. Rotas, corpos, códigos HTTP, filtros e
+exemplos estão em `../docs/api-contracts.md`.
+
 ## Consolidação
 
 Registros normalizados podem ser cruzados pelo serviço

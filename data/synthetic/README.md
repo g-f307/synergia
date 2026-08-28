@@ -15,6 +15,7 @@ teste e jamais devem ser usadas como base para corrigir dados de origem.
 | `rules_scenarios.json` | consolidação | catálogo completo de classificações, fila ativa, histórico e divergência |
 | `formula-errors.csv` | N-FP | `#VALUE!` e referência `#REF!` preservados |
 | `unmatched-key.csv` | TMS | chave de Workorder sem correspondência |
+| `database_example.json` | API e banco | execução, Workorder, lote e serial mínimos para consultas |
 
 Uma linha inteiramente vazia é registrada como aviso. Erros de estrutura,
 campos, tipos, fórmulas, identificadores e relacionamentos são impeditivos.
