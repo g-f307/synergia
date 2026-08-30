@@ -49,6 +49,9 @@ class ExecutionStateEvent(BaseModel):
 
 class ExecutionCounts(BaseModel):
     files: int = 0
+    files_received: int = 0
+    files_accepted: int = 0
+    files_rejected: int = 0
     rows_read: int = 0
     valid_records: int = 0
     rejected_records: int = 0
@@ -347,7 +350,10 @@ class PostgresQueryRepository:
             ).fetchall()
             result["counts"] = connection.execute(
                 """SELECT
-                     (SELECT count(*) FROM synergia.source_files WHERE execution_id=%s) AS files,
+                     (SELECT count(*) FROM synergia.file_inspections WHERE execution_id=%s) AS files,
+                     (SELECT count(*) FROM synergia.file_inspections WHERE execution_id=%s) AS files_received,
+                     (SELECT count(*) FROM synergia.file_inspections WHERE execution_id=%s AND decision='accepted') AS files_accepted,
+                     (SELECT count(*) FROM synergia.file_inspections WHERE execution_id=%s AND decision='rejected') AS files_rejected,
                      COALESCE((SELECT sum(rows_read) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS rows_read,
                      COALESCE((SELECT sum(valid_records) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS valid_records,
                      COALESCE((SELECT sum(rejected_records) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS rejected_records,
@@ -359,7 +365,7 @@ class PostgresQueryRepository:
                      (SELECT count(*) FROM synergia.pending_items WHERE execution_id=%s) AS pending_items,
                      (SELECT count(*) FROM synergia.pipeline_issues WHERE execution_id=%s AND severity='error') AS errors,
                      (SELECT count(*) FROM synergia.pipeline_issues WHERE execution_id=%s AND severity='warning') AS warnings""",
-                (execution_id,) * 12,
+                (execution_id,) * 15,
             ).fetchone()
             return result
 

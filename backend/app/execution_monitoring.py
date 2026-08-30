@@ -251,7 +251,7 @@ class MonitoringRepository:
             ).fetchone()["total"]
             rows = connection.execute(
                 """SELECT sf.id AS evidence_id,sf.extension,sf.detected_media_type AS media_type,
-                          sf.size_bytes,sf.content_hash AS sha256
+                          sf.size_bytes,sf.content_hash AS sha256,sf.storage_key
                    FROM synergia.source_files sf JOIN synergia.file_inspections fi ON fi.id=sf.inspection_id
                    WHERE sf.execution_id=%s AND fi.decision='accepted'
                    ORDER BY sf.id """
@@ -259,14 +259,17 @@ class MonitoringRepository:
                 + " LIMIT %s OFFSET %s",
                 (execution_id, page_size, (page - 1) * page_size),
             ).fetchall()
-        items = [
-            {
-                **dict(row),
-                "safe_name": f"evidence-{row['evidence_id']}.{row['extension']}",
-                "available": True,
-            }
-            for row in rows
-        ]
+        root = Path(os.getenv("IMPORT_STORAGE_DIR", "/tmp/synergia-imports")).resolve()
+        items = []
+        for row in rows:
+            item = dict(row)
+            storage_key = item.pop("storage_key", None)
+            path = (root / storage_key).resolve() if storage_key else None
+            item["safe_name"] = f"evidence-{row['evidence_id']}.{row['extension']}"
+            item["available"] = bool(
+                path is not None and root in path.parents and path.is_file()
+            )
+            items.append(item)
         return items, total
 
     def evidence_file(self, execution_id: str, evidence_id: int) -> dict | None:
