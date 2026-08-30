@@ -1,5 +1,8 @@
 # Contratos da API
 
+Consulte também [Acompanhamento de execuções](execution-monitoring.md) para os
+contratos integrados de estado, divergências, classificações, pendências e evidências.
+
 A API FastAPI é a fronteira pública do backend. Clientes não devem consultar o
 PostgreSQL nem ler arquivos importados diretamente. A especificação executável
 fica em `/openapi.json` e a interface interativa em `/docs`.

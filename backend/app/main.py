@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.errors import install_error_handlers
+from app.execution_monitoring import router as monitoring_router
 from app.imports import router as imports_router
 from app.queries import router as queries_router
 
@@ -25,6 +26,7 @@ app.add_middleware(
 install_error_handlers(app)
 app.include_router(imports_router)
 app.include_router(queries_router)
+app.include_router(monitoring_router)
 
 
 @app.get("/health", tags=["system"])
