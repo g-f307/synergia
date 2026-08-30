@@ -23,6 +23,11 @@ identificadas por número e nome gerado; nomes originais, `storage_key`, caminho
 quarentena e caminhos absolutos nunca fazem parte das respostas. Arquivos rejeitados
 retornam `403 evidence_not_allowed`.
 
+As contagens de arquivos distinguem `files_received`, `files_accepted` e
+`files_rejected`. O campo legado `files` representa todos os recebimentos inspecionados,
+inclusive os rejeitados. Em evidências, `available` somente é verdadeiro quando existe
+uma chave de armazenamento segura e o arquivo está fisicamente disponível.
+
 ## Cenários de estado
 
 | Ciclo público | Estados persistidos |
