@@ -7,9 +7,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from openpyxl import load_workbook
-
 from generate_synthetic_data import validate_manifest
+from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "database" / "migrations"

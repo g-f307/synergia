@@ -16,7 +16,6 @@ from typing import Any
 
 from openpyxl import Workbook, load_workbook
 
-
 GENERATOR_VERSION = "1.0.0"
 SCHEMA_VERSION = "1.0"
 SYNTHETIC_NOTICE = "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
