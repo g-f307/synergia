@@ -326,7 +326,7 @@ class PostgresQueryRepository:
                        failure_reason, pipeline_version, rule_catalog_version,
                        state_version, updated_at,
                        CASE
-                         WHEN status = 'completed' THEN 'completed'
+                         WHEN status IN ('completed','duplicate') THEN 'completed'
                          WHEN status = 'completed_with_errors' THEN 'partial'
                          WHEN status IN ('failed','validation_failed','cancelled') THEN 'failed'
                          ELSE 'active'
