@@ -26,9 +26,19 @@ python scripts/validate_project_assets.py
 - `pending_items` representa impedimentos anteriores à liberação;
 - `holds` representa retenções pós-liberação e aceita razão ausente;
 - `oqc_decisions` registra o estado da decisão sem automatizá-la;
+- `classifications` preserva regra, versão, prioridade, justificativa e evidência;
+- `rule_evaluations` registra também as regras que não foram acionadas;
+- `consolidated_field_provenance` liga cada campo consolidado às linhas de origem;
 - `audit_events` registra eventos e contexto adicional em `jsonb`;
-- quantidades são não negativas e a liberação parcial exige quantidade
-  liberada maior que zero e menor que a recebida.
+- quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
+  não negativas e a liberação parcial exige quantidade liberada maior que zero
+  e menor que a recebida.
+
+Cada Workorder consolidada é uma unidade transacional independente. Uma falha
+reverte lote, serial, classificação, pendência e proveniência daquela unidade,
+registra `processing_persistence_failed` e não impede a confirmação das demais
+Workorders da execução. Chaves estrangeiras compostas com `execution_id`
+impedem relacionamentos entre execuções diferentes.
 
 O arquivo original aceito é preservado em diretório controlado. O banco mantém
 nome, extensão, tipo, tamanho, SHA-256 e somente a chave relativa de
@@ -50,13 +60,16 @@ erDiagram
     workorders ||--o{ pending_items : apresenta
     workorders ||--o{ holds : recebe
     workorders ||--o{ oqc_decisions : avalia
+    workorders ||--o{ classifications : classifica
+    workorders ||--o{ rule_evaluations : avalia_regra
+    workorders ||--o{ consolidated_field_provenance : rastreia
     executions ||--o{ audit_events : registra
 ```
 
 ## Teste de persistência
 
-O teste de integração aplica todas as migrations em PostgreSQL 16 e persiste
-uma execução reprocessada, fonte, Workorder, lote, serial, container, pendência
-e hold. O cenário também comprova liberação parcial e preservação de zeros à
-esquerda. A massa de referência está em
+Os testes de integração aplicam todas as migrations em PostgreSQL 16 e cobrem
+persistência completa, continuidade parcial, rollback da unidade afetada,
+integridade entre execuções, reinício do repositório e presença dos índices das
+consultas críticas. A massa de referência está em
 `data/synthetic/database_example.json`.

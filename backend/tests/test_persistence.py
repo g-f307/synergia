@@ -116,6 +116,8 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
 def test_creates_all_operational_entities() -> None:
     expected_tables = {
         "audit_events",
+        "classifications",
+        "consolidated_field_provenance",
         "executions",
         "holds",
         "imported_records",
@@ -126,6 +128,7 @@ def test_creates_all_operational_entities() -> None:
         "pending_items",
         "pipeline_issues",
         "pipeline_summaries",
+        "rule_evaluations",
         "serials",
         "source_files",
         "workorders",

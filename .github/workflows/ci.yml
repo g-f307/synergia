@@ -111,6 +111,7 @@ jobs:
           pytest -q -m integration
           backend/tests/test_persistence.py
           backend/tests/test_query_persistence.py
+          backend/tests/test_processing_persistence.py
       - name: Validar Docker Compose
         run: docker compose config
 

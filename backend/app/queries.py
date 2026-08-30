@@ -54,13 +54,13 @@ class WorkorderResponse(BaseModel):
     workorder_number: str
     organization_code: str | None = None
     processing_status: str
-    planned_quantity: int
-    produced_quantity: int
-    received_quantity: int
-    released_quantity: int
-    pending_quantity: int
-    retained_quantity: int
-    partially_released: bool
+    planned_quantity: int | None = None
+    produced_quantity: int | None = None
+    received_quantity: int | None = None
+    released_quantity: int | None = None
+    pending_quantity: int | None = None
+    retained_quantity: int | None = None
+    partially_released: bool | None = None
     lots: list[str]
     serials: list[str]
     updated_at: datetime
@@ -146,6 +146,9 @@ class ConsolidatedResultResponse(BaseModel):
     holds: list[HoldResponse]
     oqc_decisions: list[OqcDecisionResponse]
     pending_items: list[PendingItemResponse]
+    classifications: list[dict[str, Any]] = Field(default_factory=list)
+    rule_evaluations: list[dict[str, Any]] = Field(default_factory=list)
+    provenance: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ReprocessRequest(BaseModel):
@@ -395,7 +398,8 @@ class PostgresQueryRepository:
                 f"""
                 SELECT p.id, p.execution_id, w.workorder_number,
                        l.lot_number, s.serial_number, p.category, p.reason,
-                       p.status, p.created_at, p.updated_at
+                       p.status, p.priority_score, p.priority,
+                       p.responsible_area, p.created_at, p.updated_at
                 {base} {where}
                 ORDER BY {order}
                 LIMIT %s OFFSET %s
@@ -410,7 +414,8 @@ class PostgresQueryRepository:
                 f"""
                 SELECT p.id, p.execution_id, w.workorder_number,
                        l.lot_number, s.serial_number, p.category, p.reason,
-                       p.status, p.created_at, p.updated_at
+                       p.status, p.priority_score, p.priority,
+                       p.responsible_area, p.created_at, p.updated_at
                 {self._pending_base()}
                 WHERE p.id = %s
                 """,
@@ -421,18 +426,22 @@ class PostgresQueryRepository:
     @staticmethod
     def _decorate_pending(item: dict) -> dict:
         rule = RULE_CATALOG["rules"].get(item["category"], {})
-        score = int(rule.get("priority", 0))
+        score = item.get("priority_score")
+        if score is None:
+            score = int(rule.get("priority", 0))
         item["priority_score"] = score
-        item["priority"] = (
-            "critical"
-            if score >= 90
-            else "high"
-            if score >= 60
-            else "normal"
-            if score >= 30
-            else "low"
-        )
-        item["responsible_area"] = rule.get("responsible_area")
+        if item.get("priority") is None:
+            item["priority"] = (
+                "critical"
+                if score >= 90
+                else "high"
+                if score >= 60
+                else "normal"
+                if score >= 30
+                else "low"
+            )
+        if item.get("responsible_area") is None:
+            item["responsible_area"] = rule.get("responsible_area")
         return item
 
     def list_history(
@@ -511,6 +520,46 @@ class PostgresQueryRepository:
                 """,
                 (workorder_number, execution_id),
             ).fetchall()
+            classifications = connection.execute(
+                """
+                SELECT c.classification_id, c.rule_id,
+                       c.rule_catalog_version, c.state, c.entity_type,
+                       c.entity_id, c.justification, c.reason, c.data_quality,
+                       c.priority, c.priority_score, c.responsible_area,
+                       c.occurred_at, c.classified_at, c.evidence,
+                       l.lot_number, s.serial_number
+                FROM synergia.classifications c
+                JOIN synergia.workorders w ON w.id = c.workorder_id
+                LEFT JOIN synergia.lots l ON l.id = c.lot_id
+                LEFT JOIN synergia.serials s ON s.id = c.serial_id
+                WHERE w.workorder_number = %s AND c.execution_id = %s
+                ORDER BY c.classified_at, c.classification_id
+                """,
+                (workorder_number, execution_id),
+            ).fetchall()
+            evaluations = connection.execute(
+                """
+                SELECT r.id, r.rule_id, r.rule_catalog_version, r.result,
+                       r.justification, r.evidence, r.created_at
+                FROM synergia.rule_evaluations r
+                JOIN synergia.workorders w ON w.id = r.workorder_id
+                WHERE w.workorder_number = %s AND r.execution_id = %s
+                ORDER BY r.id
+                """,
+                (workorder_number, execution_id),
+            ).fetchall()
+            provenance = connection.execute(
+                """
+                SELECT p.id, p.field_name, p.source, p.sheet_name,
+                       p.row_number, p.observed_value, p.source_file_id,
+                       p.created_at
+                FROM synergia.consolidated_field_provenance p
+                JOIN synergia.workorders w ON w.id = p.workorder_id
+                WHERE w.workorder_number = %s AND p.execution_id = %s
+                ORDER BY p.field_name, p.source_file_id, p.row_number, p.id
+                """,
+                (workorder_number, execution_id),
+            ).fetchall()
         pending, _ = self.list_pending(
             status_filter=None,
             category=None,
@@ -525,6 +574,9 @@ class PostgresQueryRepository:
             "holds": [dict(item) for item in holds],
             "oqc_decisions": [dict(item) for item in decisions],
             "pending_items": pending,
+            "classifications": [dict(item) for item in classifications],
+            "rule_evaluations": [dict(item) for item in evaluations],
+            "provenance": [dict(item) for item in provenance],
         }
 
     def request_reprocessing(
