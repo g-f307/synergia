@@ -14,7 +14,7 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
             cursor.execute(
                 """
                 INSERT INTO synergia.executions (id, status, source)
-                VALUES ('exec-processing-db', 'running', 'N-FP');
+                VALUES ('exec-processing-db', 'validating', 'N-FP');
                 """
             )
             cursor.execute(
@@ -119,6 +119,8 @@ def test_creates_all_operational_entities() -> None:
         "classifications",
         "consolidated_field_provenance",
         "executions",
+        "execution_idempotency",
+        "execution_state_transitions",
         "holds",
         "imported_records",
         "lots",
@@ -151,7 +153,7 @@ def test_persists_traceable_partial_release_and_reprocessing() -> None:
             cursor.execute(
                 """
                 INSERT INTO synergia.executions (id, status)
-                VALUES ('exec-001', 'completed'), ('exec-002', 'running');
+                VALUES ('exec-001', 'completed'), ('exec-002', 'validating');
                 """
             )
             cursor.execute(

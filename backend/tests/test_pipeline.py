@@ -3,15 +3,24 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook
 
+from app.execution import validate_transition
 from app.pipeline import read_source, run_pipeline, run_pipeline_batch
 
 
 class RecordingRepository:
     def __init__(self) -> None:
         self.commits: list[tuple[str, dict]] = []
+        self.state = "pending"
+        self.transitions: list[str] = []
 
     def commit_pipeline(self, execution_id: str, result: dict) -> None:
         self.commits.append((execution_id, result))
+        self.transition_execution(execution_id, result["status"], result["status"])
+
+    def transition_execution(self, execution_id: str, target: str, reason: str) -> None:
+        validate_transition(self.state, target)
+        self.state = target
+        self.transitions.append(target)
 
 
 def run_csv(
@@ -94,6 +103,13 @@ def test_valid_file_runs_all_stages_and_preserves_traceability(tmp_path) -> None
         },
     }
     assert len(repository.commits) == 1
+    assert repository.transitions == [
+        "validating",
+        "normalizing",
+        "consolidating",
+        "applying_rules",
+        "completed",
+    ]
 
 
 def test_record_error_rejects_only_affected_line(tmp_path) -> None:
@@ -105,7 +121,7 @@ def test_record_error_rejects_only_affected_line(tmp_path) -> None:
         "WO-ALSO-OK,2,28/08/2026\n",
     )
 
-    assert result["status"] == "completed"
+    assert result["status"] == "completed_with_errors"
     assert result["blocking"] is False
     assert result["summary"]["valid_records"] == 2
     assert result["summary"]["rejected_records"] == 1
@@ -122,12 +138,13 @@ def test_record_error_rejects_only_affected_line(tmp_path) -> None:
     ["status\nopen\n", "workorder\n", ""],
 )
 def test_structural_error_blocks_the_file(tmp_path, content) -> None:
-    result, _ = run_csv(tmp_path, content)
+    result, repository = run_csv(tmp_path, content)
 
     assert result["status"] == "validation_failed"
     assert result["blocking"] is True
     assert result["summary"]["normalized_records"] == 0
     assert any(issue["scope"] == "structure" for issue in result["issues"])
+    assert repository.transitions == ["validating", "validation_failed"]
 
 
 def test_required_field_and_unknown_organization_are_row_errors(tmp_path) -> None:
