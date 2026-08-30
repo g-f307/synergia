@@ -150,7 +150,7 @@ def _seed_monitoring(storage_root: Path) -> tuple[int, int]:
             )
     target = storage_root / storage_key
     target.parent.mkdir(parents=True)
-    target.write_text("workorder_number\n", encoding="utf-8")
+    target.write_bytes(b"workorder_number\n")
     assert accepted_id != source_id
     return source_id, accepted_id
 
@@ -164,7 +164,10 @@ def test_postgres_monitoring_counts_states_pagination_and_safe_download(
     detail = repository.get_execution(EXECUTION_ID)
     assert detail["lifecycle"] == "partial"
     assert detail["counts"] == {
-        "files": 1,
+        "files": 4,
+        "files_received": 4,
+        "files_accepted": 1,
+        "files_rejected": 3,
         "rows_read": 3,
         "valid_records": 2,
         "rejected_records": 1,
@@ -190,6 +193,9 @@ def test_postgres_monitoring_counts_states_pagination_and_safe_download(
         )
         assert allowed.status_code == 200
         assert allowed.content == b"workorder_number\n"
+        (tmp_path / f"accepted/OWM/{EXECUTION_ID}/accepted.csv").unlink()
+        unavailable = client.get(f"/executions/{EXECUTION_ID}/evidences").json()
+        assert unavailable["items"][0]["available"] is False
         internal_alias = client.get(
             f"/executions/{EXECUTION_ID}/evidences/{inspection_id}/download"
         )
