@@ -6,15 +6,56 @@ from copy import deepcopy
 
 import psycopg
 import pytest
+from psycopg import sql
 
 from app.persistence import PostgresProcessingRepository
 from app.processing import process_normalized_records
 from app.queries import PostgresQueryRepository
 
 pytestmark = pytest.mark.integration
+_CREATED_EXECUTION_IDS: set[str] = set()
+
+
+@pytest.fixture(autouse=True)
+def cleanup_created_executions():
+    """Remove committed fixtures so integration tests remain order-independent."""
+    _CREATED_EXECUTION_IDS.clear()
+    yield
+    if not _CREATED_EXECUTION_IDS:
+        return
+    execution_ids = sorted(_CREATED_EXECUTION_IDS)
+    targets = (
+        ("pending_items", "execution_id"),
+        ("holds", "execution_id"),
+        ("oqc_decisions", "execution_id"),
+        ("classifications", "execution_id"),
+        ("rule_evaluations", "execution_id"),
+        ("consolidated_field_provenance", "execution_id"),
+        ("audit_events", "execution_id"),
+        ("pipeline_issues", "execution_id"),
+        ("pipeline_summaries", "execution_id"),
+        ("normalized_records", "execution_id"),
+        ("imported_records", "execution_id"),
+        ("serials", "execution_id"),
+        ("lots", "execution_id"),
+        ("workorders", "execution_id"),
+        ("organizations", "execution_id"),
+        ("source_files", "execution_id"),
+        ("executions", "id"),
+    )
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        for table, column in targets:
+            connection.execute(
+                sql.SQL("DELETE FROM synergia.{} WHERE {} = ANY(%s)").format(
+                    sql.Identifier(table), sql.Identifier(column)
+                ),
+                (execution_ids,),
+            )
+    _CREATED_EXECUTION_IDS.clear()
 
 
 def _seed_execution(execution_id: str, sources: list[str]) -> list[int]:
+    _CREATED_EXECUTION_IDS.add(execution_id)
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         connection.execute(
             "INSERT INTO synergia.executions (id, status, source) "
