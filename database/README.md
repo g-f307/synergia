@@ -19,6 +19,8 @@ python scripts/validate_project_assets.py
 
 - `executions` registra tentativa, estado e vínculo de reprocessamento;
 - `source_files` mantém metadados e SHA-256, com proteção contra duplicidade;
+- `file_inspections` registra tipo declarado/detectado, hash, tamanho, decisão,
+  motivo e retenção sem expor caminhos internos;
 - `workorders`, `lots` e `serials` preservam identificadores como texto;
 - `container_number` também é texto para preservar zeros à esquerda;
 - todas as entidades operacionais apontam para `execution_id` e
@@ -44,10 +46,12 @@ registra `processing_persistence_failed` e não impede a confirmação das demai
 Workorders da execução. Chaves estrangeiras compostas com `execution_id`
 impedem relacionamentos entre execuções diferentes.
 
-O arquivo original aceito é preservado em diretório controlado. O banco mantém
-nome, extensão, tipo, tamanho, SHA-256 e somente a chave relativa de
-armazenamento. A execução registra fonte, ator, início, fim, estado, motivo de
-falha e eventual execução original em caso de duplicidade.
+O arquivo fica em quarentena até a aprovação. O original aceito é preservado em
+diretório controlado com nome interno aleatório. O banco mantém nome original
+como metadado, extensão, tipos declarado e detectado, tamanho, SHA-256, decisão
+e somente a chave relativa de armazenamento do aceito. A execução registra
+fonte, ator, início, fim, estado, motivo de falha e eventual execução original
+em caso de duplicidade.
 
 ## Diagrama entidade-relacionamento
 
@@ -55,6 +59,8 @@ falha e eventual execução original em caso de duplicidade.
 erDiagram
     executions ||--o{ executions : reprocessa
     executions ||--o{ source_files : importa
+    executions ||--o{ file_inspections : inspeciona
+    file_inspections ||--o| source_files : libera
     source_files ||--o{ organizations : origina
     source_files ||--o{ workorders : origina
     organizations ||--o{ workorders : possui

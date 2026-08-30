@@ -11,7 +11,8 @@ flowchart LR
     A -->|HTTP / OpenAPI| F[FastAPI]
     F --> P[(PostgreSQL 16)]
     F --> S[Armazenamento controlado]
-    I[CSV, JSON e XLSX] --> F
+    I[CSV, JSON e XLSX] --> Q[Quarentena e inspeção]
+    Q --> F
     C[GitHub Actions] --> A
     C --> F
     C --> P
@@ -32,7 +33,7 @@ uma execução.
 | FastAPI | importação, consultas, validação HTTP e OpenAPI | `backend/app/` |
 | Serviços de domínio | estados, normalização, consolidação e regras determinísticas | `backend/app/execution.py`, `normalization.py`, `consolidation.py` e `business_rules.py` |
 | PostgreSQL 16 | execuções, fontes, resultados, pendências e auditoria | `database/migrations/` |
-| Armazenamento controlado | original, relatório e resultado normalizado por execução | `IMPORT_STORAGE_DIR`; `data/imports/` apenas em desenvolvimento |
+| Armazenamento controlado | quarentena isolada, original aceito com nome aleatório, relatório e resultado normalizado | `IMPORT_STORAGE_DIR`; `data/imports/` apenas em desenvolvimento |
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |
 | Dados sintéticos | cenários reproduzíveis sem dados reais | `data/synthetic/` |
 
@@ -51,6 +52,9 @@ importação rastreável está em `imports.py`; consultas e reprocessamento em
 serviços independentes da interface e do mecanismo futuro de coleta. A máquina
 de estados, a idempotência versionada e o reprocessamento estão documentados em
 [execution-lifecycle.md](execution-lifecycle.md).
+O recebimento não entrega bytes HTTP diretamente ao pipeline: extensão, MIME,
+tipo real, tamanho, arquivo compactado e conteúdo ativo são inspecionados pela
+camada descrita em [upload-security.md](upload-security.md).
 
 Os contratos OpenAPI são gerados pela aplicação em `/openapi.json`. Detalhes de
 cada etapa estão em [normalization.md](normalization.md),
@@ -62,10 +66,12 @@ As migrations constroem o schema `synergia` desde um banco vazio. Entidades
 operacionais preservam `execution_id` e `source_file_id` para rastreabilidade.
 Identificadores de negócio são texto para manter zeros à esquerda.
 
-O banco armazena metadados e a chave relativa do arquivo. O conteúdo original
-fica sob `IMPORT_STORAGE_DIR/<fonte>/<execution_id>/`; caminho absoluto e
-conteúdo não são expostos pela API ou pelos logs. Em desenvolvimento, o padrão
-é `data/imports/`, ignorado pelo Git.
+O banco armazena a decisão de inspeção, metadados e a chave relativa do arquivo
+aceito. A entrada fica primeiro em `IMPORT_STORAGE_DIR/quarantine/` com nome
+aleatório; somente após aprovação é movida para
+`IMPORT_STORAGE_DIR/accepted/<fonte>/<execution_id>/`. Caminho absoluto, nome
+interno e conteúdo não são expostos pela API ou pelos logs. Em desenvolvimento,
+o padrão é `data/imports/`, ignorado pelo Git.
 
 ### Integração contínua
 

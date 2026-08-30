@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
-import shutil
 from collections.abc import Generator
 from datetime import UTC, datetime
 from enum import Enum
@@ -29,6 +27,12 @@ from app.execution import (
 )
 from app.persistence import PostgresProcessingRepository
 from app.pipeline import read_source, run_pipeline_batch
+from app.upload_security import (
+    InspectionResult,
+    purge_quarantined,
+    receive_and_inspect,
+    release_to_accepted,
+)
 
 logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -92,6 +96,22 @@ class PipelineSummary(BaseModel):
     warnings: int
 
 
+class FileInspectionRecord(BaseModel):
+    inspection_id: int
+    source: ImportSource
+    original_file_name: str
+    extension: str | None
+    declared_media_type: str | None
+    detected_media_type: str | None
+    size_bytes: int
+    sha256: str
+    decision: str
+    reason_code: str
+    analyzed_at: datetime
+    retained_until: datetime | None
+    discarded_at: datetime | None
+
+
 class ImportRepository(Protocol):
     def start(
         self,
@@ -112,9 +132,21 @@ class ImportRepository(Protocol):
         size_bytes: int,
         digest: str,
         media_type: str | None,
+        detected_media_type: str = "",
         storage_key: str,
+        inspection_id: int | None = None,
         source: str,
     ) -> tuple[int | None, str | None]: ...
+
+    def record_inspection(
+        self, execution_id: str, source: str, result: InspectionResult
+    ) -> int: ...
+
+    def list_inspections(self, execution_id: str) -> list[dict]: ...
+
+    def mark_inspections_discarded(self, internal_stems: list[str]) -> None: ...
+
+    def list_expired_inspection_stems(self) -> list[str]: ...
 
     def claim_processing(
         self, execution_id: str, file_hashes: list[str]
@@ -197,7 +229,9 @@ class PostgresImportRepository:
         size_bytes: int,
         digest: str,
         media_type: str | None,
+        detected_media_type: str = "",
         storage_key: str,
+        inspection_id: int | None = None,
         source: str,
     ) -> tuple[int | None, str | None]:
         with self._connect() as connection:
@@ -205,8 +239,9 @@ class PostgresImportRepository:
                 """
                 INSERT INTO synergia.source_files
                     (execution_id, source, file_name, extension, content_hash,
-                     media_type, size_bytes, storage_key)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                     media_type, detected_media_type, size_bytes, storage_key,
+                     inspection_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (execution_id, content_hash) DO NOTHING
                 RETURNING id
                 """,
@@ -217,8 +252,10 @@ class PostgresImportRepository:
                     extension,
                     digest,
                     media_type,
+                    detected_media_type,
                     size_bytes,
                     storage_key,
+                    inspection_id,
                 ),
             ).fetchone()
             if inserted:
@@ -235,6 +272,84 @@ class PostgresImportRepository:
             if duplicate is None:
                 raise RuntimeError("Conflito de hash sem execução original")
             return None, duplicate["execution_id"]
+
+    def record_inspection(
+        self, execution_id: str, source: str, result: InspectionResult
+    ) -> int:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                INSERT INTO synergia.file_inspections (
+                    execution_id, source, original_file_name, internal_name,
+                    extension, declared_media_type, detected_media_type,
+                    size_bytes, content_hash, decision, reason_code,
+                    analyzed_at, retained_until, discarded_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s
+                )
+                RETURNING id
+                """,
+                (
+                    execution_id,
+                    source,
+                    result.original_name,
+                    result.internal_name,
+                    result.extension.lstrip(".") or None,
+                    result.declared_media_type or None,
+                    result.detected_media_type,
+                    result.size_bytes,
+                    result.sha256,
+                    result.decision.value,
+                    result.reason_code,
+                    result.analyzed_at,
+                    result.retained_until,
+                    result.discarded_at,
+                ),
+            ).fetchone()
+            return row["id"]
+
+    def list_inspections(self, execution_id: str) -> list[dict]:
+        with self._connect() as connection:
+            return connection.execute(
+                """
+                SELECT id AS inspection_id, source, original_file_name,
+                       extension, declared_media_type, detected_media_type,
+                       size_bytes, content_hash AS sha256, decision,
+                       reason_code, analyzed_at, retained_until, discarded_at
+                FROM synergia.file_inspections
+                WHERE execution_id = %s
+                ORDER BY id
+                """,
+                (execution_id,),
+            ).fetchall()
+
+    def mark_inspections_discarded(self, internal_stems: list[str]) -> None:
+        if not internal_stems:
+            return
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE synergia.file_inspections
+                SET discarded_at = now()
+                WHERE decision = 'rejected' AND discarded_at IS NULL
+                  AND split_part(internal_name, '.', 1) = ANY(%s)
+                """,
+                (internal_stems,),
+            )
+
+    def list_expired_inspection_stems(self) -> list[str]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT split_part(internal_name, '.', 1) AS internal_stem
+                FROM synergia.file_inspections
+                WHERE decision = 'rejected' AND discarded_at IS NULL
+                  AND retained_until <= now()
+                ORDER BY id
+                """
+            ).fetchall()
+            return [row["internal_stem"] for row in rows]
 
     def claim_processing(self, execution_id: str, file_hashes: list[str]) -> str | None:
         with self._connect() as connection:
@@ -687,12 +802,52 @@ def _error(
     )
 
 
+INSPECTION_MESSAGES = {
+    "unsupported_extension": "Formato de arquivo não permitido para a fonte",
+    "empty_file": "Arquivo vazio",
+    "file_too_large": "Arquivo acima do limite permitido",
+    "path_traversal": "Nome de arquivo inválido",
+    "declared_mime_mismatch": "MIME declarado incompatível com o arquivo",
+    "content_signature_mismatch": "Conteúdo incompatível com a extensão",
+    "binary_content_mismatch": "Conteúdo binário incompatível com a extensão",
+    "content_type_mismatch": "Tipo real incompatível com a extensão",
+    "disguised_active_content": "Conteúdo ativo disfarçado de planilha",
+    "invalid_text_encoding": "Codificação de texto não permitida",
+    "corrupted_file": "Arquivo truncado ou corrompido",
+    "macro_or_active_content": "Macro ou conteúdo ativo não permitido",
+    "embedded_object": "Objeto incorporado não permitido",
+    "external_link": "Vínculo externo não permitido",
+    "dangerous_formula": "Fórmula potencialmente perigosa",
+    "archive_too_many_entries": "Arquivo compactado com entradas em excesso",
+    "archive_uncompressed_limit": "Conteúdo descompactado acima do limite",
+    "archive_compression_ratio": "Razão de compressão abusiva",
+    "archive_path_traversal": "Caminho inseguro dentro do arquivo compactado",
+    "encrypted_archive": "Arquivo compactado criptografado não permitido",
+}
+
+
+def _inspection_http_status(reason_code: str) -> int:
+    if reason_code == "file_too_large":
+        return status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+    if reason_code in {
+        "unsupported_extension",
+        "declared_mime_mismatch",
+        "content_signature_mismatch",
+        "binary_content_mismatch",
+        "content_type_mismatch",
+        "disguised_active_content",
+    }:
+        return status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    return status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
 @router.post(
     "",
     response_model=ImportStatus,
     status_code=status.HTTP_201_CREATED,
     summary="Enviar e registrar um arquivo de entrada",
     responses={
+        413: {"model": ErrorResponse, "description": "Arquivo acima do limite"},
         409: {"model": ErrorResponse, "description": "Arquivo duplicado por SHA-256"},
         415: {"model": ErrorResponse, "description": "Extensão não suportada"},
         422: {
@@ -756,63 +911,81 @@ async def upload_import(
         ",".join(item.value for item in source),
     )
 
-    temp_paths: list[Path] = []
     destinations: list[Path] = []
     pipeline_inputs: list[dict] = []
     file_hashes: list[str] = []
     try:
-        for index, (item_source, item_file) in enumerate(
-            zip(source, file, strict=True), 1
-        ):
-            safe_name = Path(item_file.filename or "").name
-            extension = Path(safe_name).suffix.lower()
-            if extension not in {".xlsx", ".csv", ".json"}:
+        removed_inspections = purge_quarantined(
+            storage_root(), repository.list_expired_inspection_stems()
+        )
+        repository.mark_inspections_discarded(removed_inspections)
+        for item_source, item_file in zip(source, file, strict=True):
+            inspection = await receive_and_inspect(
+                item_file,
+                source=item_source.value,
+                execution_id=execution_id,
+                root=storage_root(),
+            )
+            try:
+                inspection_id = repository.record_inspection(
+                    execution_id, item_source.value, inspection
+                )
+            except Exception:
+                if inspection.quarantine_path is not None:
+                    inspection.quarantine_path.unlink(missing_ok=True)
+                raise
+            if not inspection.accepted:
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 if pipeline_inputs:
-                    repository.abort_claim(execution_id, "unsupported_extension")
+                    repository.abort_claim(execution_id, inspection.reason_code)
                 _error(
                     repository,
                     execution_id,
-                    415,
-                    "unsupported_extension",
-                    "Extensão não suportada",
+                    _inspection_http_status(inspection.reason_code),
+                    inspection.reason_code,
+                    INSPECTION_MESSAGES.get(
+                        inspection.reason_code, "Arquivo rejeitado pela inspeção"
+                    ),
                 )
-            digest = hashlib.sha256()
-            size_bytes = 0
-            with NamedTemporaryFile(
-                delete=False, dir=storage_root(), suffix=".upload"
-            ) as temp:
-                temp_path = Path(temp.name)
-                temp_paths.append(temp_path)
-                while chunk := await item_file.read(1024 * 1024):
-                    size_bytes += len(chunk)
-                    digest.update(chunk)
-                    temp.write(chunk)
-            if size_bytes == 0:
+            try:
+                destination = release_to_accepted(
+                    inspection,
+                    source_key=item_source.name,
+                    execution_id=execution_id,
+                    root=storage_root(),
+                )
+            except OSError as exc:
+                if inspection.quarantine_path is not None:
+                    inspection.quarantine_path.unlink(missing_ok=True)
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
-                if pipeline_inputs:
-                    repository.abort_claim(execution_id, "empty_file")
-                _error(repository, execution_id, 422, "empty_file", "Arquivo vazio")
-            tables, read_issues = read_source(temp_path, extension, item_source.value)
-            stored_name = (
-                f"original{extension}"
-                if len(file) == 1
-                else f"original-{index}{extension}"
-            )
-            destination = storage_root() / item_source.name / execution_id / stored_name
+                repository.abort_claim(execution_id, "storage_error")
+                logger.exception("import_storage_failed execution_id=%s", execution_id)
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "code": "storage_error",
+                        "message": "Não foi possível preservar o arquivo",
+                        "execution_id": execution_id,
+                    },
+                ) from exc
+            destinations.append(destination)
             storage_key = str(destination.relative_to(storage_root()))
-            file_digest = digest.hexdigest()
+            tables, read_issues = read_source(
+                destination, inspection.extension, item_source.value
+            )
             source_file_id, duplicate_of = repository.claim_file(
                 execution_id,
                 source=item_source.value,
-                file_name=safe_name,
-                extension=extension[1:],
-                size_bytes=size_bytes,
-                digest=file_digest,
-                media_type=item_file.content_type,
+                file_name=inspection.original_name,
+                extension=inspection.extension[1:],
+                size_bytes=inspection.size_bytes,
+                digest=inspection.sha256,
+                media_type=inspection.declared_media_type,
+                detected_media_type=inspection.detected_media_type or "",
                 storage_key=storage_key,
+                inspection_id=inspection_id,
             )
             if duplicate_of:
                 for stored in destinations:
@@ -838,29 +1011,10 @@ async def upload_import(
                 )
             if source_file_id is None:
                 raise RuntimeError("Arquivo reservado sem identificador")
-            try:
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(temp_path, destination)
-            except OSError as exc:
-                destination.unlink(missing_ok=True)
-                for stored in destinations:
-                    stored.unlink(missing_ok=True)
-                repository.abort_claim(execution_id, "storage_error")
-                logger.exception("import_storage_failed execution_id=%s", execution_id)
-                raise HTTPException(
-                    status_code=500,
-                    detail={
-                        "code": "storage_error",
-                        "message": "Não foi possível preservar o arquivo",
-                        "execution_id": execution_id,
-                    },
-                ) from exc
-            temp_paths.remove(temp_path)
-            destinations.append(destination)
-            file_hashes.append(file_digest)
+            file_hashes.append(inspection.sha256)
             pipeline_inputs.append(
                 {
-                    "file_name": safe_name,
+                    "file_name": inspection.original_name,
                     "source": item_source.value,
                     "source_file_id": source_file_id,
                     "tables": tables,
@@ -942,8 +1096,6 @@ async def upload_import(
     finally:
         for item_file in file:
             await item_file.close()
-        for temp_path in temp_paths:
-            temp_path.unlink(missing_ok=True)
 
     result = repository.get(execution_id)
     if result is None:
@@ -970,6 +1122,24 @@ def get_import(
 
 
 @router.get(
+    "/{execution_id}/inspections",
+    response_model=list[FileInspectionRecord],
+    summary="Consultar as decisões de segurança dos arquivos",
+    responses={404: {"model": ErrorResponse, "description": "Execução não encontrada"}},
+)
+def get_file_inspections(
+    execution_id: str,
+    repository: ImportRepository = Depends(get_repository),
+) -> list[FileInspectionRecord]:
+    if repository.get(execution_id) is None:
+        raise HTTPException(status_code=404, detail="Execução não encontrada")
+    return [
+        FileInspectionRecord.model_validate(item)
+        for item in repository.list_inspections(execution_id)
+    ]
+
+
+@router.get(
     "/{execution_id}/validation-report",
     response_model=ValidationReport,
     summary="Visualizar o relatório de validação da execução",
@@ -987,7 +1157,13 @@ def get_validation_report(
             status_code=404, detail="Execução de importação não encontrada"
         )
     source = ImportSource(execution["source"])
-    report_path = storage_root() / source.name / execution_id / "validation-report.json"
+    report_path = (
+        storage_root()
+        / "accepted"
+        / source.name
+        / execution_id
+        / "validation-report.json"
+    )
     if not report_path.is_file():
         raise HTTPException(
             status_code=404, detail="Relatório de validação não disponível"
@@ -1013,7 +1189,11 @@ def get_normalized_data(
         )
     source = ImportSource(execution["source"])
     normalized_path = (
-        storage_root() / source.name / execution_id / "normalized-data.json"
+        storage_root()
+        / "accepted"
+        / source.name
+        / execution_id
+        / "normalized-data.json"
     )
     if not normalized_path.is_file():
         raise HTTPException(
@@ -1039,7 +1219,13 @@ def get_pipeline_summary(
             status_code=404, detail="Execução de importação não encontrada"
         )
     source = ImportSource(execution["source"])
-    summary_path = storage_root() / source.name / execution_id / "pipeline-summary.json"
+    summary_path = (
+        storage_root()
+        / "accepted"
+        / source.name
+        / execution_id
+        / "pipeline-summary.json"
+    )
     if not summary_path.is_file():
         raise HTTPException(status_code=404, detail="Resumo do pipeline não disponível")
     with summary_path.open(encoding="utf-8") as stream:
