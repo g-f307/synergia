@@ -95,8 +95,12 @@ crie uma nova fixture com sufixo de versão ou cenário, em vez de apagar a
 evidência anterior.
 
 O README do diretório descreve finalidade, fonte simulada e resultado esperado.
-JSON deve ser válido e CSV deve manter cabeçalho não vazio; a CI verifica ambos.
-A tag/commit da aplicação identifica a versão exata do conjunto de fixtures.
+JSON deve ser válido e CSV/XLSX deve manter cabeçalho não vazio; a CI verifica
+os três formatos. Conjuntos gerados possuem `generator_version`,
+`schema_version`, seed, configuração, contagens e hashes no `manifest.json`.
+Uma alteração incompatível no algoritmo ou contrato incrementa a versão
+correspondente. A tag/commit da aplicação identifica a versão exata das
+fixtures mínimas; perfis maiores são regenerados sob demanda e não versionados.
 
 ## Protótipo navegável
 

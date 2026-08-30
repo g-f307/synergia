@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0",
+  "generator_version": "1.0.0",
+  "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION",
+  "seed": 20260830,
+  "profile": "minimal",
+  "scenario": "valid",
+  "logical_digest": "d2f390256899d3d0d9e35494817f81d2506cf56d7f6c435bdf451994a8f0d044",
+  "configuration": {
+    "workorders": 4,
+    "serials": 12
+  },
+  "entities": {
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "organizations": 4
+  },
+  "sources": {
+    "N-FP": {
+      "records": 4
+    },
+    "OWM": {
+      "records": 12
+    },
+    "GMES/OQC": {
+      "records": 12
+    },
+    "TMS": {
+      "records": 4
+    }
+  },
+  "files": [
+    {
+      "source": "N-FP",
+      "format": "xlsx",
+      "file": "n-fp.xlsx",
+      "records": 4,
+      "size_bytes": 5270,
+      "sha256": "b639b877a25d7818bad3bbb980f9a011026bbf2253bc51ee9d01e4da8484b8da"
+    },
+    {
+      "source": "OWM",
+      "format": "json",
+      "file": "owm.json",
+      "records": 12,
+      "size_bytes": 5535,
+      "sha256": "af3d80b5691308763069807eb945bc0649bbf81f122dccd09b705208e31181fd"
+    },
+    {
+      "source": "GMES/OQC",
+      "format": "csv",
+      "file": "gmes-oqc.csv",
+      "records": 12,
+      "size_bytes": 1781,
+      "sha256": "9bdc3530846eae30f59e4ad805411ad68bb2c6141b2dc948b02b3a15d550735a"
+    },
+    {
+      "source": "TMS",
+      "format": "json",
+      "file": "tms.json",
+      "records": 4,
+      "size_bytes": 1395,
+      "sha256": "f219daaf35f7e41f2cf397b579006a42cb2ae49323fb15b46ce327ff378d0f9e"
+    }
+  ],
+  "scenario_counts": {
+    "fully_valid": 32
+  },
+  "expectations": {
+    "validation_issue_codes": {},
+    "processing_issue_codes": {},
+    "classification_rule_ids": [
+      "oqc_pass"
+    ],
+    "known_organizations": [
+      "SYN-ORG-001",
+      "SYN-ORG-002",
+      "SYN-ORG-003",
+      "SYN-ORG-004",
+      "SYN-ORG-005",
+      "SYN-ORG-006",
+      "SYN-ORG-007",
+      "SYN-ORG-008"
+    ],
+    "valid_pipeline": {
+      "rows_read": 32,
+      "valid_records": 32,
+      "rejected_records": 0,
+      "normalized_records": 32,
+      "consolidated_workorders": 4,
+      "consolidated_lots": 4,
+      "consolidated_serials": 12
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "generator_version": "1.0.0",
+  "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION",
+  "seed": 20260830,
+  "profile": "minimal",
+  "scenario": "comprehensive",
+  "logical_digest": "b7171cb2f4ca38093579bf09054dbbe298bd09898bc8695a2532203266e3e8d6",
+  "configuration": {
+    "workorders": 4,
+    "serials": 12
+  },
+  "entities": {
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "organizations": 4
+  },
+  "sources": {
+    "N-FP": {
+      "records": 4
+    },
+    "OWM": {
+      "records": 13
+    },
+    "GMES/OQC": {
+      "records": 12
+    },
+    "TMS": {
+      "records": 4
+    }
+  },
+  "files": [
+    {
+      "source": "N-FP",
+      "format": "xlsx",
+      "file": "n-fp.xlsx",
+      "records": 4,
+      "size_bytes": 5287,
+      "sha256": "fb78cf8a0e0bc3d4bd7a134029a8b60f606f7db4130a2dc6ba27fb3c29eea3fe"
+    },
+    {
+      "source": "OWM",
+      "format": "json",
+      "file": "owm.json",
+      "records": 13,
+      "size_bytes": 5952,
+      "sha256": "c023ffb24b1f1aca29c385dea0f4a2b466e09e0de15d0188caa52c0f24dbe609"
+    },
+    {
+      "source": "GMES/OQC",
+      "format": "csv",
+      "file": "gmes-oqc.csv",
+      "records": 12,
+      "size_bytes": 1833,
+      "sha256": "10000f39993044b0b47b784b311a44e6bcae3ae699e454d9637e4083c16e49d5"
+    },
+    {
+      "source": "TMS",
+      "format": "json",
+      "file": "tms.json",
+      "records": 4,
+      "size_bytes": 1416,
+      "sha256": "6cc485f784bd9f7c6bd096ddeb5cd360b2ea6757e395d8970e3284c97c2e1264"
+    }
+  ],
+  "scenario_counts": {
+    "duplicate_serial": 1,
+    "fully_valid": 32,
+    "invalid_date_and_quantity": 1,
+    "invalid_serial": 1,
+    "long_term_hold": 1,
+    "lot_absent": 1,
+    "oqc_hold": 1,
+    "oqc_pending": 1,
+    "partial_release": 1,
+    "required_data_absent": 1,
+    "rework": 1,
+    "ship_block": 1,
+    "source_divergence": 1,
+    "unknown_organization": 1,
+    "workorder_absent": 1
+  },
+  "expectations": {
+    "validation_issue_codes": {
+      "duplicate_serial": 1,
+      "invalid_date": 1,
+      "invalid_identifier": 1,
+      "invalid_quantity": 1,
+      "required_field": 1,
+      "unknown_organization": 1
+    },
+    "processing_issue_codes": {
+      "missing_source_match": 1,
+      "source_divergence": 1
+    },
+    "classification_rule_ids": [
+      "long_term_hold",
+      "oqc_hold",
+      "oqc_pass",
+      "oqc_pending",
+      "rework",
+      "ship_block",
+      "source_divergence"
+    ],
+    "known_organizations": [
+      "SYN-ORG-001",
+      "SYN-ORG-002",
+      "SYN-ORG-003",
+      "SYN-ORG-004",
+      "SYN-ORG-005",
+      "SYN-ORG-006",
+      "SYN-ORG-007",
+      "SYN-ORG-008"
+    ],
+    "valid_pipeline": null
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "workorder_number": "SYN-WO-000001",
+    "demand_id": "SYN-DEM-000001",
+    "lot_number": "SYN-LOT-000001",
+    "container_number": "SYN-CONT-000001",
+    "organization_code": "SYN-ORG-001",
+    "quantity": 3,
+    "shipment_status": "ship_block",
+    "ship_block_flag": true,
+    "pending_reason": "SYNTHETIC SHIP BLOCK",
+    "shipment_date": "2026-01-02"
+  },
+  {
+    "workorder_number": "SYN-WO-000002",
+    "demand_id": "SYN-DEM-000002",
+    "lot_number": "SYN-LOT-000002",
+    "container_number": "SYN-CONT-000001",
+    "organization_code": "SYN-ORG-002",
+    "quantity": 3,
+    "shipment_status": "released",
+    "ship_block_flag": false,
+    "pending_reason": "",
+    "shipment_date": "2026-01-03"
+  },
+  {
+    "workorder_number": "SYN-WO-000003",
+    "demand_id": "SYN-DEM-000003",
+    "lot_number": "SYN-LOT-000003",
+    "container_number": "SYN-CONT-000001",
+    "organization_code": "SYN-ORG-003",
+    "quantity": 3,
+    "shipment_status": "released",
+    "ship_block_flag": false,
+    "pending_reason": "",
+    "shipment_date": "2026-01-04"
+  },
+  {
+    "workorder_number": "SYN-WO-000004",
+    "demand_id": "SYN-DEM-000004",
+    "lot_number": "SYN-LOT-000004",
+    "container_number": "SYN-CONT-000001",
+    "organization_code": "SYN-ORG-004",
+    "quantity": 3,
+    "shipment_status": "released",
+    "ship_block_flag": false,
+    "pending_reason": "",
+    "shipment_date": "2026-01-05"
+  }
+]
