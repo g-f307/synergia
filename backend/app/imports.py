@@ -20,6 +20,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.errors import ErrorResponse
+from app.persistence import PostgresProcessingRepository
 from app.pipeline import read_source, run_pipeline_batch
 
 logger = logging.getLogger("synergia.imports")
@@ -403,6 +404,15 @@ class PostgresImportRepository:
                     execution_id,
                 ),
             )
+        persistence = PostgresProcessingRepository(self.database_url).persist(
+            execution_id, result["processing"]
+        )
+        logger.info(
+            "processing_persisted execution_id=%s confirmed=%d failed=%d",
+            execution_id,
+            len(persistence["confirmed_workorders"]),
+            len(persistence["failed_workorders"]),
+        )
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
         with self._connect() as connection:

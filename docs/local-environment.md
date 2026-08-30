@@ -105,7 +105,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m pytest -q -m "not integration"
-.\.venv\Scripts\python.exe -m pytest -q -m integration tests/test_persistence.py tests/test_query_persistence.py
+.\.venv\Scripts\python.exe -m pytest -q -m integration tests
 .\.venv\Scripts\python.exe -m compileall -q app
 Set-Location ..
 ```
@@ -119,7 +119,7 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ruff check .
 pytest -q -m "not integration"
-pytest -q -m integration tests/test_persistence.py tests/test_query_persistence.py
+pytest -q -m integration tests
 python -m compileall -q app
 cd ..
 ```

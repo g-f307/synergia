@@ -20,6 +20,7 @@ coberta na fundação atual; não implica que integrações futuras estejam pron
 | Reprocessar sem sobrescrever a execução anterior | F/NF | nova tentativa e evento auditável; execução ativa gera conflito | [#10](https://github.com/g-f307/synergia/issues/10) | `PostgresQueryRepository.request_reprocessing` | `test_queries.py`, `test_query_persistence.py` | Atendido |
 | Expor OpenAPI e erros HTTP seguros e estáveis | NF | envelope `error`; detalhes internos não são retornados | [#10](https://github.com/g-f307/synergia/issues/10) | `backend/app/errors.py`, modelos de `queries.py` | testes de erro e OpenAPI em `test_queries.py` e `test_imports.py` | Atendido |
 | Apresentar indicadores operacionais básicos | F | agregados não substituem histórico auditável | [#10](https://github.com/g-f307/synergia/issues/10) | endpoint `/indicators` em `backend/app/queries.py` | `test_returns_basic_indicators`; integração PostgreSQL | Atendido |
+| Persistir consolidados, classificações, decisões OQC, pendências e proveniência | F/NF | transação por Workorder; rollback isolado; regra e prioridade versionadas; integridade por execução | [#25](https://github.com/g-f307/synergia/issues/25) | `backend/app/persistence.py`, migration `0008_*`, `PostgresQueryRepository.get_consolidated` | `test_processing_persistence.py`; suíte de integração PostgreSQL | Atendido |
 
 ## Estados usados
 

@@ -104,7 +104,9 @@ inclusive a preservação da execução anterior. O arquivo
 ## Decisões de contrato
 
 - Seriais, lotes e Workorders permanecem texto para preservar zeros à esquerda.
-- A prioridade da pendência é derivada do catálogo versionado de regras.
-- O consolidado restringe holds, decisões OQC e pendências à execução escolhida.
+- A prioridade da pendência é persistida com a versão do catálogo que produziu
+  o resultado; dados legados sem prioridade usam o catálogo atual como fallback.
+- O consolidado restringe holds, decisões OQC, pendências, classificações,
+  avaliações de regras e proveniência à execução escolhida.
 - Indicadores agregados não substituem o histórico auditável.
 - Autenticação, notificações e integrações RPA permanecem fora desta etapa.
