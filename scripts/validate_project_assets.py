@@ -7,6 +7,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from openpyxl import load_workbook
+
+from generate_synthetic_data import validate_manifest
+
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "database" / "migrations"
 SYNTHETIC_DATA = ROOT / "data" / "synthetic"
@@ -53,7 +57,7 @@ def validate_migrations() -> None:
 
 
 def validate_synthetic_data() -> None:
-    supported = {".csv", ".json"}
+    supported = {".csv", ".json", ".xlsx"}
     files = [
         path
         for path in SYNTHETIC_DATA.rglob("*")
@@ -61,13 +65,25 @@ def validate_synthetic_data() -> None:
     ]
 
     for path in files:
-        if path.suffix.lower() == ".json":
+        if path.name == "manifest.json":
+            validate_manifest(path)
+        elif path.suffix.lower() == ".json":
             json.loads(path.read_text(encoding="utf-8"))
-        else:
+        elif path.suffix.lower() == ".csv":
             with path.open(encoding="utf-8", newline="") as source:
                 header = next(csv.reader(source), None)
                 if not header or any(not column.strip() for column in header):
                     raise ValueError(f"CSV sem cabeçalho válido: {path.name}")
+        else:
+            workbook = load_workbook(path, read_only=True, data_only=False)
+            try:
+                header = next(workbook.active.iter_rows(values_only=True), None)
+                if not header or any(
+                    not str(column or "").strip() for column in header
+                ):
+                    raise ValueError(f"XLSX sem cabeçalho válido: {path.name}")
+            finally:
+                workbook.close()
     print(f"Arquivos sintéticos validados: {len(files)}")
 
 
