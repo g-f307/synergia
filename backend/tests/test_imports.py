@@ -12,6 +12,8 @@ from fastapi.testclient import TestClient
 from openpyxl import Workbook
 
 from app import pipeline
+from app.business_rules import RULE_CATALOG
+from app.execution import PIPELINE_VERSION, import_fingerprint, validate_transition
 from app.imports import get_repository
 from app.main import app
 
@@ -23,13 +25,20 @@ class MemoryRepository:
         self.normalized_records: dict[str, list[dict]] = {}
         self.files: dict[str, list[dict]] = {}
         self.next_file_id = 1
+        self.processing_claims: dict[str, str] = {}
 
     def start(
-        self, execution_id: str, source: str, actor_type: str, actor: str
+        self,
+        execution_id: str,
+        source: str,
+        actor_type: str,
+        actor: str,
+        pipeline_version: str = PIPELINE_VERSION,
+        rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None:
         self.executions[execution_id] = {
             "execution_id": execution_id,
-            "status": "running",
+            "status": "pending",
             "source": source,
             "file_name": None,
             "extension": None,
@@ -41,15 +50,15 @@ class MemoryRepository:
             "finished_at": None,
             "failure_reason": None,
             "duplicate_of_execution_id": None,
+            "pipeline_version": pipeline_version,
+            "rule_catalog_version": rule_catalog_version,
+            "state_version": 0,
         }
         self.files[execution_id] = []
 
     def claim_file(
         self, execution_id: str, **metadata
     ) -> tuple[int | None, str | None]:
-        duplicate_of = self.hashes.get(metadata["digest"])
-        if duplicate_of:
-            return None, duplicate_of
         source_file_id = self.next_file_id
         self.next_file_id += 1
         self.files[execution_id].append({"id": source_file_id, **metadata})
@@ -64,16 +73,47 @@ class MemoryRepository:
         self.hashes[metadata["digest"]] = execution_id
         return source_file_id, None
 
-    def mark_completed(self, execution_id: str) -> None:
-        self.executions[execution_id].update(
-            status="completed", finished_at=datetime.now(UTC)
+    def claim_processing(self, execution_id: str, file_hashes: list[str]) -> str | None:
+        execution = self.executions[execution_id]
+        request_fingerprint = import_fingerprint(
+            file_hashes,
+            execution["pipeline_version"],
+            execution["rule_catalog_version"],
         )
+        duplicate_of = self.processing_claims.get(request_fingerprint)
+        if duplicate_of is None:
+            self.processing_claims[request_fingerprint] = execution_id
+        return duplicate_of
+
+    def release_claim(self, execution_id: str) -> None:
+        self.files[execution_id] = []
+
+    def transition_execution(self, execution_id: str, target: str, reason: str) -> None:
+        execution = self.executions[execution_id]
+        validate_transition(execution["status"], target)
+        execution["status"] = target
+        execution["state_version"] += 1
+        execution["failure_reason"] = (
+            reason if target in {"failed", "validation_failed"} else None
+        )
+        if target in {
+            "completed",
+            "completed_with_errors",
+            "validation_failed",
+            "failed",
+            "duplicate",
+            "cancelled",
+        }:
+            execution["finished_at"] = datetime.now(UTC)
+
+    def mark_completed(self, execution_id: str) -> None:
+        self.transition_execution(execution_id, "completed", "pipeline_completed")
 
     def mark_validation_failed(self, execution_id: str) -> None:
-        self.executions[execution_id].update(
-            status="validation_failed",
-            failure_reason="validation_failed",
-            finished_at=datetime.now(UTC),
+        self.transition_execution(
+            execution_id,
+            "validation_failed",
+            "validation_failed",
         )
 
     def save_normalized_records(self, execution_id: str, records: list[dict]) -> None:
@@ -81,20 +121,13 @@ class MemoryRepository:
 
     def commit_pipeline(self, execution_id: str, result: dict) -> None:
         self.normalized_records[execution_id] = result["normalized_records"]
-        self.executions[execution_id].update(
-            status=result["status"],
-            failure_reason=("validation_failed" if result["blocking"] else None),
-            finished_at=datetime.now(UTC),
-        )
+        self.transition_execution(execution_id, result["status"], result["status"])
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
-        execution = self.executions[execution_id]
         for metadata in self.files[execution_id]:
             self.hashes.pop(metadata["digest"], None)
         self.files[execution_id] = []
-        execution.update(
-            status="failed", failure_reason=reason, finished_at=datetime.now(UTC)
-        )
+        self.transition_execution(execution_id, "failed", reason)
 
     def finish(
         self,
@@ -103,12 +136,8 @@ class MemoryRepository:
         reason: str,
         duplicate_of: str | None = None,
     ) -> None:
-        self.executions[execution_id].update(
-            status=state,
-            failure_reason=reason,
-            duplicate_of_execution_id=duplicate_of,
-            finished_at=datetime.now(UTC),
-        )
+        self.executions[execution_id]["duplicate_of_execution_id"] = duplicate_of
+        self.transition_execution(execution_id, state, reason)
 
     def get(self, execution_id: str) -> dict | None:
         return self.executions.get(execution_id)
@@ -251,9 +280,7 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     assert not list(storage.glob("**/original.csv"))
 
 
-def test_second_file_claim_failure_rolls_back_prepared_batch(
-    api, monkeypatch
-) -> None:
+def test_second_file_claim_failure_rolls_back_prepared_batch(api, monkeypatch) -> None:
     client, repository, storage = api
     original_claim = repository.claim_file
     claim_count = 0

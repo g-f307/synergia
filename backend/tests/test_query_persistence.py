@@ -89,9 +89,7 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     assert repository.get_execution(execution_id)["status"] == "completed"
     assert repository.get_workorder("WO-API-001")["lots"] == ["LOT-API-001"]
     assert repository.get_lot("LOT-API-001")["serials"] == ["SER-API-001"]
-    assert repository.get_serial("SER-API-001")["container_number"] == (
-        "CONT-API-001"
-    )
+    assert repository.get_serial("SER-API-001")["container_number"] == ("CONT-API-001")
     pending, total = repository.list_pending(
         status_filter="open",
         category="long_term_hold",
@@ -120,14 +118,19 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
 
     new_execution_id = "exec-api-query-reprocessed"
     reprocessed = repository.request_reprocessing(
-        execution_id, new_execution_id, "integration-test"
+        execution_id,
+        new_execution_id,
+        "integration-test",
+        "request-1",
+        "1.0.0",
+        "1.0.0",
     )
 
     assert reprocessed["attempt"] == 2
     assert reprocessed["previous_execution_id"] == execution_id
     assert repository.get_execution(execution_id)["status"] == "completed"
     new_execution = repository.get_execution(new_execution_id)
-    assert new_execution["status"] == "pending"
+    assert new_execution["status"] == "reprocessing"
     assert new_execution["reprocessed_from_execution_id"] == execution_id
     events, total = repository.list_history(
         execution_id=new_execution_id,

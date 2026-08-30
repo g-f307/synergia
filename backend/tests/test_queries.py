@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 from fastapi.testclient import TestClient
 
+from app.execution import reprocessing_fingerprint
 from app.main import app
 from app.queries import ReprocessingConflict, get_query_repository
 
@@ -14,6 +15,7 @@ NOW = datetime(2026, 8, 27, 12, tzinfo=UTC)
 
 class MemoryQueryRepository:
     def __init__(self) -> None:
+        self.reprocessing_requests: dict[str, dict] = {}
         self.executions = {
             "exec-1": {
                 "execution_id": "exec-1",
@@ -26,6 +28,9 @@ class MemoryQueryRepository:
                 "started_at": NOW,
                 "finished_at": NOW,
                 "failure_reason": None,
+                "pipeline_version": "1.0.0",
+                "rule_catalog_version": "1.0.0",
+                "state_version": 5,
             }
         }
         self.workorder = {
@@ -168,8 +173,7 @@ class MemoryQueryRepository:
             if (status_filter is None or item["status"] == status_filter)
             and (category is None or item["category"] == category)
             and (
-                workorder_number is None
-                or item["workorder_number"] == workorder_number
+                workorder_number is None or item["workorder_number"] == workorder_number
             )
             and (execution_id is None or item["execution_id"] == execution_id)
         ]
@@ -245,30 +249,55 @@ class MemoryQueryRepository:
         }
 
     def request_reprocessing(
-        self, execution_id: str, new_execution_id: str, technical_origin: str
+        self,
+        execution_id: str,
+        new_execution_id: str,
+        technical_origin: str,
+        request_key: str,
+        pipeline_version: str,
+        rule_catalog_version: str,
     ) -> dict | None:
         original = self.executions.get(execution_id)
         if original is None:
             return None
-        if original["status"] in {"pending", "running"}:
+        if original["status"] not in {
+            "completed",
+            "completed_with_errors",
+            "validation_failed",
+            "failed",
+        }:
             raise ReprocessingConflict
+        fingerprint = reprocessing_fingerprint(
+            execution_id, request_key, pipeline_version, rule_catalog_version
+        )
+        if fingerprint in self.reprocessing_requests:
+            return {
+                **deepcopy(self.reprocessing_requests[fingerprint]),
+                "idempotent_replay": True,
+            }
         root = original["reprocessed_from_execution_id"] or execution_id
-        attempt = max(
-            (
-                item["attempt"]
-                for item in self.executions.values()
-                if item["execution_id"] == root
-                or item["reprocessed_from_execution_id"] == root
-            ),
-            default=0,
-        ) + 1
+        attempt = (
+            max(
+                (
+                    item["attempt"]
+                    for item in self.executions.values()
+                    if item["execution_id"] == root
+                    or item["reprocessed_from_execution_id"] == root
+                ),
+                default=0,
+            )
+            + 1
+        )
         self.executions[new_execution_id] = {
             **deepcopy(original),
             "execution_id": new_execution_id,
-            "status": "pending",
+            "status": "reprocessing",
             "attempt": attempt,
             "reprocessed_from_execution_id": root,
             "actor_identifier": technical_origin,
+            "pipeline_version": pipeline_version,
+            "rule_catalog_version": rule_catalog_version,
+            "state_version": 0,
             "finished_at": None,
         }
         self.history.append(
@@ -286,13 +315,18 @@ class MemoryQueryRepository:
                 "occurred_at": NOW,
             }
         )
-        return {
+        result = {
             "execution_id": new_execution_id,
-            "status": "pending",
+            "status": "reprocessing",
             "attempt": attempt,
             "reprocessed_from_execution_id": root,
             "previous_execution_id": execution_id,
+            "pipeline_version": pipeline_version,
+            "rule_catalog_version": rule_catalog_version,
+            "idempotent_replay": False,
         }
+        self.reprocessing_requests[fingerprint] = deepcopy(result)
+        return result
 
     def indicators(self) -> dict:
         return {
@@ -326,8 +360,7 @@ def test_consults_execution_workorder_lot_and_serial(api) -> None:
     assert workorder["lots"] == ["LOT-SYN-001"]
     assert client.get("/lots/LOT-SYN-001").json()["serials"] == ["SER-SYN-001"]
     assert (
-        client.get("/serials/SER-SYN-001").json()["container_number"]
-        == "CONT-SYN-001"
+        client.get("/serials/SER-SYN-001").json()["container_number"] == "CONT-SYN-001"
     )
 
 
@@ -360,9 +393,7 @@ def test_consults_pending_detail_history_and_consolidated_result(api) -> None:
     ).json()
     assert history["pagination"]["total"] == 1
     assert history["items"][0]["event_type"] == "classified"
-    consolidated = client.get(
-        "/workorders/WO-SYN-001/consolidated-result"
-    ).json()
+    consolidated = client.get("/workorders/WO-SYN-001/consolidated-result").json()
     assert consolidated["workorder"]["released_quantity"] == 6
     assert consolidated["holds"][0]["post_release"] is True
 
@@ -382,14 +413,14 @@ def test_reprocessing_preserves_original_execution(api) -> None:
     assert body["reprocessed_from_execution_id"] == "exec-1"
     assert body["execution_id"] != "exec-1"
     assert repository.executions["exec-1"] == before
-    assert repository.executions[body["execution_id"]]["status"] == "pending"
+    assert repository.executions[body["execution_id"]]["status"] == "reprocessing"
     assert repository.history[-1]["event_type"] == "reprocessing_requested"
     assert repository.history[-1]["payload"]["previous_execution_id"] == "exec-1"
 
 
 def test_rejects_reprocessing_while_execution_is_active(api) -> None:
     client, repository = api
-    repository.executions["exec-1"]["status"] = "running"
+    repository.executions["exec-1"]["status"] = "validating"
 
     response = client.post(
         "/executions/exec-1/reprocess",
@@ -399,6 +430,24 @@ def test_rejects_reprocessing_while_execution_is_active(api) -> None:
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "execution_still_active"
     assert len(repository.executions) == 1
+
+
+def test_identical_reprocessing_request_is_idempotent(api) -> None:
+    client, repository = api
+    request = {
+        "technical_origin": "api-test",
+        "idempotency_key": "stable-request",
+    }
+
+    first = client.post("/executions/exec-1/reprocess", json=request)
+    second = client.post("/executions/exec-1/reprocess", json=request)
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert second.json()["execution_id"] == first.json()["execution_id"]
+    assert first.json()["idempotent_replay"] is False
+    assert second.json()["idempotent_replay"] is True
+    assert len(repository.executions) == 2
 
 
 def test_rejects_blank_reprocessing_origin(api) -> None:

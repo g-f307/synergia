@@ -21,6 +21,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [contratos da API](docs/api-contracts.md);
+- [ciclo de vida, idempotência e reprocessamento](docs/execution-lifecycle.md);
 - [guia de contribuição, Definition of Ready e Definition of Done](CONTRIBUTING.md).
 
 ## Protótipo navegável

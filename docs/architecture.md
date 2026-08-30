@@ -30,7 +30,7 @@ uma execução.
 | --- | --- | --- |
 | Angular 20 | aplicação web e consumo da API | `frontend-angular/` |
 | FastAPI | importação, consultas, validação HTTP e OpenAPI | `backend/app/` |
-| Serviços de domínio | normalização, consolidação e regras determinísticas | `backend/app/normalization.py`, `consolidation.py` e `business_rules.py` |
+| Serviços de domínio | estados, normalização, consolidação e regras determinísticas | `backend/app/execution.py`, `normalization.py`, `consolidation.py` e `business_rules.py` |
 | PostgreSQL 16 | execuções, fontes, resultados, pendências e auditoria | `database/migrations/` |
 | Armazenamento controlado | original, relatório e resultado normalizado por execução | `IMPORT_STORAGE_DIR`; `data/imports/` apenas em desenvolvimento |
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |
@@ -48,7 +48,9 @@ automaticamente alterações no Angular e precisam de implementação própria.
 `backend/app/main.py` compõe os routers e os tratamentos globais de erro. A
 importação rastreável está em `imports.py`; consultas e reprocessamento em
 `queries.py`. Validação, normalização, consolidação e regras de negócio são
-serviços independentes da interface e do mecanismo futuro de coleta.
+serviços independentes da interface e do mecanismo futuro de coleta. A máquina
+de estados, a idempotência versionada e o reprocessamento estão documentados em
+[execution-lifecycle.md](execution-lifecycle.md).
 
 Os contratos OpenAPI são gerados pela aplicação em `/openapi.json`. Detalhes de
 cada etapa estão em [normalization.md](normalization.md),

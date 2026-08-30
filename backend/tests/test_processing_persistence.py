@@ -32,6 +32,8 @@ def cleanup_created_executions():
         ("rule_evaluations", "execution_id"),
         ("consolidated_field_provenance", "execution_id"),
         ("audit_events", "execution_id"),
+        ("execution_idempotency", "execution_id"),
+        ("execution_state_transitions", "execution_id"),
         ("pipeline_issues", "execution_id"),
         ("pipeline_summaries", "execution_id"),
         ("normalized_records", "execution_id"),

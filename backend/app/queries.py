@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.business_rules import RULE_CATALOG
 from app.errors import ApiError, ErrorResponse
+from app.execution import PIPELINE_VERSION, reprocessing_fingerprint
 
 router = APIRouter(tags=["queries"])
 ERROR_RESPONSES = {
@@ -47,6 +48,9 @@ class ExecutionResponse(BaseModel):
     started_at: datetime
     finished_at: datetime | None = None
     failure_reason: str | None = None
+    pipeline_version: str
+    rule_catalog_version: str
+    state_version: int
 
 
 class WorkorderResponse(BaseModel):
@@ -157,6 +161,11 @@ class ReprocessRequest(BaseModel):
         max_length=120,
         description="Origem técnica que solicitou o reprocessamento",
     )
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+    pipeline_version: str = Field(default=PIPELINE_VERSION, min_length=1, max_length=40)
+    rule_catalog_version: str = Field(
+        default=RULE_CATALOG["version"], min_length=1, max_length=40
+    )
 
     @field_validator("technical_origin")
     @classmethod
@@ -169,10 +178,13 @@ class ReprocessRequest(BaseModel):
 
 class ReprocessResponse(BaseModel):
     execution_id: str
-    status: Literal["pending"]
+    status: str
     attempt: int
     reprocessed_from_execution_id: str
     previous_execution_id: str
+    pipeline_version: str
+    rule_catalog_version: str
+    idempotent_replay: bool
 
 
 class IndicatorsResponse(BaseModel):
@@ -224,7 +236,13 @@ class QueryRepository(Protocol):
     def get_consolidated(self, workorder_number: str) -> dict | None: ...
 
     def request_reprocessing(
-        self, execution_id: str, new_execution_id: str, technical_origin: str
+        self,
+        execution_id: str,
+        new_execution_id: str,
+        technical_origin: str,
+        request_key: str,
+        pipeline_version: str,
+        rule_catalog_version: str,
     ) -> dict | None: ...
 
     def indicators(self) -> dict: ...
@@ -237,6 +255,38 @@ class PostgresQueryRepository:
     def _connect(self):
         return psycopg.connect(self.database_url, row_factory=dict_row)
 
+    @staticmethod
+    def _record_reprocessing_event(
+        connection,
+        *,
+        execution_id: str,
+        previous_execution_id: str,
+        root_execution_id: str,
+        attempt: int,
+        pipeline_version: str,
+        rule_catalog_version: str,
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO synergia.audit_events (
+                execution_id, entity_type, entity_id, event_type, payload
+            ) VALUES (%s, 'execution', %s, 'reprocessing_requested', %s)
+            """,
+            (
+                execution_id,
+                execution_id,
+                Jsonb(
+                    {
+                        "previous_execution_id": previous_execution_id,
+                        "root_execution_id": root_execution_id,
+                        "attempt": attempt,
+                        "pipeline_version": pipeline_version,
+                        "rule_catalog_version": rule_catalog_version,
+                    }
+                ),
+            ),
+        )
+
     def get_execution(self, execution_id: str) -> dict | None:
         with self._connect() as connection:
             return connection.execute(
@@ -244,7 +294,8 @@ class PostgresQueryRepository:
                 SELECT id AS execution_id, status, source, attempt,
                        reprocessed_from_id AS reprocessed_from_execution_id,
                        actor_type, actor_identifier, started_at, finished_at,
-                       failure_reason
+                       failure_reason, pipeline_version, rule_catalog_version,
+                       state_version
                 FROM synergia.executions
                 WHERE id = %s
                 """,
@@ -580,7 +631,13 @@ class PostgresQueryRepository:
         }
 
     def request_reprocessing(
-        self, execution_id: str, new_execution_id: str, technical_origin: str
+        self,
+        execution_id: str,
+        new_execution_id: str,
+        technical_origin: str,
+        request_key: str,
+        pipeline_version: str,
+        rule_catalog_version: str,
     ) -> dict | None:
         with self._connect() as connection:
             original = connection.execute(
@@ -594,12 +651,45 @@ class PostgresQueryRepository:
             ).fetchone()
             if original is None:
                 return None
-            if original["status"] in {"pending", "running"}:
+            if original["status"] not in {
+                "completed",
+                "completed_with_errors",
+                "validation_failed",
+                "failed",
+            }:
                 raise ReprocessingConflict
             connection.execute(
                 "SELECT id FROM synergia.executions WHERE id = %s FOR UPDATE",
                 (original["root_id"],),
             ).fetchone()
+            request_fingerprint = reprocessing_fingerprint(
+                execution_id,
+                request_key,
+                pipeline_version,
+                rule_catalog_version,
+            )
+            existing = connection.execute(
+                """
+                SELECT e.id AS execution_id, e.status, e.attempt,
+                       e.reprocessed_from_id, i.source_execution_id,
+                       e.pipeline_version, e.rule_catalog_version
+                FROM synergia.execution_idempotency i
+                JOIN synergia.executions e ON e.id = i.execution_id
+                WHERE i.request_fingerprint = %s
+                """,
+                (request_fingerprint,),
+            ).fetchone()
+            if existing is not None:
+                return {
+                    "execution_id": existing["execution_id"],
+                    "status": existing["status"],
+                    "attempt": existing["attempt"],
+                    "reprocessed_from_execution_id": existing["reprocessed_from_id"],
+                    "previous_execution_id": existing["source_execution_id"],
+                    "pipeline_version": existing["pipeline_version"],
+                    "rule_catalog_version": existing["rule_catalog_version"],
+                    "idempotent_replay": True,
+                }
             attempt = connection.execute(
                 """
                 SELECT COALESCE(max(attempt), 0) + 1 AS next_attempt
@@ -612,8 +702,11 @@ class PostgresQueryRepository:
                 """
                 INSERT INTO synergia.executions
                     (id, status, attempt, reprocessed_from_id, source,
-                     actor_type, actor_identifier)
-                VALUES (%s, 'pending', %s, %s, %s, 'technical', %s)
+                     actor_type, actor_identifier, pipeline_version,
+                     rule_catalog_version, state_changed_by_type,
+                     state_changed_by, state_change_reason)
+                VALUES (%s, 'reprocessing', %s, %s, %s, 'technical', %s,
+                        %s, %s, 'technical', %s, 'reprocessing_requested')
                 """,
                 (
                     new_execution_id,
@@ -621,32 +714,44 @@ class PostgresQueryRepository:
                     original["root_id"],
                     original["source"],
                     technical_origin,
+                    pipeline_version,
+                    rule_catalog_version,
+                    technical_origin,
                 ),
             )
             connection.execute(
                 """
-                INSERT INTO synergia.audit_events
-                    (execution_id, entity_type, entity_id, event_type, payload)
-                VALUES (%s, 'execution', %s, 'reprocessing_requested', %s)
+                INSERT INTO synergia.execution_idempotency (
+                    request_fingerprint, request_type, execution_id,
+                    source_execution_id, pipeline_version, rule_catalog_version
+                ) VALUES (%s, 'reprocess', %s, %s, %s, %s)
                 """,
                 (
+                    request_fingerprint,
                     new_execution_id,
-                    new_execution_id,
-                    Jsonb(
-                        {
-                            "previous_execution_id": execution_id,
-                            "root_execution_id": original["root_id"],
-                            "attempt": attempt,
-                        }
-                    ),
+                    execution_id,
+                    pipeline_version,
+                    rule_catalog_version,
                 ),
+            )
+            self._record_reprocessing_event(
+                connection,
+                execution_id=new_execution_id,
+                previous_execution_id=execution_id,
+                root_execution_id=original["root_id"],
+                attempt=attempt,
+                pipeline_version=pipeline_version,
+                rule_catalog_version=rule_catalog_version,
             )
         return {
             "execution_id": new_execution_id,
-            "status": "pending",
+            "status": "reprocessing",
             "attempt": attempt,
             "reprocessed_from_execution_id": original["root_id"],
             "previous_execution_id": execution_id,
+            "pipeline_version": pipeline_version,
+            "rule_catalog_version": rule_catalog_version,
+            "idempotent_replay": False,
         }
 
     def indicators(self) -> dict:
@@ -897,12 +1002,15 @@ def request_reprocessing(
             execution_id,
             str(uuid4()),
             request.technical_origin,
+            request.idempotency_key or request.technical_origin,
+            request.pipeline_version,
+            request.rule_catalog_version,
         )
     except ReprocessingConflict as exc:
         raise ApiError(
             409,
             "execution_still_active",
-            "Uma execução pendente ou em andamento não pode ser reprocessada",
+            "A execução não está em um estado que permita reprocessamento",
             {"execution_id": execution_id},
         ) from exc
     if result is None:
