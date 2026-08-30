@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook
 
-from app.pipeline import read_source, run_pipeline
+from app.pipeline import read_source, run_pipeline, run_pipeline_batch
 
 
 class RecordingRepository:
@@ -32,6 +32,8 @@ def run_csv(
         repository=repository,
         tables=tables,
         read_issues=read_issues,
+        source_file_id=1,
+        classified_at="2026-08-28T12:00:00+00:00",
         known_organizations=organizations,
     )
     return result, repository
@@ -63,6 +65,34 @@ def test_valid_file_runs_all_stages_and_preserves_traceability(tmp_path) -> None
     assert normalized["values"]["serial_number"] == "0000456"
     assert normalized["original_values"]["planned_date"] == "27/08/2026"
     assert normalized["values"]["planned_date"] == "2026-08-27"
+    assert normalized["execution_id"] == "exec-pipeline"
+    assert normalized["source_file_id"] == 1
+    assert (
+        result["processing"]["consolidation"]["workorders"][0]["provenance"][
+            "planned_quantity"
+        ][0]["source_file_id"]
+        == 1
+    )
+    assert result["processing"]["summary"] == {
+        "eligible_normalized_records": 1,
+        "consolidated_workorders": 1,
+        "consolidated_lots": 0,
+        "consolidated_serials": 1,
+        "consolidated_organizations": 0,
+        "consolidation_issues": 1,
+        "failed_workorders": 0,
+        "classifications": 0,
+        "active_pending_items": 0,
+        "classifications_by_rule": {},
+        "consolidated_quantities": {
+            "planned_quantity": {"known_workorders": 1, "total": 10},
+            "produced_quantity": {"known_workorders": 0, "total": None},
+            "received_quantity": {"known_workorders": 0, "total": None},
+            "released_quantity": {"known_workorders": 0, "total": None},
+            "pending_quantity": {"known_workorders": 0, "total": None},
+            "retained_quantity": {"known_workorders": 0, "total": None},
+        },
+    }
     assert len(repository.commits) == 1
 
 
@@ -80,6 +110,10 @@ def test_record_error_rejects_only_affected_line(tmp_path) -> None:
     assert result["summary"]["valid_records"] == 2
     assert result["summary"]["rejected_records"] == 1
     assert [record["row"] for record in result["normalized_records"]] == [2, 4]
+    assert {
+        item["workorder_number"]
+        for item in result["processing"]["consolidation"]["workorders"]
+    } == {"WO-OK", "WO-ALSO-OK"}
     assert {issue["scope"] for issue in result["issues"]} == {"record"}
 
 
@@ -143,6 +177,8 @@ def test_unexpected_normalization_failure_does_not_commit(
             repository=repository,
             tables=tables,
             read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
         )
 
     assert repository.commits == []
@@ -165,6 +201,8 @@ def test_artifact_failure_does_not_commit_pipeline(tmp_path) -> None:
             repository=repository,
             tables=tables,
             read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
             prepare_commit=fail_artifacts,
         )
 
@@ -184,3 +222,39 @@ def test_reads_xlsx_from_temporary_path_without_xlsx_suffix(tmp_path) -> None:
 
     assert read_issues == []
     assert tables == [("Sheet", ["workorder", "status"], [["WO-1", "open"]])]
+
+
+def test_batch_pipeline_uses_real_file_ids_for_multisource_provenance() -> None:
+    repository = RecordingRepository()
+    result = run_pipeline_batch(
+        execution_id="exec-batch",
+        inputs=[
+            {
+                "file_name": "plan.csv",
+                "source": "N-FP",
+                "source_file_id": 41,
+                "tables": [("CSV", ["workorder", "planned_quantity"], [["WO", 10]])],
+                "read_issues": [],
+            },
+            {
+                "file_name": "receiving.csv",
+                "source": "OWM",
+                "source_file_id": 42,
+                "tables": [("CSV", ["workorder", "planned_quantity"], [["WO", 12]])],
+                "read_issues": [],
+            },
+        ],
+        repository=repository,
+        classified_at="2026-08-28T12:00:00+00:00",
+    )
+
+    workorder = result["processing"]["consolidation"]["workorders"][0]
+    assert workorder["planned_quantity"] == 10
+    assert {
+        origin["source_file_id"]
+        for origin in workorder["provenance"]["planned_quantity"]
+    } == {41, 42}
+    assert (
+        result["processing"]["summary"]["classifications_by_rule"]["source_divergence"]
+        == 1
+    )

@@ -236,7 +236,7 @@ def _classification_facts(
 
 def _quantity_observations(
     records: Sequence[Mapping[str, Any]], field: str
-) -> tuple[int, list[dict[str, Any]], dict[str, int]]:
+) -> tuple[int | None, list[dict[str, Any]], dict[str, int]]:
     by_source: dict[str, int] = defaultdict(int)
     origins: list[dict[str, Any]] = []
     for record in records:
@@ -256,7 +256,7 @@ def _quantity_observations(
         min(by_source, key=_source_key) if by_source else None,
     )
     return (
-        by_source[selected_source] if selected_source is not None else 0,
+        by_source[selected_source] if selected_source is not None else None,
         origins,
         dict(sorted(by_source.items(), key=lambda item: _source_key(item[0]))),
     )
@@ -327,7 +327,7 @@ def _consolidate_workorder(
     for field in IDENTIFIER_FIELDS:
         identifiers[field], provenance[field] = _identifier_values(records, field)
 
-    quantities: dict[str, int] = {}
+    quantities: dict[str, int | None] = {}
     quantities_by_source: dict[str, dict[str, int]] = {}
     selected_quantity_sources: dict[str, str | None] = {}
     for field in QUANTITY_FIELDS:
@@ -355,19 +355,29 @@ def _consolidate_workorder(
         )
     }
     explicit_retained = quantities["retained_quantity"]
-    quantities["retained_quantity"] = max(
-        explicit_retained, len(held_serials)
+    quantities["retained_quantity"] = (
+        max(explicit_retained or 0, len(held_serials))
+        if explicit_retained is not None or held_serials
+        else None
     )
     explicit_pending = quantities["pending_quantity"]
-    calculated_pending = max(
-        quantities["planned_quantity"] - quantities["released_quantity"], 0
+    calculated_pending = (
+        max(quantities["planned_quantity"] - quantities["released_quantity"], 0)
+        if quantities["planned_quantity"] is not None
+        and quantities["released_quantity"] is not None
+        else None
     )
-    quantities["pending_quantity"] = max(
-        explicit_pending, calculated_pending
+    pending_candidates = [
+        value for value in (explicit_pending, calculated_pending) if value is not None
+    ]
+    quantities["pending_quantity"] = (
+        max(pending_candidates) if pending_candidates else None
     )
     partial_release = (
-        quantities["received_quantity"] > 0
-        and 0 < quantities["released_quantity"] < quantities["received_quantity"]
+        0 < quantities["released_quantity"] < quantities["received_quantity"]
+        if quantities["received_quantity"] is not None
+        and quantities["released_quantity"] is not None
+        else None
     )
     missing_sources = [source for source in SOURCE_ORDER if source not in sources]
     status = "complete" if not missing_sources else "incomplete"
@@ -430,7 +440,9 @@ def _consolidate_workorder(
     )
 
 
-def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def consolidate(
+    records: Iterable[Mapping[str, Any]], *, isolate_failures: bool = False
+) -> dict[str, Any]:
     """Consolidate normalized records into deterministic, auditable Workorders."""
     ordered: list[Mapping[str, Any]] = []
     seen_records: dict[tuple[Any, ...], Mapping[str, Any]] = {}
@@ -504,10 +516,23 @@ def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         *relationship_conflicts,
         *unmatched,
     ]
+    failed_workorders: list[dict[str, Any]] = []
     for workorder in sorted(grouped):
-        consolidated, workorder_issues = _consolidate_workorder(
-            workorder, grouped[workorder]
-        )
+        try:
+            consolidated, workorder_issues = _consolidate_workorder(
+                workorder, grouped[workorder]
+            )
+        except ConsolidationError as exc:
+            if not isolate_failures:
+                raise
+            failure = {
+                "code": "workorder_processing_failed",
+                "workorder_number": workorder,
+                "reason": str(exc),
+            }
+            failed_workorders.append(failure)
+            issues.append(failure)
+            continue
         workorders.append(consolidated)
         issues.extend(workorder_issues)
     for field, values in ambiguous.items():
@@ -525,6 +550,8 @@ def consolidate(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         "conflicting_relationship_count": len(relationship_conflicts),
         "unmatched_record_count": len(unmatched),
         "issue_count": len(issues),
+        "failed_workorder_count": len(failed_workorders),
+        "failed_workorders": failed_workorders,
         "workorders": workorders,
         "issues": issues,
     }
@@ -555,9 +582,9 @@ def compare_with_reference(
             )
             continue
         for field in fields:
-            expected = _quantity(reference[workorder].get(field), field) or 0
-            observed = _quantity(actual[workorder].get(field), field) or 0
-            if observed != expected:
+            expected = _quantity(reference[workorder].get(field), field)
+            observed = _quantity(actual[workorder].get(field), field)
+            if (observed or 0) != (expected or 0):
                 differences.append(
                     {
                         "workorder_number": workorder,

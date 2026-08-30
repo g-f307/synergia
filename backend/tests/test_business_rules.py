@@ -212,6 +212,14 @@ def test_identifies_area_organization_priority_and_applied_rule(result) -> None:
     assert ship_block["rule_description"]
     assert divergent["responsible_organization"] is None
     assert result["divergence_report"][0]["code"] == "source_divergence"
+    assert ship_block["justification"]
+    assert any(
+        evaluation["rule_id"] == "ship_block"
+        and evaluation["result"] == "matched"
+        and evaluation["rule_catalog_version"] == "1.0.0"
+        and evaluation["justification"]
+        for evaluation in result["rule_evaluations"]
+    )
 
 
 def test_container_impact_counts_only_affected_serials(result) -> None:
@@ -250,10 +258,7 @@ def test_reprocessing_appends_history_without_mutating_previous_evidence(
     }
     assert not (
         {item["classification_id"] for item in prior_history}
-        & {
-            item["classification_id"]
-            for item in reprocessed["current_classifications"]
-        }
+        & {item["classification_id"] for item in reprocessed["current_classifications"]}
     )
 
 

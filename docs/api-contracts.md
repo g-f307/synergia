@@ -43,6 +43,19 @@ Toda resposta de erro possui o mesmo envelope:
 traz somente contexto seguro. Erros de validação usam
 `request_validation_error` e incluem uma lista `issues`.
 
+## Importação com múltiplas fontes
+
+`POST /imports` aceita um ou mais pares `source`/`file` em `multipart/form-data`.
+Os campos são posicionais: a primeira fonte descreve o primeiro arquivo, e assim
+por diante. Quantidades diferentes retornam `422` com
+`source_file_mismatch`. Um único par mantém o comportamento anterior.
+
+Todos os arquivos do pedido pertencem ao mesmo `execution_id`. Cada arquivo é
+reservado no banco antes do pipeline e recebe um `source_file_id` real, usado
+nos registros importados, normalizados e na proveniência consolidada. A
+normalização de todas as fontes elegíveis é reunida antes da consolidação, o que
+torna alcançáveis a precedência e as divergências multifuente pelo fluxo HTTP.
+
 ## Paginação, filtros e ordenação
 
 `GET /pending-items` e `GET /history` aceitam `page` (padrão `1`) e
