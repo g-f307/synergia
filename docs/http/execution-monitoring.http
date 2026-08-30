@@ -1,0 +1,26 @@
+@apiUrl = http://localhost:8000
+@executionId = replace-with-synthetic-execution-id
+@evidenceId = replace-with-public-source-file-id
+
+### Detalhe, histórico e contagens da execução
+GET {{apiUrl}}/executions/{{executionId}}
+Accept: application/json
+
+### Divergências filtradas e paginadas
+GET {{apiUrl}}/executions/{{executionId}}/divergences?page=1&page_size=20&sort=oldest&severity=warning
+Accept: application/json
+
+### Classificações paginadas
+GET {{apiUrl}}/executions/{{executionId}}/classifications?page=1&page_size=20&sort=oldest
+Accept: application/json
+
+### Pendências paginadas
+GET {{apiUrl}}/executions/{{executionId}}/pending-items?page=1&page_size=20&sort=oldest
+Accept: application/json
+
+### Evidências públicas paginadas
+GET {{apiUrl}}/executions/{{executionId}}/evidences?page=1&page_size=20&sort=oldest
+Accept: application/json
+
+### Download pelo identificador público anunciado na listagem
+GET {{apiUrl}}/executions/{{executionId}}/evidences/{{evidenceId}}/download
