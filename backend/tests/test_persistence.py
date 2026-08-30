@@ -133,6 +133,7 @@ def test_creates_all_operational_entities() -> None:
         "rule_evaluations",
         "serials",
         "source_files",
+        "file_inspections",
         "workorders",
     }
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:

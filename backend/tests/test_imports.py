@@ -26,6 +26,7 @@ class MemoryRepository:
         self.files: dict[str, list[dict]] = {}
         self.next_file_id = 1
         self.processing_claims: dict[str, str] = {}
+        self.inspections: dict[str, list[dict]] = {}
 
     def start(
         self,
@@ -55,6 +56,49 @@ class MemoryRepository:
             "state_version": 0,
         }
         self.files[execution_id] = []
+        self.inspections[execution_id] = []
+
+    def record_inspection(self, execution_id: str, source: str, result) -> int:
+        inspection_id = sum(len(items) for items in self.inspections.values()) + 1
+        self.inspections[execution_id].append(
+            {
+                "inspection_id": inspection_id,
+                "source": source,
+                "original_file_name": result.original_name,
+                "extension": result.extension.lstrip(".") or None,
+                "declared_media_type": result.declared_media_type or None,
+                "detected_media_type": result.detected_media_type,
+                "size_bytes": result.size_bytes,
+                "sha256": result.sha256,
+                "decision": result.decision.value,
+                "reason_code": result.reason_code,
+                "analyzed_at": result.analyzed_at,
+                "retained_until": result.retained_until,
+                "discarded_at": result.discarded_at,
+                "internal_name": result.internal_name,
+            }
+        )
+        return inspection_id
+
+    def list_inspections(self, execution_id: str) -> list[dict]:
+        return self.inspections.get(execution_id, [])
+
+    def mark_inspections_discarded(self, internal_stems: list[str]) -> None:
+        for inspections in self.inspections.values():
+            for inspection in inspections:
+                if inspection["internal_name"].split(".", 1)[0] in internal_stems:
+                    inspection["discarded_at"] = datetime.now(UTC)
+
+    def list_expired_inspection_stems(self) -> list[str]:
+        now = datetime.now(UTC)
+        return [
+            inspection["internal_name"].split(".", 1)[0]
+            for inspections in self.inspections.values()
+            for inspection in inspections
+            if inspection["decision"] == "rejected"
+            and inspection["discarded_at"] is None
+            and inspection["retained_until"] <= now
+        ]
 
     def claim_file(
         self, execution_id: str, **metadata
@@ -194,7 +238,13 @@ def test_accepts_supported_files(api, filename, content, content_type) -> None:
     assert body["status"] == "completed"
     assert body["source"] == "N-FP"
     assert body["actor_identifier"] == "test-user"
-    stored = list(storage.glob(f"n_fp/{body['execution_id']}/original.*"))
+    stored = [
+        path
+        for path in storage.glob(
+            f"accepted/n_fp/{body['execution_id']}/*.{filename.rsplit('.', 1)[-1]}"
+        )
+        if len(path.stem) == 48
+    ]
     assert len(stored) == 1
     assert stored[0].read_bytes() == original
 
@@ -215,15 +265,40 @@ def test_rejects_unsupported_extension_and_keeps_failure_trace(api) -> None:
     assert status_response.json()["failure_reason"] == "unsupported_extension"
 
 
+def test_rejection_is_auditable_without_exposing_internal_paths(api) -> None:
+    client, _, storage = api
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP", "imported_by": "security-test"},
+        files={"file": ("report.csv", b"<script>alert(1)</script>", "text/csv")},
+    )
+
+    assert response.status_code == 415
+    execution_id = response.json()["error"]["details"]["execution_id"]
+    inspections = client.get(f"/imports/{execution_id}/inspections")
+    assert inspections.status_code == 200
+    record = inspections.json()[0]
+    assert record["decision"] == "rejected"
+    assert record["reason_code"] == "disguised_active_content"
+    assert record["original_file_name"] == "report.csv"
+    assert record["sha256"]
+    assert "path" not in record
+    assert "internal_name" not in record
+    assert not list((storage / "accepted").glob("**/*"))
+    assert list((storage / "quarantine" / execution_id).glob("*.upload"))
+
+
 @pytest.mark.parametrize(
-    ("filename", "content", "reason"),
+    ("filename", "content", "reason", "http_status"),
     [
-        ("empty.csv", b"", "empty_file"),
-        ("bad.json", b"{invalid", "invalid_file"),
-        ("bad.xlsx", b"not-a-workbook", "invalid_file"),
+        ("empty.csv", b"", "empty_file", 422),
+        ("bad.json", b"{invalid", "corrupted_file", 422),
+        ("bad.xlsx", b"not-a-workbook", "content_signature_mismatch", 415),
     ],
 )
-def test_rejects_empty_and_invalid_files(api, filename, content, reason) -> None:
+def test_rejects_empty_and_invalid_files(
+    api, filename, content, reason, http_status
+) -> None:
     client, _, _ = api
     response = client.post(
         "/imports",
@@ -231,7 +306,7 @@ def test_rejects_empty_and_invalid_files(api, filename, content, reason) -> None
         files={"file": (filename, content)},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == http_status
     assert response.json()["error"]["code"] == reason
 
 
@@ -254,8 +329,8 @@ def test_identifies_duplicate_by_hash_and_exposes_both_statuses(api) -> None:
     assert detail["duplicate_of_execution_id"] == first.json()["execution_id"]
     duplicate_status = client.get(f"/imports/{detail['execution_id']}").json()
     assert duplicate_status["status"] == "duplicate"
-    assert not (storage / "owm" / detail["execution_id"]).exists()
-    assert len(list(storage.glob("**/original.csv"))) == 1
+    assert not (storage / "accepted" / "owm" / detail["execution_id"]).exists()
+    assert len(list(storage.glob("accepted/**/**/*.csv"))) == 1
 
 
 def test_storage_failure_releases_hash_claim_and_removes_artifacts(
@@ -266,7 +341,7 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     def fail_move(*_args, **_kwargs) -> None:
         raise OSError("synthetic storage failure")
 
-    monkeypatch.setattr("app.imports.shutil.move", fail_move)
+    monkeypatch.setattr("app.imports.release_to_accepted", fail_move)
     response = client.post(
         "/imports",
         data={"source": "OWM", "technical_origin": "fixture"},
@@ -277,7 +352,8 @@ def test_storage_failure_releases_hash_claim_and_removes_artifacts(
     execution_id = response.json()["error"]["details"]["execution_id"]
     assert repository.get(execution_id)["status"] == "failed"
     assert repository.hashes == {}
-    assert not list(storage.glob("**/original.csv"))
+    assert not list(storage.glob("accepted/**/*.csv"))
+    assert not list(storage.glob("quarantine/**/*.upload"))
 
 
 def test_second_file_claim_failure_rolls_back_prepared_batch(api, monkeypatch) -> None:
@@ -316,7 +392,7 @@ def test_second_file_claim_failure_rolls_back_prepared_batch(api, monkeypatch) -
     assert repository.get(execution_id)["failure_reason"] == "preparation_error"
     assert repository.files[execution_id] == []
     assert repository.hashes == {}
-    assert not list(storage.glob("**/original-*"))
+    assert not list(storage.glob("accepted/**/*.*"))
 
 
 def test_artifact_failure_does_not_commit_pipeline(api, monkeypatch) -> None:
@@ -339,7 +415,7 @@ def test_artifact_failure_does_not_commit_pipeline(api, monkeypatch) -> None:
     execution_id = response.json()["error"]["details"]["execution_id"]
     assert repository.get(execution_id)["status"] == "failed"
     assert execution_id not in repository.normalized_records
-    assert not list((storage / "n_fp" / execution_id).glob("*.json"))
+    assert not list((storage / "accepted" / "n_fp" / execution_id).glob("*.json"))
 
 
 def test_original_file_is_interpreted_only_once(api, monkeypatch) -> None:
@@ -409,8 +485,9 @@ def test_validation_report_endpoint_and_blocked_execution(api) -> None:
     report = report_response.json()
     assert report["blocking"] is True
     assert report["issues"][0]["file_name"] == "invalid.csv"
-    assert (storage / "n_fp" / execution_id / "original.csv").exists()
-    assert (storage / "n_fp" / execution_id / "validation-report.json").exists()
+    directory = storage / "accepted" / "n_fp" / execution_id
+    assert list(directory.glob("*.csv"))
+    assert (directory / "validation-report.json").exists()
 
 
 def test_malformed_csv_finishes_with_persisted_blocking_report(api) -> None:
@@ -434,8 +511,9 @@ def test_malformed_csv_finishes_with_persisted_blocking_report(api) -> None:
     assert report["blocking"] is True
     assert report["issues"][0]["code"] == "read_error"
     assert report["issues"][0]["row"] == 2
-    assert (storage / "n_fp" / execution_id / "original.csv").exists()
-    assert (storage / "n_fp" / execution_id / "validation-report.json").exists()
+    directory = storage / "accepted" / "n_fp" / execution_id
+    assert list(directory.glob("*.csv"))
+    assert (directory / "validation-report.json").exists()
 
 
 def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
@@ -471,7 +549,9 @@ def test_valid_import_persists_and_exposes_normalized_data(api) -> None:
         "provenance"
     ]["workorder_number"][0]
     assert provenance["source_file_id"] == repository.files[execution_id][0]["id"]
-    assert (storage / "n_fp" / execution_id / "normalized-data.json").exists()
+    assert (
+        storage / "accepted" / "n_fp" / execution_id / "normalized-data.json"
+    ).exists()
 
 
 def test_multisource_upload_consolidates_precedence_and_divergence(
@@ -537,9 +617,11 @@ def test_multisource_upload_consolidates_precedence_and_divergence(
     assert source_file_ids == {item["id"] for item in repository.files[execution_id]}
     assert processing["summary"]["eligible_normalized_records"] == 2
     assert processing["summary"]["classifications_by_rule"]["source_divergence"] == 1
-    assert (tmp_path / "n_fp" / execution_id / "normalized-data.json").exists()
-    assert (tmp_path / "n_fp" / execution_id / "original-1.csv").exists()
-    assert (tmp_path / "owm" / execution_id / "original-2.csv").exists()
+    assert (
+        tmp_path / "accepted" / "n_fp" / execution_id / "normalized-data.json"
+    ).exists()
+    assert list((tmp_path / "accepted" / "n_fp" / execution_id).glob("*.csv"))
+    assert list((tmp_path / "accepted" / "owm" / execution_id).glob("*.csv"))
 
 
 def test_pipeline_exposes_partial_summary_and_keeps_valid_rows(api) -> None:
