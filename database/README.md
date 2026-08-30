@@ -30,6 +30,10 @@ python scripts/validate_project_assets.py
 - `rule_evaluations` registra também as regras que não foram acionadas;
 - `consolidated_field_provenance` liga cada campo consolidado às linhas de origem;
 - `audit_events` registra eventos e contexto adicional em `jsonb`;
+- `execution_state_transitions` preserva estado anterior, novo estado,
+  responsável, motivo, data e versão otimista;
+- `execution_idempotency` reserva importações e reprocessamentos pelo
+  fingerprint dos arquivos, execução e versões do pipeline e das regras;
 - quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
   não negativas e a liberação parcial exige quantidade liberada maior que zero
   e menor que a recebida.
@@ -64,6 +68,8 @@ erDiagram
     workorders ||--o{ rule_evaluations : avalia_regra
     workorders ||--o{ consolidated_field_provenance : rastreia
     executions ||--o{ audit_events : registra
+    executions ||--o{ execution_state_transitions : transiciona
+    executions ||--o| execution_idempotency : reserva
 ```
 
 ## Teste de persistência

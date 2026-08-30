@@ -88,11 +88,14 @@ Content-Type: application/json
 {"technical_origin":"frontend-angular"}
 ```
 
-A operação cria uma nova execução `pending`, incrementa `attempt`, referencia a
-execução raiz em `reprocessed_from_execution_id` e registra o evento
-`reprocessing_requested`. A execução anterior e seus resultados permanecem
-inalterados e consultáveis. Pedidos sobre execução `pending` ou `running` são
-rejeitados com `409` e código `execution_still_active`.
+A operação cria uma nova execução `reprocessing`, incrementa `attempt`,
+referencia a execução raiz em `reprocessed_from_execution_id` e registra o
+evento `reprocessing_requested`. `idempotency_key`, `pipeline_version` e
+`rule_catalog_version` fazem parte da reserva transacional; uma repetição
+idêntica retorna a mesma execução com `idempotent_replay=true`. A execução
+anterior e seus resultados permanecem inalterados e consultáveis. Estados
+ativos ou não reprocessáveis são rejeitados com `409` e código
+`execution_still_active`.
 
 ## Massa sintética
 

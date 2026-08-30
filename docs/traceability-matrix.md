@@ -21,6 +21,7 @@ coberta na fundação atual; não implica que integrações futuras estejam pron
 | Expor OpenAPI e erros HTTP seguros e estáveis | NF | envelope `error`; detalhes internos não são retornados | [#10](https://github.com/g-f307/synergia/issues/10) | `backend/app/errors.py`, modelos de `queries.py` | testes de erro e OpenAPI em `test_queries.py` e `test_imports.py` | Atendido |
 | Apresentar indicadores operacionais básicos | F | agregados não substituem histórico auditável | [#10](https://github.com/g-f307/synergia/issues/10) | endpoint `/indicators` em `backend/app/queries.py` | `test_returns_basic_indicators`; integração PostgreSQL | Atendido |
 | Persistir consolidados, classificações, decisões OQC, pendências e proveniência | F/NF | transação por Workorder; rollback isolado; regra e prioridade versionadas; integridade por execução | [#25](https://github.com/g-f307/synergia/issues/25) | `backend/app/persistence.py`, migration `0008_*`, `PostgresQueryRepository.get_consolidated` | `test_processing_persistence.py`; suíte de integração PostgreSQL | Atendido |
+| Controlar estados, idempotência e reprocessamento seguro | F/NF | transições autorizadas; fingerprint por arquivos e versões; lock da raiz; histórico imutável | [#26](https://github.com/g-f307/synergia/issues/26) | `backend/app/execution.py`, migration `0009_*`, repositórios de importação e consulta | `test_execution.py`, `test_execution_lifecycle.py`; PostgreSQL 16 | Atendido |
 
 ## Estados usados
 
