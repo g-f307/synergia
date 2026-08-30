@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from copy import deepcopy
 from typing import Any
 
@@ -34,10 +34,13 @@ def process_normalized_records(
     execution_id: str,
     classified_at: str,
     catalog: dict[str, Any] = RULE_CATALOG,
+    on_consolidated: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Consolidate and classify eligible normalized records from one execution."""
     eligible = _validated_records(records, execution_id)
     consolidation = consolidate(eligible, isolate_failures=True)
+    if on_consolidated is not None:
+        on_consolidated()
     classifiable_workorders = []
     for workorder in consolidation["workorders"]:
         workorder_number = workorder["workorder_number"]

@@ -30,6 +30,10 @@ STRUCTURAL_ISSUES = {
 class PipelineRepository(Protocol):
     def commit_pipeline(self, execution_id: str, result: dict[str, Any]) -> None: ...
 
+    def transition_execution(
+        self, execution_id: str, target: str, reason: str
+    ) -> None: ...
+
 
 class SourceImporter(Protocol):
     def read(
@@ -152,6 +156,7 @@ def run_pipeline_batch(
     prepare_commit: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Process every source file from one execution without rereading originals."""
+    repository.transition_execution(execution_id, "validating", "pipeline_started")
     imported_records: list[dict[str, Any]] = []
     normalized_records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
@@ -220,11 +225,27 @@ def run_pipeline_batch(
         valid_records += len(eligible_rows)
         rejected_records += len(imported) if structural_blocked else len(rejected_rows)
 
-    processing = process_normalized_records(
-        normalized_records,
-        execution_id=execution_id,
-        classified_at=classified_at,
-    )
+    if blocked_files and not normalized_records:
+        processing = process_normalized_records(
+            normalized_records,
+            execution_id=execution_id,
+            classified_at=classified_at,
+        )
+    else:
+        repository.transition_execution(
+            execution_id, "normalizing", "validation_completed"
+        )
+        repository.transition_execution(
+            execution_id, "consolidating", "normalization_completed"
+        )
+        processing = process_normalized_records(
+            normalized_records,
+            execution_id=execution_id,
+            classified_at=classified_at,
+            on_consolidated=lambda: repository.transition_execution(
+                execution_id, "applying_rules", "consolidation_completed"
+            ),
+        )
     error_count = sum(issue["severity"] == "error" for issue in issues)
     warning_count = sum(issue["severity"] == "warning" for issue in issues)
     summary = {
@@ -235,7 +256,13 @@ def run_pipeline_batch(
         "errors": error_count,
         "warnings": warning_count,
     }
-    status = "validation_failed" if blocked_files else "completed"
+    status = (
+        "validation_failed"
+        if blocked_files and not normalized_records
+        else "completed_with_errors"
+        if error_count or processing["summary"]["failed_workorders"]
+        else "completed"
+    )
     sources = list(dict.fromkeys(str(item["source"]) for item in inputs))
     file_names = [str(item["file_name"]) for item in inputs]
     result = {

@@ -19,7 +19,14 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
+from app.business_rules import RULE_CATALOG
 from app.errors import ErrorResponse
+from app.execution import (
+    PIPELINE_VERSION,
+    ExecutionState,
+    import_fingerprint,
+    validate_transition,
+)
 from app.persistence import PostgresProcessingRepository
 from app.pipeline import read_source, run_pipeline_batch
 
@@ -48,6 +55,9 @@ class ImportStatus(BaseModel):
     finished_at: datetime | None
     failure_reason: str | None = None
     duplicate_of_execution_id: str | None = None
+    pipeline_version: str
+    rule_catalog_version: str
+    state_version: int
 
 
 class ValidationReport(BaseModel):
@@ -84,7 +94,13 @@ class PipelineSummary(BaseModel):
 
 class ImportRepository(Protocol):
     def start(
-        self, execution_id: str, source: str, actor_type: str, actor: str
+        self,
+        execution_id: str,
+        source: str,
+        actor_type: str,
+        actor: str,
+        pipeline_version: str = PIPELINE_VERSION,
+        rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None: ...
 
     def claim_file(
@@ -99,6 +115,16 @@ class ImportRepository(Protocol):
         storage_key: str,
         source: str,
     ) -> tuple[int | None, str | None]: ...
+
+    def claim_processing(
+        self, execution_id: str, file_hashes: list[str]
+    ) -> str | None: ...
+
+    def release_claim(self, execution_id: str) -> None: ...
+
+    def transition_execution(
+        self, execution_id: str, target: str, reason: str
+    ) -> None: ...
 
     def mark_completed(self, execution_id: str) -> None: ...
 
@@ -131,16 +157,35 @@ class PostgresImportRepository:
         return psycopg.connect(self.database_url, row_factory=dict_row)
 
     def start(
-        self, execution_id: str, source: str, actor_type: str, actor: str
+        self,
+        execution_id: str,
+        source: str,
+        actor_type: str,
+        actor: str,
+        pipeline_version: str = PIPELINE_VERSION,
+        rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None:
         with self._connect() as connection:
             connection.execute(
                 """
                 INSERT INTO synergia.executions
-                    (id, status, source, actor_type, actor_identifier)
-                VALUES (%s, 'running', %s, %s, %s)
+                    (id, status, source, actor_type, actor_identifier,
+                     pipeline_version, rule_catalog_version,
+                     state_changed_by_type, state_changed_by,
+                     state_change_reason)
+                VALUES (%s, 'pending', %s, %s, %s, %s, %s, %s, %s,
+                        'execution_created')
                 """,
-                (execution_id, source, actor_type, actor),
+                (
+                    execution_id,
+                    source,
+                    actor_type,
+                    actor,
+                    pipeline_version,
+                    rule_catalog_version,
+                    actor_type,
+                    actor,
+                ),
             )
 
     def claim_file(
@@ -162,7 +207,7 @@ class PostgresImportRepository:
                     (execution_id, source, file_name, extension, content_hash,
                      media_type, size_bytes, storage_key)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (content_hash) DO NOTHING
+                ON CONFLICT (execution_id, content_hash) DO NOTHING
                 RETURNING id
                 """,
                 (
@@ -183,36 +228,106 @@ class PostgresImportRepository:
                 """
                 SELECT execution_id
                 FROM synergia.source_files
-                WHERE content_hash = %s
+                WHERE execution_id = %s AND content_hash = %s
                 """,
-                (digest,),
+                (execution_id, digest),
             ).fetchone()
             if duplicate is None:
                 raise RuntimeError("Conflito de hash sem execução original")
             return None, duplicate["execution_id"]
 
-    def mark_completed(self, execution_id: str) -> None:
+    def claim_processing(self, execution_id: str, file_hashes: list[str]) -> str | None:
+        with self._connect() as connection:
+            execution = connection.execute(
+                """
+                SELECT pipeline_version, rule_catalog_version
+                FROM synergia.executions WHERE id = %s FOR UPDATE
+                """,
+                (execution_id,),
+            ).fetchone()
+            if execution is None:
+                raise RuntimeError("Execução não encontrada")
+            request_fingerprint = import_fingerprint(
+                file_hashes,
+                execution["pipeline_version"],
+                execution["rule_catalog_version"],
+            )
+            inserted = connection.execute(
+                """
+                INSERT INTO synergia.execution_idempotency (
+                    request_fingerprint, request_type, execution_id,
+                    pipeline_version, rule_catalog_version
+                ) VALUES (%s, 'import', %s, %s, %s)
+                ON CONFLICT (request_fingerprint) DO NOTHING
+                RETURNING execution_id
+                """,
+                (
+                    request_fingerprint,
+                    execution_id,
+                    execution["pipeline_version"],
+                    execution["rule_catalog_version"],
+                ),
+            ).fetchone()
+            if inserted is not None:
+                return None
+            return connection.execute(
+                """
+                SELECT execution_id FROM synergia.execution_idempotency
+                WHERE request_fingerprint = %s
+                """,
+                (request_fingerprint,),
+            ).fetchone()["execution_id"]
+
+    def release_claim(self, execution_id: str) -> None:
         with self._connect() as connection:
             connection.execute(
-                """
-                UPDATE synergia.executions
-                SET status = 'completed', finished_at = now(), updated_at = now()
-                WHERE id = %s
-                """,
+                "DELETE FROM synergia.source_files WHERE execution_id = %s",
                 (execution_id,),
             )
 
-    def mark_validation_failed(self, execution_id: str) -> None:
+    def transition_execution(self, execution_id: str, target: str, reason: str) -> None:
         with self._connect() as connection:
+            current = connection.execute(
+                "SELECT status FROM synergia.executions WHERE id = %s FOR UPDATE",
+                (execution_id,),
+            ).fetchone()
+            if current is None:
+                raise RuntimeError("Execução não encontrada")
+            validate_transition(current["status"], target)
+            terminal = target in {
+                state.value
+                for state in (
+                    ExecutionState.VALIDATION_FAILED,
+                    ExecutionState.COMPLETED,
+                    ExecutionState.COMPLETED_WITH_ERRORS,
+                    ExecutionState.FAILED,
+                    ExecutionState.DUPLICATE,
+                    ExecutionState.CANCELLED,
+                )
+            }
             connection.execute(
                 """
                 UPDATE synergia.executions
-                SET status = 'validation_failed', failure_reason = 'validation_failed',
-                    finished_at = now(), updated_at = now()
+                SET status = %s, state_changed_by_type = 'system',
+                    state_changed_by = 'synergia-api',
+                    state_change_reason = %s,
+                    failure_reason = CASE
+                        WHEN %s IN ('failed', 'validation_failed') THEN %s
+                        ELSE failure_reason
+                    END,
+                    finished_at = CASE WHEN %s THEN now() ELSE NULL END
                 WHERE id = %s
                 """,
-                (execution_id,),
+                (target, reason, target, reason, terminal, execution_id),
             )
+
+    def mark_completed(self, execution_id: str) -> None:
+        self.transition_execution(execution_id, "completed", "pipeline_completed")
+
+    def mark_validation_failed(self, execution_id: str) -> None:
+        self.transition_execution(
+            execution_id, "validation_failed", "validation_failed"
+        )
 
     def save_normalized_records(self, execution_id: str, records: list[dict]) -> None:
         with self._connect() as connection:
@@ -391,21 +506,22 @@ class PostgresImportRepository:
                     Jsonb(summary),
                 ),
             )
-            connection.execute(
-                """
-                UPDATE synergia.executions
-                SET status = %s, failure_reason = %s, finished_at = now(),
-                    updated_at = now()
-                WHERE id = %s
-                """,
-                (
-                    result["status"],
-                    "validation_failed" if result["blocking"] else None,
-                    execution_id,
-                ),
-            )
         persistence = PostgresProcessingRepository(self.database_url).persist(
             execution_id, result["processing"]
+        )
+        final_state = result["status"]
+        if persistence["failed_workorders"] and final_state == "completed":
+            final_state = "completed_with_errors"
+        self.transition_execution(
+            execution_id,
+            final_state,
+            (
+                "processing_completed_with_errors"
+                if final_state == "completed_with_errors"
+                else "validation_failed"
+                if final_state == "validation_failed"
+                else "pipeline_completed"
+            ),
         )
         logger.info(
             "processing_persisted execution_id=%s confirmed=%d failed=%d",
@@ -420,15 +536,7 @@ class PostgresImportRepository:
                 "DELETE FROM synergia.source_files WHERE execution_id = %s",
                 (execution_id,),
             )
-            connection.execute(
-                """
-                UPDATE synergia.executions
-                SET status = 'failed', failure_reason = %s,
-                    finished_at = now(), updated_at = now()
-                WHERE id = %s
-                """,
-                (reason, execution_id),
-            )
+        self.transition_execution(execution_id, "failed", reason)
 
     def finish(
         self,
@@ -437,17 +545,17 @@ class PostgresImportRepository:
         reason: str,
         duplicate_of: str | None = None,
     ) -> None:
-        with self._connect() as connection:
-            connection.execute(
-                """
-                UPDATE synergia.executions
-                SET status = %s, failure_reason = %s,
-                    duplicate_of_execution_id = %s,
-                    finished_at = now(), updated_at = now()
-                WHERE id = %s
-                """,
-                (state, reason, duplicate_of, execution_id),
-            )
+        if duplicate_of is not None:
+            with self._connect() as connection:
+                connection.execute(
+                    """
+                    UPDATE synergia.executions
+                    SET duplicate_of_execution_id = %s
+                    WHERE id = %s
+                    """,
+                    (duplicate_of, execution_id),
+                )
+        self.transition_execution(execution_id, state, reason)
 
     def get(self, execution_id: str) -> dict | None:
         with self._connect() as connection:
@@ -457,7 +565,9 @@ class PostgresImportRepository:
                        sf.file_name, sf.extension, sf.size_bytes,
                        sf.content_hash AS sha256, e.actor_type,
                        e.actor_identifier, e.started_at, e.finished_at,
-                       e.failure_reason, e.duplicate_of_execution_id
+                       e.failure_reason, e.duplicate_of_execution_id,
+                       e.pipeline_version, e.rule_catalog_version,
+                       e.state_version
                 FROM synergia.executions e
                 LEFT JOIN synergia.source_files sf ON sf.execution_id = e.id
                 WHERE e.id = %s
@@ -567,7 +677,9 @@ def _error(
     code: str,
     message: str,
 ) -> None:
-    repository.finish(execution_id, "failed", code)
+    current = repository.get(execution_id)
+    if current is not None and current["status"] != "failed":
+        repository.finish(execution_id, "failed", code)
     logger.warning("import_failed execution_id=%s reason=%s", execution_id, code)
     raise HTTPException(
         status_code=http_status,
@@ -647,6 +759,7 @@ async def upload_import(
     temp_paths: list[Path] = []
     destinations: list[Path] = []
     pipeline_inputs: list[dict] = []
+    file_hashes: list[str] = []
     try:
         for index, (item_source, item_file) in enumerate(
             zip(source, file, strict=True), 1
@@ -690,13 +803,14 @@ async def upload_import(
             )
             destination = storage_root() / item_source.name / execution_id / stored_name
             storage_key = str(destination.relative_to(storage_root()))
+            file_digest = digest.hexdigest()
             source_file_id, duplicate_of = repository.claim_file(
                 execution_id,
                 source=item_source.value,
                 file_name=safe_name,
                 extension=extension[1:],
                 size_bytes=size_bytes,
-                digest=digest.hexdigest(),
+                digest=file_digest,
                 media_type=item_file.content_type,
                 storage_key=storage_key,
             )
@@ -743,6 +857,7 @@ async def upload_import(
                 ) from exc
             temp_paths.remove(temp_path)
             destinations.append(destination)
+            file_hashes.append(file_digest)
             pipeline_inputs.append(
                 {
                     "file_name": safe_name,
@@ -751,6 +866,30 @@ async def upload_import(
                     "tables": tables,
                     "read_issues": read_issues,
                 }
+            )
+        duplicate_of = repository.claim_processing(execution_id, file_hashes)
+        if duplicate_of:
+            for stored in destinations:
+                stored.unlink(missing_ok=True)
+            for directory in {stored.parent for stored in destinations}:
+                directory.rmdir()
+            repository.release_claim(execution_id)
+            repository.finish(
+                execution_id, "duplicate", "duplicate_processing_request", duplicate_of
+            )
+            logger.info(
+                "import_duplicate execution_id=%s duplicate_of=%s",
+                execution_id,
+                duplicate_of,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "duplicate_file",
+                    "message": "Arquivos já processados nestas versões",
+                    "execution_id": execution_id,
+                    "duplicate_of_execution_id": duplicate_of,
+                },
             )
         try:
             artifact_directory = destinations[0].parent
