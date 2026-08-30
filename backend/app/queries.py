@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Complex reporting queries are kept readable as aligned SQL blocks.
+# ruff: noqa: E501
 import math
 import os
 from collections.abc import Generator
@@ -37,6 +39,29 @@ class Pagination(BaseModel):
     pages: int
 
 
+class ExecutionStateEvent(BaseModel):
+    from_state: str | None = None
+    to_state: str
+    reason: str
+    state_version: int
+    occurred_at: datetime
+
+
+class ExecutionCounts(BaseModel):
+    files: int = 0
+    rows_read: int = 0
+    valid_records: int = 0
+    rejected_records: int = 0
+    normalized_records: int = 0
+    workorders: int = 0
+    lots: int = 0
+    serials: int = 0
+    classifications: int = 0
+    pending_items: int = 0
+    errors: int = 0
+    warnings: int = 0
+
+
 class ExecutionResponse(BaseModel):
     execution_id: str
     status: str
@@ -51,6 +76,10 @@ class ExecutionResponse(BaseModel):
     pipeline_version: str
     rule_catalog_version: str
     state_version: int
+    updated_at: datetime | None = None
+    lifecycle: Literal["active", "completed", "partial", "failed"] | None = None
+    state_history: list[ExecutionStateEvent] = Field(default_factory=list)
+    counts: ExecutionCounts = Field(default_factory=ExecutionCounts)
 
 
 class WorkorderResponse(BaseModel):
@@ -289,18 +318,50 @@ class PostgresQueryRepository:
 
     def get_execution(self, execution_id: str) -> dict | None:
         with self._connect() as connection:
-            return connection.execute(
+            row = connection.execute(
                 """
                 SELECT id AS execution_id, status, source, attempt,
                        reprocessed_from_id AS reprocessed_from_execution_id,
                        actor_type, actor_identifier, started_at, finished_at,
                        failure_reason, pipeline_version, rule_catalog_version,
-                       state_version
+                       state_version, updated_at,
+                       CASE
+                         WHEN status = 'completed' THEN 'completed'
+                         WHEN status = 'completed_with_errors' THEN 'partial'
+                         WHEN status IN ('failed','validation_failed','cancelled') THEN 'failed'
+                         ELSE 'active'
+                       END AS lifecycle
                 FROM synergia.executions
                 WHERE id = %s
                 """,
                 (execution_id,),
             ).fetchone()
+            if row is None:
+                return None
+            result = dict(row)
+            result["state_history"] = connection.execute(
+                """SELECT from_state,to_state,reason,state_version,occurred_at
+                   FROM synergia.execution_state_transitions WHERE execution_id=%s
+                   ORDER BY occurred_at,id""",
+                (execution_id,),
+            ).fetchall()
+            result["counts"] = connection.execute(
+                """SELECT
+                     (SELECT count(*) FROM synergia.source_files WHERE execution_id=%s) AS files,
+                     COALESCE((SELECT sum(rows_read) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS rows_read,
+                     COALESCE((SELECT sum(valid_records) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS valid_records,
+                     COALESCE((SELECT sum(rejected_records) FROM synergia.pipeline_summaries WHERE execution_id=%s),0) AS rejected_records,
+                     (SELECT count(*) FROM synergia.normalized_records WHERE execution_id=%s) AS normalized_records,
+                     (SELECT count(*) FROM synergia.workorders WHERE execution_id=%s) AS workorders,
+                     (SELECT count(*) FROM synergia.lots WHERE execution_id=%s) AS lots,
+                     (SELECT count(*) FROM synergia.serials WHERE execution_id=%s) AS serials,
+                     (SELECT count(*) FROM synergia.classifications WHERE execution_id=%s) AS classifications,
+                     (SELECT count(*) FROM synergia.pending_items WHERE execution_id=%s) AS pending_items,
+                     (SELECT count(*) FROM synergia.pipeline_issues WHERE execution_id=%s AND severity='error') AS errors,
+                     (SELECT count(*) FROM synergia.pipeline_issues WHERE execution_id=%s AND severity='warning') AS warnings""",
+                (execution_id,) * 12,
+            ).fetchone()
+            return result
 
     def get_workorder(
         self, workorder_number: str, execution_id: str | None = None
