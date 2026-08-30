@@ -21,6 +21,9 @@ Configure a conexão e, opcionalmente, o diretório controlado de evidências:
 ```bash
 export DATABASE_URL=postgresql://synergia:synergia-local-only@localhost:5432/synergia
 export IMPORT_STORAGE_DIR=/var/lib/synergia/imports
+# O padrão é 25 MiB e 24 horas de retenção para rejeitados
+export UPLOAD_MAX_BYTES=26214400
+export UPLOAD_REJECTED_RETENTION_HOURS=24
 # Opcional: catálogo oficial, separado por vírgulas
 export VALID_ORGANIZATION_CODES=ORG-001,LG
 ```
@@ -126,10 +129,15 @@ vazio ou estruturalmente inválido retorna `422`, e extensão não suportada
 retorna `415`. Todas essas respostas incluem um ID consultável quando a fonte
 e o ator já foram aceitos.
 
-O arquivo aceito é preservado byte a byte em
-`<IMPORT_STORAGE_DIR>/<fonte>/<execution_id>/original.<extensão>`. A API e os
-logs não expõem seu conteúdo nem o caminho absoluto. Em desenvolvimento, o
-diretório padrão é `data/imports/`, ignorado pelo Git.
+O arquivo é recebido primeiro em `<IMPORT_STORAGE_DIR>/quarantine/` com nome
+aleatório. Após extensão, MIME, tipo real, tamanho, magic bytes, ZIP e conteúdo
+ativo serem aprovados, ele é movido byte a byte para
+`<IMPORT_STORAGE_DIR>/accepted/<fonte>/<execution_id>/<token>.<extensão>`.
+A API e os logs não expõem conteúdo, caminho absoluto nem nome interno.
+Decisões seguras podem ser consultadas em
+`GET /imports/{execution_id}/inspections`; formatos, limites e retenção estão em
+[`../docs/upload-security.md`](../docs/upload-security.md). Em desenvolvimento,
+o diretório padrão é `data/imports/`, ignorado pelo Git.
 
 A especificação OpenAPI interativa está em `http://localhost:8000/docs` e o
 documento JSON em `http://localhost:8000/openapi.json`.

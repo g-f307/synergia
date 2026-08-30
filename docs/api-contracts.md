@@ -9,6 +9,7 @@ fica em `/openapi.json` e a interface interativa em `/docs`.
 | Método e rota | Resultado | Sucesso |
 | --- | --- | --- |
 | `POST /imports` | inicia uma importação rastreável | `201` |
+| `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
 | `GET /imports/{execution_id}/validation-report` | erros e avisos | `200` |
 | `GET /workorders/{workorder_number}` | Workorder, lotes e seriais | `200` |
@@ -22,8 +23,9 @@ fica em `/openapi.json` e a interface interativa em `/docs`.
 | `GET /indicators` | totais operacionais básicos | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
-ou parâmetros inválidos retornam `422`, e falhas inesperadas retornam `500` sem
-expor detalhes internos.
+ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,
+tipo/extensão incompatível retorna `415`, e falhas inesperadas retornam `500`
+sem expor detalhes internos.
 
 ## Erros padronizados
 
@@ -55,6 +57,13 @@ reservado no banco antes do pipeline e recebe um `source_file_id` real, usado
 nos registros importados, normalizados e na proveniência consolidada. A
 normalização de todas as fontes elegíveis é reunida antes da consolidação, o que
 torna alcançáveis a precedência e as divergências multifuente pelo fluxo HTTP.
+
+Antes da reserva e do pipeline, cada arquivo permanece em quarentena e passa
+pela política da fonte. Uma rejeição retorna `reason_code` estável e deixa
+metadados consultáveis em `GET /imports/{execution_id}/inspections`; a resposta
+nunca inclui caminho absoluto, chave de storage ou nome interno. Formatos,
+limites, inspeções de conteúdo e retenção estão em
+[upload-security.md](upload-security.md).
 
 ## Paginação, filtros e ordenação
 

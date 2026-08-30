@@ -17,11 +17,12 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 O README é o ponto de entrada. Os detalhes vigentes ficam em:
 
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
-- [matriz de rastreabilidade das issues #1 a #10](docs/traceability-matrix.md);
+- [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [contratos da API](docs/api-contracts.md);
 - [ciclo de vida, idempotência e reprocessamento](docs/execution-lifecycle.md);
+- [recebimento seguro, quarentena e retenção](docs/upload-security.md);
 - [guia de contribuição, Definition of Ready e Definition of Done](CONTRIBUTING.md).
 
 ## Protótipo navegável
