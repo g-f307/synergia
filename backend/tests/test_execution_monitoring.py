@@ -36,8 +36,8 @@ class MemoryMonitoringRepository:
             return [], 0
         return items, len(items)
 
-    def classifications(self, execution_id: str):
-        return [
+    def classifications(self, execution_id: str, **filters):
+        items = [
             {
                 "classification_id": "class-1",
                 "workorder_number": "WO-1",
@@ -58,9 +58,10 @@ class MemoryMonitoringRepository:
                 "evidence": {"source": "synthetic"},
             }
         ]
+        return items, len(items)
 
-    def pending(self, execution_id: str):
-        return [
+    def pending(self, execution_id: str, **filters):
+        items = [
             {
                 "id": 1,
                 "workorder_number": "WO-1",
@@ -79,9 +80,10 @@ class MemoryMonitoringRepository:
                 "updated_at": NOW,
             }
         ]
+        return items, len(items)
 
-    def evidences(self, execution_id: str):
-        return [
+    def evidences(self, execution_id: str, **filters):
+        items = [
             {
                 "evidence_id": 7,
                 "safe_name": "evidence-7.csv",
@@ -91,6 +93,7 @@ class MemoryMonitoringRepository:
                 "available": True,
             }
         ]
+        return items, len(items)
 
     def evidence_file(self, execution_id: str, evidence_id: int):
         if evidence_id == 8:
@@ -116,14 +119,17 @@ def test_lists_monitoring_resources_with_deterministic_contract(api) -> None:
     page = api.get("/executions/exec-1/divergences?page=1&page_size=20").json()
     assert page["pagination"] == {"page": 1, "page_size": 20, "total": 1, "pages": 1}
     assert page["items"][0]["workorder_number"] == "WO-1"
-    assert (
-        api.get("/executions/exec-1/classifications").json()[0]["rule_id"]
-        == "oqc_pending"
-    )
-    assert api.get("/executions/exec-1/pending-items").json()[0]["status"] == "open"
-    evidence = api.get("/executions/exec-1/evidences").json()[0]
+    classifications = api.get("/executions/exec-1/classifications").json()
+    assert classifications["items"][0]["rule_id"] == "oqc_pending"
+    assert classifications["pagination"]["total"] == 1
+    pending = api.get("/executions/exec-1/pending-items").json()
+    assert pending["items"][0]["status"] == "open"
+    assert pending["pagination"]["total"] == 1
+    evidence_page = api.get("/executions/exec-1/evidences").json()
+    evidence = evidence_page["items"][0]
     assert evidence["safe_name"] == "evidence-7.csv"
     assert "storage_key" not in evidence
+    assert evidence_page["pagination"]["total"] == 1
 
 
 def test_standardizes_not_found_period_and_quarantine_errors(api) -> None:
