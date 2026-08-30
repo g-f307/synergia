@@ -110,5 +110,8 @@ leitura, que o protótipo permanece disponível na branch `prototype-pages`.
 As migrations SQL em `database/migrations/` são aplicadas, em ordem pelo nome,
 em um PostgreSQL 16 temporário durante a CI. A validação falha quando não há
 migrations ou quando qualquer arquivo contém SQL inválido para PostgreSQL.
-Os dados sintéticos aceitos em
-`data/synthetic/` são arquivos JSON válidos ou CSV com cabeçalho preenchido.
+Os dados sintéticos aceitos em `data/synthetic/` são arquivos JSON válidos,
+CSV ou XLSX com cabeçalho preenchido. Fixtures geradas possuem manifesto com
+seed, versão, contagens e hashes verificados pela CI. Consulte o
+[guia das massas sintéticas](data/synthetic/README.md) para regeneração e
+perfis de volume.
