@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.access_control import router as access_control_router
 from app.errors import install_error_handlers
 from app.execution_monitoring import router as monitoring_router
 from app.imports import router as imports_router
@@ -29,6 +30,7 @@ app.include_router(imports_router)
 app.include_router(queries_router)
 app.include_router(monitoring_router)
 app.include_router(users_router)
+app.include_router(access_control_router)
 
 
 @app.get("/health", tags=["system"])
