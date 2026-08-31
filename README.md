@@ -23,6 +23,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [contratos da API](docs/api-contracts.md);
 - [ciclo de vida, idempotência e reprocessamento](docs/execution-lifecycle.md);
 - [recebimento seguro, quarentena e retenção](docs/upload-security.md);
+- [ADR da estratégia de identidade e sessão](docs/adr/0001-identity-strategy.md);
+- [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
 - [guia de contribuição, Definition of Ready e Definition of Done](CONTRIBUTING.md).
 
 ## Protótipo navegável

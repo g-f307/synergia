@@ -59,6 +59,10 @@ camada descrita em [upload-security.md](upload-security.md).
 Os contratos OpenAPI são gerados pela aplicação em `/openapi.json`. Detalhes de
 cada etapa estão em [normalization.md](normalization.md),
 [consolidation.md](consolidation.md) e [business-rules.md](business-rules.md).
+A estratégia futura e desacoplada de autenticação está no
+[ADR de identidade](adr/0001-identity-strategy.md), e as ações privadas estão na
+[matriz de acesso](access-control-matrix.md). Nenhum desses controles está
+implementado na API atual.
 
 ### Persistência e arquivos
 

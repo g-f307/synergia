@@ -1,8 +1,10 @@
-# Matriz de rastreabilidade da Etapa 0
+# Matriz de rastreabilidade
 
 Esta matriz liga requisitos, regras, issues, implementação e evidências
 automatizadas. `Atendido` significa que a capacidade está implementada e
 coberta na fundação atual; não implica que integrações futuras estejam prontas.
+`Decidido` identifica uma política arquitetural aprovada cuja implementação foi
+deliberadamente deixada para issue posterior.
 
 | Requisito | Tipo | Regra ou decisão relacionada | Issue | Implementação principal | Evidência automatizada | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -24,10 +26,14 @@ coberta na fundação atual; não implica que integrações futuras estejam pron
 | Controlar estados, idempotência e reprocessamento seguro | F/NF | transições autorizadas; fingerprint por arquivos e versões; lock da raiz; histórico imutável | [#26](https://github.com/g-f307/synergia/issues/26) | `backend/app/execution.py`, migration `0009_*`, repositórios de importação e consulta | `test_execution.py`, `test_execution_lifecycle.py`; PostgreSQL 16 | Atendido |
 | Inspecionar uploads e isolar conteúdo rejeitado | F/NF | extensão/MIME/tipo real; limites por fonte; nomes aleatórios; quarentena, retenção e auditoria sem caminhos | [#27](https://github.com/g-f307/synergia/issues/27) | `backend/app/upload_security.py`, migration `0010_*`, integração em `imports.py` | `test_upload_security.py`, `test_imports.py`, `test_upload_security_persistence.py`; PostgreSQL 16 | Atendido |
 | Gerar massas sintéticas reproduzíveis para todas as fontes | NF | seed e calendário fixos; IDs sintéticos; manifesto com versão, contagens, cenários e hashes; volumes grandes sob demanda | [#28](https://github.com/g-f307/synergia/issues/28) | `scripts/generate_synthetic_data.py`, `data/synthetic/fixtures/` | `test_synthetic_data.py`; validação de manifestos no job `project-data` | Atendido |
+| Definir identidade e sessão sem acoplar usuário a e-mail, login ou provedor | RF013 / RNF005 / RNF006 / RNF015 | arquitetura híbrida; identidade corporativa é alvo de produção; login local e integração corporativa dependem de portões explícitos | Issue atual — identidade e autorização da Etapa 2 | `docs/adr/0001-identity-strategy.md` | revisão do ADR e política de tokens, revogação, senha condicional e pendências | Decidido |
+| Autorizar por ação com papéis `admin`, `gestor`, `analista`, `operador` e `consulta` | RF002 / RF011 / RF013 / RF017 / RF028 | negação padrão; papéis não hierárquicos; segregação entre administração e operação | Issue atual — identidade e autorização da Etapa 2 | `docs/access-control-matrix.md` | `python scripts/validate_access_matrix.py`; revisão de conflitos entre papéis | Decidido |
+| Restringir dados e ações ao escopo organizacional do ator | RF039 / RF040 / RF043 / RNF006 | escopo `org` obrigatório; concessão `all` separada do papel; listas e detalhes filtrados no servidor | Issue atual — identidade e autorização da Etapa 2 | seção “Escopo por organização” da matriz; portão `ID-P06` do ADR | inventário das 21 rotas privadas; regras de acesso horizontal e vertical | Decidido |
 
 ## Estados usados
 
 - **Atendido:** implementado, documentado e com evidência automatizada.
+- **Decidido:** política documental aceita, ainda sem implementação executável.
 - **Parcial:** parte verificável foi entregue, mas resta capacidade da mesma
   obrigação.
 - **Planejado:** aceito no roadmap, sem implementação vigente.
