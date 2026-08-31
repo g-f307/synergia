@@ -1,9 +1,11 @@
 # Matriz inicial de acesso
 
-Esta matriz especifica a política-alvo da Etapa 2. A API atual **ainda não
-implementa autenticação ou autorização**; portanto, a classificação abaixo não
-deve ser interpretada como proteção já existente. Implementação, migrations,
-tokens e telas permanecem fora desta issue.
+Esta matriz especifica a política-alvo da Etapa 2. O catálogo, os papéis, as
+associações e a consulta de permissões efetivas estão implementados pela camada
+administrativa descrita em
+[administração de acesso](access-control-administration.md). Login, tokens,
+telas e a aplicação da matriz em todas as rotas operacionais permanecem
+incrementais e não devem ser presumidos a partir deste documento.
 
 A estratégia de identidade, sessão e troca de provedor está em
 [ADR 0001](adr/0001-identity-strategy.md). O backend deverá autorizar a ação,

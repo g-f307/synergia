@@ -25,6 +25,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [recebimento seguro, quarentena e retenção](docs/upload-security.md);
 - [ADR da estratégia de identidade e sessão](docs/adr/0001-identity-strategy.md);
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
+- [administração de grupos, papéis, permissões e associações](docs/access-control-administration.md);
 - [modelo persistente de identidade e acesso](docs/identity-data-model.md);
 - [guia de contribuição, Definition of Ready e Definition of Done](CONTRIBUTING.md).
 

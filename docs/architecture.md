@@ -61,8 +61,10 @@ cada etapa estão em [normalization.md](normalization.md),
 [consolidation.md](consolidation.md) e [business-rules.md](business-rules.md).
 A estratégia futura e desacoplada de autenticação está no
 [ADR de identidade](adr/0001-identity-strategy.md), e as ações privadas estão na
-[matriz de acesso](access-control-matrix.md). Nenhum desses controles está
-implementado na API atual.
+[matriz de acesso](access-control-matrix.md). A fundação administrativa desses
+controles está implementada conforme
+[administração de acesso](access-control-administration.md); a aplicação das
+permissões em todas as rotas operacionais continua incremental.
 
 O modelo PostgreSQL que sustenta essa estratégia está descrito em
 [identity-data-model.md](identity-data-model.md). Ele contém usuários, vínculos,

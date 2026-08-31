@@ -33,6 +33,7 @@ deliberadamente deixada para issue posterior.
 | Persistir grupos, papéis, permissões e concessões por organização | RF013 / RF043 / RNF006 | autorização por ação; associações únicas; catálogo IAM de organização estável | Issue atual — modelo persistente de identidade e acesso | migration `0012_*`; rollbacks explícitos | testes de associações e escopo em `test_identity_persistence.py` | Atendido |
 | Persistir sessões, hashes de refresh token e eventos IAM | RF012 / RF013 / RNF004 / RNF015 | usuário não ativo sem sessão; três sessões simultâneas; refresh somente por hash; auditoria append-only | Issue atual — modelo persistente de identidade e acesso | migration `0013_*`; `docs/identity-data-model.md` | testes de sessão, revogação, hash, auditoria e índices | Atendido |
 | Administrar ciclo de vida de usuarios | RF013 / RNF004 / RNF006 / RNF015 | autorizacao `access.admin`; CRUD logico; versao otimista; ultimo admin protegido; auditoria com ator e motivo | Issue #39 — CRUD e ciclo de vida de usuarios | `app/users.py`; migration `0014_*`; `docs/user-administration.md` | `test_users.py`; `test_user_persistence.py` | Atendido |
+| Administrar grupos, papéis, permissões e associações | RF002 / RF013 / RF043 / RNF004 / RNF006 | catálogo versionado; escopo organizacional; idempotência; último admin protegido; auditoria | Issue #40 — controle de acesso | `app/access_control.py`; migration `0015_*`; `docs/access-control-administration.md` | `test_access_control_persistence.py`; OpenAPI; PostgreSQL 16 | Atendido |
 
 ## Estados usados
 
