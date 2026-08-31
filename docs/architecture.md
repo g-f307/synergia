@@ -66,8 +66,13 @@ implementado na API atual.
 
 O modelo PostgreSQL que sustenta essa estratégia está descrito em
 [identity-data-model.md](identity-data-model.md). Ele contém usuários, vínculos,
-papéis, permissões, sessões e eventos, mas ainda não é consumido pelos endpoints
-da aplicação.
+papéis, permissões, sessões e eventos. Os endpoints administrativos de usuários
+consomem esse núcleo; login e os demais recursos ainda não o utilizam.
+
+Os endpoints administrativos agora consomem esse modelo conforme
+[user-administration.md](user-administration.md). A autenticacao permanece em
+uma camada futura; nesta etapa, um gateway confiavel fornece o UUID do ator e o
+backend valida `admin` ou `access.admin` no PostgreSQL.
 
 ### Persistência e arquivos
 

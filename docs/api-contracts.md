@@ -1,5 +1,10 @@
 # Contratos da API
 
+Os contratos administrativos de usuarios, incluindo autorizacao temporaria por
+contexto confiavel, filtros, concorrencia otimista e ciclo de vida, estao em
+[user-administration.md](user-administration.md). O OpenAPI publica essas rotas
+sob a tag `user administration`.
+
 Consulte também [Acompanhamento de execuções](execution-monitoring.md) para os
 contratos integrados de estado, divergências, classificações, pendências e evidências.
 
