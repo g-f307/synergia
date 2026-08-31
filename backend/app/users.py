@@ -15,6 +15,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.authorization import active_global_admin_count, is_global_admin
 from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(prefix="/admin/users", tags=["user administration"])
@@ -262,26 +263,7 @@ class PostgresUserRepository:
 
     def authorize(self, actor_id: UUID) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM synergia.identity_users u
-                    JOIN synergia.user_role_assignments ura ON ura.user_id = u.id
-                    JOIN synergia.roles r ON r.id = ura.role_id
-                    LEFT JOIN synergia.role_permissions rp ON rp.role_id = r.id
-                    LEFT JOIN synergia.permissions p ON p.id = rp.permission_id
-                    WHERE u.id = %s AND u.status = 'active'
-                      AND ura.revoked_at IS NULL
-                      AND (ura.expires_at IS NULL OR ura.expires_at > now())
-                      AND r.is_active
-                      AND (r.normalized_key = 'admin'
-                           OR (p.normalized_key = 'access.admin' AND p.is_active))
-                ) AS authorized
-                """,
-                (actor_id,),
-            )
-            if not cursor.fetchone()["authorized"]:
+            if not is_global_admin(cursor, actor_id):
                 raise ApiError(
                     403, "access_denied", "Acao administrativa nao autorizada"
                 )
@@ -602,45 +584,8 @@ class PostgresUserRepository:
                     409, "user_state_unchanged", "Usuario ja esta no estado solicitado"
                 )
             if target_status in {"inactive", "blocked"}:
-                cursor.execute(
-                    """
-                    SELECT EXISTS (
-                        SELECT 1 FROM synergia.user_role_assignments ura
-                        JOIN synergia.roles r ON r.id = ura.role_id
-                        LEFT JOIN synergia.role_permissions rp
-                          ON rp.role_id = r.id
-                        LEFT JOIN synergia.permissions p
-                          ON p.id = rp.permission_id
-                        WHERE ura.user_id = %s AND ura.revoked_at IS NULL
-                          AND (ura.expires_at IS NULL OR ura.expires_at > now())
-                          AND r.is_active
-                          AND (r.normalized_key = 'admin'
-                               OR (p.normalized_key = 'access.admin'
-                                   AND p.is_active))
-                    ) AS is_admin
-                    """,
-                    (user_id,),
-                )
-                if cursor.fetchone()["is_admin"]:
-                    cursor.execute(
-                        """
-                        SELECT count(DISTINCT u.id) AS total
-                        FROM synergia.identity_users u
-                        JOIN synergia.user_role_assignments ura ON ura.user_id = u.id
-                        JOIN synergia.roles r ON r.id = ura.role_id
-                        LEFT JOIN synergia.role_permissions rp
-                          ON rp.role_id = r.id
-                        LEFT JOIN synergia.permissions p
-                          ON p.id = rp.permission_id
-                        WHERE u.status = 'active' AND ura.revoked_at IS NULL
-                          AND (ura.expires_at IS NULL OR ura.expires_at > now())
-                          AND r.is_active
-                          AND (r.normalized_key = 'admin'
-                               OR (p.normalized_key = 'access.admin'
-                                   AND p.is_active))
-                        """
-                    )
-                    if cursor.fetchone()["total"] <= 1:
+                if is_global_admin(cursor, user_id):
+                    if active_global_admin_count(cursor) <= 1:
                         raise ApiError(
                             409,
                             "last_active_admin",
