@@ -59,12 +59,9 @@ def _cleanup(database_url: str, actor_id: UUID, subject_id: UUID | None) -> None
             "DISABLE TRIGGER trg_identity_users_no_delete"
         )
         cursor.execute(
-            "ALTER TABLE synergia.user_emails "
-            "DISABLE TRIGGER trg_user_emails_no_delete"
+            "ALTER TABLE synergia.user_emails DISABLE TRIGGER trg_user_emails_no_delete"
         )
-        cursor.execute(
-            "ALTER TABLE synergia.roles DISABLE TRIGGER trg_roles_no_delete"
-        )
+        cursor.execute("ALTER TABLE synergia.roles DISABLE TRIGGER trg_roles_no_delete")
         try:
             cursor.execute(
                 """
@@ -85,9 +82,7 @@ def _cleanup(database_url: str, actor_id: UUID, subject_id: UUID | None) -> None
                 "DELETE FROM synergia.identity_users WHERE id = ANY(%s)",
                 (identifiers,),
             )
-            cursor.execute(
-                "DELETE FROM synergia.roles WHERE normalized_key = 'admin'"
-            )
+            cursor.execute("DELETE FROM synergia.roles WHERE normalized_key = 'admin'")
         finally:
             cursor.execute(
                 "ALTER TABLE synergia.roles ENABLE TRIGGER trg_roles_no_delete"
@@ -107,7 +102,9 @@ def _cleanup(database_url: str, actor_id: UUID, subject_id: UUID | None) -> None
         connection.commit()
 
 
-def test_user_api_uses_operational_identity_model() -> None:
+def test_user_api_uses_operational_identity_model(monkeypatch) -> None:
+    monkeypatch.setenv("SYNERGIA_ENV", "test")
+    monkeypatch.setenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", "true")
     database_url = os.environ["DATABASE_URL"]
     suffix = uuid4().hex[:12]
     actor_id = _bootstrap_admin(database_url, suffix)
@@ -115,6 +112,26 @@ def test_user_api_uses_operational_identity_model() -> None:
     headers = {"X-Actor-Id": str(actor_id)}
     try:
         with TestClient(app) as client:
+            inactive_creation = client.post(
+                "/admin/users",
+                headers=headers,
+                json={
+                    "display_name": "Inactive created user",
+                    "status": "inactive",
+                    "emails": [{"email": f"inactive-{suffix}@example.invalid"}],
+                    "reason": "review scenario",
+                },
+            )
+            assert inactive_creation.status_code == 422
+            with psycopg.connect(database_url) as verification:
+                persisted = verification.execute(
+                    """
+                    SELECT count(*) FROM synergia.identity_users
+                    WHERE display_name = 'Inactive created user'
+                    """
+                ).fetchone()[0]
+                assert persisted == 0
+
             created = client.post(
                 "/admin/users",
                 headers=headers,
@@ -133,9 +150,7 @@ def test_user_api_uses_operational_identity_model() -> None:
             assert created.status_code == 201, created.text
             body = created.json()
             subject_id = UUID(body["id"])
-            assert body["emails"][0]["email"] == (
-                f"subject-{suffix}@example.invalid"
-            )
+            assert body["emails"][0]["email"] == (f"subject-{suffix}@example.invalid")
             assert "local_password_hash" not in body
 
             duplicate = client.post(

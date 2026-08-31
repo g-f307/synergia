@@ -144,7 +144,9 @@ class MemoryUserRepository:
 
 
 @pytest.fixture
-def api():
+def api(monkeypatch):
+    monkeypatch.setenv("SYNERGIA_ENV", "test")
+    monkeypatch.setenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", "true")
     repository = MemoryUserRepository()
     app.dependency_overrides[get_user_repository] = lambda: repository
     with TestClient(app) as client:
@@ -196,6 +198,23 @@ def test_rejects_invalid_creation(api, payload_path, payload_value) -> None:
     response = client.post("/admin/users", headers=HEADERS, json=payload)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "request_validation_error"
+
+
+def test_rejects_inactive_state_during_creation(api) -> None:
+    client, repository = api
+    response = client.post(
+        "/admin/users",
+        headers=HEADERS,
+        json={
+            "display_name": "Inactive created user",
+            "status": "inactive",
+            "emails": [{"email": "inactive-review@example.invalid"}],
+            "reason": "review scenario",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "request_validation_error"
+    assert repository.users == {}
 
 
 def test_rejects_duplicate_email_without_enumerating_owner(api) -> None:
@@ -304,6 +323,22 @@ def test_rejects_physical_delete_and_unauthorized_access(api) -> None:
     assert denied.status_code == 403
     missing_actor = client.get(f"/admin/users/{user['id']}")
     assert missing_actor.status_code == 403
+
+
+def test_trusted_header_adapter_is_disabled_by_default_and_in_production(
+    api, monkeypatch
+) -> None:
+    client, _repository = api
+    monkeypatch.delenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED")
+    disabled = client.get(f"/admin/users/{uuid4()}", headers=HEADERS)
+    assert disabled.status_code == 503
+    assert disabled.json()["error"]["code"] == "identity_adapter_unavailable"
+
+    monkeypatch.setenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", "true")
+    monkeypatch.setenv("SYNERGIA_ENV", "production")
+    production = client.get(f"/admin/users/{uuid4()}", headers=HEADERS)
+    assert production.status_code == 503
+    assert production.json()["error"]["code"] == "identity_adapter_unavailable"
 
 
 def test_openapi_documents_filters_errors_and_models(api) -> None:

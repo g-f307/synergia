@@ -25,11 +25,17 @@ ERROR_RESPONSES = {
     404: {"model": ErrorResponse, "description": "Recurso nao encontrado"},
     409: {"model": ErrorResponse, "description": "Conflito de estado ou versao"},
     422: {"model": ErrorResponse, "description": "Parametros invalidos"},
+    503: {
+        "model": ErrorResponse,
+        "description": "Adaptador de identidade indisponivel",
+    },
 }
 
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 UserStatus = Literal["pending", "active", "blocked", "inactive"]
+UserCreateStatus = Literal["pending", "active"]
 UserStateAction = Literal["deactivate", "reactivate", "block", "unblock"]
+TRUSTED_HEADER_ENVIRONMENTS = frozenset({"development", "test", "homologation"})
 
 
 def normalize_email(value: str) -> str:
@@ -52,7 +58,7 @@ class UserEmailInput(BaseModel):
 
 class UserCreate(BaseModel):
     display_name: str = Field(min_length=1, max_length=200)
-    status: UserStatus = "pending"
+    status: UserCreateStatus = "pending"
     emails: list[UserEmailInput] = Field(min_length=1, max_length=20)
     reason: str = Field(min_length=3, max_length=500)
 
@@ -168,6 +174,16 @@ class Actor(BaseModel):
 def get_actor(
     x_actor_id: Annotated[str | None, Header(alias="X-Actor-Id")] = None,
 ) -> Actor:
+    environment = os.getenv("SYNERGIA_ENV", "").strip().lower()
+    header_enabled = os.getenv(
+        "SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", ""
+    ).strip().lower() in {"1", "true", "yes"}
+    if not header_enabled or environment not in TRUSTED_HEADER_ENVIRONMENTS:
+        raise ApiError(
+            503,
+            "identity_adapter_unavailable",
+            "Administracao de usuarios indisponivel sem adaptador de identidade",
+        )
     if not x_actor_id:
         raise ApiError(403, "access_denied", "Acao administrativa nao autorizada")
     try:
@@ -743,9 +759,7 @@ def _change_status(
     actor: Actor,
 ) -> dict:
     _authorized(repository, actor)
-    return repository.change_status(
-        user_id, target, action, payload, actor.user_id
-    )
+    return repository.change_status(user_id, target, action, payload, actor.user_id)
 
 
 @router.post(
@@ -754,9 +768,7 @@ def _change_status(
 def deactivate_user(
     user_id: UUID, payload: UserStateChange, repository: Repository, actor: CurrentActor
 ) -> dict:
-    return _change_status(
-        user_id, "inactive", "deactivate", payload, repository, actor
-    )
+    return _change_status(user_id, "inactive", "deactivate", payload, repository, actor)
 
 
 @router.post(
@@ -765,9 +777,7 @@ def deactivate_user(
 def reactivate_user(
     user_id: UUID, payload: UserStateChange, repository: Repository, actor: CurrentActor
 ) -> dict:
-    return _change_status(
-        user_id, "active", "reactivate", payload, repository, actor
-    )
+    return _change_status(user_id, "active", "reactivate", payload, repository, actor)
 
 
 @router.post("/{user_id}/block", response_model=UserResponse, responses=ERROR_RESPONSES)
