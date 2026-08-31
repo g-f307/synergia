@@ -44,6 +44,8 @@ python scripts/validate_project_assets.py
   organizações observadas nas importações;
 - `identity_sessions` e `session_refresh_tokens` mantêm revogação, expiração e
   somente o hash do refresh token;
+- `identity_users.version` protege atualizações administrativas com concorrência
+  otimista;
 - `identity_access_events` preserva um histórico append-only sem exclusão em
   cascata;
 - quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
