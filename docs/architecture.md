@@ -64,6 +64,11 @@ A estratégia futura e desacoplada de autenticação está no
 [matriz de acesso](access-control-matrix.md). Nenhum desses controles está
 implementado na API atual.
 
+O modelo PostgreSQL que sustenta essa estratégia está descrito em
+[identity-data-model.md](identity-data-model.md). Ele contém usuários, vínculos,
+papéis, permissões, sessões e eventos, mas ainda não é consumido pelos endpoints
+da aplicação.
+
 ### Persistência e arquivos
 
 As migrations constroem o schema `synergia` desde um banco vazio. Entidades
