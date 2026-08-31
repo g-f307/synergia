@@ -36,6 +36,7 @@ UserStatus = Literal["pending", "active", "blocked", "inactive"]
 UserCreateStatus = Literal["pending", "active"]
 UserStateAction = Literal["deactivate", "reactivate", "block", "unblock"]
 TRUSTED_HEADER_ENVIRONMENTS = frozenset({"development", "test", "homologation"})
+LAST_ACTIVE_ADMIN_LOCK_ID = 7_421_903_901
 
 
 def normalize_email(value: str) -> str:
@@ -569,6 +570,11 @@ class PostgresUserRepository:
         actor_id: UUID,
     ) -> dict:
         with self._connect() as connection, connection.cursor() as cursor:
+            if target_status in {"inactive", "blocked"}:
+                cursor.execute(
+                    "SELECT pg_advisory_xact_lock(%s)",
+                    (LAST_ACTIVE_ADMIN_LOCK_ID,),
+                )
             cursor.execute(
                 "SELECT status, version FROM synergia.identity_users "
                 "WHERE id = %s FOR UPDATE",

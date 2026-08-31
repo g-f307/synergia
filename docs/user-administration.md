@@ -116,6 +116,9 @@ deve consultar o recurso novamente antes de decidir se repete a alteracao.
 - `unblock`: aceita somente `blocked` e produz `active`;
 - desativacao e bloqueio revogam sessoes ativas pela trigger do modelo;
 - o ultimo administrador ativo nao pode ser desativado nem bloqueado;
+- desativacoes e bloqueios adquirem um lock transacional dedicado antes de
+  avaliar administradores ativos; operacoes concorrentes sao serializadas e a
+  segunda reavalia o total, retornando `last_active_admin` quando necessario;
 - e-mails sao normalizados por `lower(btrim(email))`;
 - e-mails removidos sao desabilitados, nao apagados;
 - reintroduzir um e-mail do mesmo usuario reativa o vinculo historico;

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from uuid import UUID, uuid4
 
 import psycopg
@@ -45,10 +47,36 @@ def _bootstrap_admin(database_url: str, suffix: str) -> UUID:
         return actor_id
 
 
-def _cleanup(database_url: str, actor_id: UUID, subject_id: UUID | None) -> None:
-    identifiers = [actor_id]
-    if subject_id is not None:
-        identifiers.append(subject_id)
+def _bootstrap_admin_pair(database_url: str, suffix: str) -> tuple[UUID, UUID]:
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO synergia.roles (role_key) VALUES ('admin') RETURNING id"
+        )
+        role_id = cursor.fetchone()[0]
+        identifiers = []
+        for position in (1, 2):
+            cursor.execute(
+                """
+                INSERT INTO synergia.identity_users (status, display_name)
+                VALUES ('active', %s) RETURNING id
+                """,
+                (f"Concurrent Admin {position} {suffix}",),
+            )
+            user_id = cursor.fetchone()[0]
+            identifiers.append(user_id)
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_role_assignments (user_id, role_id)
+                VALUES (%s, %s)
+                """,
+                (user_id, role_id),
+            )
+        connection.commit()
+        return identifiers[0], identifiers[1]
+
+
+def _cleanup(database_url: str, *identifiers: UUID | None) -> None:
+    persisted_ids = [identifier for identifier in identifiers if identifier is not None]
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         cursor.execute(
             "ALTER TABLE synergia.identity_access_events "
@@ -68,19 +96,19 @@ def _cleanup(database_url: str, actor_id: UUID, subject_id: UUID | None) -> None
                 DELETE FROM synergia.identity_access_events
                 WHERE actor_user_id = ANY(%s) OR subject_user_id = ANY(%s)
                 """,
-                (identifiers, identifiers),
+                (persisted_ids, persisted_ids),
             )
             cursor.execute(
                 "DELETE FROM synergia.user_role_assignments WHERE user_id = ANY(%s)",
-                (identifiers,),
+                (persisted_ids,),
             )
             cursor.execute(
                 "DELETE FROM synergia.user_emails WHERE user_id = ANY(%s)",
-                (identifiers,),
+                (persisted_ids,),
             )
             cursor.execute(
                 "DELETE FROM synergia.identity_users WHERE id = ANY(%s)",
-                (identifiers,),
+                (persisted_ids,),
             )
             cursor.execute("DELETE FROM synergia.roles WHERE normalized_key = 'admin'")
         finally:
@@ -253,3 +281,49 @@ def test_user_api_uses_operational_identity_model(monkeypatch) -> None:
             assert all(event[1] == actor_id for event in events)
     finally:
         _cleanup(database_url, actor_id, subject_id)
+
+
+def test_concurrent_deactivation_preserves_last_active_admin(monkeypatch) -> None:
+    monkeypatch.setenv("SYNERGIA_ENV", "test")
+    monkeypatch.setenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", "true")
+    database_url = os.environ["DATABASE_URL"]
+    suffix = uuid4().hex[:12]
+    first_admin, second_admin = _bootstrap_admin_pair(database_url, suffix)
+    barrier = Barrier(2)
+
+    def deactivate(user_id: UUID) -> tuple[int, str | None]:
+        barrier.wait(timeout=5)
+        with TestClient(app) as client:
+            response = client.post(
+                f"/admin/users/{user_id}/deactivate",
+                headers={"X-Actor-Id": str(user_id)},
+                json={
+                    "version": 1,
+                    "reason": "concurrent administrator deactivation",
+                },
+            )
+            error = response.json().get("error", {})
+            return response.status_code, error.get("code")
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(deactivate, (first_admin, second_admin)))
+
+        assert sorted(status for status, _code in results) == [200, 409]
+        assert {code for _status, code in results} == {None, "last_active_admin"}
+        assert all(status != 500 for status, _code in results)
+
+        with psycopg.connect(database_url) as connection:
+            active_admins = connection.execute(
+                """
+                SELECT count(DISTINCT u.id)
+                FROM synergia.identity_users u
+                JOIN synergia.user_role_assignments ura ON ura.user_id = u.id
+                JOIN synergia.roles r ON r.id = ura.role_id
+                WHERE u.status = 'active' AND ura.revoked_at IS NULL
+                  AND r.normalized_key = 'admin'
+                """
+            ).fetchone()[0]
+            assert active_admins == 1
+    finally:
+        _cleanup(database_url, first_admin, second_admin)
