@@ -36,6 +36,16 @@ python scripts/validate_project_assets.py
   responsável, motivo, data e versão otimista;
 - `execution_idempotency` reserva importações e reprocessamentos pelo
   fingerprint dos arquivos, execução e versões do pipeline e das regras;
+- `identity_users`, `user_emails` e `user_external_identities` mantêm a
+  identidade interna sem depender de e-mail ou provedor;
+- `identity_groups`, `roles`, `permissions` e suas associações modelam
+  autorização por ação;
+- `iam_organizations` oferece UUID estável para escopo de papel, separado das
+  organizações observadas nas importações;
+- `identity_sessions` e `session_refresh_tokens` mantêm revogação, expiração e
+  somente o hash do refresh token;
+- `identity_access_events` preserva um histórico append-only sem exclusão em
+  cascata;
 - quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
   não negativas e a liberação parcial exige quantidade liberada maior que zero
   e menor que a recebida.
@@ -76,7 +86,22 @@ erDiagram
     executions ||--o{ audit_events : registra
     executions ||--o{ execution_state_transitions : transiciona
     executions ||--o| execution_idempotency : reserva
+    identity_users ||--o{ user_emails : possui
+    identity_users ||--o{ user_external_identities : vincula
+    identity_users ||--o{ user_group_memberships : participa
+    identity_groups ||--o{ user_group_memberships : agrega
+    identity_users ||--o{ user_role_assignments : recebe
+    roles ||--o{ user_role_assignments : concede
+    iam_organizations o|--o{ user_role_assignments : restringe
+    roles ||--o{ role_permissions : agrupa
+    permissions ||--o{ role_permissions : autoriza
+    identity_users ||--o{ identity_sessions : autentica
+    identity_sessions ||--o{ session_refresh_tokens : renova
+    identity_users o|--o{ identity_access_events : audita
 ```
+
+Entidades, invariantes, índices e rollback do núcleo IAM são detalhados em
+[identity-data-model.md](../docs/identity-data-model.md).
 
 ## Teste de persistência
 
