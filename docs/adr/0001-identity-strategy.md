@@ -156,4 +156,3 @@ backend.
 | ID-P05 | custódia e rotação de chaves, cofre e domínio dos cookies | TI/DevOps | emissão de tokens |
 | ID-P06 | organizações existentes e responsáveis por conceder escopo | Gestor | carga de escopos de produção |
 | ID-P07 | retenção de sessões, eventos de segurança e identificadores pessoais | DPO/TI/Gestor | política de retenção |
-

@@ -159,4 +159,3 @@ Além dos portões `ID-P01` a `ID-P07` da ADR:
 | AUTH-P03 | classificar campos sensíveis de normalizados, evidências e exportações | Segurança/DPO/Gestor |
 | AUTH-P04 | decidir formato e limite dos relatórios exportáveis | Gestor |
 | AUTH-P05 | revisar esta matriz por integrante diferente do autor antes do merge | Revisor do PR |
-
