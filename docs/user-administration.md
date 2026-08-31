@@ -6,11 +6,26 @@ corporativo e telas administrativas permanecem fora do escopo.
 
 ## Contexto administrativo
 
-Enquanto o adaptador de autenticacao nao estiver implementado, as rotas recebem
-o UUID interno do ator pelo cabecalho confiavel `X-Actor-Id`. O backend confirma
-que esse usuario esta ativo e possui um papel `admin` ativo ou a permissao
-`access.admin`. O cabecalho deve ser preenchido somente por um gateway confiavel;
-clientes publicos nao devem defini-lo diretamente.
+Enquanto o adaptador de autenticacao nao estiver implementado, existe um
+adaptador temporario para desenvolvimento, testes e homologacao. Ele recebe o
+UUID interno do ator pelo cabecalho `X-Actor-Id` e o backend confirma que esse
+usuario esta ativo e possui um papel `admin` ativo ou a permissao
+`access.admin`.
+
+O adaptador fica **desabilitado por padrao**. Para habilita-lo explicitamente:
+
+```text
+SYNERGIA_ENV=development|test|homologation
+SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED=true
+```
+
+Mesmo que a flag seja definida, `SYNERGIA_ENV=production` e qualquer ambiente
+nao reconhecido mantêm as rotas desabilitadas com HTTP `503` e o codigo
+`identity_adapter_unavailable`. Portanto, o UUID nunca e tratado como
+credencial de producao. O servico so pode ser exposto em producao depois da
+integracao com o adaptador autenticado prevista no ADR. Em ambientes permitidos,
+o cabecalho deve ser injetado por infraestrutura restrita e nunca exposto como
+credencial de cliente publico.
 
 Todas as rotas usam o prefixo `/admin/users`. Falhas seguem o envelope comum:
 
@@ -45,6 +60,10 @@ A listagem aceita `status`, `group`, `role`, `organization`, `name`, `email`,
 `page` e `page_size`. O limite maximo e 100 itens. A ordenacao fixa
 `created_at,id` fornece desempate deterministico entre registros criados no
 mesmo instante.
+
+Na criacao, somente `pending` e `active` sao aceitos. Estados `inactive` e
+`blocked` exigem uma operacao explicita de ciclo de vida, com versao e motivo;
+enviá-los em `POST /admin/users` retorna HTTP `422` antes de acessar o banco.
 
 ## Exemplos
 
