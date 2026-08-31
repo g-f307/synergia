@@ -139,7 +139,7 @@ def test_rejects_case_insensitive_duplicate_email_role_and_permission() -> None:
         connection.rollback()
 
 
-def test_rejects_duplicate_group_role_and_permission_associations() -> None:
+def test_rejects_duplicate_active_group_role_and_permission_associations() -> None:
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         with connection.cursor() as cursor:
             user_id = _create_user(cursor, "associations")
@@ -202,6 +202,97 @@ def test_rejects_duplicate_group_role_and_permission_associations() -> None:
                 with pytest.raises(errors.UniqueViolation):
                     cursor.execute(statement, parameters)
                 cursor.execute(f"ROLLBACK TO SAVEPOINT duplicate_association_{index}")
+        connection.rollback()
+
+
+def test_allows_group_and_role_reassignment_after_revocation() -> None:
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        with connection.cursor() as cursor:
+            user_id = _create_user(cursor, "reassignment")
+            cursor.execute(
+                """
+                INSERT INTO synergia.identity_groups (group_name)
+                VALUES ('Reassignable Group') RETURNING id;
+                """
+            )
+            group_id = str(cursor.fetchone()[0])
+            role_id = _create_role(cursor, "consulta")
+            cursor.execute(
+                """
+                INSERT INTO synergia.iam_organizations (
+                    organization_code, display_name
+                ) VALUES ('org-reassignment', 'Reassignment Organization')
+                RETURNING id;
+                """
+            )
+            organization_id = str(cursor.fetchone()[0])
+
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_group_memberships (user_id, group_id)
+                VALUES (%s, %s);
+                """,
+                (user_id, group_id),
+            )
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_role_assignments (
+                    user_id, role_id, organization_id
+                ) VALUES (%s, %s, %s);
+                """,
+                (user_id, role_id, organization_id),
+            )
+            cursor.execute(
+                """
+                UPDATE synergia.user_group_memberships
+                SET revoked_at = now(), revocation_reason = 'synthetic rotation'
+                WHERE user_id = %s AND group_id = %s AND revoked_at IS NULL;
+                """,
+                (user_id, group_id),
+            )
+            cursor.execute(
+                """
+                UPDATE synergia.user_role_assignments
+                SET revoked_at = now(), revocation_reason = 'synthetic rotation'
+                WHERE user_id = %s AND role_id = %s
+                  AND organization_id = %s AND revoked_at IS NULL;
+                """,
+                (user_id, role_id, organization_id),
+            )
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_group_memberships (user_id, group_id)
+                VALUES (%s, %s);
+                """,
+                (user_id, group_id),
+            )
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_role_assignments (
+                    user_id, role_id, organization_id
+                ) VALUES (%s, %s, %s);
+                """,
+                (user_id, role_id, organization_id),
+            )
+
+            cursor.execute(
+                """
+                SELECT count(*), count(*) FILTER (WHERE revoked_at IS NULL)
+                FROM synergia.user_group_memberships
+                WHERE user_id = %s AND group_id = %s;
+                """,
+                (user_id, group_id),
+            )
+            assert cursor.fetchone() == (2, 1)
+            cursor.execute(
+                """
+                SELECT count(*), count(*) FILTER (WHERE revoked_at IS NULL)
+                FROM synergia.user_role_assignments
+                WHERE user_id = %s AND role_id = %s AND organization_id = %s;
+                """,
+                (user_id, role_id, organization_id),
+            )
+            assert cursor.fetchone() == (2, 1)
         connection.rollback()
 
 

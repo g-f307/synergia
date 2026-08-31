@@ -71,13 +71,13 @@ CREATE TABLE synergia.permissions (
 );
 
 CREATE TABLE synergia.user_group_memberships (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES synergia.identity_users(id),
     group_id uuid NOT NULL REFERENCES synergia.identity_groups(id),
     granted_by_user_id uuid REFERENCES synergia.identity_users(id),
     granted_at timestamptz NOT NULL DEFAULT now(),
     revoked_at timestamptz,
     revocation_reason text,
-    PRIMARY KEY (user_id, group_id),
     CHECK (revoked_at IS NULL OR revoked_at >= granted_at),
     CHECK (
         (revoked_at IS NULL AND revocation_reason IS NULL)
@@ -95,7 +95,6 @@ CREATE TABLE synergia.user_role_assignments (
     expires_at timestamptz,
     revoked_at timestamptz,
     revocation_reason text,
-    UNIQUE NULLS NOT DISTINCT (user_id, role_id, organization_id),
     CHECK (expires_at IS NULL OR expires_at > granted_at),
     CHECK (revoked_at IS NULL OR revoked_at >= granted_at),
     CHECK (
@@ -124,6 +123,10 @@ CREATE INDEX idx_user_group_memberships_group
     ON synergia.user_group_memberships (group_id, user_id)
     WHERE revoked_at IS NULL;
 
+CREATE UNIQUE INDEX uq_user_group_memberships_active
+    ON synergia.user_group_memberships (user_id, group_id)
+    WHERE revoked_at IS NULL;
+
 CREATE INDEX idx_user_role_assignments_user
     ON synergia.user_role_assignments (user_id, organization_id, role_id)
     WHERE revoked_at IS NULL;
@@ -131,6 +134,14 @@ CREATE INDEX idx_user_role_assignments_user
 CREATE INDEX idx_user_role_assignments_role
     ON synergia.user_role_assignments (role_id, organization_id, user_id)
     WHERE revoked_at IS NULL;
+
+CREATE UNIQUE INDEX uq_user_role_assignments_global_active
+    ON synergia.user_role_assignments (user_id, role_id)
+    WHERE organization_id IS NULL AND revoked_at IS NULL;
+
+CREATE UNIQUE INDEX uq_user_role_assignments_scoped_active
+    ON synergia.user_role_assignments (user_id, role_id, organization_id)
+    WHERE organization_id IS NOT NULL AND revoked_at IS NULL;
 
 CREATE INDEX idx_role_permissions_permission
     ON synergia.role_permissions (permission_id, role_id);

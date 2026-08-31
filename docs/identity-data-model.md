@@ -57,9 +57,10 @@ aprovação. Quando preenchido, aceita somente representação iniciada por
 ### Grupos, papéis e permissões
 
 `identity_groups` representa agrupamentos administrativos ou corporativos sem
-acoplar o schema a um diretório. `user_group_memberships` impede associação
-repetida pela chave `(user_id, group_id)` e encerra uma associação por
-`revoked_at`, sem apagar o histórico.
+acoplar o schema a um diretório. `user_group_memberships` possui UUID próprio e
+impede somente uma segunda associação **ativa** para `(user_id, group_id)`.
+Após `revoked_at`, uma nova concessão cria outro registro e preserva todos os
+ciclos anteriores.
 
 `roles` e `permissions` possuem chaves normalizadas e únicas sem distinção de
 caixa. Permissões seguem `recurso.acao`, por exemplo `artifact.export`.
@@ -67,9 +68,10 @@ caixa. Permissões seguem `recurso.acao`, por exemplo `artifact.export`.
 duplicados.
 
 `user_role_assignments` concede um papel global quando `organization_id` é
-nulo, ou restrito a uma organização IAM quando preenchido. `UNIQUE NULLS NOT
-DISTINCT` impede duas concessões globais equivalentes e também duplicidade no
-mesmo escopo. Expiração e revogação preservam a concessão original.
+nulo, ou restrito a uma organização IAM quando preenchido. Índices únicos
+parciais impedem duas concessões ativas equivalentes, tanto globais quanto no
+mesmo escopo. Após revogação, uma nova concessão recebe outro UUID e o registro
+anterior permanece como histórico.
 
 `iam_organizations` é um catálogo estável com UUID. Ele é separado de
 `organizations`, que pertence ao modelo operacional legado e registra a
@@ -113,7 +115,8 @@ o encerramento lógico.
 - senha local, quando autorizada, é somente hash Argon2id;
 - `(provider_key, subject_identifier)` identifica um único vínculo externo;
 - grupo, papel e permissão não se duplicam por diferença de caixa;
-- associações repetidas falham por chave primária ou restrição única;
+- associações ativas repetidas falham por índice único parcial;
+- vínculos revogados podem ser concedidos novamente em outro registro;
 - escopos organizacionais referenciam uma organização IAM existente;
 - concessão global e concessão por organização são distintas;
 - usuário não ativo não recebe nova sessão ativa;
