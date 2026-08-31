@@ -297,6 +297,52 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
             keys = {item["permission_key"] for item in effective.json()["permissions"]}
             assert {"report.export", "dashboard.read"} <= keys
 
+            subject_headers = {"X-Actor-Id": str(ids["subject"])}
+            for protected_path in ("/admin/access/groups", "/admin/users"):
+                scoped_admin = client.get(protected_path, headers=subject_headers)
+                assert scoped_admin.status_code == 403
+
+            direct_admin_path = (
+                f"/admin/access/users/{ids['subject']}/permissions/"
+                f"{ids['access_admin_permission']}"
+            )
+            global_direct_admin = client.put(
+                direct_admin_path,
+                headers=headers,
+                json={"reason": "global direct administration"},
+            )
+            assert global_direct_admin.status_code == 200
+            for protected_path in ("/admin/access/groups", "/admin/users"):
+                direct_admin = client.get(protected_path, headers=subject_headers)
+                assert direct_admin.status_code == 200
+            revoke_direct_admin = client.request(
+                "DELETE",
+                direct_admin_path,
+                headers=headers,
+                json={"reason": "replace direct administration"},
+            )
+            assert revoke_direct_admin.status_code == 200
+
+            group_admin_path = (
+                f"/admin/access/groups/{ids['group']}/roles/{ids['admin_role']}"
+            )
+            global_group_admin = client.put(
+                group_admin_path,
+                headers=headers,
+                json={"reason": "global group administration"},
+            )
+            assert global_group_admin.status_code == 200
+            for protected_path in ("/admin/access/groups", "/admin/users"):
+                group_admin = client.get(protected_path, headers=subject_headers)
+                assert group_admin.status_code == 200
+            revoke_group_admin = client.request(
+                "DELETE",
+                group_admin_path,
+                headers=headers,
+                json={"reason": "remove group administration"},
+            )
+            assert revoke_group_admin.status_code == 200
+
             invalid_scope = client.put(
                 f"/admin/access/users/{ids['subject']}/roles/{ids['consulta_role']}",
                 headers=headers,
