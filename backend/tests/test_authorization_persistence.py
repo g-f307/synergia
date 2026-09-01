@@ -13,7 +13,11 @@ from app.auth.security import AccessClaims, TokenCodec
 from app.authorization import AuthorizationRepository
 from app.main import app
 
-pytestmark = [pytest.mark.integration, pytest.mark.real_authorization]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.real_authorization,
+    pytest.mark.security,
+]
 
 KEY = "authorization-test-signing-key-with-at-least-32-bytes"
 

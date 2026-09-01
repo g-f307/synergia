@@ -105,6 +105,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m pytest -q -m "not integration"
+.\.venv\Scripts\python.exe -m pytest -q -m "security and not integration"
 .\.venv\Scripts\python.exe -m pytest -q -m integration tests
 .\.venv\Scripts\python.exe -m compileall -q app
 Set-Location ..
@@ -119,12 +120,23 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ruff check .
 pytest -q -m "not integration"
+pytest -q -m "security and not integration"
 pytest -q -m integration tests
 python -m compileall -q app
 cd ..
 ```
 
 Os testes de integração usam `DATABASE_URL` e pressupõem migrations aplicadas.
+
+A regressão dedicada de segurança também valida a completude da matriz e o
+relatório versionado:
+
+```bash
+python scripts/security_matrix.py --check
+```
+
+As 285 combinações HTTP reais da matriz são executadas junto aos testes de
+integração, com JWT, sessões e permissões persistidas no PostgreSQL 16.
 
 ## 4. Frontend Angular
 

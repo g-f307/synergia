@@ -218,6 +218,25 @@ def test_rejects_inactive_state_during_creation(api) -> None:
     assert repository.users == {}
 
 
+def test_rejects_mass_assignment_in_admin_http_contract(api) -> None:
+    client, repository = api
+    response = client.post(
+        "/admin/users",
+        headers=HEADERS,
+        json={
+            "display_name": "Synthetic Escalation",
+            "emails": [{"email": "mass-assignment@example.invalid"}],
+            "reason": "security regression",
+            "roles": ["admin"],
+            "local_password_hash": "must-never-be-accepted",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "request_validation_error"
+    assert repository.users == {}
+
+
 def test_rejects_duplicate_email_without_enumerating_owner(api) -> None:
     client, _repository = api
     assert _create(client).status_code == 201

@@ -15,7 +15,7 @@ from app.auth.repository import PostgresAuthRepository
 from app.auth.security import PasswordVerifier, protected_identifier, sha256_token
 from app.main import app
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.security]
 
 KEY = "synthetic-integration-signing-key-at-least-32-bytes"
 
