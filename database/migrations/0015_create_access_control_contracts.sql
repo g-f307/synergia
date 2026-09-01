@@ -30,7 +30,10 @@ ALTER TABLE synergia.identity_groups
     ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
 
 ALTER TABLE synergia.roles
-    ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
+    ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0),
+    ADD COLUMN preexisting_in_0015 boolean NOT NULL DEFAULT false;
+
+UPDATE synergia.roles SET preexisting_in_0015 = true;
 
 CREATE OR REPLACE FUNCTION synergia.touch_versioned_access_entity()
 RETURNS trigger

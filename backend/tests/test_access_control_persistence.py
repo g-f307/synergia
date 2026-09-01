@@ -443,12 +443,50 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
 def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
     database_url = os.environ["DATABASE_URL"]
     permission_key = f"legacy_{uuid4().hex[:10]}.read"
+    preexisting_role_key = f"legacy_{uuid4().hex[:10]}"
+    migration_role_key = f"migration_{uuid4().hex[:10]}"
     rollback_sql = (
         ROOT / "database/rollbacks/0015_create_access_control_contracts.down.sql"
     ).read_text(encoding="utf-8")
 
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         try:
+            cursor.execute(
+                """
+                INSERT INTO synergia.roles (
+                    role_key, description, preexisting_in_0015
+                ) VALUES (%s, 'Pre-migration role', true)
+                RETURNING id
+                """,
+                (preexisting_role_key,),
+            )
+            preexisting_role_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.roles (
+                    role_key, description, preexisting_in_0015
+                ) VALUES (%s, 'Migration role', false)
+                RETURNING id
+                """,
+                (migration_role_key,),
+            )
+            migration_role_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                SELECT normalized_key
+                FROM synergia.roles
+                WHERE normalized_key = ANY(%s) AND NOT preexisting_in_0015
+                """,
+                (["admin", "gestor", "analista", "operador", "consulta"],),
+            )
+            seeded_role_keys = {row[0] for row in cursor.fetchall()}
+            assert seeded_role_keys == {
+                "admin",
+                "gestor",
+                "analista",
+                "operador",
+                "consulta",
+            }
             cursor.execute(
                 """
                 INSERT INTO synergia.permissions (
@@ -484,6 +522,25 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
                 (permission_id,),
             )
             assert cursor.fetchone()[0] == permission_key
+            cursor.execute(
+                "SELECT role_key FROM synergia.roles WHERE id = %s",
+                (preexisting_role_id,),
+            )
+            assert cursor.fetchone()[0] == preexisting_role_key
+            cursor.execute(
+                "SELECT 1 FROM synergia.roles WHERE id = %s",
+                (migration_role_id,),
+            )
+            assert cursor.fetchone() is None
+            cursor.execute(
+                """
+                SELECT normalized_key
+                FROM synergia.roles
+                WHERE normalized_key = ANY(%s)
+                """,
+                (list(seeded_role_keys),),
+            )
+            assert cursor.fetchall() == []
             cursor.execute(
                 """
                 SELECT granted_at

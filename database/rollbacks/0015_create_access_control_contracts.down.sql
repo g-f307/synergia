@@ -16,7 +16,15 @@ DROP TRIGGER trg_roles_touch ON synergia.roles;
 DROP TRIGGER trg_identity_groups_touch ON synergia.identity_groups;
 DROP FUNCTION synergia.touch_versioned_access_entity();
 
-ALTER TABLE synergia.roles DROP COLUMN version;
+DELETE FROM synergia.user_role_assignments ura
+USING synergia.roles r
+WHERE ura.role_id = r.id AND NOT r.preexisting_in_0015;
+ALTER TABLE synergia.roles DISABLE TRIGGER trg_roles_no_delete;
+DELETE FROM synergia.roles WHERE NOT preexisting_in_0015;
+ALTER TABLE synergia.roles ENABLE TRIGGER trg_roles_no_delete;
+ALTER TABLE synergia.roles
+    DROP COLUMN preexisting_in_0015,
+    DROP COLUMN version;
 ALTER TABLE synergia.identity_groups DROP COLUMN version;
 ALTER TABLE synergia.permissions DISABLE TRIGGER trg_permissions_no_delete;
 DELETE FROM synergia.permissions WHERE NOT preexisting_in_0015;
