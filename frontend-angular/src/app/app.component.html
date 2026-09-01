@@ -1,21 +1,15 @@
-<main class="shell">
-  <section class="card" aria-labelledby="page-title">
-    <p class="eyebrow">Automação e Consolidação de Indicadores</p>
-    <h1 id="page-title">{{ title }}</h1>
-    <p>Estrutura inicial do frontend Angular integrada à API FastAPI.</p>
-
-    @if (healthState$ | async; as health) {
-      @switch (health.state) {
-        @case ('loading') {
-          <p class="status status--loading">Verificando disponibilidade da API…</p>
-        }
-        @case ('available') {
-          <p class="status status--ok">API disponível: {{ health.service }}</p>
-        }
-        @case ('unavailable') {
-          <p class="status status--offline">API indisponível</p>
-        }
+@if (session.isAuthenticated()) {
+  <header class="topbar">
+    <a class="brand" routerLink="/profile">{{ title }}</a>
+    <nav aria-label="Navegação principal">
+      <a routerLink="/profile">Meu perfil</a>
+      @if (session.isAdministrator()) {
+        <a routerLink="/admin">Administração</a>
       }
-    }
-  </section>
+      <button type="button" class="link-button" (click)="logout()">Sair</button>
+    </nav>
+  </header>
+}
+<main class="application-shell">
+  <router-outlet />
 </main>

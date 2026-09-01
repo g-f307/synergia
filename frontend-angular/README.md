@@ -4,6 +4,10 @@ Frontend oficial do SYNERGIA, implementado em Angular 20. Os contratos são
 consumidos exclusivamente pela API FastAPI; esta aplicação não acessa o banco
 ou os arquivos importados diretamente.
 
+A Etapa 2 acrescenta login, refresh por cookie `HttpOnly`, interceptor, guards,
+perfil/preferências, avatar e consulta administrativa inicial. O access token
+permanece somente em memória e o backend continua sendo a autoridade de acesso.
+
 ## Desenvolvimento
 
 Instale exatamente as versões do lockfile e inicie o servidor:
