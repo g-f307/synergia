@@ -20,14 +20,14 @@ from app.authorization import (
     CurrentActor,
     active_global_admin_count,
     is_global_admin,
-    require_permission,
+    require_global_permission,
 )
 from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(
     prefix="/admin/users",
     tags=["user administration"],
-    dependencies=[Depends(require_permission("access.admin"))],
+    dependencies=[Depends(require_global_permission("access.admin"))],
 )
 
 ERROR_RESPONSES = {

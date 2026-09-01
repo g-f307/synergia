@@ -21,7 +21,7 @@ from app.authorization import (
     CurrentActor,
     active_global_admin_count,
     is_global_admin,
-    require_permission,
+    require_global_permission,
 )
 from app.errors import ApiError, ErrorResponse
 from app.users import LAST_ACTIVE_ADMIN_LOCK_ID
@@ -29,7 +29,7 @@ from app.users import LAST_ACTIVE_ADMIN_LOCK_ID
 router = APIRouter(
     prefix="/admin/access",
     tags=["access control"],
-    dependencies=[Depends(require_permission("access.admin"))],
+    dependencies=[Depends(require_global_permission("access.admin"))],
 )
 
 ERROR_RESPONSES = {

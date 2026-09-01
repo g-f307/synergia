@@ -296,6 +296,89 @@ def test_role_change_and_session_revocation_are_immediate(monkeypatch) -> None:
         assert response.status_code == 401
 
 
+def test_organization_and_global_scope_denials_are_audited(monkeypatch) -> None:
+    config = _configure(monkeypatch)
+    database_url = os.environ["DATABASE_URL"]
+    upload_ids = _bootstrap(database_url, "operador")
+    admin_ids = _bootstrap(database_url, "consulta")
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """
+            INSERT INTO synergia.user_permission_assignments (
+                user_id, permission_id, organization_id
+            )
+            SELECT %s, id, %s
+            FROM synergia.permissions
+            WHERE normalized_key = 'access.admin'
+            """,
+            (admin_ids["user"], admin_ids["organization_a"]),
+        )
+    upload_correlation_id = uuid4()
+    admin_correlation_id = uuid4()
+
+    with TestClient(app) as client:
+        upload = client.post(
+            "/imports",
+            headers={
+                "Authorization": f"Bearer {_token(config, upload_ids)}",
+                "X-Correlation-ID": str(upload_correlation_id),
+            },
+            data={
+                "source": "OWM",
+                "organization_id": str(upload_ids["organization_b"]),
+            },
+            files={"file": ("synthetic.csv", b"id\n1\n", "text/csv")},
+        )
+        assert upload.status_code == 403
+
+        administration = client.get(
+            "/admin/users",
+            headers={
+                "Authorization": f"Bearer {_token(config, admin_ids)}",
+                "X-Correlation-ID": str(admin_correlation_id),
+            },
+        )
+        assert administration.status_code == 403
+
+    with psycopg.connect(database_url) as connection:
+        events = connection.execute(
+            """
+            SELECT actor_user_id, session_id, correlation_id, entity_id, payload
+            FROM synergia.identity_access_events
+            WHERE event_key = 'authorization.denied'
+              AND correlation_id = ANY(%s)
+            ORDER BY correlation_id
+            """,
+            ([upload_correlation_id, admin_correlation_id],),
+        ).fetchall()
+    assert len(events) == 2
+    by_correlation = {event[2]: event for event in events}
+    upload_event = by_correlation[upload_correlation_id]
+    assert upload_event[:4] == (
+        upload_ids["user"],
+        upload_ids["session"],
+        upload_correlation_id,
+        "/imports",
+    )
+    assert upload_event[4] == {"method": "POST", "permission": "import.create"}
+    admin_event = by_correlation[admin_correlation_id]
+    assert admin_event[:4] == (
+        admin_ids["user"],
+        admin_ids["session"],
+        admin_correlation_id,
+        "/admin/users",
+    )
+    assert admin_event[4] == {"method": "GET", "permission": "access.admin"}
+    serialized = str([event[4] for event in events])
+    for sensitive_value in (
+        str(upload_ids["organization_b"]),
+        str(upload_ids["execution_b"]),
+        "synthetic.csv",
+        "id\\n1",
+    ):
+        assert sensitive_value not in serialized
+
+
 def test_lot_query_uses_the_same_workorder_and_organization_scope(monkeypatch) -> None:
     config = _configure(monkeypatch)
     database_url = os.environ["DATABASE_URL"]

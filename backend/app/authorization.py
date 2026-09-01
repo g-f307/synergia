@@ -285,6 +285,20 @@ def require_permission(permission: str) -> Callable:
     return dependency
 
 
+def require_global_permission(permission: str) -> Callable:
+    def dependency(
+        request: Request,
+        actor: CurrentActor,
+        repository: AuthorizationRepo,
+    ) -> ActorContext:
+        if None not in actor.scopes_for(permission):
+            repository.audit_denial(actor, permission, request)
+            raise ApiError(403, "access_denied", "Acao nao autorizada")
+        return actor
+
+    return dependency
+
+
 def permission_dependency(permission: str):
     return Depends(require_permission(permission))
 

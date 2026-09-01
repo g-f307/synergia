@@ -1008,7 +1008,6 @@ def get_serial(
     response_model=PendingPage,
     summary="Listar pendências com filtros e paginação",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_permission("pending.read"))],
 )
 def list_pending_items(
     actor: Annotated[ActorContext, Depends(require_permission("pending.read"))],
@@ -1063,7 +1062,6 @@ def get_pending_item(
     response_model=HistoryPage,
     summary="Consultar histórico auditável",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_permission("audit.read"))],
 )
 def list_history(
     actor: Annotated[ActorContext, Depends(require_permission("audit.read"))],
@@ -1116,7 +1114,6 @@ def get_consolidated_result(
     status_code=status.HTTP_202_ACCEPTED,
     summary="Solicitar reprocessamento sem alterar a execução anterior",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_execution_permission("execution.reprocess"))],
 )
 def request_reprocessing(
     execution_id: str,
@@ -1153,7 +1150,6 @@ def request_reprocessing(
     response_model=IndicatorsResponse,
     summary="Consultar indicadores operacionais básicos",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_permission("dashboard.read"))],
 )
 def get_indicators(
     actor: Annotated[ActorContext, Depends(require_permission("dashboard.read"))],

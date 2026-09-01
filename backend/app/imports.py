@@ -12,13 +12,23 @@ from typing import Annotated, Protocol
 from uuid import UUID, uuid4
 
 import psycopg
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.authorization import (
     ActorContext,
+    AuthorizationRepo,
     require_execution_permission,
     require_permission,
 )
@@ -888,14 +898,15 @@ def _inspection_http_status(reason_code: str) -> int:
             "description": "Falha ao preservar o arquivo no storage",
         },
     },
-    dependencies=[Depends(require_permission("import.create"))],
 )
 async def upload_import(
     source: Annotated[
         list[ImportSource], Form(description="Sistema de origem de cada arquivo")
     ],
     file: Annotated[list[UploadFile], File(description="Arquivos XLSX, CSV ou JSON")],
+    request: Request,
     actor: Annotated[ActorContext, Depends(require_permission("import.create"))],
+    authorization_repository: AuthorizationRepo,
     organization_id: Annotated[
         UUID | None, Form(description="Organização IAM autorizada para a execução")
     ] = None,
@@ -924,6 +935,12 @@ async def upload_import(
         if len(available) == 1:
             organization_id = next(iter(available))
     if organization_id is None or not actor.allows("import.create", organization_id):
+        authorization_repository.audit_denial(
+            actor,
+            "import.create",
+            request,
+            organization_id=organization_id,
+        )
         raise HTTPException(
             status_code=403,
             detail={"code": "access_denied", "message": "Acao nao autorizada"},
