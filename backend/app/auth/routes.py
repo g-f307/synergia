@@ -13,6 +13,7 @@ from app.auth.models import LoginRequest, LogoutResponse, TokenResponse
 from app.auth.repository import AuthRepository, PostgresAuthRepository
 from app.auth.security import AccessClaims
 from app.auth.service import AuthService
+from app.authorization import ActorContext, require_permission
 from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -154,7 +155,9 @@ def refresh(
 def logout(
     request: Request,
     response: Response,
-    claims: CurrentClaims,
+    claims: Annotated[
+        ActorContext, Depends(require_permission("session.revoke.own"))
+    ],
     service: Service,
     config: Config,
 ) -> LogoutResponse:
@@ -168,7 +171,9 @@ def logout(
 def logout_all(
     request: Request,
     response: Response,
-    claims: CurrentClaims,
+    claims: Annotated[
+        ActorContext, Depends(require_permission("session.revoke.own"))
+    ],
     service: Service,
     config: Config,
 ) -> LogoutResponse:

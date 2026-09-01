@@ -2,12 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.access_control import router as access_control_router
-from app.auth import router as auth_router
 from app.auth.config import configured_allowed_origins
+from app.auth.routes import router as auth_router
 from app.errors import install_error_handlers
 from app.execution_monitoring import router as monitoring_router
 from app.imports import router as imports_router
 from app.queries import router as queries_router
+from app.request_context import CorrelationIdMiddleware
 from app.users import router as users_router
 
 
@@ -27,6 +28,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    application.add_middleware(CorrelationIdMiddleware)
     install_error_handlers(application)
     application.include_router(auth_router)
     application.include_router(imports_router)

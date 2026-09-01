@@ -16,11 +16,21 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.authorization import active_global_admin_count, is_global_admin
+from app.authorization import ActorContext as Actor
+from app.authorization import (
+    CurrentActor,
+    active_global_admin_count,
+    is_global_admin,
+    require_permission,
+)
 from app.errors import ApiError, ErrorResponse
-from app.users import LAST_ACTIVE_ADMIN_LOCK_ID, Actor, CurrentActor
+from app.users import LAST_ACTIVE_ADMIN_LOCK_ID
 
-router = APIRouter(prefix="/admin/access", tags=["access control"])
+router = APIRouter(
+    prefix="/admin/access",
+    tags=["access control"],
+    dependencies=[Depends(require_permission("access.admin"))],
+)
 
 ERROR_RESPONSES = {
     403: {"model": ErrorResponse, "description": "Acao nao autorizada"},

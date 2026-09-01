@@ -9,16 +9,26 @@ from typing import Annotated, Literal, Protocol
 from uuid import UUID
 
 import psycopg
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from psycopg import errors
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.authorization import active_global_admin_count, is_global_admin
+from app.authorization import ActorContext as Actor
+from app.authorization import (
+    CurrentActor,
+    active_global_admin_count,
+    is_global_admin,
+    require_permission,
+)
 from app.errors import ApiError, ErrorResponse
 
-router = APIRouter(prefix="/admin/users", tags=["user administration"])
+router = APIRouter(
+    prefix="/admin/users",
+    tags=["user administration"],
+    dependencies=[Depends(require_permission("access.admin"))],
+)
 
 ERROR_RESPONSES = {
     400: {"model": ErrorResponse, "description": "Operacao inconsistente"},
@@ -167,33 +177,6 @@ class UserPage(BaseModel):
     total: int
     pages: int
     sort: Literal["created_at,id"] = "created_at,id"
-
-
-class Actor(BaseModel):
-    user_id: UUID
-
-
-def get_actor(
-    x_actor_id: Annotated[str | None, Header(alias="X-Actor-Id")] = None,
-) -> Actor:
-    environment = os.getenv("SYNERGIA_ENV", "").strip().lower()
-    header_enabled = os.getenv(
-        "SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", ""
-    ).strip().lower() in {"1", "true", "yes"}
-    if not header_enabled or environment not in TRUSTED_HEADER_ENVIRONMENTS:
-        raise ApiError(
-            503,
-            "identity_adapter_unavailable",
-            "Administracao de usuarios indisponivel sem adaptador de identidade",
-        )
-    if not x_actor_id:
-        raise ApiError(403, "access_denied", "Acao administrativa nao autorizada")
-    try:
-        return Actor(user_id=UUID(x_actor_id))
-    except ValueError as exc:
-        raise ApiError(
-            403, "access_denied", "Acao administrativa nao autorizada"
-        ) from exc
 
 
 class UserRepository(Protocol):
@@ -631,9 +614,6 @@ def get_user_repository() -> Generator[UserRepository, None, None]:
 
 
 Repository = Annotated[UserRepository, Depends(get_user_repository)]
-CurrentActor = Annotated[Actor, Depends(get_actor)]
-
-
 def _authorized(repository: UserRepository, actor: Actor) -> None:
     repository.authorize(actor.user_id)
 
