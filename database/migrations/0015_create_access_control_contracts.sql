@@ -21,7 +21,10 @@ ALTER TABLE synergia.permissions
     ),
     ADD COLUMN catalog_version text NOT NULL DEFAULT '1.0.0'
         REFERENCES synergia.permission_catalog_versions(version),
-    ADD COLUMN is_reserved boolean NOT NULL DEFAULT true;
+    ADD COLUMN is_reserved boolean NOT NULL DEFAULT true,
+    ADD COLUMN preexisting_in_0015 boolean NOT NULL DEFAULT false;
+
+UPDATE synergia.permissions SET preexisting_in_0015 = true;
 
 ALTER TABLE synergia.identity_groups
     ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
@@ -52,7 +55,10 @@ ALTER TABLE synergia.role_permissions
     DROP CONSTRAINT role_permissions_pkey,
     ADD COLUMN id uuid DEFAULT gen_random_uuid(),
     ADD COLUMN revoked_at timestamptz,
-    ADD COLUMN revocation_reason text;
+    ADD COLUMN revocation_reason text,
+    ADD COLUMN preexisting_in_0015 boolean NOT NULL DEFAULT false;
+
+UPDATE synergia.role_permissions SET preexisting_in_0015 = true;
 
 ALTER TABLE synergia.role_permissions
     ALTER COLUMN id SET NOT NULL,
