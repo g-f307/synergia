@@ -864,7 +864,10 @@ class PostgresAccessRepository:
                 JOIN synergia.permissions p ON p.id = upa.permission_id AND p.is_active
                 LEFT JOIN synergia.iam_organizations o ON o.id = upa.organization_id
                 WHERE upa.user_id = %s AND upa.revoked_at IS NULL
-                  AND (%s IS NULL OR upa.organization_id IS NULL OR upa.organization_id = %s)
+                  AND (
+                      %s::uuid IS NULL OR upa.organization_id IS NULL
+                      OR upa.organization_id = %s
+                  )
                 UNION ALL
                 SELECT p.permission_key, p.resource_type, 'role', ura.id,
                        ura.organization_id, o.organization_code
@@ -875,7 +878,10 @@ class PostgresAccessRepository:
                 LEFT JOIN synergia.iam_organizations o ON o.id = ura.organization_id
                 WHERE ura.user_id = %s AND ura.revoked_at IS NULL
                   AND (ura.expires_at IS NULL OR ura.expires_at > now())
-                  AND (%s IS NULL OR ura.organization_id IS NULL OR ura.organization_id = %s)
+                  AND (
+                      %s::uuid IS NULL OR ura.organization_id IS NULL
+                      OR ura.organization_id = %s
+                  )
                 UNION ALL
                 SELECT p.permission_key, p.resource_type, 'group', gra.id,
                        gra.organization_id, o.organization_code
@@ -887,7 +893,10 @@ class PostgresAccessRepository:
                 JOIN synergia.permissions p ON p.id = rp.permission_id AND p.is_active
                 LEFT JOIN synergia.iam_organizations o ON o.id = gra.organization_id
                 WHERE ugm.user_id = %s AND ugm.revoked_at IS NULL
-                  AND (%s IS NULL OR gra.organization_id IS NULL OR gra.organization_id = %s)
+                  AND (
+                      %s::uuid IS NULL OR gra.organization_id IS NULL
+                      OR gra.organization_id = %s
+                  )
                 ORDER BY permission_key, source, organization_code NULLS FIRST, source_id
                 """,
                 (
