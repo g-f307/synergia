@@ -134,6 +134,65 @@ def _token(config: AuthConfig, ids: dict[str, UUID | str]) -> str:
     return TokenCodec(config).issue_access(ids["user"], ids["session"])[0]
 
 
+def _seed_duplicate_lots(
+    database_url: str, ids: dict[str, UUID | str]
+) -> None:
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        resources = []
+        for label, execution_id in (
+            ("a", ids["execution_a"]),
+            ("b", ids["execution_b"]),
+        ):
+            source_file_id = cursor.execute(
+                """
+                INSERT INTO synergia.source_files (
+                    execution_id, file_name, content_hash
+                ) VALUES (%s, %s, %s) RETURNING id
+                """,
+                (execution_id, f"lot-{label}.csv", label * 64),
+            ).fetchone()[0]
+            workorder_id = cursor.execute(
+                """
+                INSERT INTO synergia.workorders (
+                    workorder_number, execution_id, source_file_id
+                ) VALUES (%s, %s, %s) RETURNING id
+                """,
+                (f"WO-{label.upper()}", execution_id, source_file_id),
+            ).fetchone()[0]
+            lot_id = cursor.execute(
+                """
+                INSERT INTO synergia.lots (
+                    lot_number, workorder_id, execution_id, source_file_id,
+                    updated_at
+                ) VALUES (
+                    'LOT-001', %s, %s, %s,
+                    now() + CASE WHEN %s = 'b' THEN interval '1 minute'
+                                 ELSE interval '0 minutes' END
+                ) RETURNING id
+                """,
+                (workorder_id, execution_id, source_file_id, label),
+            ).fetchone()[0]
+            resources.append(
+                (label, execution_id, source_file_id, workorder_id, lot_id)
+            )
+        for label, execution_id, source_file_id, workorder_id, lot_id in resources:
+            cursor.execute(
+                """
+                INSERT INTO synergia.serials (
+                    serial_number, workorder_id, lot_id,
+                    execution_id, source_file_id
+                ) VALUES (%s, %s, %s, %s, %s)
+                """,
+                (
+                    f"SER-{execution_id}",
+                    workorder_id,
+                    lot_id,
+                    execution_id,
+                    source_file_id,
+                ),
+            )
+
+
 @pytest.mark.parametrize(("role", "expected"), ROLE_PERMISSIONS.items())
 def test_effective_permission_matrix_by_role(role, expected) -> None:
     database_url = os.environ["DATABASE_URL"]
@@ -235,6 +294,38 @@ def test_role_change_and_session_revocation_are_immediate(monkeypatch) -> None:
             )
         response = client.get(f"/executions/{ids['execution_a']}", headers=headers)
         assert response.status_code == 401
+
+
+def test_lot_query_uses_the_same_workorder_and_organization_scope(monkeypatch) -> None:
+    config = _configure(monkeypatch)
+    database_url = os.environ["DATABASE_URL"]
+    ids = _bootstrap(database_url, "analista")
+    _seed_duplicate_lots(database_url, ids)
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """
+            UPDATE synergia.user_role_assignments
+            SET organization_id = %s WHERE id = %s
+            """,
+            (ids["organization_b"], ids["assignment"]),
+        )
+    headers = {"Authorization": f"Bearer {_token(config, ids)}"}
+
+    with TestClient(app) as client:
+        allowed = client.get(
+            "/lots/LOT-001?workorder_number=WO-B", headers=headers
+        )
+        assert allowed.status_code == 200
+        assert allowed.json()["workorder_number"] == "WO-B"
+        assert allowed.json()["serials"] == [f"SER-{ids['execution_b']}"]
+
+        crossed = client.get(
+            "/lots/LOT-001?workorder_number=WO-A", headers=headers
+        )
+        assert crossed.status_code == 404
+        assert crossed.json()["error"]["code"] == "lot_not_found"
+        assert "WO-A" not in crossed.text
+        assert f"SER-{ids['execution_a']}" not in crossed.text
 
 
 def test_denial_audit_uses_safe_technical_identity_and_correlation(monkeypatch) -> None:

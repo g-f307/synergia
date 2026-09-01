@@ -240,7 +240,10 @@ class QueryRepository(Protocol):
     ) -> dict | None: ...
 
     def get_lot(
-        self, lot_number: str, workorder_number: str | None = None
+        self,
+        lot_number: str,
+        workorder_number: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None: ...
 
     def get_serial(self, serial_number: str) -> dict | None: ...
@@ -427,13 +430,19 @@ class PostgresQueryRepository:
             return result
 
     def get_lot(
-        self, lot_number: str, workorder_number: str | None = None
+        self,
+        lot_number: str,
+        workorder_number: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None:
         filters = ["l.lot_number = %s"]
         parameters: list[Any] = [lot_number]
         if workorder_number:
             filters.append("w.workorder_number = %s")
             parameters.append(workorder_number)
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         where = " AND ".join(filters)
         with self._connect() as connection:
             row = connection.execute(
@@ -442,6 +451,7 @@ class PostgresQueryRepository:
                        l.updated_at, l.id
                 FROM synergia.lots l
                 JOIN synergia.workorders w ON w.id = l.workorder_id
+                JOIN synergia.executions e ON e.id = l.execution_id
                 WHERE {where}
                 ORDER BY l.updated_at DESC, l.id DESC
                 LIMIT 1
@@ -956,16 +966,21 @@ def get_workorder(
     response_model=LotResponse,
     summary="Consultar um lote",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_resource_permission("business.read", "lot", "lot_number"))],
+    dependencies=[Depends(require_permission("business.read"))],
 )
 def get_lot(
     lot_number: str,
+    actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
     workorder_number: str | None = Query(
         default=None, description="Restringe o lote a uma Workorder"
     ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> LotResponse:
-    item = repository.get_lot(lot_number, workorder_number)
+    item = repository.get_lot(
+        lot_number,
+        workorder_number,
+        actor.scope_filter("business.read"),
+    )
     if item is None:
         raise _not_found("lot", lot_number)
     return LotResponse.model_validate(item)

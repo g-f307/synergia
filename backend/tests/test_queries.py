@@ -145,7 +145,10 @@ class MemoryQueryRepository:
         return deepcopy(self.workorder)
 
     def get_lot(
-        self, lot_number: str, workorder_number: str | None = None
+        self,
+        lot_number: str,
+        workorder_number: str | None = None,
+        organization_ids=None,
     ) -> dict | None:
         if lot_number != self.lot["lot_number"]:
             return None
