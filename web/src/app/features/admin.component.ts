@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 
@@ -39,19 +40,25 @@ interface Named {
           </article>
         </div>
       } @else {
-        <p>{{ failed() ? 'Administração indisponível.' : 'Carregando recursos administrativos…' }}</p>
+        @if (forbidden()) {
+          <p role="alert">Acesso negado. Você não possui permissão para esta área.</p>
+        } @else {
+          <p>{{ failed() ? 'Administração indisponível.' : 'Carregando recursos administrativos…' }}</p>
+        }
       }
     </section>`
 })
 export class AdminComponent {
   private readonly http = inject(HttpClient);
   readonly failed = signal(false);
+  readonly forbidden = signal(false);
   readonly resources$ = forkJoin({
     users: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/users`),
     groups: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/access/groups`),
     roles: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/access/roles`)
-  }).pipe(catchError(() => {
-    this.failed.set(true);
+  }).pipe(catchError((error: HttpErrorResponse) => {
+    if (error.status === 403) this.forbidden.set(true);
+    else this.failed.set(true);
     return of(null);
   }));
 }

@@ -408,6 +408,12 @@ def _inspect_avatar(upload: UploadFile) -> tuple[bytes, str, str, str]:
     declared = (upload.content_type or "").split(";", 1)[0].lower()
     if declared != media_type:
         raise ApiError(400, "avatar_media_mismatch", "Tipo declarado divergente")
+    filename_extension = Path(upload.filename or "").suffix.lower()
+    allowed_extensions = {extension}
+    if image_format == "JPEG":
+        allowed_extensions.add(".jpeg")
+    if filename_extension not in allowed_extensions:
+        raise ApiError(400, "avatar_extension_mismatch", "Extensao divergente")
     if width > MAX_AVATAR_DIMENSION or height > MAX_AVATAR_DIMENSION:
         raise ApiError(
             400, "avatar_dimensions_invalid", "Dimensoes de avatar invalidas"

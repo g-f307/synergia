@@ -59,4 +59,17 @@ describe('authInterceptor', () => {
     expect(retry.request.headers.get('Authorization')).toBe('Bearer refreshed-token');
     retry.flush({});
   });
+
+  it('preserves forbidden responses without attempting refresh', () => {
+    let receivedStatus = 0;
+    http.get('/protected').subscribe({
+      error: (error) => { receivedStatus = error.status; }
+    });
+    controller.expectOne('/protected').flush(
+      {}, { status: 403, statusText: 'Forbidden' }
+    );
+
+    expect(receivedStatus).toBe(403);
+    controller.expectNone('http://localhost:8000/auth/refresh');
+  });
 });

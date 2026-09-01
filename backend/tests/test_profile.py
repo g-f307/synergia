@@ -18,6 +18,12 @@ def png_bytes(size: tuple[int, int] = (8, 8)) -> bytes:
     return stream.getvalue()
 
 
+def image_bytes(image_format: str) -> bytes:
+    stream = BytesIO()
+    Image.new("RGB", (8, 8), color=(165, 0, 52)).save(stream, format=image_format)
+    return stream.getvalue()
+
+
 class FakeProfileRepository:
     def __init__(self) -> None:
         self.profile = {
@@ -183,6 +189,38 @@ def test_rejects_active_or_mismatched_avatar(
     )
     assert response.status_code == 400
     assert response.json()["error"]["code"] == code
+    assert not list(root.rglob("*.*"))
+
+
+@pytest.mark.parametrize(
+    ("name", "image_format", "media_type"),
+    [
+        ("AVATAR.PNG", "PNG", "image/png"),
+        ("AVATAR.JPG", "JPEG", "image/jpeg"),
+        ("avatar.JpEg", "JPEG", "image/jpeg"),
+        ("Avatar.WeBp", "WEBP", "image/webp"),
+    ],
+)
+def test_accepts_matching_avatar_extensions_case_insensitively(
+    profile_api, name, image_format, media_type
+) -> None:
+    client, _repository, _root = profile_api
+    response = client.post(
+        "/me/avatar",
+        files={"avatar": (name, image_bytes(image_format), media_type)},
+    )
+    assert response.status_code == 201, response.text
+
+
+@pytest.mark.parametrize("name", ["avatar.png", "avatar", "avatar.gif"])
+def test_rejects_missing_or_mismatched_avatar_extension(profile_api, name) -> None:
+    client, _repository, root = profile_api
+    response = client.post(
+        "/me/avatar",
+        files={"avatar": (name, image_bytes("JPEG"), "image/jpeg")},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "avatar_extension_mismatch"
     assert not list(root.rglob("*.*"))
 
 

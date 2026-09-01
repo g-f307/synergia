@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 
@@ -34,6 +34,9 @@ import { SessionService } from '../core/session.service';
         </form>
         <div class="avatar-panel">
           <h2>Foto do perfil</h2>
+          @if (avatarUrl(); as source) {
+            <img class="avatar-preview" [src]="source" alt="Foto do perfil">
+          }
           <input type="file" accept="image/png,image/jpeg,image/webp"
             (change)="selectAvatar($event)">
           @if (profile.avatar) {
@@ -52,9 +55,12 @@ import { SessionService } from '../core/session.service';
 export class ProfileComponent {
   readonly session = inject(SessionService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
   readonly busy = signal(false);
   readonly error = signal(false);
   readonly message = signal('');
+  readonly avatarUrl = signal<string | null>(null);
+  private loadedAvatarSha?: string;
   readonly form = this.fb.nonNullable.group({
     display_name: ['', Validators.required],
     locale: ['pt-BR'],
@@ -73,8 +79,14 @@ export class ProfileComponent {
           timezone: profile.timezone,
           ...profile.notifications
         });
+        if (profile.avatar && profile.avatar.sha256 !== this.loadedAvatarSha) {
+          this.loadAvatar(profile.avatar.sha256);
+        } else if (!profile.avatar) {
+          this.clearAvatar();
+        }
       }
     });
+    this.destroyRef.onDestroy(() => this.clearAvatar());
   }
 
   save(): void {
@@ -101,7 +113,10 @@ export class ProfileComponent {
     this.session.uploadAvatar(file)
       .pipe(finalize(() => this.busy.set(false)))
       .subscribe({
-        next: () => this.message.set('Foto atualizada.'),
+        next: (profile) => {
+          this.message.set('Foto atualizada.');
+          if (profile.avatar) this.loadAvatar(profile.avatar.sha256);
+        },
         error: () => this.error.set(true)
       });
   }
@@ -111,7 +126,10 @@ export class ProfileComponent {
     this.session.removeAvatar()
       .pipe(finalize(() => this.busy.set(false)))
       .subscribe({
-        next: () => this.message.set('Foto removida.'),
+        next: () => {
+          this.clearAvatar();
+          this.message.set('Foto removida.');
+        },
         error: () => this.error.set(true)
       });
   }
@@ -120,5 +138,23 @@ export class ProfileComponent {
     this.busy.set(true);
     this.error.set(false);
     this.message.set('');
+  }
+
+  private loadAvatar(sha256: string): void {
+    this.session.loadAvatar().subscribe({
+      next: (blob) => {
+        this.clearAvatar();
+        this.avatarUrl.set(URL.createObjectURL(blob));
+        this.loadedAvatarSha = sha256;
+      },
+      error: () => this.error.set(true)
+    });
+  }
+
+  private clearAvatar(): void {
+    const current = this.avatarUrl();
+    if (current) URL.revokeObjectURL(current);
+    this.avatarUrl.set(null);
+    this.loadedAvatarSha = undefined;
   }
 }

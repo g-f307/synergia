@@ -86,6 +86,10 @@ export class SessionService {
     );
   }
 
+  loadAvatar(): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/me/avatar`, { responseType: 'blob' });
+  }
+
   removeAvatar(): Observable<UserProfile> {
     return this.http.delete<UserProfile>(`${environment.apiUrl}/me/avatar`).pipe(
       tap((profile) => this.profile.set(profile))
