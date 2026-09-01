@@ -12,17 +12,20 @@ A API FastAPI é a fronteira pública do backend. Clientes não devem consultar 
 PostgreSQL nem ler arquivos importados diretamente. A especificação executável
 fica em `/openapi.json` e a interface interativa em `/docs`.
 
-A API atual ainda não aplica autenticação. A política-alvo classifica todas as
-operações de negócio como privadas e está inventariada na
-[matriz inicial de acesso](access-control-matrix.md); `/health` é a única
-operação pública. A estratégia de identidade e sessão está no
-[ADR 0001](adr/0001-identity-strategy.md). Esses documentos não ativam uma
-integração nem substituem a implementação posterior dos controles.
+A API emite sessões, access tokens JWT e refresh tokens rotativos conforme
+[autenticação e sessões](authentication.md). Login local permanece restrito a
+ambientes não produtivos; a integração corporativa continua bloqueada pelos
+portões da [ADR 0001](adr/0001-identity-strategy.md). A aplicação de RBAC e
+escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
 | Método e rota | Resultado | Sucesso |
 | --- | --- | --- |
+| `POST /auth/login` | cria sessão e emite access/refresh | `200` |
+| `POST /auth/refresh` | rotaciona refresh e renova access | `200` |
+| `POST /auth/logout` | revoga a sessão atual | `200` |
+| `POST /auth/logout-all` | revoga as sessões próprias | `200` |
 | `POST /imports` | inicia uma importação rastreável | `201` |
 | `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
@@ -139,6 +142,5 @@ inclusive a preservação da execução anterior. O arquivo
 - O consolidado restringe holds, decisões OQC, pendências, classificações,
   avaliações de regras e proveniência à execução escolhida.
 - Indicadores agregados não substituem o histórico auditável.
-- A implementação de autenticação, notificações e integrações RPA permanece
-  fora desta etapa; as decisões preparatórias de identidade e autorização estão
-  versionadas no ADR e na matriz de acesso.
+- Notificações, integrações RPA e a aplicação geral de autorização permanecem
+  fora desta etapa; autenticação e sessões seguem o ADR e a matriz de acesso.

@@ -7,10 +7,13 @@ import re
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "docs" / "access-control-matrix.md"
-PUBLIC = {("GET", "/health")}
+PUBLIC = {
+    ("GET", "/health"),
+    ("POST", "/auth/login"),
+    ("POST", "/auth/refresh"),
+}
 ROW = re.compile(r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` \|")
 
 
@@ -55,7 +58,7 @@ def main() -> int:
 
     print(
         f"OK: {len(private)} operações privadas documentadas; "
-        f"{len(PUBLIC)} operação pública explícita."
+        f"{len(PUBLIC)} operações públicas explícitas."
     )
     return 0
 

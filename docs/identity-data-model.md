@@ -1,8 +1,9 @@
 # Modelo persistente de identidade e acesso
 
-Este documento descreve o schema criado pelas migrations `0011` a `0013`.
-Ele implementa somente persistência e integridade no PostgreSQL 16. Endpoints,
-login, JWT, adaptadores corporativos e telas permanecem fora desta entrega.
+Este documento descreve o núcleo criado pelas migrations `0011` a `0013`. A
+migration `0016` acrescenta a janela operacional de limitação de login. Os
+endpoints de sessão e JWT estão descritos em [autenticação](authentication.md);
+adaptador corporativo e telas permanecem fora desta entrega.
 
 As decisões de comportamento estão no
 [ADR 0001](adr/0001-identity-strategy.md), e o catálogo de ações está na
@@ -95,6 +96,10 @@ caracteres hexadecimais, além de família, rotação, expiração e revogação
 existe coluna para o segredo original. `replaced_by_token_id` liga a rotação a
 outro token da mesma sessão.
 
+`identity_login_attempts` mantém somente HMACs do identificador normalizado e
+do IP para aplicar limitação persistente e concorrente. Registros antigos podem
+ser removidos porque a evidência durável fica em `identity_access_events`.
+
 ### Auditoria
 
 `identity_access_events` registra eventos como `user.created`,
@@ -154,6 +159,7 @@ vínculos externos e associações.
 | `0011_create_identity_users.sql` | usuários, identidades externas e e-mails | `database/rollbacks/0011_create_identity_users.down.sql` |
 | `0012_create_authorization_model.sql` | organizações IAM, grupos, papéis e permissões | `database/rollbacks/0012_create_authorization_model.down.sql` |
 | `0013_create_identity_sessions.sql` | sessões, refresh tokens, eventos e triggers | `database/rollbacks/0013_create_identity_sessions.down.sql` |
+| `0016_create_authentication_attempts.sql` | janela de limitação de login | `database/rollbacks/0016_create_authentication_attempts.down.sql` |
 
 Rollback é uma operação deliberada e destrutiva, permitida apenas antes de
 existirem dados reais ou com plano aprovado. A ordem é `0013`, `0012`, `0011`.

@@ -3,6 +3,13 @@
 Backend FastAPI inicial. A implementação começa sem RPA e utilizará arquivos
 manuais e dados sintéticos como fontes de entrada.
 
+## Autenticação
+
+A API implementa access token JWT, refresh opaco rotativo e revogação de
+sessões. O adaptador local fica desabilitado por padrão e é proibido em
+produção; configuração, contratos e exemplos estão em
+[`../docs/authentication.md`](../docs/authentication.md).
+
 ## Execução prevista
 
 ```bash
