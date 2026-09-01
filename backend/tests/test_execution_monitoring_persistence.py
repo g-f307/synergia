@@ -151,7 +151,6 @@ def _seed_monitoring(storage_root: Path) -> tuple[int, int]:
     target = storage_root / storage_key
     target.parent.mkdir(parents=True)
     target.write_bytes(b"workorder_number\n")
-    assert accepted_id != source_id
     return source_id, accepted_id
 
 

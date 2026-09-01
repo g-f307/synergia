@@ -5,6 +5,7 @@ import json
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
+from uuid import UUID
 
 import httpx
 import pytest
@@ -34,6 +35,9 @@ class MemoryRepository:
         source: str,
         actor_type: str,
         actor: str,
+        organization_id: UUID,
+        user_id: UUID,
+        session_id: UUID,
         pipeline_version: str = PIPELINE_VERSION,
         rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None:
@@ -57,6 +61,9 @@ class MemoryRepository:
         }
         self.files[execution_id] = []
         self.inspections[execution_id] = []
+
+    def organization_code(self, organization_id: UUID) -> str:
+        return "org-001"
 
     def record_inspection(self, execution_id: str, source: str, result) -> int:
         inspection_id = sum(len(items) for items in self.inspections.values()) + 1
@@ -237,7 +244,7 @@ def test_accepts_supported_files(api, filename, content, content_type) -> None:
     body = response.json()
     assert body["status"] == "completed"
     assert body["source"] == "N-FP"
-    assert body["actor_identifier"] == "test-user"
+    assert body["actor_identifier"] == "00000000-0000-0000-0000-000000000001"
     stored = [
         path
         for path in storage.glob(
@@ -441,13 +448,13 @@ def test_original_file_is_interpreted_only_once(api, monkeypatch) -> None:
 
 def test_requires_actor_and_returns_not_found(api) -> None:
     client, _, _ = api
-    missing_actor = client.post(
+    invalid_request = client.post(
         "/imports",
-        data={"source": "N-FP"},
+        data={},
         files={"file": ("entry.json", b"{}", "application/json")},
     )
-    assert missing_actor.status_code == 422
-    assert missing_actor.json()["error"]["code"] == "missing_actor"
+    assert invalid_request.status_code == 422
+    assert invalid_request.json()["error"]["code"] == "request_validation_error"
     not_found = client.get("/imports/unknown")
     assert not_found.status_code == 404
     assert not_found.json()["error"]["code"] == "not_found"

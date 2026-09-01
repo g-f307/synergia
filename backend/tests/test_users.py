@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from app.authorization import get_actor_context, get_authorization_repository
 from app.errors import ApiError
 from app.main import app
 from app.users import UserCreate, UserStateChange, UserUpdate, get_user_repository
@@ -325,20 +326,13 @@ def test_rejects_physical_delete_and_unauthorized_access(api) -> None:
     assert missing_actor.status_code == 403
 
 
-def test_trusted_header_adapter_is_disabled_by_default_and_in_production(
-    api, monkeypatch
-) -> None:
+def test_trusted_actor_header_does_not_replace_bearer_authentication(api) -> None:
     client, _repository = api
-    monkeypatch.delenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED")
-    disabled = client.get(f"/admin/users/{uuid4()}", headers=HEADERS)
-    assert disabled.status_code == 503
-    assert disabled.json()["error"]["code"] == "identity_adapter_unavailable"
-
-    monkeypatch.setenv("SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED", "true")
-    monkeypatch.setenv("SYNERGIA_ENV", "production")
-    production = client.get(f"/admin/users/{uuid4()}", headers=HEADERS)
-    assert production.status_code == 503
-    assert production.json()["error"]["code"] == "identity_adapter_unavailable"
+    app.dependency_overrides.pop(get_actor_context, None)
+    app.dependency_overrides[get_authorization_repository] = lambda: object()
+    response = client.get(f"/admin/users/{uuid4()}", headers=HEADERS)
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_access_token"
 
 
 def test_openapi_documents_filters_errors_and_models(api) -> None:

@@ -3,12 +3,12 @@
 @userId = 22222222-2222-2222-2222-222222222222
 
 # Requer SYNERGIA_ENV=development|test|homologation e
-# SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED=true. O adaptador e bloqueado em producao.
+# Use um access token de usuário com a permissão global access.admin.
 
 ### Criar usuario sintetico
 POST {{baseUrl}}/admin/users
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {
   "display_name": "Usuario Sintetico",
@@ -21,16 +21,16 @@ X-Actor-Id: {{actorId}}
 
 ### Listar com filtros e paginacao
 GET {{baseUrl}}/admin/users?status=active&name=Sintetico&page=1&page_size=25
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 ### Consultar por UUID interno
 GET {{baseUrl}}/admin/users/{{userId}}
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 ### Atualizar com versao otimista
 PATCH {{baseUrl}}/admin/users/{{userId}}
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {
   "version": 1,
@@ -44,7 +44,7 @@ X-Actor-Id: {{actorId}}
 ### Desativar sem excluir historico
 POST {{baseUrl}}/admin/users/{{userId}}/deactivate
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {
   "version": 2,

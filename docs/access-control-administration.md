@@ -7,11 +7,9 @@ permissoes fora desse catalogo.
 
 ## Fronteira de confianca
 
-Todas as rotas usam a mesma fronteira temporaria de identidade descrita em
-`user-administration.md`: o cabecalho `X-Actor-Id` so pode ser habilitado em
-desenvolvimento, teste ou homologacao. Producao recusa essa configuracao. O ator
-tambem precisa estar ativo e possuir o papel `admin` ou a permissao
-`access.admin` no PostgreSQL.
+Todas as rotas exigem access token Bearer, usuário e sessão ativos e a permissão
+global `access.admin` carregada do PostgreSQL. Nomes de papel no token e o
+cabecalho legado `X-Actor-Id` não autorizam operações.
 
 ## Contratos
 

@@ -4,9 +4,9 @@ Esta matriz especifica a política-alvo da Etapa 2. O catálogo, os papéis, as
 associações e a consulta de permissões efetivas estão implementados pela camada
 administrativa descrita em
 [administração de acesso](access-control-administration.md). Login, tokens e
-sessões estão implementados conforme [autenticação](authentication.md). Telas e
-a aplicação da matriz em todas as rotas operacionais permanecem incrementais e
-não devem ser presumidos a partir deste documento.
+sessões estão implementados conforme [autenticação](authentication.md). A matriz
+é aplicada no backend conforme [autorização](authorization.md); telas continuam
+incrementais e não concedem acesso.
 
 A estratégia de identidade, sessão e troca de provedor está em
 [ADR 0001](adr/0001-identity-strategy.md). O backend deverá autorizar a ação,
@@ -142,7 +142,7 @@ de papel terá `organization_scope = list` com um ou mais `organization_id`, ou
 `all` quando aprovado. `all` não decorre do papel `admin`; é uma concessão
 separada e auditável.
 
-Na implementação futura:
+Na implementação vigente:
 
 1. importação exigirá exatamente uma organização autorizada, registrada na
    execução e propagada aos artefatos;
@@ -154,9 +154,9 @@ Na implementação futura:
 5. indicadores e exportações serão calculados somente sobre o escopo efetivo;
 6. uma troca de organização na interface não altera as concessões do token.
 
-As migrations atuais ainda não garantem esse isolamento em todas as entidades.
-O portão `ID-P06` da ADR deve fornecer organizações e responsáveis antes da
-implementação; isso não muda a decisão arquitetural de exigir o escopo.
+A migration `0017` vincula cada nova execução ao UUID IAM e as entidades
+derivadas herdam esse escopo pela execução. O portão `ID-P06` ainda deve
+fornecer o catálogo e os responsáveis de produção.
 
 ## Segregação de função
 
@@ -185,8 +185,8 @@ na interface administrativa.
 | Completude contra OpenAPI | `python scripts/validate_access_matrix.py` compara todas as operações atuais | aprovado quando o comando termina com `OK` |
 | Toda ação privada aparece | inventário acompanha automaticamente as operações privadas; saúde é a única exceção pública | coberto |
 | Conflitos entre papéis | revisão cruzada das colunas e regras acima | sem papel com administração e operação por padrão; combinações críticas explicitamente proibidas |
-| Acesso horizontal | regra `org` em cada rota e comportamento de listas/detalhes | decidido; implementação posterior |
-| Acesso vertical | permissão por ação, negação padrão e papéis não hierárquicos | decidido; implementação posterior |
+| Acesso horizontal | regra `org` em cada rota e comportamento de listas/detalhes | implementado e coberto em PostgreSQL |
+| Acesso vertical | permissão por ação, negação padrão e papéis não hierárquicos | implementado e coberto em PostgreSQL |
 
 ## Pendências para implementação
 

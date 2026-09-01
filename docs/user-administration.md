@@ -1,31 +1,14 @@
 # Administracao do ciclo de vida de usuarios
 
 Esta entrega disponibiliza contratos administrativos sobre o modelo persistente
-de identidade. Login, emissao de JWT, recuperacao de senha, diretorio
-corporativo e telas administrativas permanecem fora do escopo.
+de identidade. Recuperacao de senha, diretorio corporativo e telas
+administrativas permanecem fora do escopo.
 
 ## Contexto administrativo
 
-Enquanto o adaptador de autenticacao nao estiver implementado, existe um
-adaptador temporario para desenvolvimento, testes e homologacao. Ele recebe o
-UUID interno do ator pelo cabecalho `X-Actor-Id` e o backend confirma que esse
-usuario esta ativo e possui um papel `admin` ativo ou a permissao
-`access.admin`.
-
-O adaptador fica **desabilitado por padrao**. Para habilita-lo explicitamente:
-
-```text
-SYNERGIA_ENV=development|test|homologation
-SYNERGIA_TRUSTED_ACTOR_HEADER_ENABLED=true
-```
-
-Mesmo que a flag seja definida, `SYNERGIA_ENV=production` e qualquer ambiente
-nao reconhecido mantêm as rotas desabilitadas com HTTP `503` e o codigo
-`identity_adapter_unavailable`. Portanto, o UUID nunca e tratado como
-credencial de producao. O servico so pode ser exposto em producao depois da
-integracao com o adaptador autenticado prevista no ADR. Em ambientes permitidos,
-o cabecalho deve ser injetado por infraestrutura restrita e nunca exposto como
-credencial de cliente publico.
+Todas as rotas exigem access token Bearer associado a usuário e sessão ativos.
+O backend carrega `access.admin` do PostgreSQL em cada requisição. O antigo
+cabecalho `X-Actor-Id` não é credencial e não substitui o token.
 
 Todas as rotas usam o prefixo `/admin/users`. Falhas seguem o envelope comum:
 
@@ -72,7 +55,7 @@ Criacao:
 ```http
 POST /admin/users HTTP/1.1
 Content-Type: application/json
-X-Actor-Id: 11111111-1111-1111-1111-111111111111
+Authorization: Bearer {{accessToken}}
 
 {
   "display_name": "Usuario de Homologacao",
@@ -93,7 +76,7 @@ Atualizacao com concorrencia otimista:
 ```http
 PATCH /admin/users/22222222-2222-2222-2222-222222222222 HTTP/1.1
 Content-Type: application/json
-X-Actor-Id: 11111111-1111-1111-1111-111111111111
+Authorization: Bearer {{accessToken}}
 
 {
   "version": 3,

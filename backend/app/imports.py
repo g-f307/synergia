@@ -9,14 +9,29 @@ from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Protocol
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import psycopg
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
+from app.authorization import (
+    ActorContext,
+    AuthorizationRepo,
+    require_execution_permission,
+    require_permission,
+)
 from app.business_rules import RULE_CATALOG
 from app.errors import ErrorResponse
 from app.execution import (
@@ -119,9 +134,14 @@ class ImportRepository(Protocol):
         source: str,
         actor_type: str,
         actor: str,
+        organization_id: UUID | None = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
         pipeline_version: str = PIPELINE_VERSION,
         rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None: ...
+
+    def organization_code(self, organization_id: UUID) -> str | None: ...
 
     def claim_file(
         self,
@@ -194,6 +214,9 @@ class PostgresImportRepository:
         source: str,
         actor_type: str,
         actor: str,
+        organization_id: UUID | None = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
         pipeline_version: str = PIPELINE_VERSION,
         rule_catalog_version: str = RULE_CATALOG["version"],
     ) -> None:
@@ -204,9 +227,10 @@ class PostgresImportRepository:
                     (id, status, source, actor_type, actor_identifier,
                      pipeline_version, rule_catalog_version,
                      state_changed_by_type, state_changed_by,
-                     state_change_reason)
+                     state_change_reason, organization_id,
+                     initiated_by_user_id, initiated_by_session_id)
                 VALUES (%s, 'pending', %s, %s, %s, %s, %s, %s, %s,
-                        'execution_created')
+                        'execution_created', %s, %s, %s)
                 """,
                 (
                     execution_id,
@@ -217,8 +241,23 @@ class PostgresImportRepository:
                     rule_catalog_version,
                     actor_type,
                     actor,
+                    organization_id,
+                    user_id,
+                    session_id,
                 ),
             )
+
+    def organization_code(self, organization_id: UUID) -> str | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT organization_code
+                FROM synergia.iam_organizations
+                WHERE id = %s AND is_active
+                """,
+                (organization_id,),
+            ).fetchone()
+            return row["organization_code"] if row else None
 
     def claim_file(
         self,
@@ -865,9 +904,11 @@ async def upload_import(
         list[ImportSource], Form(description="Sistema de origem de cada arquivo")
     ],
     file: Annotated[list[UploadFile], File(description="Arquivos XLSX, CSV ou JSON")],
-    imported_by: Annotated[str | None, Form(description="Usuário responsável")] = None,
-    technical_origin: Annotated[
-        str | None, Form(description="Identificador da origem técnica")
+    request: Request,
+    actor: Annotated[ActorContext, Depends(require_permission("import.create"))],
+    authorization_repository: AuthorizationRepo,
+    organization_id: Annotated[
+        UUID | None, Form(description="Organização IAM autorizada para a execução")
     ] = None,
     repository: ImportRepository = Depends(get_repository),
 ) -> ImportStatus:
@@ -889,22 +930,40 @@ async def upload_import(
                 "message": "Os nomes dos arquivos devem ser únicos na execução",
             },
         )
-    actor_type, actor = (
-        ("user", imported_by.strip())
-        if imported_by and imported_by.strip()
-        else ("technical", technical_origin.strip())
-        if technical_origin and technical_origin.strip()
-        else ("", "")
-    )
-    if not actor:
+    if organization_id is None:
+        available = actor.organization_ids("import.create")
+        if len(available) == 1:
+            organization_id = next(iter(available))
+    if organization_id is None or not actor.allows("import.create", organization_id):
+        authorization_repository.audit_denial(
+            actor,
+            "import.create",
+            request,
+            organization_id=organization_id,
+        )
         raise HTTPException(
-            status_code=422,
+            status_code=403,
+            detail={"code": "access_denied", "message": "Acao nao autorizada"},
+        )
+    organization_code = repository.organization_code(organization_id)
+    if organization_code is None:
+        raise HTTPException(
+            status_code=404,
             detail={
-                "code": "missing_actor",
-                "message": "Informe imported_by ou technical_origin",
+                "code": "organization_not_found",
+                "message": "Organizacao nao encontrada",
             },
         )
-    repository.start(execution_id, source[0].value, actor_type, actor)
+    actor_identifier = str(actor.user_id)
+    repository.start(
+        execution_id,
+        source[0].value,
+        "user",
+        actor_identifier,
+        organization_id,
+        actor.user_id,
+        actor.session_id,
+    )
     logger.info(
         "import_started execution_id=%s sources=%s",
         execution_id,
@@ -1052,7 +1111,7 @@ async def upload_import(
                 inputs=pipeline_inputs,
                 repository=repository,
                 classified_at=datetime.now(UTC).isoformat(),
-                known_organizations=configured_organizations(),
+                known_organizations={organization_code.upper()},
                 prepare_commit=lambda result: _write_pipeline_artifacts(
                     artifact_directory, result
                 ),
@@ -1108,6 +1167,7 @@ async def upload_import(
     response_model=ImportStatus,
     summary="Consultar o estado de uma importação",
     responses={404: {"model": ErrorResponse, "description": "Execução não encontrada"}},
+    dependencies=[Depends(require_execution_permission("import.read"))],
 )
 def get_import(
     execution_id: str,
@@ -1126,6 +1186,7 @@ def get_import(
     response_model=list[FileInspectionRecord],
     summary="Consultar as decisões de segurança dos arquivos",
     responses={404: {"model": ErrorResponse, "description": "Execução não encontrada"}},
+    dependencies=[Depends(require_execution_permission("import.read"))],
 )
 def get_file_inspections(
     execution_id: str,
@@ -1146,6 +1207,7 @@ def get_file_inspections(
     responses={
         404: {"model": ErrorResponse, "description": "Relatório não encontrado"}
     },
+    dependencies=[Depends(require_execution_permission("artifact.read"))],
 )
 def get_validation_report(
     execution_id: str,
@@ -1177,6 +1239,7 @@ def get_validation_report(
     response_model=NormalizationResult,
     summary="Visualizar os dados normalizados da execução",
     responses={404: {"model": ErrorResponse, "description": "Dados não encontrados"}},
+    dependencies=[Depends(require_execution_permission("artifact.read"))],
 )
 def get_normalized_data(
     execution_id: str,
@@ -1208,6 +1271,7 @@ def get_normalized_data(
     response_model=PipelineSummary,
     summary="Visualizar as contagens do pipeline integrado",
     responses={404: {"model": ErrorResponse, "description": "Resumo não encontrado"}},
+    dependencies=[Depends(require_execution_permission("import.read"))],
 )
 def get_pipeline_summary(
     execution_id: str,

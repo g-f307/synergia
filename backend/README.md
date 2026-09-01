@@ -35,13 +35,14 @@ export UPLOAD_REJECTED_RETENTION_HOURS=24
 export VALID_ORGANIZATION_CODES=ORG-001,LG
 ```
 
-Envie XLSX, CSV ou JSON informando uma das fontes permitidas e o usuário (ou
-`technical_origin`, para uma execução técnica):
+Envie XLSX, CSV ou JSON com access token em memória, uma das fontes permitidas
+e a organização IAM autorizada:
 
 ```bash
 curl -X POST http://localhost:8000/imports \
+  -H 'Authorization: Bearer <access-token>' \
   -F 'source=N-FP' \
-  -F 'imported_by=operador.local' \
+  -F 'organization_id=11111111-1111-4111-8111-111111111111' \
   -F 'file=@entrada.csv'
 ```
 
@@ -51,11 +52,12 @@ normalização e todos os normalizados elegíveis seguem juntos para a consolida
 
 ```bash
 curl -X POST http://localhost:8000/imports \
+  -H 'Authorization: Bearer <access-token>' \
   -F 'source=N-FP' -F 'file=@plano.csv' \
   -F 'source=OWM' -F 'file=@recebimento.csv' \
   -F 'source=GMES/OQC' -F 'file=@qualidade.xlsx' \
   -F 'source=TMS' -F 'file=@embarque.json' \
-  -F 'imported_by=operador.local'
+  -F 'organization_id=11111111-1111-4111-8111-111111111111'
 ```
 
 A resposta `201` contém o `execution_id`. Consulte o estado sem acessar o
