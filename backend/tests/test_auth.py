@@ -12,7 +12,7 @@ from app.auth.models import CredentialRecord, RefreshResult, SessionResult
 from app.auth.routes import get_auth_config, get_auth_repository, get_auth_service
 from app.auth.security import TokenCodec, sha256_token
 from app.auth.service import AuthService
-from app.main import app
+from app.main import app, create_app
 
 NOW = datetime.now(UTC).replace(microsecond=0)
 USER_ID = UUID("11111111-1111-1111-1111-111111111111")
@@ -271,6 +271,29 @@ def test_auth_http_rejects_untrusted_origin() -> None:
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "origin_not_allowed"
+
+
+def test_cors_uses_configured_allowed_origins(monkeypatch) -> None:
+    allowed = "https://homolog.example"
+    monkeypatch.setenv("AUTH_ALLOWED_ORIGINS", allowed)
+    cors_app = create_app()
+    headers = {
+        "Origin": allowed,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    }
+
+    with TestClient(cors_app) as client:
+        accepted = client.options("/auth/login", headers=headers)
+        rejected = client.options(
+            "/auth/login",
+            headers={**headers, "Origin": "https://untrusted.example"},
+        )
+
+    assert accepted.status_code == 200
+    assert accepted.headers["access-control-allow-origin"] == allowed
+    assert rejected.status_code == 400
+    assert "access-control-allow-origin" not in rejected.headers
 
 
 def test_openapi_documents_credentials_cookie_and_bearer_security() -> None:

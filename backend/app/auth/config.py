@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from app.errors import ApiError
 
 NON_PRODUCTION_ENVIRONMENTS = frozenset({"development", "test", "homologation"})
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:4200"
 
 
 def _boolean(name: str, default: bool = False) -> bool:
@@ -26,6 +27,19 @@ def _integer(name: str, default: int, minimum: int) -> int:
     if value < minimum:
         raise ApiError(503, "auth_configuration_invalid", "Autenticacao indisponivel")
     return value
+
+
+def configured_allowed_origins() -> tuple[str, ...]:
+    origins = tuple(
+        item.strip()
+        for item in os.getenv(
+            "AUTH_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS
+        ).split(",")
+        if item.strip()
+    )
+    if not origins:
+        raise ValueError("AUTH_ALLOWED_ORIGINS deve possuir ao menos uma origem")
+    return origins
 
 
 @dataclass(frozen=True)
@@ -69,15 +83,12 @@ class AuthConfig:
                 503, "auth_configuration_invalid", "Autenticacao indisponivel"
             )
 
-        origins = tuple(
-            item.strip()
-            for item in os.getenv("AUTH_ALLOWED_ORIGINS", "http://localhost:4200").split(",")
-            if item.strip()
-        )
-        if not origins:
+        try:
+            origins = configured_allowed_origins()
+        except ValueError as exc:
             raise ApiError(
                 503, "auth_configuration_invalid", "Autenticacao indisponivel"
-            )
+            ) from exc
 
         cookie_secure = _boolean("AUTH_REFRESH_COOKIE_SECURE", True)
         if environment == "production" and not cookie_secure:
