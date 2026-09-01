@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -126,6 +127,89 @@ def test_two_concurrent_refreshes_do_not_return_an_internal_failure() -> None:
         assert cursor.fetchone() == ("revoked", "refresh_token_reuse")
 
 
+def test_ip_limit_applies_across_identifiers_without_storing_plaintext() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    repository = PostgresAuthRepository(database_url)
+    now = datetime.now(UTC)
+    raw_ip = f"192.0.2.synthetic-{uuid4()}"
+    ip_hash = protected_identifier(raw_ip, KEY)
+    raw_identifiers = [f"spray-{uuid4()}@example.invalid" for _ in range(3)]
+
+    results = [
+        repository.begin_login_attempt(
+            protected_identifier(identifier, KEY),
+            ip_hash,
+            now,
+            900,
+            2,
+            900,
+        )
+        for identifier in raw_identifiers
+    ]
+
+    assert results[0][0] is not None
+    assert results[1][0] is not None
+    assert results[2][0] is None and results[2][1] == 900
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT row_to_json(attempt)::text
+            FROM synergia.identity_login_attempts attempt
+            WHERE ip_hash = %s
+            """,
+            (ip_hash,),
+        )
+        persisted_attempts = " ".join(row[0] for row in cursor.fetchall())
+        cursor.execute(
+            """
+            SELECT entity_id, payload::text
+            FROM synergia.identity_access_events
+            WHERE event_key LIKE 'auth.%'
+            """,
+        )
+        persisted_events = " ".join(
+            f"{entity_id} {payload}" for entity_id, payload in cursor.fetchall()
+        )
+        for raw_value in [raw_ip, *raw_identifiers]:
+            assert raw_value not in persisted_attempts
+            assert raw_value not in persisted_events
+
+
+def test_ip_limit_is_concurrent_and_different_ips_are_independent() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    now = datetime.now(UTC)
+    shared_ip_hash = protected_identifier(f"198.51.100.synthetic-{uuid4()}", KEY)
+    barrier = threading.Barrier(2)
+
+    def attempt(identifier: str, ip_hash: str):
+        barrier.wait()
+        return PostgresAuthRepository(database_url).begin_login_attempt(
+            protected_identifier(identifier, KEY), ip_hash, now, 900, 1, 900
+        )
+
+    identifiers = [f"concurrent-{uuid4()}@example.invalid" for _ in range(2)]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(attempt, identifier, shared_ip_hash)
+            for identifier in identifiers
+        ]
+        results = [future.result() for future in futures]
+
+    assert sorted(result[0] is None for result in results) == [False, True]
+    independent_results = [
+        PostgresAuthRepository(database_url).begin_login_attempt(
+            protected_identifier(f"independent-{uuid4()}@example.invalid", KEY),
+            protected_identifier(f"203.0.113.{index}-{uuid4()}", KEY),
+            now,
+            900,
+            1,
+            900,
+        )
+        for index in (10, 11)
+    ]
+    assert all(attempt_id is not None for attempt_id, _retry in independent_results)
+
+
 def test_global_logout_and_user_status_change_prevent_refresh() -> None:
     database_url = os.environ["DATABASE_URL"]
     user_id, email, password, _hash = _create_user(database_url)
@@ -156,9 +240,10 @@ def test_global_logout_and_user_status_change_prevent_refresh() -> None:
 def test_http_login_refresh_logout_and_rate_limit(monkeypatch) -> None:
     database_url = os.environ["DATABASE_URL"]
     user_id, email, password, _hash = _create_user(database_url)
+    test_key = f"synthetic-integration-{uuid4()}-signing-key"
     monkeypatch.setenv("SYNERGIA_ENV", "test")
     monkeypatch.setenv("SYNERGIA_LOCAL_AUTH_ENABLED", "true")
-    monkeypatch.setenv("AUTH_JWT_SIGNING_KEY", KEY)
+    monkeypatch.setenv("AUTH_JWT_SIGNING_KEY", test_key)
     monkeypatch.setenv("AUTH_JWT_ISSUER", "synergia-integration")
     monkeypatch.setenv("AUTH_JWT_AUDIENCE", "synergia-api-integration")
     monkeypatch.setenv("AUTH_REFRESH_COOKIE_SECURE", "false")
@@ -199,6 +284,8 @@ def test_http_login_refresh_logout_and_rate_limit(monkeypatch) -> None:
             )
             assert failed.status_code == expected
         assert failed.headers["retry-after"]
+        assert missing_email not in failed.text
+        assert "testclient" not in failed.text
 
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         cursor.execute(

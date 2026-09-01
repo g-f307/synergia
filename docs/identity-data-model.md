@@ -97,8 +97,9 @@ existe coluna para o segredo original. `replaced_by_token_id` liga a rotação a
 outro token da mesma sessão.
 
 `identity_login_attempts` mantém somente HMACs do identificador normalizado e
-do IP para aplicar limitação persistente e concorrente. Registros antigos podem
-ser removidos porque a evidência durável fica em `identity_access_events`.
+do IP para aplicar janelas persistentes e concorrentes em ambas as dimensões.
+Registros antigos podem ser removidos porque a evidência durável fica em
+`identity_access_events`.
 
 ### Auditoria
 
@@ -146,6 +147,7 @@ o encerramento lógico.
 | Validação de sessão por ID e expiração | `idx_identity_sessions_validation` |
 | Validação de refresh por hash | `idx_refresh_tokens_validation` |
 | Rotação/família de refresh | `idx_refresh_tokens_session` |
+| Limitação de login por identificador e IP | `idx_identity_login_attempts_window` e `idx_identity_login_attempts_ip_window` |
 | Auditoria por usuário, entidade ou sessão | `idx_identity_events_subject`, `idx_identity_events_entity`, `idx_identity_events_session` |
 
 Índices parciais excluem registros inativos das consultas frequentes. As

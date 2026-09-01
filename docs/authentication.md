@@ -68,6 +68,8 @@ negociação pelo conteúdo do token.
 O refresh nunca aparece no JSON. Ele usa cookie `HttpOnly`, `SameSite=Strict`,
 `Path=/auth` e `Secure` obrigatório em produção. Requisições de navegador com
 `Origin` fora de `AUTH_ALLOWED_ORIGINS` são recusadas.
+Essa mesma lista configura o `CORSMiddleware`; preflight e validação da rota não
+mantêm políticas independentes.
 
 ## Rotação, concorrência e replay
 
@@ -83,10 +85,12 @@ como erro interno.
 ## Limitação de tentativas
 
 O padrão aceita cinco falhas em uma janela de 15 minutos e aplica bloqueio de
-15 minutos. Os limites são configuráveis. E-mail normalizado e endereço IP são
-persistidos somente como HMAC-SHA-256. Registros operacionais com mais de 48
-horas são removidos durante novas tentativas; os eventos de segurança
-append-only permanecem sem credenciais ou tokens.
+15 minutos. Os limites são configuráveis e calculados simultaneamente por
+e-mail normalizado e por endereço IP, reduzindo ataques contra uma conta e
+password spraying entre contas. Ambos são persistidos somente como
+HMAC-SHA-256. Registros operacionais com mais de 48 horas são removidos durante
+novas tentativas; os eventos de segurança append-only permanecem sem
+credenciais ou tokens.
 
 Usuário inexistente, senha incorreta e estado não ativo retornam o mesmo `401`
 e executam uma verificação Argon2id de custo equivalente. Excesso retorna `429`

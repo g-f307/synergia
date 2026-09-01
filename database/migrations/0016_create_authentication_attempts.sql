@@ -12,5 +12,9 @@ CREATE INDEX idx_identity_login_attempts_window
     ON synergia.identity_login_attempts (identifier_hash, attempted_at DESC)
     WHERE succeeded = false;
 
+CREATE INDEX idx_identity_login_attempts_ip_window
+    ON synergia.identity_login_attempts (ip_hash, attempted_at DESC)
+    WHERE succeeded = false AND ip_hash IS NOT NULL;
+
 COMMENT ON TABLE synergia.identity_login_attempts IS
     'Janela operacional de limitacao; identificadores e IPs sao protegidos por HMAC';

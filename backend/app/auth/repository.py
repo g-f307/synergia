@@ -87,6 +87,50 @@ class PostgresAuthRepository:
             ),
         )
 
+    @staticmethod
+    def _login_limit_state(
+        cursor,
+        column: str,
+        value: str,
+        now: datetime,
+        window_seconds: int,
+    ) -> dict:
+        if column not in {"identifier_hash", "ip_hash"}:
+            raise ValueError("unsupported login limit dimension")
+        cursor.execute(
+            f"""
+            SELECT count(*) AS failures, max(blocked_until) AS blocked_until
+            FROM synergia.identity_login_attempts
+            WHERE {column} = %s
+              AND succeeded = false
+              AND attempted_at >= %s - make_interval(secs => %s)
+            """,
+            (value, now, window_seconds),
+        )
+        return cursor.fetchone()
+
+    @staticmethod
+    def _block_login_dimension(
+        cursor,
+        column: str,
+        value: str,
+        blocked_until: datetime,
+    ) -> None:
+        if column not in {"identifier_hash", "ip_hash"}:
+            raise ValueError("unsupported login limit dimension")
+        cursor.execute(
+            f"""
+            UPDATE synergia.identity_login_attempts
+            SET blocked_until = %s
+            WHERE id = (
+                SELECT id FROM synergia.identity_login_attempts
+                WHERE {column} = %s AND succeeded = false
+                ORDER BY attempted_at DESC, id DESC LIMIT 1
+            )
+            """,
+            (blocked_until, value),
+        )
+
     def begin_login_attempt(
         self,
         identifier_hash: str,
@@ -97,10 +141,16 @@ class PostgresAuthRepository:
         block_seconds: int,
     ) -> tuple[int | None, int | None]:
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 41))",
-                (identifier_hash,),
-            )
+            dimensions = [
+                ("identifier_hash", identifier_hash, "login_identifier")
+            ]
+            if ip_hash is not None:
+                dimensions.append(("ip_hash", ip_hash, "login_ip"))
+            for lock_value in sorted({item[1] for item in dimensions}):
+                cursor.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s, 41))",
+                    (lock_value,),
+                )
             cursor.execute(
                 """
                 DELETE FROM synergia.identity_login_attempts
@@ -108,48 +158,49 @@ class PostgresAuthRepository:
                 """,
                 (now,),
             )
-            cursor.execute(
-                """
-                SELECT count(*) AS failures, max(blocked_until) AS blocked_until
-                FROM synergia.identity_login_attempts
-                WHERE identifier_hash = %s
-                  AND succeeded = false
-                  AND attempted_at >= %s - make_interval(secs => %s)
-                """,
-                (identifier_hash, now, window_seconds),
-            )
-            state = cursor.fetchone()
-            blocked_until = state["blocked_until"]
-            if blocked_until is not None and blocked_until > now:
-                retry = max(1, int((blocked_until - now).total_seconds()))
+            states = [
+                (
+                    column,
+                    value,
+                    entity_type,
+                    self._login_limit_state(
+                        cursor, column, value, now, window_seconds
+                    ),
+                )
+                for column, value, entity_type in dimensions
+            ]
+            active_blocks = [
+                state["blocked_until"]
+                for _column, _value, _entity_type, state in states
+                if state["blocked_until"] is not None
+                and state["blocked_until"] > now
+            ]
+            if active_blocks:
+                retry = max(
+                    1,
+                    int((max(active_blocks) - now).total_seconds()),
+                )
                 self._event(
                     cursor,
                     "auth.login_rate_limited",
-                    "login_identifier",
-                    identifier_hash,
-                    payload={"retry_after": retry},
+                    "login_attempt",
+                    "protected",
+                    payload={"retry_after": retry, "dimensions": len(active_blocks)},
                 )
                 return None, retry
-            if state["failures"] >= max_attempts:
+            exceeded = [item for item in states if item[3]["failures"] >= max_attempts]
+            if exceeded:
                 blocked_until = now + timedelta(seconds=block_seconds)
-                cursor.execute(
-                    """
-                    UPDATE synergia.identity_login_attempts
-                    SET blocked_until = %s
-                    WHERE id = (
-                        SELECT id FROM synergia.identity_login_attempts
-                        WHERE identifier_hash = %s AND succeeded = false
-                        ORDER BY attempted_at DESC, id DESC LIMIT 1
+                for column, value, _entity_type, _state in exceeded:
+                    self._block_login_dimension(
+                        cursor, column, value, blocked_until
                     )
-                    """,
-                    (blocked_until, identifier_hash),
-                )
                 self._event(
                     cursor,
                     "auth.login_rate_limited",
-                    "login_identifier",
-                    identifier_hash,
-                    payload={"retry_after": block_seconds},
+                    "login_attempt",
+                    "protected",
+                    payload={"retry_after": block_seconds, "dimensions": len(exceeded)},
                 )
                 return None, block_seconds
             cursor.execute(
