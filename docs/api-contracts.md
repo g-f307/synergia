@@ -23,6 +23,11 @@ escopo organizacional a todas as operações existentes será incremental.
 | Método e rota | Resultado | Sucesso |
 | --- | --- | --- |
 | `POST /auth/login` | cria sessão e emite access/refresh | `200` |
+| `GET /me` | consulta identidade e preferências próprias | `200` |
+| `PATCH /me` | atualiza perfil e preferências próprias | `200` |
+| `POST /me/avatar` | valida e grava avatar próprio | `201` |
+| `GET /me/avatar` | baixa avatar próprio após autenticação | `200` |
+| `DELETE /me/avatar` | remove avatar próprio | `200` |
 | `POST /auth/refresh` | rotaciona refresh e renova access | `200` |
 | `POST /auth/logout` | revoga a sessão atual | `200` |
 | `POST /auth/logout-all` | revoga as sessões próprias | `200` |

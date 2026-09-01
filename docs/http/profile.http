@@ -1,0 +1,35 @@
+@api = http://localhost:8000
+@accessToken = substitua-pelo-access-token
+
+### Consultar perfil próprio
+GET {{api}}/me
+Authorization: Bearer {{accessToken}}
+
+### Atualizar preferências
+PATCH {{api}}/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "version": 1,
+  "display_name": "Usuário de demonstração",
+  "locale": "pt-BR",
+  "timezone": "America/Manaus",
+  "notifications": {
+    "email": true,
+    "in_app": true
+  }
+}
+
+### Enviar avatar (selecione um arquivo raster no cliente HTTP)
+POST {{api}}/me/avatar
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=avatar
+
+### Baixar avatar
+GET {{api}}/me/avatar
+Authorization: Bearer {{accessToken}}
+
+### Remover avatar
+DELETE {{api}}/me/avatar
+Authorization: Bearer {{accessToken}}

@@ -130,7 +130,8 @@ def render_report(cases: list[MatrixCase]) -> str:
             "",
             "## Evidências automatizadas",
             "",
-            "- `test_security_matrix_persistence.py`: 285 requisições HTTP reais",
+            f"- `test_security_matrix_persistence.py`: {len(cases) * len(ROLES)} "
+            "requisições HTTP reais",
             "  com JWT, papéis e permissões carregados do PostgreSQL;",
             "- `test_security_regression.py`: completude OpenAPI, mass assignment,",
             "  respostas uniformes e ausência de segredos;",
