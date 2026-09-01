@@ -44,6 +44,8 @@ python scripts/validate_project_assets.py
   organizações observadas nas importações;
 - `identity_sessions` e `session_refresh_tokens` mantêm revogação, expiração e
   somente o hash do refresh token;
+- `identity_login_attempts` aplica limitação concorrente usando somente HMACs
+  do identificador e do IP;
 - `identity_users.version` protege atualizações administrativas com concorrência
   otimista;
 - `identity_access_events` preserva um histórico append-only sem exclusão em
@@ -110,6 +112,9 @@ A migration `0015_create_access_control_contracts.sql` publica o catálogo
 de concessões diretas, por papel e por grupo. Os contratos administrativos e a
 regra de proteção do último administrador estão em
 [access-control-administration.md](../docs/access-control-administration.md).
+A migration `0016_create_authentication_attempts.sql` acrescenta a janela
+operacional usada pelo login descrito em
+[authentication.md](../docs/authentication.md).
 
 ## Teste de persistência
 

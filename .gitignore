@@ -8,3 +8,4 @@ backend/reports/
 artifacts/synthetic/
 .DS_Store
 Thumbs.db
+docs/GUIA_GITFLOW_AGENTES.md

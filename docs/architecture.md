@@ -59,8 +59,9 @@ camada descrita em [upload-security.md](upload-security.md).
 Os contratos OpenAPI são gerados pela aplicação em `/openapi.json`. Detalhes de
 cada etapa estão em [normalization.md](normalization.md),
 [consolidation.md](consolidation.md) e [business-rules.md](business-rules.md).
-A estratégia futura e desacoplada de autenticação está no
-[ADR de identidade](adr/0001-identity-strategy.md), e as ações privadas estão na
+A estratégia desacoplada de autenticação está no
+[ADR de identidade](adr/0001-identity-strategy.md), sua implementação de sessão
+está em [autenticação](authentication.md), e as ações privadas estão na
 [matriz de acesso](access-control-matrix.md). A fundação administrativa desses
 controles está implementada conforme
 [administração de acesso](access-control-administration.md); a aplicação das
@@ -68,12 +69,13 @@ permissões em todas as rotas operacionais continua incremental.
 
 O modelo PostgreSQL que sustenta essa estratégia está descrito em
 [identity-data-model.md](identity-data-model.md). Ele contém usuários, vínculos,
-papéis, permissões, sessões e eventos. Os endpoints administrativos de usuários
-consomem esse núcleo; login e os demais recursos ainda não o utilizam.
+papéis, permissões, sessões e eventos. Os endpoints administrativos e a
+autenticação local restrita consomem esse núcleo; o adaptador corporativo ainda
+não está definido.
 
 Os endpoints administrativos agora consomem esse modelo conforme
-[user-administration.md](user-administration.md). A autenticacao permanece em
-uma camada futura. O adaptador temporario de cabecalho e desabilitado por padrao,
+[user-administration.md](user-administration.md). O adaptador temporario de
+cabecalho e desabilitado por padrao,
 so pode ser ativado em desenvolvimento, teste ou homologacao e permanece
 bloqueado em producao; nesses ambientes restritos, o backend ainda valida
 `admin` ou `access.admin` no PostgreSQL.
@@ -139,7 +141,7 @@ correção documental.
 
 ## Limites da Etapa 0
 
-Não fazem parte da arquitetura entregue autenticação, autorização, notificações,
-integrações RPA, filas distribuídas ou decisões autônomas. O motor atual
+Não fazem parte da arquitetura entregue a aplicação geral de autorização,
+notificações, integrações RPA, filas distribuídas ou decisões autônomas. O motor atual
 classifica evidências, mas não libera materiais nem decide em nome das áreas
 responsáveis.

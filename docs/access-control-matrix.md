@@ -3,9 +3,10 @@
 Esta matriz especifica a política-alvo da Etapa 2. O catálogo, os papéis, as
 associações e a consulta de permissões efetivas estão implementados pela camada
 administrativa descrita em
-[administração de acesso](access-control-administration.md). Login, tokens,
-telas e a aplicação da matriz em todas as rotas operacionais permanecem
-incrementais e não devem ser presumidos a partir deste documento.
+[administração de acesso](access-control-administration.md). Login, tokens e
+sessões estão implementados conforme [autenticação](authentication.md). Telas e
+a aplicação da matriz em todas as rotas operacionais permanecem incrementais e
+não devem ser presumidos a partir deste documento.
 
 A estratégia de identidade, sessão e troca de provedor está em
 [ADR 0001](adr/0001-identity-strategy.md). O backend deverá autorizar a ação,
@@ -70,6 +71,8 @@ técnica também dependerá da política de rede da TI.
 
 | Método e rota | Ação | Recurso | Escopo | Papéis autorizados |
 | --- | --- | --- | --- | --- |
+| `POST /auth/logout` | `session.revoke.own` | sessão atual | `own` | admin, gestor, analista, operador, consulta |
+| `POST /auth/logout-all` | `session.revoke.own` | sessões próprias | `own` | admin, gestor, analista, operador, consulta |
 | `POST /imports` | `import.create` | importação | `org` | gestor, operador |
 | `GET /imports/{execution_id}` | `import.read` | importação | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/inspections` | `import.read` | inspeções | `org` | gestor, analista, operador |
@@ -126,7 +129,8 @@ técnica também dependerá da política de rede da TI.
 | `GET /admin/access/associations` | `access.admin` | associações de acesso | global | admin |
 | `GET /admin/access/users/{user_id}/effective-permissions` | `access.admin` | permissões efetivas | global/org | admin |
 
-`GET /health` permanece público e não retorna dados operacionais. Upload é
+`GET /health`, `POST /auth/login` e `POST /auth/refresh` permanecem públicos e
+não retornam dados operacionais sem validar sua própria credencial. Upload é
 restrito a `import.create`; reprocessamento a `execution.reprocess`; downloads e
 futuras exportações às ações `artifact.export` e `report.export`;
 administração a `access.admin`.
