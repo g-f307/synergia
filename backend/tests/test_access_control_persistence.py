@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import psycopg
@@ -10,6 +11,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 pytestmark = pytest.mark.integration
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _bootstrap(database_url: str, suffix: str) -> dict[str, UUID]:
@@ -402,5 +405,93 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
                 (ids["actor"],),
             ).fetchall()
             assert len(events) >= 8
+            group_update = connection.execute(
+                """
+                SELECT payload
+                FROM synergia.identity_access_events
+                WHERE actor_user_id = %s
+                  AND event_key = 'access.group_updated'
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (ids["actor"],),
+            ).fetchone()[0]
+            assert group_update["before"]["group_name"] == f"Quality {suffix}"
+            assert group_update["after"]["group_name"] == (
+                f"Quality Updated {suffix}"
+            )
+            assert group_update["before"]["version"] < group_update["after"]["version"]
+
+            scoped_event = connection.execute(
+                """
+                SELECT organization_id, payload
+                FROM synergia.identity_access_events
+                WHERE actor_user_id = %s
+                  AND event_key = 'access.association_granted'
+                  AND organization_id = %s
+                ORDER BY id
+                LIMIT 1
+                """,
+                (ids["actor"], ids["organization"]),
+            ).fetchone()
+            assert scoped_event[0] == ids["organization"]
+            assert scoped_event[1]["change"] == "granted"
     finally:
         _cleanup(database_url, ids)
+
+
+def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    permission_key = f"legacy_{uuid4().hex[:10]}.read"
+    rollback_sql = (
+        ROOT / "database/rollbacks/0015_create_access_control_contracts.down.sql"
+    ).read_text(encoding="utf-8")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        try:
+            cursor.execute(
+                """
+                INSERT INTO synergia.permissions (
+                    permission_key, resource_type, description,
+                    catalog_version, is_reserved, preexisting_in_0015
+                ) VALUES (
+                    %s, 'legacy', 'Pre-migration permission', '1.0.0', false, true
+                )
+                RETURNING id
+                """,
+                (permission_key,),
+            )
+            permission_id = cursor.fetchone()[0]
+            cursor.execute(
+                "SELECT id FROM synergia.roles WHERE normalized_key = 'admin'"
+            )
+            role_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.role_permissions (
+                    role_id, permission_id, preexisting_in_0015
+                ) VALUES (%s, %s, true)
+                RETURNING granted_by_user_id, granted_at
+                """,
+                (role_id, permission_id),
+            )
+            _, granted_at = cursor.fetchone()
+
+            cursor.execute(rollback_sql, prepare=False)
+
+            cursor.execute(
+                "SELECT permission_key FROM synergia.permissions WHERE id = %s",
+                (permission_id,),
+            )
+            assert cursor.fetchone()[0] == permission_key
+            cursor.execute(
+                """
+                SELECT granted_at
+                FROM synergia.role_permissions
+                WHERE role_id = %s AND permission_id = %s
+                """,
+                (role_id, permission_id),
+            )
+            assert cursor.fetchone()[0] == granted_at
+        finally:
+            connection.rollback()
