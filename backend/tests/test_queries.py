@@ -166,6 +166,7 @@ class MemoryQueryRepository:
         page: int,
         page_size: int,
         sort: str,
+        organization_ids=None,
     ) -> tuple[list[dict], int]:
         items = [
             item
@@ -204,6 +205,7 @@ class MemoryQueryRepository:
         page: int,
         page_size: int,
         sort: str,
+        organization_ids=None,
     ) -> tuple[list[dict], int]:
         items = [
             item
@@ -256,6 +258,7 @@ class MemoryQueryRepository:
         request_key: str,
         pipeline_version: str,
         rule_catalog_version: str,
+        actor=None,
     ) -> dict | None:
         original = self.executions.get(execution_id)
         if original is None:
@@ -328,7 +331,7 @@ class MemoryQueryRepository:
         self.reprocessing_requests[fingerprint] = deepcopy(result)
         return result
 
-    def indicators(self) -> dict:
+    def indicators(self, organization_ids=None) -> dict:
         return {
             "executions": {"completed": 1},
             "workorders": {"total": 1, "partially_released": 1},

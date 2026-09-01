@@ -139,7 +139,9 @@ def test_access_token_rejects_invalid_claims(mutation, error) -> None:
 def test_access_token_rejects_tampering_algorithm_and_missing_claim() -> None:
     codec = TokenCodec(config(), lambda: NOW)
     valid, _ = codec.issue_access(USER_ID, SESSION_ID)
-    tampered = valid[:-1] + ("a" if valid[-1] != "a" else "b")
+    segments = valid.split(".")
+    segments[1] = ("a" if segments[1][0] != "a" else "b") + segments[1][1:]
+    tampered = ".".join(segments)
     wrong_algorithm = jwt.encode(
         {
             "iss": "synergia-test", "aud": "synergia-api-test",
