@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Query, status
 from psycopg import errors
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.authorization import ActorContext as Actor
 from app.authorization import (
@@ -60,7 +60,11 @@ def _audit_snapshot(row: dict, *fields: str) -> dict:
     }
 
 
-class ReasonRequest(BaseModel):
+class StrictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReasonRequest(StrictRequest):
     reason: str = Field(min_length=3, max_length=500)
     organization_id: UUID | None = None
 
@@ -77,7 +81,7 @@ class VersionedReason(ReasonRequest):
     version: int = Field(ge=1)
 
 
-class GroupCreate(BaseModel):
+class GroupCreate(StrictRequest):
     group_name: str = Field(min_length=1, max_length=160)
     external_reference: str | None = Field(default=None, max_length=240)
     reason: str = Field(min_length=3, max_length=500)
@@ -88,7 +92,7 @@ class GroupCreate(BaseModel):
         return _strip(value)
 
 
-class GroupUpdate(BaseModel):
+class GroupUpdate(StrictRequest):
     version: int = Field(ge=1)
     group_name: str | None = Field(default=None, min_length=1, max_length=160)
     external_reference: str | None = Field(default=None, max_length=240)
@@ -106,7 +110,7 @@ class GroupUpdate(BaseModel):
         return self
 
 
-class RoleCreate(BaseModel):
+class RoleCreate(StrictRequest):
     role_key: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=500)
     reason: str = Field(min_length=3, max_length=500)
@@ -117,7 +121,7 @@ class RoleCreate(BaseModel):
         return _strip(value)
 
 
-class RoleUpdate(BaseModel):
+class RoleUpdate(StrictRequest):
     version: int = Field(ge=1)
     description: str = Field(min_length=1, max_length=500)
     reason: str = Field(min_length=3, max_length=500)

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query, status
 from psycopg import errors
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.authorization import ActorContext as Actor
 from app.authorization import (
@@ -57,7 +57,11 @@ def normalize_email(value: str) -> str:
     return normalized
 
 
-class UserEmailInput(BaseModel):
+class StrictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class UserEmailInput(StrictRequest):
     email: str = Field(min_length=3, max_length=320)
     is_primary: bool = False
     is_verified: bool = False
@@ -68,7 +72,7 @@ class UserEmailInput(BaseModel):
         return normalize_email(value)
 
 
-class UserCreate(BaseModel):
+class UserCreate(StrictRequest):
     display_name: str = Field(min_length=1, max_length=200)
     status: UserCreateStatus = "pending"
     emails: list[UserEmailInput] = Field(min_length=1, max_length=20)
@@ -100,7 +104,7 @@ class UserCreate(BaseModel):
         return self
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(StrictRequest):
     version: int = Field(ge=1)
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     emails: list[UserEmailInput] | None = Field(
@@ -139,7 +143,7 @@ class UserUpdate(BaseModel):
         return self
 
 
-class UserStateChange(BaseModel):
+class UserStateChange(StrictRequest):
     version: int = Field(ge=1)
     reason: str = Field(min_length=3, max_length=500)
 
