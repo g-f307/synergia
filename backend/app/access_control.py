@@ -42,6 +42,14 @@ def _strip(value: str) -> str:
     return normalized
 
 
+def _audit_snapshot(row: dict, *fields: str) -> dict:
+    return {
+        field: value.isoformat() if isinstance(value, datetime) else value
+        for field in fields
+        if (value := row.get(field)) is not None
+    }
+
+
 class ReasonRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=500)
     organization_id: UUID | None = None
@@ -165,6 +173,12 @@ class EffectivePermissionsResponse(BaseModel):
     permissions: list[EffectivePermission]
 
 
+class AssociationResponse(BaseModel):
+    id: UUID | None
+    idempotent: bool
+    kind: AssociationKind
+
+
 class AccessRepository(Protocol):
     def authorize(self, actor_id: UUID) -> None: ...
 
@@ -249,18 +263,20 @@ class PostgresAccessRepository:
         reason: str,
         subject_id: UUID | None = None,
         details: dict | None = None,
+        organization_id: UUID | None = None,
     ) -> None:
         cursor.execute(
             """
             INSERT INTO synergia.identity_access_events (
                 event_key, actor_user_id, subject_user_id,
-                entity_type, entity_id, payload
-            ) VALUES (%s, %s, %s, %s, %s, %s)
+                organization_id, entity_type, entity_id, payload
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 event_key,
                 actor_id,
                 subject_id,
+                organization_id,
                 entity_type,
                 str(entity_id),
                 Jsonb({"reason": reason, **(details or {})}),
@@ -326,6 +342,15 @@ class PostgresAccessRepository:
         try:
             with self._connect() as connection, connection.cursor() as cursor:
                 cursor.execute(
+                    "SELECT * FROM synergia.identity_groups WHERE id = %s FOR UPDATE",
+                    (group_id,),
+                )
+                before = cursor.fetchone()
+                if before is None:
+                    raise ApiError(
+                        404, "access_resource_not_found", "Recurso nao encontrado"
+                    )
+                cursor.execute(
                     """
                     UPDATE synergia.identity_groups
                     SET group_name = COALESCE(%s, group_name),
@@ -349,6 +374,14 @@ class PostgresAccessRepository:
                     "identity_group",
                     group_id,
                     payload.reason,
+                    details={
+                        "before": _audit_snapshot(
+                            before, "group_name", "external_reference", "version"
+                        ),
+                        "after": _audit_snapshot(
+                            result, "group_name", "external_reference", "version"
+                        ),
+                    },
                 )
                 connection.commit()
                 return result
@@ -374,6 +407,15 @@ class PostgresAccessRepository:
             if not active:
                 cursor.execute(
                     "SELECT pg_advisory_xact_lock(%s)", (LAST_ACTIVE_ADMIN_LOCK_ID,)
+                )
+            cursor.execute(
+                "SELECT * FROM synergia.identity_groups WHERE id = %s FOR UPDATE",
+                (group_id,),
+            )
+            before = cursor.fetchone()
+            if before is None:
+                raise ApiError(
+                    404, "access_resource_not_found", "Recurso nao encontrado"
                 )
             cursor.execute(
                 """
@@ -402,6 +444,14 @@ class PostgresAccessRepository:
                 "identity_group",
                 group_id,
                 payload.reason,
+                details={
+                    "before": _audit_snapshot(
+                        before, "is_active", "deactivated_at", "version"
+                    ),
+                    "after": _audit_snapshot(
+                        result, "is_active", "deactivated_at", "version"
+                    ),
+                },
             )
             connection.commit()
             return result
@@ -448,6 +498,14 @@ class PostgresAccessRepository:
     def update_role(self, role_id: UUID, payload: RoleUpdate, actor_id: UUID) -> dict:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
+                "SELECT * FROM synergia.roles WHERE id = %s FOR UPDATE", (role_id,)
+            )
+            before = cursor.fetchone()
+            if before is None:
+                raise ApiError(
+                    404, "access_resource_not_found", "Recurso nao encontrado"
+                )
+            cursor.execute(
                 """
                 UPDATE synergia.roles SET description = %s
                 WHERE id = %s AND version = %s RETURNING *
@@ -458,7 +516,16 @@ class PostgresAccessRepository:
             if result is None:
                 self._version_or_not_found(cursor, "roles", role_id)
             self._event(
-                cursor, "access.role_updated", actor_id, "role", role_id, payload.reason
+                cursor,
+                "access.role_updated",
+                actor_id,
+                "role",
+                role_id,
+                payload.reason,
+                details={
+                    "before": _audit_snapshot(before, "description", "version"),
+                    "after": _audit_snapshot(result, "description", "version"),
+                },
             )
             connection.commit()
             return result
@@ -470,6 +537,14 @@ class PostgresAccessRepository:
             if not active:
                 cursor.execute(
                     "SELECT pg_advisory_xact_lock(%s)", (LAST_ACTIVE_ADMIN_LOCK_ID,)
+                )
+            cursor.execute(
+                "SELECT * FROM synergia.roles WHERE id = %s FOR UPDATE", (role_id,)
+            )
+            before = cursor.fetchone()
+            if before is None:
+                raise ApiError(
+                    404, "access_resource_not_found", "Recurso nao encontrado"
                 )
             cursor.execute(
                 """
@@ -498,6 +573,14 @@ class PostgresAccessRepository:
                 "role",
                 role_id,
                 payload.reason,
+                details={
+                    "before": _audit_snapshot(
+                        before, "is_active", "deactivated_at", "version"
+                    ),
+                    "after": _audit_snapshot(
+                        result, "is_active", "deactivated_at", "version"
+                    ),
+                },
             )
             connection.commit()
             return result
@@ -652,10 +735,9 @@ class PostgresAccessRepository:
                     {
                         "left_id": str(left_id),
                         "right_id": str(right_id),
-                        "organization_id": str(organization_id)
-                        if organization_id
-                        else None,
+                        "change": "granted",
                     },
+                    organization_id,
                 )
                 connection.commit()
                 return {"id": association_id, "idempotent": False, "kind": kind}
@@ -714,10 +796,9 @@ class PostgresAccessRepository:
                 {
                     "left_id": str(left_id),
                     "right_id": str(right_id),
-                    "organization_id": str(organization_id)
-                    if organization_id
-                    else None,
+                    "change": "revoked",
                 },
+                organization_id,
             )
             connection.commit()
             return {"id": result["id"], "idempotent": False, "kind": kind}
@@ -1027,8 +1108,20 @@ for _kind, _path in {
     "user_permission": "/users/{left_id}/permissions/{right_id}",
 }.items():
     _grant, _revoke = _association_path(_kind)
-    router.add_api_route(_path, _grant, methods=["PUT"], responses=ERROR_RESPONSES)
-    router.add_api_route(_path, _revoke, methods=["DELETE"], responses=ERROR_RESPONSES)
+    router.add_api_route(
+        _path,
+        _grant,
+        methods=["PUT"],
+        response_model=AssociationResponse,
+        responses=ERROR_RESPONSES,
+    )
+    router.add_api_route(
+        _path,
+        _revoke,
+        methods=["DELETE"],
+        response_model=AssociationResponse,
+        responses=ERROR_RESPONSES,
+    )
 
 
 @router.get("/associations", response_model=Page, responses=ERROR_RESPONSES)
