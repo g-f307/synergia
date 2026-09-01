@@ -6,7 +6,7 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 
 ## Estrutura
 
-- [`frontend-angular/`](frontend-angular/): aplicação web Angular;
+- [`web/`](web/): aplicação web;
 - [`backend/`](backend/): API FastAPI;
 - [`database/`](database/): migrations e documentação do modelo persistente;
 - [`data/synthetic/`](data/synthetic/): massas sintéticas controladas;
@@ -76,10 +76,10 @@ cd backend
 pytest
 ```
 
-## Frontend Angular
+## Aplicação web
 
 ```bash
-cd frontend-angular
+cd web
 npm ci
 npm start
 ```
@@ -88,14 +88,14 @@ O frontend ficará disponível em `http://localhost:4200` e consultará o endpoi
 de saúde da API.
 
 O endereço da API utilizado pelo Angular é definido em
-`frontend-angular/src/environments/environment.ts`. O `.env` da raiz é
+`web/src/environments/environment.ts`. O `.env` da raiz é
 reservado aos serviços de backend e infraestrutura; aplicações Angular não
 carregam esse arquivo automaticamente.
 
 Build e testes:
 
 ```bash
-cd frontend-angular
+cd web
 npm run build
 npm test -- --watch=false
 ```

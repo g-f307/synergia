@@ -1,4 +1,4 @@
-# Frontend Angular
+# Aplicação web do SYNERGIA
 
 Frontend oficial do SYNERGIA, implementado em Angular 20. Os contratos são
 consumidos exclusivamente pela API FastAPI; esta aplicação não acessa o banco
@@ -29,7 +29,7 @@ npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 npm run build
 ```
 
-O build de produção é gerado em `dist/frontend-angular/`. A CI usa Node.js
+O build de produção é gerado em `dist/synergia-web/`. A CI usa Node.js
 22.12 e executa os três comandos acima em todo PR para `main`.
 
 ## Limites atuais

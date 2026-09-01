@@ -29,7 +29,7 @@ uma execução.
 
 | Camada | Responsabilidade | Referência principal |
 | --- | --- | --- |
-| Angular 20 | aplicação web e consumo da API | `frontend-angular/` |
+| Angular 20 | aplicação web e consumo da API | `web/` |
 | FastAPI | importação, consultas, validação HTTP e OpenAPI | `backend/app/` |
 | Serviços de domínio | estados, normalização, consolidação e regras determinísticas | `backend/app/execution.py`, `normalization.py`, `consolidation.py` e `business_rules.py` |
 | PostgreSQL 16 | execuções, fontes, resultados, pendências e auditoria | `database/migrations/` |
@@ -37,9 +37,9 @@ uma execução.
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |
 | Dados sintéticos | cenários reproduzíveis sem dados reais | `data/synthetic/` |
 
-### Frontend Angular
+### Aplicação web
 
-O código oficial está em `frontend-angular/`, com configuração de ambiente em
+O código oficial está em `web/`, com configuração de ambiente em
 `src/environments/environment.ts`. A aplicação usa os contratos HTTP descritos
 em [api-contracts.md](api-contracts.md). Alterações visuais no protótipo não são
 automaticamente alterações no Angular e precisam de implementação própria.
@@ -132,7 +132,7 @@ sintéticos.
 
 Em 28 de agosto de 2026, a busca case-insensitive por `React` nos arquivos
 versionados da `main` não encontrou referência arquitetural ativa. Angular está
-registrado no README, no diretório `frontend-angular/`, no build e no job de CI.
+registrado no README, no diretório `web/`, no build e no job de CI.
 
 Se documentos externos ou históricos chamarem o protótipo de React, a
 referência é desatualizada: o protótipo congelado é estático, e a implementação

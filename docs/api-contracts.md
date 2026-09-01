@@ -120,7 +120,7 @@ retornada quando o identificador aparece em mais de uma execução.
 POST /executions/exec-001/reprocess
 Content-Type: application/json
 
-{"technical_origin":"frontend-angular"}
+{"technical_origin":"web"}
 ```
 
 A operação cria uma nova execução `reprocessing`, incrementa `attempt`,
