@@ -24,18 +24,8 @@ def _bootstrap_admin(database_url: str, suffix: str) -> UUID:
             (f"Integration Admin {suffix}",),
         )
         actor_id = cursor.fetchone()[0]
-        cursor.execute(
-            """
-            INSERT INTO synergia.roles (role_key)
-            VALUES (%s) RETURNING id
-            """,
-            (f"admin-{suffix}",),
-        )
+        cursor.execute("SELECT id FROM synergia.roles WHERE normalized_key = 'admin'")
         role_id = cursor.fetchone()[0]
-        cursor.execute(
-            "UPDATE synergia.roles SET role_key = 'admin' WHERE id = %s",
-            (role_id,),
-        )
         cursor.execute(
             """
             INSERT INTO synergia.user_role_assignments (user_id, role_id)
@@ -49,9 +39,7 @@ def _bootstrap_admin(database_url: str, suffix: str) -> UUID:
 
 def _bootstrap_admin_pair(database_url: str, suffix: str) -> tuple[UUID, UUID]:
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO synergia.roles (role_key) VALUES ('admin') RETURNING id"
-        )
+        cursor.execute("SELECT id FROM synergia.roles WHERE normalized_key = 'admin'")
         role_id = cursor.fetchone()[0]
         identifiers = []
         for position in (1, 2):
@@ -110,7 +98,6 @@ def _cleanup(database_url: str, *identifiers: UUID | None) -> None:
                 "DELETE FROM synergia.identity_users WHERE id = ANY(%s)",
                 (persisted_ids,),
             )
-            cursor.execute("DELETE FROM synergia.roles WHERE normalized_key = 'admin'")
         finally:
             cursor.execute(
                 "ALTER TABLE synergia.roles ENABLE TRIGGER trg_roles_no_delete"

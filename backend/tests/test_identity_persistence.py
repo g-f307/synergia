@@ -24,7 +24,7 @@ def _create_user(cursor, suffix: str, status: str = "active") -> str:
     return str(cursor.fetchone()[0])
 
 
-def _create_role(cursor, key: str = "analista") -> str:
+def _create_role(cursor, key: str = "test-analista") -> str:
     cursor.execute(
         "INSERT INTO synergia.roles (role_key) VALUES (%s) RETURNING id;",
         (key,),
@@ -114,16 +114,16 @@ def test_rejects_case_insensitive_duplicate_email_role_and_permission() -> None:
                 )
             cursor.execute("ROLLBACK TO SAVEPOINT duplicate_email")
 
-            _create_role(cursor, "Gestor")
+            _create_role(cursor, "Test-Gestor")
             cursor.execute("SAVEPOINT duplicate_role")
             with pytest.raises(errors.UniqueViolation):
-                _create_role(cursor, " gestor ")
+                _create_role(cursor, " test-gestor ")
             cursor.execute("ROLLBACK TO SAVEPOINT duplicate_role")
 
             cursor.execute(
                 """
                 INSERT INTO synergia.permissions (permission_key, resource_type)
-                VALUES ('artifact.export', 'artifact');
+                VALUES ('test.artifact.export', 'artifact');
                 """
             )
             cursor.execute("SAVEPOINT duplicate_permission")
@@ -132,7 +132,7 @@ def test_rejects_case_insensitive_duplicate_email_role_and_permission() -> None:
                     """
                     INSERT INTO synergia.permissions
                         (permission_key, resource_type)
-                    VALUES ('ARTIFACT.EXPORT', 'artifact');
+                    VALUES ('TEST.ARTIFACT.EXPORT', 'artifact');
                     """
                 )
             cursor.execute("ROLLBACK TO SAVEPOINT duplicate_permission")
@@ -154,7 +154,7 @@ def test_rejects_duplicate_active_group_role_and_permission_associations() -> No
             cursor.execute(
                 """
                 INSERT INTO synergia.permissions (permission_key, resource_type)
-                VALUES ('business.read', 'business') RETURNING id;
+                VALUES ('test.business.read', 'business') RETURNING id;
                 """
             )
             permission_id = str(cursor.fetchone()[0])
@@ -216,7 +216,7 @@ def test_allows_group_and_role_reassignment_after_revocation() -> None:
                 """
             )
             group_id = str(cursor.fetchone()[0])
-            role_id = _create_role(cursor, "consulta")
+            role_id = _create_role(cursor, "test-consulta")
             cursor.execute(
                 """
                 INSERT INTO synergia.iam_organizations (
@@ -377,7 +377,7 @@ def test_enforces_organization_scope_and_global_assignment_uniqueness() -> None:
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         with connection.cursor() as cursor:
             user_id = _create_user(cursor, "scope")
-            role_id = _create_role(cursor, "operador")
+            role_id = _create_role(cursor, "test-operador")
             cursor.execute(
                 """
                 INSERT INTO synergia.iam_organizations (

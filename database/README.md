@@ -105,6 +105,12 @@ erDiagram
 Entidades, invariantes, índices e rollback do núcleo IAM são detalhados em
 [identity-data-model.md](../docs/identity-data-model.md).
 
+A migration `0015_create_access_control_contracts.sql` publica o catálogo
+`1.0.0`, adiciona concorrência otimista a grupos e papéis e preserva o histórico
+de concessões diretas, por papel e por grupo. Os contratos administrativos e a
+regra de proteção do último administrador estão em
+[access-control-administration.md](../docs/access-control-administration.md).
+
 ## Teste de persistência
 
 Os testes de integração aplicam todas as migrations em PostgreSQL 16 e cobrem

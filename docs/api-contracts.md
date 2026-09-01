@@ -36,6 +36,9 @@ integração nem substituem a implementação posterior dos controles.
 | `GET /workorders/{workorder_number}/consolidated-result` | consolidado | `200` |
 | `POST /executions/{execution_id}/reprocess` | cria nova tentativa | `202` |
 | `GET /indicators` | totais operacionais básicos | `200` |
+| `GET /admin/access/permissions` | catálogo versionado de permissões | `200` |
+| `GET /admin/access/associations` | associações administrativas paginadas | `200` |
+| `GET /admin/access/users/{user_id}/effective-permissions` | permissões efetivas e origens | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
 ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,
