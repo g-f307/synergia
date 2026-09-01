@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.authorization import (
     ActorContext,
     require_execution_permission,
+    require_lot_permission,
     require_permission,
     require_resource_permission,
 )
@@ -966,11 +967,10 @@ def get_workorder(
     response_model=LotResponse,
     summary="Consultar um lote",
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(require_permission("business.read"))],
 )
 def get_lot(
     lot_number: str,
-    actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
+    actor: Annotated[ActorContext, Depends(require_lot_permission("business.read"))],
     workorder_number: str | None = Query(
         default=None, description="Restringe o lote a uma Workorder"
     ),

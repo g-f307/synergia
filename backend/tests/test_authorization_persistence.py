@@ -309,7 +309,11 @@ def test_lot_query_uses_the_same_workorder_and_organization_scope(monkeypatch) -
             """,
             (ids["organization_b"], ids["assignment"]),
         )
-    headers = {"Authorization": f"Bearer {_token(config, ids)}"}
+    correlation_id = uuid4()
+    headers = {
+        "Authorization": f"Bearer {_token(config, ids)}",
+        "X-Correlation-ID": str(correlation_id),
+    }
 
     with TestClient(app) as client:
         allowed = client.get(
@@ -326,6 +330,55 @@ def test_lot_query_uses_the_same_workorder_and_organization_scope(monkeypatch) -
         assert crossed.json()["error"]["code"] == "lot_not_found"
         assert "WO-A" not in crossed.text
         assert f"SER-{ids['execution_a']}" not in crossed.text
+
+        missing_correlation_id = uuid4()
+        missing = client.get(
+            "/lots/LOT-INEXISTENTE?workorder_number=WO-INEXISTENTE",
+            headers={
+                **headers,
+                "X-Correlation-ID": str(missing_correlation_id),
+            },
+        )
+        assert missing.status_code == 404
+        assert missing.json()["error"]["code"] == "lot_not_found"
+
+    with psycopg.connect(database_url) as connection:
+        events = connection.execute(
+            """
+            SELECT actor_user_id, session_id, correlation_id, entity_id, payload
+            FROM synergia.identity_access_events
+            WHERE event_key = 'authorization.denied'
+              AND correlation_id = %s
+            """,
+            (correlation_id,),
+        ).fetchall()
+    assert len(events) == 1
+    event = events[0]
+    assert event[:4] == (
+        ids["user"],
+        ids["session"],
+        correlation_id,
+        "/lots/{lot_number}",
+    )
+    assert event[4] == {"method": "GET", "permission": "business.read"}
+    serialized = str(event[4])
+    for sensitive_value in (
+        "LOT-001",
+        "WO-A",
+        str(ids["execution_a"]),
+        str(ids["organization_a"]),
+    ):
+        assert sensitive_value not in serialized
+    with psycopg.connect(database_url) as connection:
+        missing_event_count = connection.execute(
+            """
+            SELECT count(*) FROM synergia.identity_access_events
+            WHERE event_key = 'authorization.denied'
+              AND correlation_id = %s
+            """,
+            (missing_correlation_id,),
+        ).fetchone()[0]
+    assert missing_event_count == 0
 
 
 def test_denial_audit_uses_safe_technical_identity_and_correlation(monkeypatch) -> None:

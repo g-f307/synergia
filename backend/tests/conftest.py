@@ -53,6 +53,11 @@ class PermissiveAuthorizationRepository:
     def resource_organization(self, resource: str, identifier: str) -> UUID:
         return TEST_ORGANIZATION_ID
 
+    def lot_organization(
+        self, lot_number: str, workorder_number: str | None = None
+    ) -> None:
+        return None
+
 
 @pytest.fixture(autouse=True)
 def synthetic_authorization(request):

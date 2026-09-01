@@ -183,6 +183,30 @@ class AuthorizationRepository:
             row = cursor.fetchone()
             return row["organization_id"] if row else None
 
+    def lot_organization(
+        self, lot_number: str, workorder_number: str | None = None
+    ) -> UUID | None:
+        filters = ["l.lot_number = %s"]
+        parameters: list[str] = [lot_number]
+        if workorder_number:
+            filters.append("w.workorder_number = %s")
+            parameters.append(workorder_number)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT e.organization_id
+                FROM synergia.lots l
+                JOIN synergia.workorders w ON w.id = l.workorder_id
+                JOIN synergia.executions e ON e.id = l.execution_id
+                WHERE {" AND ".join(filters)}
+                ORDER BY l.updated_at DESC, l.id DESC
+                LIMIT 1
+                """,
+                parameters,
+            )
+            row = cursor.fetchone()
+            return row["organization_id"] if row else None
+
 
 def get_authorization_repository() -> Generator[AuthorizationRepository, None, None]:
     database_url = os.getenv("DATABASE_URL")
@@ -309,6 +333,35 @@ def require_resource_permission(
                 actor, permission, request, organization_id=organization_id
             )
             raise ApiError(404, "resource_not_found", "Recurso nao encontrado")
+        return actor
+
+    return dependency
+
+
+def require_lot_permission(permission: str) -> Callable:
+    def dependency(
+        lot_number: str,
+        request: Request,
+        actor: CurrentActor,
+        repository: AuthorizationRepo,
+        workorder_number: str | None = None,
+    ) -> ActorContext:
+        if not actor.scopes_for(permission):
+            repository.audit_denial(actor, permission, request)
+            raise ApiError(403, "access_denied", "Acao nao autorizada")
+        organization_id = repository.lot_organization(lot_number, workorder_number)
+        if organization_id is not None and not actor.allows(
+            permission, organization_id
+        ):
+            repository.audit_denial(
+                actor, permission, request, organization_id=organization_id
+            )
+            raise ApiError(
+                404,
+                "lot_not_found",
+                "Lot não encontrado",
+                {"identifier": lot_number},
+            )
         return actor
 
     return dependency
