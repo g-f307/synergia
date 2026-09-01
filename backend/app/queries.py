@@ -15,6 +15,12 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, field_validator
 
+from app.authorization import (
+    ActorContext,
+    require_execution_permission,
+    require_permission,
+    require_resource_permission,
+)
 from app.business_rules import RULE_CATALOG
 from app.errors import ApiError, ErrorResponse
 from app.execution import PIPELINE_VERSION, reprocessing_fingerprint
@@ -249,6 +255,7 @@ class QueryRepository(Protocol):
         page: int,
         page_size: int,
         sort: str,
+        organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]: ...
 
     def get_pending(self, pending_id: int) -> dict | None: ...
@@ -263,6 +270,7 @@ class QueryRepository(Protocol):
         page: int,
         page_size: int,
         sort: str,
+        organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]: ...
 
     def get_consolidated(self, workorder_number: str) -> dict | None: ...
@@ -275,9 +283,10 @@ class QueryRepository(Protocol):
         request_key: str,
         pipeline_version: str,
         rule_catalog_version: str,
+        actor: ActorContext | None = None,
     ) -> dict | None: ...
 
-    def indicators(self) -> dict: ...
+    def indicators(self, organization_ids: frozenset | None = None) -> dict: ...
 
 
 class PostgresQueryRepository:
@@ -472,6 +481,7 @@ class PostgresQueryRepository:
         return """
             FROM synergia.pending_items p
             JOIN synergia.workorders w ON w.id = p.workorder_id
+            JOIN synergia.executions e ON e.id = p.execution_id
             LEFT JOIN synergia.lots l ON l.id = p.lot_id
             LEFT JOIN synergia.serials s ON s.id = p.serial_id
         """
@@ -486,9 +496,13 @@ class PostgresQueryRepository:
         page: int,
         page_size: int,
         sort: str,
+        organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]:
         filters: list[str] = []
         parameters: list[Any] = []
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         if status_filter:
             filters.append("p.status = %s")
             parameters.append(status_filter)
@@ -572,34 +586,38 @@ class PostgresQueryRepository:
         page: int,
         page_size: int,
         sort: str,
+        organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]:
         filters: list[str] = []
         parameters: list[Any] = []
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         for column, value in (
-            ("execution_id", execution_id),
-            ("entity_type", entity_type),
-            ("entity_id", entity_id),
-            ("event_type", event_type),
+            ("a.execution_id", execution_id),
+            ("a.entity_type", entity_type),
+            ("a.entity_id", entity_id),
+            ("a.event_type", event_type),
         ):
             if value:
                 filters.append(f"{column} = %s")
                 parameters.append(value)
         where = f"WHERE {' AND '.join(filters)}" if filters else ""
         order = (
-            "occurred_at ASC, id ASC"
+            "a.occurred_at ASC, a.id ASC"
             if sort == "oldest"
-            else "occurred_at DESC, id DESC"
+            else "a.occurred_at DESC, a.id DESC"
         )
         with self._connect() as connection:
             total = connection.execute(
-                f"SELECT count(*) AS total FROM synergia.audit_events {where}",
+                f"SELECT count(*) AS total FROM synergia.audit_events a JOIN synergia.executions e ON e.id = a.execution_id {where}",
                 parameters,
             ).fetchone()["total"]
             rows = connection.execute(
                 f"""
-                SELECT id, execution_id, entity_type, entity_id, event_type,
-                       payload, occurred_at
-                FROM synergia.audit_events {where}
+                SELECT a.id, a.execution_id, a.entity_type, a.entity_id, a.event_type,
+                       a.payload, a.occurred_at
+                FROM synergia.audit_events a JOIN synergia.executions e ON e.id = a.execution_id {where}
                 ORDER BY {order}
                 LIMIT %s OFFSET %s
                 """,
@@ -705,12 +723,13 @@ class PostgresQueryRepository:
         request_key: str,
         pipeline_version: str,
         rule_catalog_version: str,
+        actor: ActorContext | None = None,
     ) -> dict | None:
         with self._connect() as connection:
             original = connection.execute(
                 """
                 SELECT id, status, COALESCE(reprocessed_from_id, id) AS root_id,
-                       source
+                       source, organization_id
                 FROM synergia.executions
                 WHERE id = %s
                 """,
@@ -771,19 +790,23 @@ class PostgresQueryRepository:
                     (id, status, attempt, reprocessed_from_id, source,
                      actor_type, actor_identifier, pipeline_version,
                      rule_catalog_version, state_changed_by_type,
-                     state_changed_by, state_change_reason)
-                VALUES (%s, 'reprocessing', %s, %s, %s, 'technical', %s,
-                        %s, %s, 'technical', %s, 'reprocessing_requested')
+                     state_changed_by, state_change_reason, organization_id,
+                     initiated_by_user_id, initiated_by_session_id)
+                VALUES (%s, 'reprocessing', %s, %s, %s, 'user', %s,
+                        %s, %s, 'user', %s, 'reprocessing_requested', %s, %s, %s)
                 """,
                 (
                     new_execution_id,
                     attempt,
                     original["root_id"],
                     original["source"],
-                    technical_origin,
+                    str(actor.user_id) if actor else technical_origin,
                     pipeline_version,
                     rule_catalog_version,
-                    technical_origin,
+                    str(actor.user_id) if actor else technical_origin,
+                    original["organization_id"],
+                    actor.user_id if actor else None,
+                    actor.session_id if actor else None,
                 ),
             )
             connection.execute(
@@ -821,26 +844,34 @@ class PostgresQueryRepository:
             "idempotent_replay": False,
         }
 
-    def indicators(self) -> dict:
+    def indicators(self, organization_ids: frozenset | None = None) -> dict:
+        scope = "" if organization_ids is None else " WHERE organization_id = ANY(%s)"
+        parameters = () if organization_ids is None else (list(organization_ids),)
         with self._connect() as connection:
             execution_rows = connection.execute(
                 "SELECT status, count(*) AS total "
-                "FROM synergia.executions GROUP BY status"
+                f"FROM synergia.executions{scope} GROUP BY status",
+                parameters,
             ).fetchall()
             workorder = connection.execute(
-                """
+                f"""
                 SELECT count(*) AS total,
                        count(*) FILTER (WHERE partially_released) AS partial,
                        COALESCE(sum(planned_quantity), 0) AS planned,
                        COALESCE(sum(produced_quantity), 0) AS produced,
                        COALESCE(sum(received_quantity), 0) AS received,
                        COALESCE(sum(released_quantity), 0) AS released
-                FROM synergia.workorders
-                """
+                FROM synergia.workorders w
+                JOIN synergia.executions e ON e.id = w.execution_id
+                {'' if organization_ids is None else 'WHERE e.organization_id = ANY(%s)'}
+                """,
+                parameters,
             ).fetchone()
             pending_rows = connection.execute(
-                "SELECT status, count(*) AS total "
-                "FROM synergia.pending_items GROUP BY status"
+                "SELECT p.status, count(*) AS total "
+                "FROM synergia.pending_items p JOIN synergia.executions e ON e.id = p.execution_id "
+                f"{'' if organization_ids is None else 'WHERE e.organization_id = ANY(%s) '}GROUP BY p.status",
+                parameters,
             ).fetchall()
         return {
             "executions": {row["status"]: row["total"] for row in execution_rows},
@@ -888,6 +919,7 @@ def _pagination(page: int, page_size: int, total: int) -> Pagination:
     response_model=ExecutionResponse,
     summary="Consultar uma execução",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_execution_permission("execution.read"))],
 )
 def get_execution(
     execution_id: str,
@@ -904,6 +936,7 @@ def get_execution(
     response_model=WorkorderResponse,
     summary="Consultar uma Workorder consolidada",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_resource_permission("business.read", "workorder", "workorder_number"))],
 )
 def get_workorder(
     workorder_number: str,
@@ -923,6 +956,7 @@ def get_workorder(
     response_model=LotResponse,
     summary="Consultar um lote",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_resource_permission("business.read", "lot", "lot_number"))],
 )
 def get_lot(
     lot_number: str,
@@ -942,6 +976,7 @@ def get_lot(
     response_model=SerialResponse,
     summary="Consultar um serial",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_resource_permission("business.read", "serial", "serial_number"))],
 )
 def get_serial(
     serial_number: str,
@@ -958,8 +993,10 @@ def get_serial(
     response_model=PendingPage,
     summary="Listar pendências com filtros e paginação",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_permission("pending.read"))],
 )
 def list_pending_items(
+    actor: Annotated[ActorContext, Depends(require_permission("pending.read"))],
     status_filter: Annotated[
         Literal["open", "resolved", "cancelled"] | None,
         Query(alias="status", description="Estado da pendência"),
@@ -980,6 +1017,7 @@ def list_pending_items(
         page=page,
         page_size=page_size,
         sort=sort,
+        organization_ids=actor.scope_filter("pending.read"),
     )
     return PendingPage(
         items=[PendingItemResponse.model_validate(item) for item in items],
@@ -993,6 +1031,7 @@ def list_pending_items(
     response_model=PendingItemResponse,
     summary="Consultar o detalhe de uma pendência",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_resource_permission("pending.read", "pending", "pending_id"))],
 )
 def get_pending_item(
     pending_id: int,
@@ -1009,8 +1048,10 @@ def get_pending_item(
     response_model=HistoryPage,
     summary="Consultar histórico auditável",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_permission("audit.read"))],
 )
 def list_history(
+    actor: Annotated[ActorContext, Depends(require_permission("audit.read"))],
     execution_id: str | None = Query(default=None),
     entity_type: str | None = Query(default=None),
     entity_id: str | None = Query(default=None),
@@ -1028,6 +1069,7 @@ def list_history(
         page=page,
         page_size=page_size,
         sort=sort,
+        organization_ids=actor.scope_filter("audit.read"),
     )
     return HistoryPage(
         items=[HistoryEventResponse.model_validate(item) for item in items],
@@ -1041,6 +1083,7 @@ def list_history(
     response_model=ConsolidatedResultResponse,
     summary="Consultar o resultado consolidado de uma Workorder",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_resource_permission("business.read", "workorder", "workorder_number"))],
 )
 def get_consolidated_result(
     workorder_number: str,
@@ -1058,10 +1101,14 @@ def get_consolidated_result(
     status_code=status.HTTP_202_ACCEPTED,
     summary="Solicitar reprocessamento sem alterar a execução anterior",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_execution_permission("execution.reprocess"))],
 )
 def request_reprocessing(
     execution_id: str,
     request: ReprocessRequest,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("execution.reprocess"))
+    ],
     repository: QueryRepository = Depends(get_query_repository),
 ) -> ReprocessResponse:
     try:
@@ -1072,6 +1119,7 @@ def request_reprocessing(
             request.idempotency_key or request.technical_origin,
             request.pipeline_version,
             request.rule_catalog_version,
+            actor,
         )
     except ReprocessingConflict as exc:
         raise ApiError(
@@ -1090,8 +1138,12 @@ def request_reprocessing(
     response_model=IndicatorsResponse,
     summary="Consultar indicadores operacionais básicos",
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(require_permission("dashboard.read"))],
 )
 def get_indicators(
+    actor: Annotated[ActorContext, Depends(require_permission("dashboard.read"))],
     repository: QueryRepository = Depends(get_query_repository),
 ) -> IndicatorsResponse:
-    return IndicatorsResponse.model_validate(repository.indicators())
+    return IndicatorsResponse.model_validate(
+        repository.indicators(actor.scope_filter("dashboard.read"))
+    )

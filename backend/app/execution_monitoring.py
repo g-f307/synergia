@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
+from app.authorization import require_execution_permission
 from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(prefix="/executions", tags=["execution-monitoring"])
@@ -319,7 +320,8 @@ def _page(model, items: list[dict], page: int, page_size: int, total: int, sort:
 
 
 @router.get(
-    "/{execution_id}/divergences", response_model=DivergencePage, responses=ERRORS
+    "/{execution_id}/divergences", response_model=DivergencePage, responses=ERRORS,
+    dependencies=[Depends(require_execution_permission("artifact.read"))],
 )
 def list_divergences(
     execution_id: str,
@@ -367,6 +369,7 @@ def list_divergences(
     "/{execution_id}/classifications",
     response_model=ClassificationPage,
     responses=ERRORS,
+    dependencies=[Depends(require_execution_permission("execution.read"))],
 )
 def list_classifications(
     execution_id: str,
@@ -386,6 +389,7 @@ def list_classifications(
     "/{execution_id}/pending-items",
     response_model=PendingPage,
     responses=ERRORS,
+    dependencies=[Depends(require_execution_permission("execution.read"))],
 )
 def list_pending(
     execution_id: str,
@@ -401,7 +405,10 @@ def list_pending(
     return _page(PendingPage, items, page, page_size, total, sort)
 
 
-@router.get("/{execution_id}/evidences", response_model=EvidencePage, responses=ERRORS)
+@router.get(
+    "/{execution_id}/evidences", response_model=EvidencePage, responses=ERRORS,
+    dependencies=[Depends(require_execution_permission("artifact.read"))],
+)
 def list_evidences(
     execution_id: str,
     repository: Repository,
@@ -420,6 +427,7 @@ def list_evidences(
     "/{execution_id}/evidences/{evidence_id}/download",
     responses=ERRORS,
     response_class=FileResponse,
+    dependencies=[Depends(require_execution_permission("artifact.export"))],
 )
 def download_evidence(
     execution_id: str, evidence_id: int, repository: Repository
