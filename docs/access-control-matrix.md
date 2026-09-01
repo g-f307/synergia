@@ -91,6 +91,40 @@ técnica também dependerá da política de rede da TI.
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/evidences` | `artifact.read` | metadados de evidência | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/evidences/{evidence_id}/download` | `artifact.export` | arquivo de evidência | `org` | gestor, analista |
+| `POST /admin/users` | `access.admin` | usuário | global | admin |
+| `GET /admin/users` | `access.admin` | usuários | global | admin |
+| `GET /admin/users/{user_id}` | `access.admin` | usuário | global | admin |
+| `PATCH /admin/users/{user_id}` | `access.admin` | usuário | global | admin |
+| `POST /admin/users/{user_id}/deactivate` | `access.admin` | usuário | global | admin |
+| `POST /admin/users/{user_id}/reactivate` | `access.admin` | usuário | global | admin |
+| `POST /admin/users/{user_id}/block` | `access.admin` | usuário | global | admin |
+| `POST /admin/users/{user_id}/unblock` | `access.admin` | usuário | global | admin |
+| `DELETE /admin/users/{user_id}` | `access.admin` | usuário | global | admin |
+| `POST /admin/access/groups` | `access.admin` | grupo | global | admin |
+| `GET /admin/access/groups` | `access.admin` | grupos | global | admin |
+| `GET /admin/access/groups/{group_id}` | `access.admin` | grupo | global | admin |
+| `PATCH /admin/access/groups/{group_id}` | `access.admin` | grupo | global | admin |
+| `POST /admin/access/groups/{group_id}/deactivate` | `access.admin` | grupo | global | admin |
+| `POST /admin/access/groups/{group_id}/activate` | `access.admin` | grupo | global | admin |
+| `POST /admin/access/roles` | `access.admin` | papel | global | admin |
+| `GET /admin/access/roles` | `access.admin` | papéis | global | admin |
+| `GET /admin/access/roles/{role_id}` | `access.admin` | papel | global | admin |
+| `PATCH /admin/access/roles/{role_id}` | `access.admin` | papel | global | admin |
+| `POST /admin/access/roles/{role_id}/deactivate` | `access.admin` | papel | global | admin |
+| `POST /admin/access/roles/{role_id}/activate` | `access.admin` | papel | global | admin |
+| `GET /admin/access/permissions` | `access.admin` | catálogo de permissões | global | admin |
+| `PUT /admin/access/users/{left_id}/groups/{right_id}` | `access.admin` | vínculo usuário-grupo | global | admin |
+| `DELETE /admin/access/users/{left_id}/groups/{right_id}` | `access.admin` | vínculo usuário-grupo | global | admin |
+| `PUT /admin/access/users/{left_id}/roles/{right_id}` | `access.admin` | vínculo usuário-papel | global/org | admin |
+| `DELETE /admin/access/users/{left_id}/roles/{right_id}` | `access.admin` | vínculo usuário-papel | global/org | admin |
+| `PUT /admin/access/roles/{left_id}/permissions/{right_id}` | `access.admin` | vínculo papel-permissão | global | admin |
+| `DELETE /admin/access/roles/{left_id}/permissions/{right_id}` | `access.admin` | vínculo papel-permissão | global | admin |
+| `PUT /admin/access/groups/{left_id}/roles/{right_id}` | `access.admin` | vínculo grupo-papel | global/org | admin |
+| `DELETE /admin/access/groups/{left_id}/roles/{right_id}` | `access.admin` | vínculo grupo-papel | global/org | admin |
+| `PUT /admin/access/users/{left_id}/permissions/{right_id}` | `access.admin` | concessão direta | global/org | admin |
+| `DELETE /admin/access/users/{left_id}/permissions/{right_id}` | `access.admin` | concessão direta | global/org | admin |
+| `GET /admin/access/associations` | `access.admin` | associações de acesso | global | admin |
+| `GET /admin/access/users/{user_id}/effective-permissions` | `access.admin` | permissões efetivas | global/org | admin |
 
 `GET /health` permanece público e não retorna dados operacionais. Upload é
 restrito a `import.create`; reprocessamento a `execution.reprocess`; downloads e
@@ -145,7 +179,7 @@ na interface administrativa.
 | Verificação obrigatória | Evidência nesta entrega | Resultado |
 | --- | --- | --- |
 | Completude contra OpenAPI | `python scripts/validate_access_matrix.py` compara todas as operações atuais | aprovado quando o comando termina com `OK` |
-| Toda ação privada aparece | inventário contém as 21 operações privadas; saúde é a única exceção pública | coberto |
+| Toda ação privada aparece | inventário acompanha automaticamente as operações privadas; saúde é a única exceção pública | coberto |
 | Conflitos entre papéis | revisão cruzada das colunas e regras acima | sem papel com administração e operação por padrão; combinações críticas explicitamente proibidas |
 | Acesso horizontal | regra `org` em cada rota e comportamento de listas/detalhes | decidido; implementação posterior |
 | Acesso vertical | permissão por ação, negação padrão e papéis não hierárquicos | decidido; implementação posterior |
