@@ -2,7 +2,10 @@ DROP TABLE synergia.user_permission_assignments;
 DROP TABLE synergia.group_role_assignments;
 
 DROP INDEX synergia.uq_role_permissions_active;
-DELETE FROM synergia.role_permissions WHERE NOT preexisting_in_0015;
+DELETE FROM synergia.role_permissions rp
+USING synergia.roles r
+WHERE rp.role_id = r.id
+  AND (NOT rp.preexisting_in_0015 OR NOT r.preexisting_in_0015);
 ALTER TABLE synergia.role_permissions DROP CONSTRAINT role_permissions_pkey;
 ALTER TABLE synergia.role_permissions
     DROP COLUMN id,

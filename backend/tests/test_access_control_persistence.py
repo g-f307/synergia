@@ -473,6 +473,15 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
             migration_role_id = cursor.fetchone()[0]
             cursor.execute(
                 """
+                INSERT INTO synergia.role_permissions (role_id, permission_id)
+                SELECT %s, id
+                FROM synergia.permissions
+                WHERE normalized_key = 'report.export'
+                """,
+                (migration_role_id,),
+            )
+            cursor.execute(
+                """
                 SELECT normalized_key
                 FROM synergia.roles
                 WHERE normalized_key = ANY(%s) AND NOT preexisting_in_0015
@@ -501,17 +510,13 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
             )
             permission_id = cursor.fetchone()[0]
             cursor.execute(
-                "SELECT id FROM synergia.roles WHERE normalized_key = 'admin'"
-            )
-            role_id = cursor.fetchone()[0]
-            cursor.execute(
                 """
                 INSERT INTO synergia.role_permissions (
                     role_id, permission_id, preexisting_in_0015
                 ) VALUES (%s, %s, true)
                 RETURNING granted_by_user_id, granted_at
                 """,
-                (role_id, permission_id),
+                (preexisting_role_id, permission_id),
             )
             _, granted_at = cursor.fetchone()
 
@@ -547,7 +552,7 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
                 FROM synergia.role_permissions
                 WHERE role_id = %s AND permission_id = %s
                 """,
-                (role_id, permission_id),
+                (preexisting_role_id, permission_id),
             )
             assert cursor.fetchone()[0] == granted_at
         finally:
