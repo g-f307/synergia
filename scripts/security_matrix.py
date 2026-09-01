@@ -130,15 +130,16 @@ def render_report(cases: list[MatrixCase]) -> str:
             "",
             "## Evidências automatizadas",
             "",
-            "- `test_security_matrix_persistence.py`: 285 requisições HTTP reais com JWT,",
-            "  papéis e permissões carregados do PostgreSQL;",
+            "- `test_security_matrix_persistence.py`: 285 requisições HTTP reais",
+            "  com JWT, papéis e permissões carregados do PostgreSQL;",
             "- `test_security_regression.py`: completude OpenAPI, mass assignment,",
             "  respostas uniformes e ausência de segredos;",
-            "- `test_auth.py`: tokens expirados, adulterados, emissor, audiência e algoritmo;",
-            "- `test_auth_persistence.py`: replay sequencial e concorrente, revogação,",
-            "  usuário bloqueado e auditoria de autenticação;",
-            "- `test_authorization_persistence.py`: escopo horizontal e vertical, mudança",
-            "  de papel, sessão revogada e auditoria de negações;",
+            "- `test_auth.py`: tokens expirados, adulterados, emissor, audiência",
+            "  e algoritmo inválidos;",
+            "- `test_auth_persistence.py`: replay sequencial e concorrente,",
+            "  revogação, usuário bloqueado e auditoria de autenticação;",
+            "- `test_authorization_persistence.py`: escopo horizontal e vertical,",
+            "  mudança de papel, sessão revogada e auditoria de negações;",
             "- PostgreSQL 16: todos os testes `integration` no job `project-data`.",
             "",
             "A suíte usa somente UUIDs, domínios `.invalid` e dados sintéticos.",
@@ -158,7 +159,12 @@ def main() -> int:
         return 1
     report = render_report(cases)
     if args.check:
-        if not args.output.is_file() or args.output.read_text(encoding="utf-8") != report:
+        current = (
+            args.output.read_text(encoding="utf-8")
+            if args.output.is_file()
+            else None
+        )
+        if current != report:
             print(f"Relatório desatualizado: {args.output}")
             return 1
     else:
