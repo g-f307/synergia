@@ -97,10 +97,11 @@ def test_persists_inspection_source_link_and_safe_audit_payload() -> None:
         ).fetchone()
         events = connection.execute(
             """
-            SELECT event_type, payload
-            FROM synergia.audit_events
-            WHERE execution_id = %s AND entity_type = 'file_inspection'
-            """,
+                SELECT event_type, payload
+                FROM synergia.audit_events
+                WHERE execution_id = %s AND entity_type = 'file_inspection'
+                ORDER BY id
+                """,
             (EXECUTION_ID,),
         ).fetchall()
 

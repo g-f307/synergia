@@ -21,8 +21,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from security_matrix import (  # noqa: E402
     PUBLIC,
-    ROLE_PERMISSIONS,
-    ROLES,
     load_cases,
     openapi_operations,
     render_report,
@@ -40,17 +38,6 @@ def test_every_private_openapi_operation_is_in_the_executable_matrix() -> None:
     assert validate(CASES) == []
     assert operations - PUBLIC == documented
     assert documented <= secured
-
-
-@pytest.mark.parametrize(
-    ("case", "role"),
-    [(case, role) for case in CASES for role in ROLES],
-    ids=[f"{case.method}-{case.path}-{role}" for case in CASES for role in ROLES],
-)
-def test_role_route_method_matrix(case, role) -> None:
-    expected = case.permission in ROLE_PERMISSIONS[role]
-
-    assert (role in case.allowed_roles) is expected
 
 
 def test_committed_security_report_matches_the_executable_matrix() -> None:

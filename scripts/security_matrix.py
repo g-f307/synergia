@@ -18,50 +18,6 @@ PUBLIC = {
     ("POST", "/auth/refresh"),
 }
 ROLES = ("admin", "gestor", "analista", "operador", "consulta")
-ROLE_PERMISSIONS = {
-    "admin": {"audit.read", "access.admin", "session.revoke.own"},
-    "gestor": {
-        "dashboard.read",
-        "execution.read",
-        "business.read",
-        "pending.read",
-        "import.create",
-        "import.read",
-        "artifact.read",
-        "execution.reprocess",
-        "audit.read",
-        "artifact.export",
-        "session.revoke.own",
-    },
-    "analista": {
-        "dashboard.read",
-        "execution.read",
-        "business.read",
-        "pending.read",
-        "import.read",
-        "artifact.read",
-        "audit.read",
-        "artifact.export",
-        "session.revoke.own",
-    },
-    "operador": {
-        "dashboard.read",
-        "execution.read",
-        "business.read",
-        "pending.read",
-        "import.create",
-        "import.read",
-        "artifact.read",
-        "session.revoke.own",
-    },
-    "consulta": {
-        "dashboard.read",
-        "execution.read",
-        "business.read",
-        "pending.read",
-        "session.revoke.own",
-    },
-}
 ROW = re.compile(r"^`(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)`$")
 
 
@@ -144,15 +100,6 @@ def validate(cases: list[MatrixCase]) -> list[str]:
             errors.append(f"{case.identifier}: papéis desconhecidos {sorted(unknown)}")
         if not case.allowed_roles:
             errors.append(f"{case.identifier}: nenhum caso positivo")
-        expected = frozenset(
-            role for role, permissions in ROLE_PERMISSIONS.items()
-            if case.permission in permissions
-        )
-        if case.allowed_roles != expected:
-            errors.append(
-                f"{case.identifier}: papéis {sorted(case.allowed_roles)}; "
-                f"esperado {sorted(expected)} para {case.permission}"
-            )
     return errors
 
 
@@ -183,8 +130,10 @@ def render_report(cases: list[MatrixCase]) -> str:
             "",
             "## Evidências automatizadas",
             "",
-            "- `test_security_regression.py`: completude OpenAPI, matriz por papel,",
-            "  mass assignment, respostas uniformes e ausência de segredos;",
+            "- `test_security_matrix_persistence.py`: 285 requisições HTTP reais com JWT,",
+            "  papéis e permissões carregados do PostgreSQL;",
+            "- `test_security_regression.py`: completude OpenAPI, mass assignment,",
+            "  respostas uniformes e ausência de segredos;",
             "- `test_auth.py`: tokens expirados, adulterados, emissor, audiência e algoritmo;",
             "- `test_auth_persistence.py`: replay sequencial e concorrente, revogação,",
             "  usuário bloqueado e auditoria de autenticação;",

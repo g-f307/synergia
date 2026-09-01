@@ -55,7 +55,7 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - name: Executar lint
-        run: ruff check .
+        run: ruff check . ../scripts
       - name: Executar testes
         run: pytest -q -m "not integration" --junitxml=reports/pytest.xml
       - name: Validar matriz e executar regressão de segurança
