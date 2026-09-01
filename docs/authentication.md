@@ -2,7 +2,7 @@
 
 Esta entrega implementa a sessão interna do SYNERGIA, access tokens JWT,
 refresh tokens opacos de uso único, logout e revogação. A aplicação de RBAC e
-escopo organizacional às rotas operacionais pertence à issue seguinte.
+escopo organizacional está descrita em [autorização](authorization.md).
 
 ## Fronteira de identidade
 

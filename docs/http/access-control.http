@@ -8,39 +8,39 @@
 ### Criar grupo
 POST {{baseUrl}}/admin/access/groups
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {"group_name":"Planejamento","external_reference":"SYN-GRP-PLN","reason":"criacao administrativa"}
 
 ### Listar catalogo inicial
 GET {{baseUrl}}/admin/access/permissions?catalog_version=1.0.0
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 ### Associar usuario ao grupo (repeticao e idempotente)
 PUT {{baseUrl}}/admin/access/users/{{userId}}/groups/{{groupId}}
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {"reason":"entrada na equipe"}
 
 ### Associar papel ao grupo em uma organizacao
 PUT {{baseUrl}}/admin/access/groups/{{groupId}}/roles/{{roleId}}
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {"organization_id":"00000000-0000-0000-0000-000000000006","reason":"responsabilidade operacional"}
 
 ### Consultar permissoes efetivas e suas origens
 GET {{baseUrl}}/admin/access/users/{{userId}}/effective-permissions
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 ### Listar associacoes de forma estavel
 GET {{baseUrl}}/admin/access/associations?page=1&page_size=25
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 ### Revogar associacao (repeticao e idempotente)
 DELETE {{baseUrl}}/admin/access/users/{{userId}}/groups/{{groupId}}
 Content-Type: application/json
-X-Actor-Id: {{actorId}}
+Authorization: Bearer {{accessToken}}
 
 {"reason":"saida da equipe"}
