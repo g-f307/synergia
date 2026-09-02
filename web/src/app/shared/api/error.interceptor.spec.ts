@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { ApiFailure } from './api-error';
 import { apiErrorInterceptor } from './error.interceptor';
+import { I18nService } from '../i18n/i18n.service';
 
 describe('apiErrorInterceptor', () => {
   let http: HttpClient;
@@ -29,5 +30,19 @@ describe('apiErrorInterceptor', () => {
     controller.expectOne('/resource').flush({ message: 'SQL password=/secret' }, { status: 500, statusText: 'Error' });
     expect(failure?.kind).toBe('unavailable');
     expect(failure?.message).not.toContain('SQL');
+  });
+
+  it('localizes safe errors without exposing server-provided messages', () => {
+    TestBed.inject(I18nService).configure('en-US');
+    let failure: ApiFailure | undefined;
+    http.get('/resource').subscribe({ error: (error: ApiFailure) => { failure = error; } });
+    controller.expectOne('/resource').flush(
+      { error: { code: 'invalid_request', message: 'Mensagem fixa do servidor' } },
+      { status: 422, statusText: 'Unprocessable Entity' }
+    );
+
+    expect(failure?.code).toBe('invalid_request');
+    expect(failure?.message).toBe('The operation could not be completed.');
+    expect(failure?.message).not.toContain('servidor');
   });
 });

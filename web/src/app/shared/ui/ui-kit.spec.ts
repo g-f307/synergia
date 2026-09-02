@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ButtonComponent, ConfirmationComponent, FieldComponent, StateComponent } from './ui-kit';
+import { ButtonComponent, ConfirmationComponent, FieldComponent, ModalComponent, StateComponent } from './ui-kit';
 
 describe('StateComponent', () => {
   it('exposes semantic state without relying on color alone', async () => {
@@ -50,5 +50,34 @@ describe('shared controls', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
     buttons[1].click();
     expect(confirmed).toBeTrue();
+  });
+
+  it('traps keyboard focus inside the modal', async () => {
+    await TestBed.configureTestingModule({ imports: [ModalComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ModalComponent);
+    fixture.componentRef.setInput('title', 'Modal sintético');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const dialog = fixture.nativeElement.querySelector('[role=dialog]') as HTMLElement;
+    const close = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    close.focus();
+    close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+
+    expect(document.activeElement).toBe(close);
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('wraps reverse keyboard navigation from the initial dialog focus', async () => {
+    await TestBed.configureTestingModule({ imports: [ModalComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ModalComponent);
+    fixture.componentRef.setInput('title', 'Modal sintético');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const dialog = fixture.nativeElement.querySelector('[role=dialog]') as HTMLElement;
+    const close = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    dialog.focus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
+
+    expect(document.activeElement).toBe(close);
   });
 });

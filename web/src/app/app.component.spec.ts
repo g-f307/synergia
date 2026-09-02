@@ -54,4 +54,19 @@ describe('AppComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Administração');
   });
+
+  it('closes the mobile menu with Escape and restores trigger focus', () => {
+    authenticated.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.menu-button') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(fixture.componentInstance.menuOpen()).toBeFalse();
+    expect(document.activeElement).toBe(button);
+  });
 });
