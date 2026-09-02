@@ -26,6 +26,10 @@ export class SessionService {
     return this.tokenState();
   }
 
+  hasPermission(key: string): boolean {
+    return this.profile()?.permissions.some((permission) => permission.key === key) ?? false;
+  }
+
   login(email: string, password: string): Observable<UserProfile> {
     this.state.set('loading');
     return this.http.post<TokenResponse>(

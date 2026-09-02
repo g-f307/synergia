@@ -1,9 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { SessionService } from '../core/session.service';
+
+const INTERNAL_DESTINATIONS = ['/dashboard', '/imports', '/executions', '/search', '/workorders', '/lots', '/serials', '/pending-items', '/profile', '/admin'];
+export function safeReturnUrl(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/profile';
+  return INTERNAL_DESTINATIONS.some((path) => value === path || value.startsWith(`${path}/`) || value.startsWith(`${path}?`)) ? value : '/profile';
+}
 
 @Component({
   imports: [ReactiveFormsModule],
@@ -32,6 +38,7 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   readonly loading = signal(false);
   readonly error = signal(false);
   readonly form = this.fb.nonNullable.group({
@@ -47,7 +54,7 @@ export class LoginComponent {
     this.session.login(email, password)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl('/profile'),
+        next: () => void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'))),
         error: () => this.error.set(true)
       });
   }
