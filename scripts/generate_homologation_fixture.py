@@ -147,14 +147,41 @@ def generate(output: Path) -> dict:
 
 def validate_manifest(path: Path) -> dict:
     manifest = json.loads(path.read_text(encoding="utf-8"))
+    required = {
+        "version", "seed", "generated_at", "contains_real_data",
+        "sources", "counts", "files",
+    }
+    missing = required - manifest.keys()
+    if missing:
+        raise ValueError(f"Manifesto sem campos obrigatorios: {sorted(missing)}")
     if manifest.get("contains_real_data") is not False:
         raise ValueError("A fixture de homologacao deve declarar dados sinteticos")
-    for item in manifest.get("files", []):
-        content = (path.parent / item["file"]).read_bytes()
+    files = manifest["files"]
+    if not isinstance(files, list) or not files:
+        raise ValueError("Manifesto deve listar ao menos um arquivo")
+    names = [item.get("file") for item in files if isinstance(item, dict)]
+    if len(names) != len(files) or len(names) != len(set(names)):
+        raise ValueError("Manifesto contem nomes ausentes ou duplicados")
+    expected = {"file", "bytes", "sha256"}
+    for item in files:
+        if expected - item.keys():
+            raise ValueError(f"Entrada de arquivo incompleta: {item!r}")
+        relative = Path(item["file"])
+        if relative.is_absolute() or relative.name != item["file"]:
+            raise ValueError(f"Caminho de arquivo invalido: {item['file']}")
+        file_path = path.parent / relative
+        if not file_path.is_file():
+            raise ValueError(f"Arquivo ausente: {item['file']}")
+        content = file_path.read_bytes()
         if len(content) != item["bytes"]:
             raise ValueError(f"Tamanho divergente: {item['file']}")
         if hashlib.sha256(content).hexdigest() != item["sha256"]:
             raise ValueError(f"SHA-256 divergente: {item['file']}")
+    present = {
+        item.name for item in path.parent.iterdir() if item.is_file() and item != path
+    }
+    if present != set(names):
+        raise ValueError("Artefatos da fixture divergem do manifesto")
     return manifest
 
 

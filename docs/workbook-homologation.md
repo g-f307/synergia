@@ -20,6 +20,13 @@ O relatorio local contabilizou 479 linhas: dez datas invalidas e dois lotes
 ausentes foram rejeitados por registro; onze linhas vazias e uma duplicidade
 foram avisos. Nenhum valor de origem e emitido pelo relatorio.
 
+A execucao completa usou um plano local autorizado para homologacao, com
+Workorders pseudonimizadas e correlacao por lote. Esse plano temporario nao
+representa cadastro operacional e nao foi versionado. O resultado sanitizado
+esta em `docs/evidence/workbook-homologation-report.json`: 709 registros lidos,
+697 normalizados, 12 rejeitados, 230 Workorders e 230 lotes consolidados, 174
+classificacoes e 32 pendencias ativas.
+
 ## Decisoes de compatibilidade
 
 1. O leitor procura o primeiro cabecalho reconhecivel em cada aba, sem depender
@@ -50,5 +57,9 @@ Para inspecionar uma copia autorizada sem publicar valores:
 
 ```powershell
 python scripts/homologate_workbook.py $env:REFERENCE_WORKBOOK `
+  --companion-plan $env:REFERENCE_PLAN `
   --output artifacts/workbook-homologation.json
 ```
+
+`REFERENCE_PLAN` deve apontar para o plano autorizado de correlacao usado na
+homologacao. O relatorio nunca inclui os identificadores ou valores das fontes.

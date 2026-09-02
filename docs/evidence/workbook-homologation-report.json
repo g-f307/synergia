@@ -1,0 +1,33 @@
+{
+  "evidence_version": "1.0.0",
+  "contains_source_values": false,
+  "contains_real_identifiers": false,
+  "correlation": {
+    "kind": "authorized_local_homologation_plan",
+    "workorders_pseudonymized": true,
+    "committed": false
+  },
+  "validation": {
+    "rows": 479,
+    "errors": 12,
+    "warnings": 12,
+    "issue_counts": {
+      "duplicate_row": 1,
+      "empty_row": 11,
+      "invalid_date": 10,
+      "required_field": 2
+    }
+  },
+  "pipeline": {
+    "executed": true,
+    "status": "completed_with_errors",
+    "rows_read": 709,
+    "valid_records": 697,
+    "rejected_records": 12,
+    "normalized_records": 697,
+    "consolidated_workorders": 230,
+    "consolidated_lots": 230,
+    "classifications": 174,
+    "active_pending_items": 32
+  }
+}

@@ -91,6 +91,23 @@ def test_xlsx_finds_header_after_preamble_and_preserves_physical_rows(tmp_path):
     assert report["row_count"] == 1
 
 
+def test_xlsx_ignores_recognized_terms_in_preamble(tmp_path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STATUS", "RELATORIO"])
+    sheet.append(["DATA", "PRODUTO", "RESUMO"])
+    sheet.append(["lote_id", "produto", "status"])
+    sheet.append(["0001", "MODEL-A", "approved"])
+    path = tmp_path / "preamble.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    report = validate_file(path, ".xlsx", "GMES/OQC")
+
+    assert report["valid"] is True
+    assert report["row_count"] == 1
+
+
 def test_quality_requires_one_relationship_identifier(tmp_path):
     workbook = Workbook()
     sheet = workbook.active
@@ -103,7 +120,7 @@ def test_quality_requires_one_relationship_identifier(tmp_path):
     report = validate_file(path, ".xlsx", "GMES/OQC")
 
     assert report["blocking"] is True
-    assert any(issue["code"] == "missing_column" for issue in report["issues"])
+    assert any(issue["code"] == "invalid_header" for issue in report["issues"])
 
 
 def test_warning_does_not_block_valid_rows(tmp_path):

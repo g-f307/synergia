@@ -118,11 +118,21 @@ def _header_candidates(source: str | None) -> set[str]:
 def _xlsx_header_index(rows: list[list[Any]], source: str | None) -> int | None:
     """Find the first credible table header and ignore presentation preambles."""
     candidates = _header_candidates(source)
+    schema = SCHEMAS.get(source) if source else None
     for index, row in enumerate(rows):
         normalized = [_header(value) for value in row if value not in (None, "")]
         if len(normalized) < 2 or len(normalized) != len(set(normalized)):
             continue
-        if any(value in candidates for value in normalized):
+        canonical = (
+            [schema.aliases.get(value, value) for value in normalized]
+            if schema
+            else normalized
+        )
+        recognized = {value for value in normalized if value in candidates}
+        has_relationship = any(
+            value in RELATIONSHIP_IDENTIFIERS for value in canonical
+        )
+        if has_relationship and len(recognized) >= 2:
             return index
     return None
 
