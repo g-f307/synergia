@@ -127,6 +127,7 @@ def validate() -> dict:
         if not endpoints:
             raise ValueError(f"Rota ativa sem contrato em {route_id}")
 
+        endpoint_permissions = set()
         for endpoint in endpoints:
             operation = (endpoint.get("method"), endpoint.get("path"))
             if operation not in operations:
@@ -143,6 +144,7 @@ def validate() -> dict:
                     f"Operação sem matriz de acesso em {route_id}: {operation}"
                 )
             expected_permission, expected_scope = expected
+            endpoint_permissions.add(expected_permission)
             if endpoint.get("permission") != expected_permission:
                 raise ValueError(
                     f"Permissão divergente em {route_id}: {operation} "
@@ -154,6 +156,12 @@ def validate() -> dict:
                     f"Escopo divergente em {route_id}: {operation} "
                     f"esperava {expected_scope}, recebeu {route.get('scope')}"
                 )
+        if route.get("permission") not in endpoint_permissions:
+            raise ValueError(
+                f"Permissão principal divergente em {route_id}: "
+                f"{route.get('permission')} não pertence aos contratos "
+                f"{sorted(endpoint_permissions)}"
+            )
 
     if mapped_prototype != PROTOTYPE_PAGES:
         missing = sorted(PROTOTYPE_PAGES - mapped_prototype)

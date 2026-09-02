@@ -76,6 +76,19 @@ def test_web_journey_map_rejects_scope_different_from_matrix(
         validate_web_journey_map.validate()
 
 
+def test_web_journey_map_rejects_primary_permission_outside_contracts(
+    tmp_path, monkeypatch
+) -> None:
+    target = _changed_map(
+        tmp_path,
+        lambda document: document["routes"][1].update(permission="business.read"),
+    )
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(ValueError, match="Permissão principal divergente"):
+        validate_web_journey_map.validate()
+
+
 def test_web_journey_map_rejects_unimplemented_angular_route(
     tmp_path, monkeypatch
 ) -> None:
