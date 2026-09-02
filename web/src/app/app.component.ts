@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
@@ -15,8 +15,12 @@ export class AppComponent {
   readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
+  private readonly mobileQuery = window.matchMedia('(max-width: 48rem)');
+  private readonly syncMobile = (event: MediaQueryListEvent): void => this.isMobile.set(event.matches);
   readonly menuOpen = signal(false);
+  readonly isMobile = signal(this.mobileQuery.matches);
   readonly darkTheme = signal(false);
   readonly items: NavigationItem[] = [
     { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: false },
@@ -27,6 +31,8 @@ export class AppComponent {
   readonly visibleItems = computed(() => this.items.filter((item) => item.implemented && this.session.hasPermission(item.permission)));
 
   constructor() {
+    this.mobileQuery.addEventListener('change', this.syncMobile);
+    this.destroyRef.onDestroy(() => this.mobileQuery.removeEventListener('change', this.syncMobile));
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
       this.menuOpen.set(false);
       setTimeout(() => document.getElementById('main-content')?.focus());

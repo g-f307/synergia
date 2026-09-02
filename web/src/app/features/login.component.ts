@@ -16,6 +16,13 @@ export function safeReturnUrl(value: string | null): string {
   imports: [ReactiveFormsModule],
   template: `
     <section class="card narrow" aria-labelledby="login-title">
+      <div class="login-locale">
+        <label for="login-locale">{{ i18n.t('profile.locale') }}</label>
+        <select id="login-locale" [value]="i18n.locale()" (change)="changeLocale($event)">
+          <option value="pt-BR">PT</option>
+          <option value="en-US">EN</option>
+        </select>
+      </div>
       <p class="eyebrow">{{ i18n.t('auth.eyebrow') }}</p>
       <h1 id="login-title">{{ i18n.t('auth.title') }}</h1>
       <form [formGroup]="form" (ngSubmit)="submit()">
@@ -43,7 +50,16 @@ export function safeReturnUrl(value: string | null): string {
           {{ i18n.t(loading() ? 'auth.submitting' : 'auth.submit') }}
         </button>
       </form>
-    </section>`
+    </section>`,
+  styles: [`
+    .narrow { position: relative; }
+    .login-locale { align-items: center; display: flex; gap: var(--space-2); position: absolute; right: var(--space-4); top: var(--space-4); }
+    .login-locale label { color: var(--color-muted); display: block; font-size: .75rem; font-weight: 600; }
+    .login-locale select { background: transparent; color: var(--color-muted); font-size: .8125rem; min-height: 2rem; padding: var(--space-1) var(--space-2); }
+    @media (max-width: 30rem) {
+      .login-locale { position: static; justify-content: flex-end; }
+    }
+  `]
 })
 export class LoginComponent {
   readonly i18n = inject(I18nService);
@@ -57,6 +73,10 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
   });
+
+  changeLocale(event: Event): void {
+    this.i18n.configure((event.target as HTMLSelectElement).value);
+  }
 
   submit(): void {
     if (this.form.invalid) {

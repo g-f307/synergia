@@ -27,7 +27,7 @@ interface Named {
         <div class="grid">
           <article class="card"><h2>{{ i18n.t('admin.users', { count: i18n.formatNumber(resources.users.total) }) }}</h2>
             @for (item of resources.users.items; track item.id) {
-              <p>{{ item.display_name }} — {{ item.status }}</p>
+              <p>{{ item.display_name }} — {{ userStatus(item.status) }}</p>
             }
           </article>
           <article class="card"><h2>{{ i18n.t('admin.groups', { count: i18n.formatNumber(resources.groups.total) }) }}</h2>
@@ -74,4 +74,14 @@ export class AdminComponent {
     else this.failed.set(true);
     return of(null);
   }));
+
+  userStatus(status?: string): string {
+    const statuses = {
+      pending: 'userStatus.pending',
+      active: 'userStatus.active',
+      blocked: 'userStatus.blocked',
+      inactive: 'userStatus.inactive'
+    } as const;
+    return this.i18n.t(statuses[status as keyof typeof statuses] ?? 'userStatus.unknown');
+  }
 }

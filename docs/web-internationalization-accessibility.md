@@ -8,6 +8,12 @@ perfil. Valores ausentes ou ainda não suportados usam `pt-BR` como fallback
 seguro. A escolha permanece no servidor; o navegador não mantém uma segunda
 fonte de verdade.
 
+Antes da autenticação, a tela de login oferece um seletor de idioma em memória.
+Uma tentativa rejeitada preserva essa escolha para que o erro e uma nova
+tentativa continuem no idioma selecionado. Após autenticação, o locale do
+perfil reassume a autoridade; logout e expiração retornam ao fallback, mantendo
+o seletor disponível para a próxima sessão anônima.
+
 `I18nService` atualiza o atributo `lang` do documento e centraliza textos e
 formatação. Datas e horas usam também o timezone do perfil. Números e
 quantidades usam `Intl`; valores ausentes continuam distintos de zero.

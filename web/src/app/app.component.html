@@ -6,7 +6,9 @@
       <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')"><img src="/assets/logos/logo-horizontal.png" alt="SYNERGIA"></a>
       <div class="account"><span>{{ session.profile()?.display_name }}</span><button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')">◐</button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
     </header>
-    <aside class="sidebar" [class.open]="menuOpen()"><nav id="main-navigation" [attr.aria-label]="i18n.t('accessibility.mainNavigation')">
+    <aside class="sidebar" [class.open]="menuOpen()"
+      [attr.inert]="isMobile() && !menuOpen() ? '' : null"
+      [attr.aria-hidden]="isMobile() && !menuOpen() ? true : null"><nav id="main-navigation" [attr.aria-label]="i18n.t('accessibility.mainNavigation')">
       @for (item of visibleItems(); track item.route) { <a [routerLink]="item.route" routerLinkActive="active"><img [src]="'/assets/icons/' + item.icon" alt="" aria-hidden="true">{{ i18n.t(item.label) }}</a> }
       <a routerLink="/profile" routerLinkActive="active"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true">{{ i18n.t('navigation.profile') }}</a>
       @if (session.isAdministrator()) { <a routerLink="/admin" routerLinkActive="active"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true">{{ i18n.t('navigation.admin') }}</a> }

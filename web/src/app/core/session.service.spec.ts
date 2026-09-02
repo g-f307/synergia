@@ -85,6 +85,18 @@ describe('SessionService', () => {
     expect(document.documentElement.lang).toBe('en-US');
   });
 
+  it('keeps the anonymous locale after rejected credentials', () => {
+    TestBed.inject(I18nService).configure('en-US');
+    service.login('user@example.invalid', 'wrong-password').subscribe({ error: () => undefined });
+    http.expectOne('http://localhost:8000/auth/login').flush(
+      {},
+      { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('anonymous');
+    expect(TestBed.inject(I18nService).locale()).toBe('en-US');
+  });
+
   it('clears local state when refresh expires', () => {
     let refreshed = true;
     service.refresh().subscribe((value) => { refreshed = value; });

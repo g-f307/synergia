@@ -40,7 +40,7 @@ export class SessionService {
       tap((token) => this.acceptToken(token)),
       switchMap(() => this.loadProfile()),
       catchError((error) => {
-        this.clear('anonymous');
+        this.clear('anonymous', false);
         return throwError(() => error);
       })
     );
@@ -119,11 +119,11 @@ export class SessionService {
     );
   }
 
-  clear(state: SessionState = 'expired'): void {
+  clear(state: SessionState = 'expired', resetLocale = true): void {
     this.tokenState.set(null);
     this.profile.set(null);
     this.state.set(state);
-    this.i18n.configure('pt-BR');
+    if (resetLocale) this.i18n.configure('pt-BR');
   }
 
   private acceptToken(token: TokenResponse): void {
