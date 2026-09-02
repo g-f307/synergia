@@ -27,6 +27,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
 - [mapa de jornadas, rotas e estados da aplicação web](docs/web-journey-map.md);
 - [paridade funcional com o protótipo](docs/web-prototype-parity.md);
+- [design system, ativos e fundação web](docs/web-design-system.md);
 - [administração de grupos, papéis, permissões e associações](docs/access-control-administration.md);
 - [modelo persistente de identidade e acesso](docs/identity-data-model.md);
 - [autenticação JWT, refresh, logout e revogação](docs/authentication.md);

@@ -5,6 +5,7 @@ import { Component, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
+import { BadgeComponent, CardComponent, StateComponent } from '../shared/ui/ui-kit';
 
 interface Page<T> { items: T[]; total: number; }
 interface Named {
@@ -16,7 +17,7 @@ interface Named {
 }
 
 @Component({
-  imports: [AsyncPipe],
+  imports: [AsyncPipe, BadgeComponent, CardComponent, StateComponent],
   template: `
     <section aria-labelledby="admin-title">
       <p class="eyebrow">Acesso restrito</p>
@@ -46,6 +47,16 @@ interface Named {
           <p>{{ failed() ? 'Administração indisponível.' : 'Carregando recursos administrativos…' }}</p>
         }
       }
+      <details class="card">
+        <summary>Catálogo visual interno</summary>
+        <p>Referência de componentes — não representa uma tela operacional.</p>
+        <div class="grid">
+          <syn-card><h2>Superfície</h2><p>Card e texto de apoio.</p><syn-badge>Sucesso</syn-badge></syn-card>
+          <syn-state state="partial" title="Resultado parcial" message="Há fontes ainda não processadas." />
+          <syn-state state="forbidden" title="Acesso proibido" message="A sessão permanece ativa." />
+          <syn-state state="unavailable" title="Indisponível" message="Tente novamente com segurança." />
+        </div>
+      </details>
     </section>`
 })
 export class AdminComponent {
