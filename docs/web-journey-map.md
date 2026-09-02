@@ -170,4 +170,3 @@ Antes do merge, o PO e ao menos um responsável técnico devem registrar no PR:
 - aceite das rotas e decisões `WEB-G01` a `WEB-G10`;
 - concordância com o adiamento de relatórios, decisão humana e Modo TV;
 - confirmação de que o protótipo continua referência funcional congelada.
-

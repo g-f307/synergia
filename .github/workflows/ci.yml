@@ -60,6 +60,8 @@ jobs:
         run: pytest -q -m "not integration" --junitxml=reports/pytest.xml
       - name: Validar matriz e executar regressão de segurança
         run: |
+          python ../scripts/validate_access_matrix.py
+          python ../scripts/validate_web_journey_map.py
           python ../scripts/security_matrix.py --check
           pytest -q -m "security and not integration" --junitxml=reports/security.xml
       - name: Validar build Python
