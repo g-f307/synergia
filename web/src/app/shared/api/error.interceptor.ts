@@ -12,13 +12,20 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
   return next(request).pipe(catchError((error: HttpErrorResponse) => {
     const body = typeof error.error === 'object' && error.error ? error.error : {};
     const status = error.status;
+    const rawDetails = typeof body.error?.details === 'object' && body.error.details ? body.error.details : {};
+    const details = Object.fromEntries(
+      ['execution_id', 'duplicate_of_execution_id']
+        .filter((key) => typeof rawDetails[key] === 'string')
+        .map((key) => [key, rawDetails[key]])
+    );
     const failure: ApiFailure = {
       kind: kinds[status] ?? (status === 0 || status >= 500 ? 'unavailable' : 'internal'),
       status,
       code: String(body.error?.code ?? body.code ?? 'unexpected_error'),
       message: i18n.t(status >= 500 || status === 0 ? 'error.unavailable' : 'error.generic'),
       correlationId: error.headers.get('x-correlation-id') ?? body.correlation_id ?? null,
-      fields: Array.isArray(body.error?.fields) ? body.error.fields : []
+      fields: Array.isArray(body.error?.fields) ? body.error.fields : [],
+      details
     };
     return throwError(() => failure);
   }));

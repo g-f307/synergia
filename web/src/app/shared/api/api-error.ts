@@ -8,4 +8,5 @@ export interface ApiFailure {
   message: string;
   correlationId: string | null;
   fields: ApiFieldError[];
+  details?: Record<string, unknown>;
 }
