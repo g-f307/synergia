@@ -3,15 +3,20 @@
 Relatório determinístico da suíte da issue #43. `permitido` e `negado`
 representam os casos positivos e negativos exigidos para cada papel.
 
-- operações privadas cobertas: 57
+- operações privadas cobertas: 62
 - papéis iniciais: 5
-- combinações papel x operação: 285
+- combinações papel x operação: 310
 - rotas públicas explicitamente verificadas: 3
 
 | Operação | Permissão | Escopo | Permitido | Negado |
 | --- | --- | --- | --- | --- |
 | `POST /auth/logout` | `session.revoke.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `POST /auth/logout-all` | `session.revoke.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `GET /me` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `PATCH /me` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `POST /me/avatar` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `DELETE /me/avatar` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `GET /me/avatar` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `POST /imports` | `import.create` | `org` | gestor, operador | admin, analista, consulta |
 | `GET /imports/{execution_id}` | `import.read` | `org` | gestor, analista, operador | admin, consulta |
 | `GET /imports/{execution_id}/inspections` | `import.read` | `org` | gestor, analista, operador | admin, consulta |
@@ -70,7 +75,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 
 ## Evidências automatizadas
 
-- `test_security_matrix_persistence.py`: 285 requisições HTTP reais
+- `test_security_matrix_persistence.py`: 310 requisições HTTP reais
   com JWT, papéis e permissões carregados do PostgreSQL;
 - `test_security_regression.py`: completude OpenAPI, mass assignment,
   respostas uniformes e ausência de segredos;

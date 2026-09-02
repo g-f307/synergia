@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "frontend-angular": {
+    "synergia-web": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/frontend-angular",
+            "outputPath": "dist/synergia-web",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -59,10 +59,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "frontend-angular:build:production"
+              "buildTarget": "synergia-web:build:production"
             },
             "development": {
-              "buildTarget": "frontend-angular:build:development"
+              "buildTarget": "synergia-web:build:development"
             }
           },
           "defaultConfiguration": "development"

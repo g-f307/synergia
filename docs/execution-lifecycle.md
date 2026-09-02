@@ -90,7 +90,7 @@ versão do pipeline ou das regras muda, sem apagar o resultado anterior.
 
 ```json
 {
-  "technical_origin": "frontend-angular",
+  "technical_origin": "web",
   "idempotency_key": "correlation-123",
   "pipeline_version": "1.0.0",
   "rule_catalog_version": "1.0.0"

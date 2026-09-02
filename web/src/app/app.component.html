@@ -1,0 +1,15 @@
+@if (session.isAuthenticated()) {
+  <header class="topbar">
+    <a class="brand" routerLink="/profile">{{ title }}</a>
+    <nav aria-label="Navegação principal">
+      <a routerLink="/profile">Meu perfil</a>
+      @if (session.isAdministrator()) {
+        <a routerLink="/admin">Administração</a>
+      }
+      <button type="button" class="link-button" (click)="logout()">Sair</button>
+    </nav>
+  </header>
+}
+<main class="application-shell">
+  <router-outlet />
+</main>

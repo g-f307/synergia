@@ -103,7 +103,7 @@ nova aprovação de segurança e, no mínimo:
 ```mermaid
 sequenceDiagram
     actor U as Usuário
-    participant F as Frontend Angular
+    participant F as Aplicação web
     participant P as Adaptador de identidade
     participant A as API / sessão
     participant D as Caso de uso

@@ -73,6 +73,11 @@ técnica também dependerá da política de rede da TI.
 | --- | --- | --- | --- | --- |
 | `POST /auth/logout` | `session.revoke.own` | sessão atual | `own` | admin, gestor, analista, operador, consulta |
 | `POST /auth/logout-all` | `session.revoke.own` | sessões próprias | `own` | admin, gestor, analista, operador, consulta |
+| `GET /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
+| `PATCH /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
+| `POST /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
+| `DELETE /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
+| `GET /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
 | `POST /imports` | `import.create` | importação | `org` | gestor, operador |
 | `GET /imports/{execution_id}` | `import.read` | importação | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/inspections` | `import.read` | inspeções | `org` | gestor, analista, operador |

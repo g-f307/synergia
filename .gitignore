@@ -6,6 +6,7 @@ __pycache__/
 .pytest-*/
 backend/reports/
 artifacts/synthetic/
+.data/
 .DS_Store
 Thumbs.db
 docs/GUIA_GITFLOW_AGENTES.md

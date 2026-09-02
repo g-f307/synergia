@@ -9,7 +9,7 @@ vazio. Os exemplos usam apenas dados sintéticos do repositório.
 - Docker com Docker Compose;
 - cliente `psql` 16 no `PATH` ou o `psql` do container Docker;
 - Python 3.11 ou superior;
-- Node.js compatível com `frontend-angular/package.json` (22.12 é usado na CI);
+- Node.js compatível com `web/package.json` (22.12 é usado na CI);
 - Google Chrome para os testes Angular headless.
 
 Confirme as ferramentas:
@@ -138,10 +138,10 @@ python scripts/security_matrix.py --check
 As 285 combinações HTTP reais da matriz são executadas junto aos testes de
 integração, com JWT, sessões e permissões persistidas no PostgreSQL 16.
 
-## 4. Frontend Angular
+## 4. Aplicação web
 
 ```bash
-cd frontend-angular
+cd web
 npm ci
 npm run lint
 npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
@@ -153,7 +153,7 @@ Se a política de execução do PowerShell bloquear `npm.ps1`, use `npm.cmd` nos
 mesmos comandos, por exemplo `npm.cmd ci` e `npm.cmd run build`.
 
 `npm ci` usa exatamente o lockfile. O endereço local da API fica em
-`frontend-angular/src/environments/environment.ts`.
+`web/src/environments/environment.ts`.
 
 ## 5. Iniciar a aplicação
 
@@ -167,7 +167,7 @@ Set-Location backend
 Em outro terminal:
 
 ```powershell
-Set-Location frontend-angular
+Set-Location web
 npm start
 ```
 

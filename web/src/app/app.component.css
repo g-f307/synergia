@@ -1,0 +1,8 @@
+:host { display: block; min-height: 100vh; }
+.topbar { align-items: center; background: #111827; color: #fff; display: flex; justify-content: space-between; padding: 1rem 2rem; }
+.brand { color: #fff; font-size: 1.25rem; font-weight: 800; text-decoration: none; }
+nav { align-items: center; display: flex; gap: 1.25rem; }
+nav a, .link-button { color: #fff; font: inherit; text-decoration: none; }
+.link-button { background: transparent; border: 0; cursor: pointer; padding: 0; }
+.application-shell { margin: 0 auto; max-width: 72rem; padding: 2rem; }
+@media (max-width: 640px) { .topbar { align-items: flex-start; flex-direction: column; gap: 1rem; } nav { flex-wrap: wrap; } .application-shell { padding: 1rem; } }
