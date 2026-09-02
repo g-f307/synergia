@@ -36,6 +36,7 @@ ou recoloração. Ícones monocromáticos podem herdar contraste do shell.
 - `core/`: sessão, guards e interceptor de autenticação;
 - `layout/`: shell raiz e navegação;
 - `shared/api/`: erros, tipos e serialização HTTP sem regras de domínio;
+- `shared/i18n/`: catálogos, preferência ativa e formatadores localizados;
 - `shared/ui/`: componentes visuais sem regras de negócio;
 - `features/`: telas existentes, migradas progressivamente para domínios.
 
@@ -62,3 +63,11 @@ redireciona silenciosamente para o perfil.
 - menu móvel, skip link e foco visível ampliam a acessibilidade;
 - tokens semânticos substituem cores e espaçamentos específicos por página;
 - ações simuladas não foram copiadas.
+
+## Internacionalização e acessibilidade
+
+Textos de produto e nomes acessíveis usam os catálogos `pt-BR` e `en-US`.
+Datas, números e quantidades seguem o locale ativo, enquanto datas e horas
+também respeitam o timezone do perfil. O processo para criar chaves e os
+contratos de foco, teclado e mensagens de validação estão documentados em
+[web-internationalization-accessibility.md](web-internationalization-accessibility.md).
