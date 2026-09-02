@@ -114,7 +114,12 @@ def validate() -> dict:
 
         endpoints = route.get("endpoints", [])
         if status == "deferred":
-            if endpoints or route.get("issue") != "stage-4" or not route.get("decision"):
+            has_invalid_deferred_contract = (
+                endpoints
+                or route.get("issue") != "stage-4"
+                or not route.get("decision")
+            )
+            if has_invalid_deferred_contract:
                 raise ValueError(f"Item adiado sem decisão explícita em {route_id}")
             continue
         if not endpoints:
@@ -123,10 +128,14 @@ def validate() -> dict:
         for endpoint in endpoints:
             operation = (endpoint.get("method"), endpoint.get("path"))
             if operation not in operations:
-                raise ValueError(f"Operação OpenAPI inexistente em {route_id}: {operation}")
+                raise ValueError(
+                    f"Operação OpenAPI inexistente em {route_id}: {operation}"
+                )
             expected = "public" if operation in PUBLIC else permissions.get(operation)
             if expected is None:
-                raise ValueError(f"Operação sem matriz de acesso em {route_id}: {operation}")
+                raise ValueError(
+                    f"Operação sem matriz de acesso em {route_id}: {operation}"
+                )
             if endpoint.get("permission") != expected:
                 raise ValueError(
                     f"Permissão divergente em {route_id}: {operation} "
