@@ -43,7 +43,11 @@ def validate(catalog_root: Path, source_root: Path) -> list[str]:
     for path in source_root.rglob("*"):
         if path.suffix not in {".ts", ".html"} or path.name.endswith(".spec.ts"):
             continue
-        source = path.read_text(encoding="utf-8").replace("\\'", "'").replace('\\"', '"')
+        source = (
+            path.read_text(encoding="utf-8")
+            .replace("\\'", "'")
+            .replace('\\"', '"')
+        )
         referenced.update(KEY_PATTERN.findall(source))
     referenced &= reference_keys
     for key in sorted(reference_keys - referenced):
@@ -60,7 +64,11 @@ def main() -> int:
     if errors:
         print("\n".join(errors))
         return 1
-    print(f"OK: {len(load_catalog(args.catalog_root / 'pt-BR.json'))} chaves em pt-BR e en-US, sem ausências ou órfãs.")
+    key_count = len(load_catalog(args.catalog_root / "pt-BR.json"))
+    print(
+        f"OK: {key_count} chaves em pt-BR e en-US, "
+        "sem ausências ou órfãs."
+    )
     return 0
 
 
