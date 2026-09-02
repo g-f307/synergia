@@ -37,15 +37,15 @@ class PipelineRepository(Protocol):
 
 class SourceImporter(Protocol):
     def read(
-        self, path: Path, extension: str
+        self, path: Path, extension: str, source: str
     ) -> tuple[list[tuple[str, list[str], list[list[Any]]]], list[dict[str, Any]]]: ...
 
 
 class TabularSourceImporter:
     def read(
-        self, path: Path, extension: str
+        self, path: Path, extension: str, source: str
     ) -> tuple[list[tuple[str, list[str], list[list[Any]]]], list[dict[str, Any]]]:
-        return read_tables(path, extension)
+        return read_tables(path, extension, source)
 
 
 IMPORTERS: dict[str, SourceImporter] = {
@@ -65,7 +65,7 @@ def read_source(
         raise ValueError(f"Fonte sem importador configurado: {source}")
 
     try:
-        return importer.read(path, extension)
+        return importer.read(path, extension, source)
     except DataReadError as exc:
         report = failed_validation_report(
             source, "read_error", exc.reason, sheet=exc.sheet, row=exc.row
@@ -96,6 +96,7 @@ def _imported_records(
     for sheet, headers, rows in tables:
         fields = [normalize_column_name(header) for header in headers]
         for row_number, row in enumerate(rows, 2):
+            row_number = getattr(row, "row_number", row_number)
             if not any(value not in (None, "") for value in row):
                 continue
             records.append(

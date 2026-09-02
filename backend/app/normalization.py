@@ -230,6 +230,7 @@ def normalize_tables(
     for sheet, raw_headers, rows in tables:
         headers = [normalize_column_name(header) for header in raw_headers]
         for row_number, row in enumerate(rows, 2):
+            row_number = getattr(row, "row_number", row_number)
             if not any(value not in (None, "") for value in row):
                 continue
             if eligible_rows is not None and (sheet, row_number) not in eligible_rows:

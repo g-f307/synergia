@@ -73,6 +73,39 @@ def test_xlsx_formula_errors_are_preserved(tmp_path):
     assert report["blocking"] is True
 
 
+def test_xlsx_finds_header_after_preamble_and_preserves_physical_rows(tmp_path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Inspection"
+    sheet.append(["RELATÓRIO DE INSPEÇÃO"])
+    sheet.append([])
+    sheet.append(["lote_id", "produto", "status", "data", "observacao"])
+    sheet.append(["0000123", "MODEL-X", "approved", "01/09/2026", None])
+    path = tmp_path / "inspection.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    report = validate_file(path, ".xlsx", "GMES/OQC")
+
+    assert report["valid"] is True
+    assert report["row_count"] == 1
+
+
+def test_quality_requires_one_relationship_identifier(tmp_path):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["produto", "status"])
+    sheet.append(["MODEL-X", "approved"])
+    path = tmp_path / "unrelated.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    report = validate_file(path, ".xlsx", "GMES/OQC")
+
+    assert report["blocking"] is True
+    assert any(issue["code"] == "missing_column" for issue in report["issues"])
+
+
 def test_warning_does_not_block_valid_rows(tmp_path):
     report = validate_file(
         write_csv(tmp_path, "workorder_number\nWO-1\n\n"), ".csv", "N-FP"

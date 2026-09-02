@@ -14,8 +14,11 @@
     "lot": "lot_number",
     "lot_number": "lot_number",
     "lote": "lot_number",
+    "lote_id": "lot_number",
     "model": "model",
     "modelo": "model",
+    "produto": "model",
+    "codigo_produto": "model",
     "organization": "organization_code",
     "organisation": "organization_code",
     "organization_code": "organization_code",
@@ -31,6 +34,7 @@
     "motivo": "reason",
     "razao": "reason",
     "reason": "reason",
+    "observacao": "reason",
     "hold_reason": "hold_reason",
     "motivo_hold": "hold_reason",
     "pending_reason": "pending_reason",
@@ -51,7 +55,8 @@
     "estado": "status",
     "shipment_status": "status",
     "decision_state": "status",
-    "processing_status": "status"
+    "processing_status": "status",
+    "data": "inspection_date"
   },
   "identifier_fields": [
     "workorder_number",

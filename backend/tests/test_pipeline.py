@@ -241,6 +241,73 @@ def test_reads_xlsx_from_temporary_path_without_xlsx_suffix(tmp_path) -> None:
     assert tables == [("Sheet", ["workorder", "status"], [["WO-1", "open"]])]
 
 
+def test_reads_multisheet_quality_workbook_with_titles_and_real_row_numbers(
+    tmp_path,
+) -> None:
+    path = tmp_path / "quality.upload"
+    workbook = Workbook()
+    first = workbook.active
+    first.title = "Inspection_A"
+    first.append(["INSPECTION REPORT"])
+    first.append([])
+    first.append(["lote_id", "produto", "status", "data"])
+    first.append(["0000007", "MODEL-A", "approved", "01/09/2026"])
+    second = workbook.create_sheet("Inspection_B")
+    second.append(["ANOTHER REPORT"])
+    second.append([])
+    second.append(["lote_id", "produto", "status", "data"])
+    second.append(["0000008", "MODEL-B", "hold", "02/09/2026"])
+    workbook.save(path)
+    workbook.close()
+
+    tables, read_issues = read_source(path, ".xlsx", "GMES/OQC")
+
+    assert read_issues == []
+    assert [table[0] for table in tables] == ["Inspection_A", "Inspection_B"]
+    assert [table[2][0].row_number for table in tables] == [4, 4]
+
+    result = run_pipeline_batch(
+        execution_id="exec-reference-contract",
+        inputs=[
+            {
+                "file_name": "plan.csv",
+                "source": "N-FP",
+                "source_file_id": 1,
+                "tables": [
+                    (
+                        "CSV",
+                        ["workorder_number", "lot_number", "planned_quantity"],
+                        [["WO-7", "0000007", 1], ["WO-8", "0000008", 1]],
+                    )
+                ],
+                "read_issues": [],
+            },
+            {
+                "file_name": "quality.xlsx",
+                "source": "GMES/OQC",
+                "source_file_id": 2,
+                "tables": tables,
+                "read_issues": read_issues,
+            },
+        ],
+        repository=RecordingRepository(),
+        classified_at="2026-09-01T12:00:00+00:00",
+    )
+
+    assert result["status"] == "completed"
+    quality_rows = [
+        record["row"]
+        for record in result["normalized_records"]
+        if record["source"] == "GMES/OQC"
+    ]
+    assert quality_rows == [4, 4]
+    assert {
+        item["workorder_number"]
+        for item in result["processing"]["consolidation"]["workorders"]
+    } == {"WO-7", "WO-8"}
+    assert result["normalized_records"][2]["values"]["lot_number"] == "0000007"
+
+
 def test_batch_pipeline_uses_real_file_ids_for_multisource_provenance() -> None:
     repository = RecordingRepository()
     result = run_pipeline_batch(
