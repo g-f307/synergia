@@ -1,16 +1,16 @@
-<a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+<a class="skip-link" href="#main-content">{{ i18n.t('accessibility.skipContent') }}</a>
 @if (session.isAuthenticated()) {
   <div class="shell">
     <header class="topbar">
-      <button class="menu-button" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-controls="main-navigation" aria-label="Abrir menu">☰</button>
-      <a class="brand" routerLink="/profile" aria-label="SYNERGIA — início"><img src="/assets/logos/logo-horizontal.png" alt="SYNERGIA"></a>
-      <div class="account"><span>{{ session.profile()?.display_name }}</span><button type="button" class="icon-button" (click)="toggleTheme()" aria-label="Alternar tema">◐</button><button type="button" class="link-button" (click)="logout()">Sair</button></div>
+      <button #menuButton class="menu-button" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-controls="main-navigation" [attr.aria-label]="i18n.t(menuOpen() ? 'accessibility.closeMenu' : 'accessibility.openMenu')">☰</button>
+      <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')"><img src="/assets/logos/logo-horizontal.png" alt="SYNERGIA"></a>
+      <div class="account"><span>{{ session.profile()?.display_name }}</span><button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')">◐</button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
     </header>
-    <aside class="sidebar" [class.open]="menuOpen()"><nav id="main-navigation" aria-label="Navegação principal">
-      @for (item of visibleItems(); track item.route) { <a [routerLink]="item.route" routerLinkActive="active"><img [src]="'/assets/icons/' + item.icon" alt="" aria-hidden="true">{{ item.label }}</a> }
-      <a routerLink="/profile" routerLinkActive="active"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true">Perfil</a>
-      @if (session.isAdministrator()) { <a routerLink="/admin" routerLinkActive="active"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true">Administração</a> }
+    <aside class="sidebar" [class.open]="menuOpen()"><nav id="main-navigation" [attr.aria-label]="i18n.t('accessibility.mainNavigation')">
+      @for (item of visibleItems(); track item.route) { <a [routerLink]="item.route" routerLinkActive="active"><img [src]="'/assets/icons/' + item.icon" alt="" aria-hidden="true">{{ i18n.t(item.label) }}</a> }
+      <a routerLink="/profile" routerLinkActive="active"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true">{{ i18n.t('navigation.profile') }}</a>
+      @if (session.isAdministrator()) { <a routerLink="/admin" routerLinkActive="active"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true">{{ i18n.t('navigation.admin') }}</a> }
     </nav></aside>
     <main id="main-content" class="content" tabindex="-1"><syn-breadcrumbs /><router-outlet /></main>
   </div>
-} @else { <main id="main-content" class="anonymous-shell"><router-outlet /></main> }
+} @else { <main id="main-content" class="anonymous-shell" tabindex="-1"><router-outlet /></main> }
