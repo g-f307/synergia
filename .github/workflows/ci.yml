@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
       - name: Executar lint
         run: npm run lint
+      - name: Validar ativos visuais incorporados
+        run: python ../scripts/validate_web_assets.py
       - name: Executar testes com cobertura
         env:
           CHROME_BIN: /usr/bin/google-chrome
