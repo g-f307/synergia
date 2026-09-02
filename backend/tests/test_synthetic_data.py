@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import sys
 from collections import Counter
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -100,6 +102,10 @@ def test_homologated_workbook_fixture_is_deterministic_and_runs_pipeline(
     assert validate_homologation_manifest(first / "manifest.json") == first_manifest
     assert _file_map(first) == _file_map(second)
     assert first_manifest["contains_real_data"] is False
+    with ZipFile(BytesIO((first / "quality-reference.xlsx").read_bytes())) as archive:
+        core_properties = archive.read("docProps/core.xml")
+    assert b"<dcterms:modified" in core_properties
+    assert b">2026-01-01T00:00:00Z</dcterms:modified>" in core_properties
 
     inputs = []
     for source_file_id, (name, source) in enumerate(

@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 from datetime import UTC, datetime
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -14,6 +15,10 @@ from openpyxl import Workbook
 SEED = 5301
 VERSION = "1.0.0"
 FIXED_ZIP_TIME = (2026, 1, 1, 0, 0, 0)
+FIXED_DOCUMENT_TIME = b"2026-01-01T00:00:00Z"
+MODIFIED_PROPERTY = re.compile(
+    rb"(<dcterms:modified[^>]*>)[^<]+(</dcterms:modified>)"
+)
 
 
 def _stable_xlsx(workbook: Workbook) -> bytes:
@@ -27,7 +32,16 @@ def _stable_xlsx(workbook: Workbook) -> bytes:
             info = ZipInfo(name, FIXED_ZIP_TIME)
             info.compress_type = ZIP_DEFLATED
             info.external_attr = original.external_attr
-            archive.writestr(info, source.read(name))
+            content = source.read(name)
+            if name == "docProps/core.xml":
+                content, replacements = MODIFIED_PROPERTY.subn(
+                    rb"\g<1>" + FIXED_DOCUMENT_TIME + rb"\g<2>",
+                    content,
+                    count=1,
+                )
+                if replacements != 1:
+                    raise ValueError("Metadado modified ausente no XLSX")
+            archive.writestr(info, content)
     return target.getvalue()
 
 

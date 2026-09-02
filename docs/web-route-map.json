@@ -1,0 +1,270 @@
+{
+  "version": "1.0.0",
+  "issue": 54,
+  "prototype_ref": "prototype-v1.0",
+  "required_states": [
+    "loading",
+    "empty",
+    "partial",
+    "stale",
+    "error",
+    "forbidden",
+    "unavailable"
+  ],
+  "routes": [
+    {
+      "id": "login",
+      "route": "/login",
+      "status": "implemented",
+      "issue": 44,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "public",
+      "scope": "public",
+      "endpoints": [
+        {"method": "POST", "path": "/auth/login", "permission": "public"},
+        {"method": "POST", "path": "/auth/refresh", "permission": "public"}
+      ],
+      "url_state": ["returnUrl"],
+      "states": ["loading", "error", "unavailable"],
+      "owner": "core/auth"
+    },
+    {
+      "id": "dashboard",
+      "route": "/dashboard",
+      "status": "planned",
+      "issue": 60,
+      "prototype_pages": ["index.html"],
+      "menu": "Visão geral",
+      "permission": "dashboard.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/indicators", "permission": "dashboard.read"}
+      ],
+      "url_state": ["organization", "dateFrom", "dateTo"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/dashboard"
+    },
+    {
+      "id": "import-new",
+      "route": "/imports/new",
+      "status": "planned",
+      "issue": 58,
+      "prototype_pages": [],
+      "menu": "Nova importação",
+      "permission": "import.create",
+      "scope": "org",
+      "endpoints": [
+        {"method": "POST", "path": "/imports", "permission": "import.create"}
+      ],
+      "url_state": [],
+      "states": ["loading", "error", "forbidden", "unavailable"],
+      "owner": "domains/imports"
+    },
+    {
+      "id": "import-detail",
+      "route": "/imports/:executionId",
+      "status": "planned",
+      "issue": 58,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "import.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/imports/{execution_id}", "permission": "import.read"},
+        {"method": "GET", "path": "/imports/{execution_id}/inspections", "permission": "import.read"},
+        {"method": "GET", "path": "/imports/{execution_id}/validation-report", "permission": "artifact.read"},
+        {"method": "GET", "path": "/imports/{execution_id}/pipeline-summary", "permission": "import.read"}
+      ],
+      "url_state": ["tab"],
+      "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/imports"
+    },
+    {
+      "id": "execution-detail",
+      "route": "/executions/:executionId",
+      "status": "planned",
+      "issue": 59,
+      "prototype_pages": ["monitor.html"],
+      "menu": "Execuções",
+      "permission": "execution.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/executions/{execution_id}", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/{execution_id}/divergences", "permission": "artifact.read"},
+        {"method": "GET", "path": "/executions/{execution_id}/classifications", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/{execution_id}/pending-items", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/{execution_id}/evidences", "permission": "artifact.read"},
+        {"method": "POST", "path": "/executions/{execution_id}/reprocess", "permission": "execution.reprocess"}
+      ],
+      "url_state": ["tab", "page", "pageSize", "severity", "source", "sort"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/executions"
+    },
+    {
+      "id": "search",
+      "route": "/search",
+      "status": "planned",
+      "issue": 61,
+      "prototype_pages": ["consulta.html"],
+      "menu": "Consulta operacional",
+      "permission": "business.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
+        {"method": "GET", "path": "/lots/{lot_number}", "permission": "business.read"},
+        {"method": "GET", "path": "/serials/{serial_number}", "permission": "business.read"}
+      ],
+      "url_state": ["type", "query", "page", "pageSize", "sort"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/queries"
+    },
+    {
+      "id": "workorder-detail",
+      "route": "/workorders/:workorderNumber",
+      "status": "planned",
+      "issue": 61,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "business.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
+        {"method": "GET", "path": "/workorders/{workorder_number}/consolidated-result", "permission": "business.read"}
+      ],
+      "url_state": ["from"],
+      "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/queries"
+    },
+    {
+      "id": "lot-detail",
+      "route": "/lots/:lotNumber",
+      "status": "planned",
+      "issue": 61,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "business.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/lots/{lot_number}", "permission": "business.read"}
+      ],
+      "url_state": ["from"],
+      "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/queries"
+    },
+    {
+      "id": "serial-detail",
+      "route": "/serials/:serialNumber",
+      "status": "planned",
+      "issue": 61,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "business.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/serials/{serial_number}", "permission": "business.read"}
+      ],
+      "url_state": ["from"],
+      "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/queries"
+    },
+    {
+      "id": "pending-list",
+      "route": "/pending-items",
+      "status": "planned",
+      "issue": 62,
+      "prototype_pages": ["pendencias.html"],
+      "menu": "Pendências",
+      "permission": "pending.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/pending-items", "permission": "pending.read"}
+      ],
+      "url_state": ["status", "category", "priority", "area", "workorder", "page", "pageSize", "sort"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/pending"
+    },
+    {
+      "id": "pending-detail",
+      "route": "/pending-items/:pendingId",
+      "status": "planned",
+      "issue": 62,
+      "prototype_pages": ["detalhe-pendencia.html"],
+      "menu": null,
+      "permission": "pending.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/pending-items/{pending_id}", "permission": "pending.read"}
+      ],
+      "url_state": ["from"],
+      "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/pending"
+    },
+    {
+      "id": "profile",
+      "route": "/profile",
+      "status": "implemented",
+      "issue": 44,
+      "prototype_pages": ["configuracoes.html"],
+      "menu": "Perfil e preferências",
+      "permission": "profile.own",
+      "scope": "own",
+      "endpoints": [
+        {"method": "GET", "path": "/me", "permission": "profile.own"},
+        {"method": "PATCH", "path": "/me", "permission": "profile.own"}
+      ],
+      "url_state": ["section"],
+      "states": ["loading", "error", "forbidden", "unavailable"],
+      "owner": "domains/profile"
+    },
+    {
+      "id": "admin",
+      "route": "/admin",
+      "status": "implemented",
+      "issue": 44,
+      "prototype_pages": [],
+      "menu": "Administração",
+      "permission": "access.admin",
+      "scope": "global",
+      "endpoints": [
+        {"method": "GET", "path": "/admin/users", "permission": "access.admin"},
+        {"method": "GET", "path": "/admin/access/groups", "permission": "access.admin"},
+        {"method": "GET", "path": "/admin/access/roles", "permission": "access.admin"},
+        {"method": "GET", "path": "/admin/access/permissions", "permission": "access.admin"}
+      ],
+      "url_state": ["section", "page", "pageSize", "query"],
+      "states": ["loading", "empty", "error", "forbidden", "unavailable"],
+      "owner": "domains/admin"
+    },
+    {
+      "id": "reports",
+      "route": "/reports",
+      "status": "deferred",
+      "issue": "stage-4",
+      "prototype_pages": ["relatorios.html"],
+      "menu": null,
+      "permission": "report.export",
+      "scope": "org",
+      "endpoints": [],
+      "url_state": ["period", "type", "status", "query", "page"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "deferred/stage-4",
+      "decision": "Adiar catálogo, geração e exportação até existir contrato de relatórios na Etapa 4."
+    },
+    {
+      "id": "report-detail",
+      "route": "/reports/:reportId",
+      "status": "deferred",
+      "issue": "stage-4",
+      "prototype_pages": ["visualizar-relatorio.html"],
+      "menu": null,
+      "permission": "report.export",
+      "scope": "org",
+      "endpoints": [],
+      "url_state": ["tab", "page"],
+      "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "deferred/stage-4",
+      "decision": "Adiar visualização e exportação final; consultas operacionais da Etapa 3 não serão chamadas de relatório."
+    }
+  ]
+}

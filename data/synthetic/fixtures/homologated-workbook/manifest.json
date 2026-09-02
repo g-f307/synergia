@@ -15,8 +15,8 @@
   "files": [
     {
       "file": "quality-reference.xlsx",
-      "bytes": 6421,
-      "sha256": "8c79b28279f2480542c72d299e51ef05e4ffce00abd0a42f01169e5a5a040c28"
+      "bytes": 6414,
+      "sha256": "1b7792ca0a59e99e46d83c8e313b5c6b37ffdf528ec69e7c0a2ee50d490abf3c"
     },
     {
       "file": "plan-reference.csv",
