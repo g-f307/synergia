@@ -13,9 +13,12 @@ permanece somente em memória e o backend continua sendo a autoridade de acesso.
 Instale exatamente as versões do lockfile e inicie o servidor:
 
 ```bash
+nvm use
 npm ci
 npm start
 ```
+
+O arquivo `.nvmrc` fixa a versão de Node.js usada também pela CI.
 
 A aplicação fica em <http://localhost:4200>. O endereço da API está em
 `src/environments/environment.ts` e, no ambiente local, aponta para
@@ -29,8 +32,9 @@ npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 npm run build
 ```
 
-O build de produção é gerado em `dist/synergia-web/`. A CI usa Node.js
-22.12 e executa os três comandos acima em todo PR para `main`.
+O build de produção é gerado em `dist/synergia-web/`. A CI usa a versão de
+Node.js declarada em `.nvmrc` e executa os três comandos acima em todo PR para
+`main`.
 
 ## Limites atuais
 

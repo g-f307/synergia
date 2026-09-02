@@ -9,7 +9,7 @@ vazio. Os exemplos usam apenas dados sintéticos do repositório.
 - Docker com Docker Compose;
 - cliente `psql` 16 no `PATH` ou o `psql` do container Docker;
 - Python 3.11 ou superior;
-- Node.js compatível com `web/package.json` (22.12 é usado na CI);
+- Node.js compatível com `web/package.json` (`web/.nvmrc` é usado na CI);
 - Google Chrome para os testes Angular headless.
 
 Confirme as ferramentas:
