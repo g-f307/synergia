@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+import unicodedata
 from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -30,6 +31,13 @@ COMMON_ALIASES = {
     "organization": "organization_code",
     "organisation": "organization_code",
     "org": "organization_code",
+    "lote": "lot_number",
+    "lote_id": "lot_number",
+    "lot": "lot_number",
+    "produto": "model",
+    "codigo_produto": "model",
+    "data": "inspection_date",
+    "observacao": "reason",
 }
 
 SCHEMAS = {
@@ -50,9 +58,7 @@ SCHEMAS = {
         ),
         ("received_at", "released_at"),
     ),
-    "GMES/OQC": SourceSchema(
-        ("workorder_number",), COMMON_ALIASES, (), ("decided_at", "inspection_date")
-    ),
+    "GMES/OQC": SourceSchema((), COMMON_ALIASES, (), ("decided_at", "inspection_date")),
     "TMS": SourceSchema(
         ("workorder_number",), COMMON_ALIASES, ("quantity",), ("shipment_date",)
     ),
@@ -70,8 +76,65 @@ class DataReadError(Exception):
         self.row = row
 
 
+class LocatedRow(list[Any]):
+    """Spreadsheet row that retains its physical position after preambles."""
+
+    def __init__(self, values: list[Any], row_number: int) -> None:
+        super().__init__(values)
+        self.row_number = row_number
+
+
+RELATIONSHIP_IDENTIFIERS = (
+    "workorder_number",
+    "demand_id",
+    "serial_number",
+    "lot_number",
+)
+
+
 def _header(value: Any) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+    text = "".join(
+        character
+        for character in unicodedata.normalize(
+            "NFKD", str(value or "").strip().lower()
+        )
+        if not unicodedata.combining(character)
+    )
+    return re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+
+
+def _header_candidates(source: str | None) -> set[str]:
+    schemas = [SCHEMAS[source]] if source else list(SCHEMAS.values())
+    candidates = set(RELATIONSHIP_IDENTIFIERS)
+    for schema in schemas:
+        candidates.update(schema.required)
+        candidates.update(schema.aliases)
+        candidates.update(schema.quantities)
+        candidates.update(schema.dates)
+    candidates.update({"status", "reason", "model", "oqc_flag"})
+    return candidates
+
+
+def _xlsx_header_index(rows: list[list[Any]], source: str | None) -> int | None:
+    """Find the first credible table header and ignore presentation preambles."""
+    candidates = _header_candidates(source)
+    schema = SCHEMAS.get(source) if source else None
+    for index, row in enumerate(rows):
+        normalized = [_header(value) for value in row if value not in (None, "")]
+        if len(normalized) < 2 or len(normalized) != len(set(normalized)):
+            continue
+        canonical = (
+            [schema.aliases.get(value, value) for value in normalized]
+            if schema
+            else normalized
+        )
+        recognized = {value for value in normalized if value in candidates}
+        has_relationship = any(
+            value in RELATIONSHIP_IDENTIFIERS for value in canonical
+        )
+        if has_relationship and len(recognized) >= 2:
+            return index
+    return None
 
 
 def _identifier_key(value: Any) -> str:
@@ -98,7 +161,7 @@ def _issue(
 
 
 def _read(
-    path: Path, extension: str
+    path: Path, extension: str, source: str | None = None
 ) -> tuple[list[tuple[str, list[str], list[list[Any]]]], list[dict[str, Any]]]:
     issues: list[dict[str, Any]] = []
     tables: list[tuple[str, list[str], list[list[Any]]]] = []
@@ -144,18 +207,28 @@ def _read(
                     values = [
                         list(row) for row in worksheet.iter_rows(values_only=True)
                     ]
-                    if not values or not any(
-                        value not in (None, "") for value in values[0]
-                    ):
+                    header_index = _xlsx_header_index(values, source)
+                    if header_index is None:
                         issues.append(
                             _issue(
-                                "empty_sheet",
+                                "invalid_header",
                                 "Aba vazia ou sem cabeçalho",
                                 sheet=worksheet.title,
                             )
                         )
                         continue
-                    tables.append((worksheet.title, values[0], values[1:]))
+                    tables.append(
+                        (
+                            worksheet.title,
+                            values[header_index],
+                            [
+                                LocatedRow(row, row_number)
+                                for row_number, row in enumerate(
+                                    values[header_index + 1 :], header_index + 2
+                                )
+                            ],
+                        )
+                    )
             finally:
                 workbook.close()
     return tables, issues
@@ -227,6 +300,9 @@ def validate_tables(
         seen_rows: dict[tuple[str, ...], int] = {}
         normalized = [_header(value) for value in raw_headers]
         headers = [schema.aliases.get(value, value) for value in normalized]
+        header_row = (
+            max(1, getattr(rows[0], "row_number", 2) - 1) if rows else 1
+        )
         for index, value in enumerate(normalized, 1):
             if not value:
                 issues.append(
@@ -234,7 +310,7 @@ def validate_tables(
                         "invalid_header",
                         "Cabeçalho vazio",
                         sheet=sheet,
-                        row=1,
+                        row=header_row,
                         column=get_column_letter(index),
                     )
                 )
@@ -245,11 +321,23 @@ def validate_tables(
                         "missing_column",
                         f"Coluna obrigatória ausente: {required}",
                         sheet=sheet,
-                        row=1,
+                        row=header_row,
                         column=required,
                     )
                 )
+        if source == "GMES/OQC" and not any(
+            field in headers for field in RELATIONSHIP_IDENTIFIERS
+        ):
+            issues.append(
+                _issue(
+                    "missing_column",
+                    "Informe Workorder, Demand ID, serial ou lote",
+                    sheet=sheet,
+                    row=header_row,
+                )
+            )
         for offset, values in enumerate(rows, 2):
+            offset = getattr(values, "row_number", offset)
             if not any(value not in (None, "") for value in values):
                 issues.append(
                     _issue(
@@ -311,6 +399,19 @@ def validate_tables(
                             column=get_column_letter(headers.index(field) + 1),
                         )
                     )
+            if source == "GMES/OQC" and not any(
+                record.get(field) not in (None, "")
+                for field in RELATIONSHIP_IDENTIFIERS
+                if field in headers
+            ):
+                issues.append(
+                    _issue(
+                        "required_field",
+                        "Informe ao menos um identificador de relacionamento",
+                        sheet=sheet,
+                        row=offset,
+                    )
+                )
             for field in schema.quantities:
                 value = record.get(field)
                 if value in (None, ""):
@@ -423,7 +524,7 @@ def validate_file(
     known_organizations: Collection[str] | None = None,
 ) -> dict[str, Any]:
     try:
-        tables, issues = read_tables(path, extension)
+        tables, issues = read_tables(path, extension, source)
     except DataReadError as exc:
         return failed_validation_report(
             source,

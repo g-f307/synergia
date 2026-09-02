@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from collections import Counter
 from pathlib import Path
@@ -10,6 +11,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.generate_homologation_fixture import (  # noqa: E402
+    generate as generate_homologation,
+)
+from scripts.generate_homologation_fixture import (  # noqa: E402
+    validate_manifest as validate_homologation_manifest,
+)
 from scripts.generate_synthetic_data import (  # noqa: E402
     CANONICAL_FORMATS,
     PROFILES,
@@ -79,6 +86,108 @@ def _pipeline_from_bundle(directory: Path) -> tuple[dict, dict]:
     )
     assert repository.result is result
     return result, manifest
+
+
+def test_homologated_workbook_fixture_is_deterministic_and_runs_pipeline(
+    tmp_path,
+) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first_manifest = generate_homologation(first)
+    second_manifest = generate_homologation(second)
+
+    assert first_manifest == second_manifest
+    assert validate_homologation_manifest(first / "manifest.json") == first_manifest
+    assert _file_map(first) == _file_map(second)
+    assert first_manifest["contains_real_data"] is False
+
+    inputs = []
+    for source_file_id, (name, source) in enumerate(
+        (("plan-reference.csv", "N-FP"), ("quality-reference.xlsx", "GMES/OQC")),
+        1,
+    ):
+        path = first / name
+        tables, read_issues = read_source(path, path.suffix, source)
+        inputs.append(
+            {
+                "file_name": name,
+                "source": source,
+                "source_file_id": source_file_id,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        )
+
+    result = run_pipeline_batch(
+        execution_id="exec-homologated-workbook",
+        inputs=inputs,
+        repository=RecordingRepository(),
+        classified_at="2026-09-01T12:00:00+00:00",
+    )
+
+    assert result["status"] == "completed"
+    assert result["summary"]["rows_read"] == 9
+    assert result["summary"]["normalized_records"] == 9
+    assert result["processing"]["summary"]["consolidated_workorders"] == 3
+    quality = [
+        record
+        for record in result["normalized_records"]
+        if record["source"] == "GMES/OQC"
+    ]
+    assert quality[0]["row"] == 4
+    assert quality[0]["values"]["lot_number"] == "0000001"
+    assert quality[0]["original_values"]["campo_adicional"] == "preserved"
+
+
+def test_homologation_manifest_rejects_incomplete_and_unlisted_files(tmp_path):
+    directory = tmp_path / "fixture"
+    directory.mkdir()
+    manifest_path = directory / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"contains_real_data": False}), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="campos obrigatorios"):
+        validate_homologation_manifest(manifest_path)
+
+    generate_homologation(directory)
+    (directory / "unlisted.txt").write_text("extra", encoding="utf-8")
+    with pytest.raises(ValueError, match="divergem do manifesto"):
+        validate_homologation_manifest(manifest_path)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda manifest: manifest.update(files=[]), "ao menos um arquivo"),
+        (
+            lambda manifest: manifest["files"].append(manifest["files"][0]),
+            "duplicados",
+        ),
+        (
+            lambda manifest: manifest["files"][0].update(file="../outside.csv"),
+            "Caminho de arquivo invalido",
+        ),
+        (
+            lambda manifest: manifest["files"][0].update(bytes=-1),
+            "Tamanho divergente",
+        ),
+        (
+            lambda manifest: manifest["files"][0].update(sha256="0" * 64),
+            "SHA-256 divergente",
+        ),
+    ],
+)
+def test_homologation_manifest_rejects_invalid_file_contract(
+    tmp_path, change, message
+):
+    directory = tmp_path / "fixture"
+    manifest = generate_homologation(directory)
+    change(manifest)
+    manifest_path = directory / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        validate_homologation_manifest(manifest_path)
 
 
 def test_same_seed_produces_identical_logical_and_physical_bundle(tmp_path) -> None:

@@ -1,0 +1,4 @@
+workorder_number,lot_number,model,planned_quantity
+WO-SYN-001,0000001,MODEL-A,1
+WO-SYN-002,0000002,MODEL-B,1
+WO-SYN-003,0000003,MODEL-C,

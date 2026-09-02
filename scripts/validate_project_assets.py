@@ -7,6 +7,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from generate_homologation_fixture import (
+    validate_manifest as validate_homologation_manifest,
+)
 from generate_synthetic_data import validate_manifest
 from openpyxl import load_workbook
 
@@ -65,7 +68,11 @@ def validate_synthetic_data() -> None:
 
     for path in files:
         if path.name == "manifest.json":
-            validate_manifest(path)
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            if "contains_real_data" in manifest:
+                validate_homologation_manifest(path)
+            else:
+                validate_manifest(path)
         elif path.suffix.lower() == ".json":
             json.loads(path.read_text(encoding="utf-8"))
         elif path.suffix.lower() == ".csv":
@@ -76,10 +83,12 @@ def validate_synthetic_data() -> None:
         else:
             workbook = load_workbook(path, read_only=True, data_only=False)
             try:
-                header = next(workbook.active.iter_rows(values_only=True), None)
-                if not header or any(
-                    not str(column or "").strip() for column in header
-                ):
+                rows = workbook.active.iter_rows(values_only=True)
+                has_header = any(
+                    len([value for value in row if str(value or "").strip()]) >= 2
+                    for _, row in zip(range(25), rows, strict=False)
+                )
+                if not has_header:
                     raise ValueError(f"XLSX sem cabeçalho válido: {path.name}")
             finally:
                 workbook.close()
