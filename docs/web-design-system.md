@@ -50,6 +50,11 @@ Administradores encontram o catálogo interno na área de administração. Ele u
 dados sintéticos, demonstra superfícies, badge e estados parcial, proibido e
 indisponível e declara explicitamente que não é uma tela operacional.
 
+Botão, campo, seletor, confirmação, modal, tabela e paginação possuem contratos
+compartilhados em `shared/ui`. Jornadas planejadas só entram no menu quando a
+respectiva rota estiver implementada; uma permissão futura não cria um link que
+redireciona silenciosamente para o perfil.
+
 ## Diferenças intencionais do protótipo
 
 - navegação deriva das permissões efetivas de `/me`;

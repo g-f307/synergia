@@ -28,3 +28,16 @@ export class ModalComponent {
   close(): void { this.dismissed.emit(); }
   focus(): void { (this.host.nativeElement.querySelector('[role=dialog]') as HTMLElement | null)?.focus(); }
 }
+
+@Component({ selector: 'syn-button', template: '<button type="button" [class.secondary]="variant() === \'secondary\'" [disabled]="disabled() || loading()" [attr.aria-busy]="loading()" (click)="pressed.emit()"><ng-content /></button>' })
+export class ButtonComponent { readonly variant = input<'primary' | 'secondary'>('primary'); readonly disabled = input(false); readonly loading = input(false); readonly pressed = output<void>(); }
+
+@Component({ selector: 'syn-field', template: '<label [attr.for]="controlId()">{{ label() }}<input [id]="controlId()" [type]="type()" [value]="value()" [disabled]="disabled()" [attr.aria-invalid]="error() ? true : null" [attr.aria-describedby]="error() ? controlId()+\'-error\' : null" (input)="valueChange.emit($any($event.target).value)"></label>@if (error()) {<span class="error" [id]="controlId()+\'-error\'">{{ error() }}</span>}' })
+export class FieldComponent { readonly controlId = input.required<string>(); readonly label = input.required<string>(); readonly type = input<'text' | 'search' | 'email' | 'password'>('text'); readonly value = input(''); readonly disabled = input(false); readonly error = input(''); readonly valueChange = output<string>(); }
+
+export interface SelectOption { value: string; label: string; }
+@Component({ selector: 'syn-select', template: '<label [attr.for]="controlId()">{{ label() }}<select [id]="controlId()" [disabled]="disabled()" [value]="value()" (change)="valueChange.emit($any($event.target).value)">@for (option of options(); track option.value) {<option [value]="option.value">{{ option.label }}</option>}</select></label>' })
+export class SelectComponent { readonly controlId = input.required<string>(); readonly label = input.required<string>(); readonly options = input.required<SelectOption[]>(); readonly value = input(''); readonly disabled = input(false); readonly valueChange = output<string>(); }
+
+@Component({ selector: 'syn-confirmation', imports: [ModalComponent, ButtonComponent], template: '<syn-modal [title]="title()" (dismissed)="cancelled.emit()"><p>{{ message() }}</p><div class="actions"><syn-button variant="secondary" (pressed)="cancelled.emit()">Cancelar</syn-button><syn-button (pressed)="confirmed.emit()">{{ confirmLabel() }}</syn-button></div></syn-modal>', styles: ['.actions{display:flex;gap:var(--space-3);justify-content:flex-end}'] })
+export class ConfirmationComponent { readonly title = input.required<string>(); readonly message = input.required<string>(); readonly confirmLabel = input('Confirmar'); readonly confirmed = output<void>(); readonly cancelled = output<void>(); }
