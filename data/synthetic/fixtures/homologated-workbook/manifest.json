@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "seed": 5301,
+  "generated_at": "2026-09-01T00:00:00+00:00",
+  "contains_real_data": false,
+  "sources": [
+    "N-FP",
+    "GMES/OQC"
+  ],
+  "counts": {
+    "workorders": 3,
+    "quality_rows": 6,
+    "sheets": 3
+  },
+  "files": [
+    {
+      "file": "quality-reference.xlsx",
+      "bytes": 6421,
+      "sha256": "8c79b28279f2480542c72d299e51ef05e4ffce00abd0a42f01169e5a5a040c28"
+    },
+    {
+      "file": "plan-reference.csv",
+      "bytes": 137,
+      "sha256": "bcf2b6d8c61b9813d13851f18480fd5c2d24edefd87fe5a22dc7a464e70d5b55"
+    }
+  ]
+}
