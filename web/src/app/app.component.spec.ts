@@ -54,4 +54,38 @@ describe('AppComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Administração');
   });
+
+  it('removes closed mobile navigation from focus and restores it when opened', () => {
+    spyOn(window, 'matchMedia').and.returnValue({
+      matches: true,
+      addEventListener: jasmine.createSpy('addEventListener'),
+      removeEventListener: jasmine.createSpy('removeEventListener')
+    } as unknown as MediaQueryList);
+    authenticated.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.menu-button') as HTMLButtonElement;
+    button.style.display = 'inline-grid';
+    const sidebar = fixture.nativeElement.querySelector('.sidebar') as HTMLElement;
+    const link = sidebar.querySelector('a') as HTMLAnchorElement;
+
+    expect(sidebar.hasAttribute('inert')).toBeTrue();
+    link.focus();
+    expect(document.activeElement).not.toBe(link);
+
+    button.focus();
+    button.click();
+    fixture.detectChanges();
+    expect(sidebar.hasAttribute('inert')).toBeFalse();
+    link.focus();
+    expect(document.activeElement).toBe(link);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.menuOpen()).toBeFalse();
+    expect(sidebar.hasAttribute('inert')).toBeTrue();
+    expect(document.activeElement).toBe(button);
+  });
 });

@@ -44,6 +44,7 @@ deliberadamente deixada para issue posterior.
 | Fundação web compartilhada | Tipo | Regra ou decisão relacionada | Issue | Implementação principal | Evidência automatizada | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
 | Design system, shell responsivo, ativos e cliente HTTP tipado | F/NF | tokens semânticos; permissão efetiva; token somente em memória; protótipo sem dependência de runtime | [#56](https://github.com/g-f307/synergia/issues/56) | `web/src/styles.css`, `app.component.*`, `shared/api/`, `shared/ui/`, `web/public/assets/` | testes Angular; `validate_web_assets.py`; lint e build | Atendido |
+| Internacionalização e acessibilidade base da aplicação web | F/NF | `pt-BR` e `en-US`; preferência no perfil; fallback seguro; foco e teclado previsíveis | [#57](https://github.com/g-f307/synergia/issues/57) | `web/src/app/shared/i18n/`, shell e componentes compartilhados; `docs/web-internationalization-accessibility.md` | testes Angular; `test_web_i18n.py`; `validate_i18n.py`; lint e build | Atendido |
 
 - **Atendido:** implementado, documentado e com evidência automatizada.
 - **Decidido:** política documental aceita, ainda sem implementação executável.

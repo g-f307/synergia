@@ -6,6 +6,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { BadgeComponent, CardComponent, StateComponent } from '../shared/ui/ui-kit';
+import { I18nService } from '../shared/i18n/i18n.service';
 
 interface Page<T> { items: T[]; total: number; }
 interface Named {
@@ -20,21 +21,21 @@ interface Named {
   imports: [AsyncPipe, BadgeComponent, CardComponent, StateComponent],
   template: `
     <section aria-labelledby="admin-title">
-      <p class="eyebrow">Acesso restrito</p>
-      <h1 id="admin-title">Administração</h1>
+      <p class="eyebrow">{{ i18n.t('admin.eyebrow') }}</p>
+      <h1 id="admin-title">{{ i18n.t('admin.title') }}</h1>
       @if (resources$ | async; as resources) {
         <div class="grid">
-          <article class="card"><h2>Usuários ({{ resources.users.total }})</h2>
+          <article class="card"><h2>{{ i18n.t('admin.users', { count: i18n.formatNumber(resources.users.total) }) }}</h2>
             @for (item of resources.users.items; track item.id) {
-              <p>{{ item.display_name }} — {{ item.status }}</p>
+              <p>{{ item.display_name }} — {{ userStatus(item.status) }}</p>
             }
           </article>
-          <article class="card"><h2>Grupos ({{ resources.groups.total }})</h2>
+          <article class="card"><h2>{{ i18n.t('admin.groups', { count: i18n.formatNumber(resources.groups.total) }) }}</h2>
             @for (item of resources.groups.items; track item.id) {
               <p>{{ item.group_name }}</p>
             }
           </article>
-          <article class="card"><h2>Papéis ({{ resources.roles.total }})</h2>
+          <article class="card"><h2>{{ i18n.t('admin.roles', { count: i18n.formatNumber(resources.roles.total) }) }}</h2>
             @for (item of resources.roles.items; track item.id) {
               <p>{{ item.role_key }}</p>
             }
@@ -42,24 +43,25 @@ interface Named {
         </div>
       } @else {
         @if (forbidden()) {
-          <p role="alert">Acesso negado. Você não possui permissão para esta área.</p>
+          <p role="alert">{{ i18n.t('admin.forbidden') }}</p>
         } @else {
-          <p>{{ failed() ? 'Administração indisponível.' : 'Carregando recursos administrativos…' }}</p>
+          <p role="status">{{ i18n.t(failed() ? 'admin.unavailable' : 'admin.loading') }}</p>
         }
       }
       <details class="card">
-        <summary>Catálogo visual interno</summary>
-        <p>Referência de componentes — não representa uma tela operacional.</p>
+        <summary>{{ i18n.t('catalog.title') }}</summary>
+        <p>{{ i18n.t('catalog.description') }}</p>
         <div class="grid">
-          <syn-card><h2>Superfície</h2><p>Card e texto de apoio.</p><syn-badge>Sucesso</syn-badge></syn-card>
-          <syn-state state="partial" title="Resultado parcial" message="Há fontes ainda não processadas." />
-          <syn-state state="forbidden" title="Acesso proibido" message="A sessão permanece ativa." />
-          <syn-state state="unavailable" title="Indisponível" message="Tente novamente com segurança." />
+          <syn-card><h2>{{ i18n.t('catalog.surface') }}</h2><p>{{ i18n.t('catalog.supportText') }}</p><syn-badge>{{ i18n.t('catalog.success') }}</syn-badge></syn-card>
+          <syn-state state="partial" [title]="i18n.t('state.partial.title')" [message]="i18n.t('state.partial.message')" />
+          <syn-state state="forbidden" [title]="i18n.t('state.forbidden.title')" [message]="i18n.t('state.forbidden.message')" />
+          <syn-state state="unavailable" [title]="i18n.t('state.unavailable.title')" [message]="i18n.t('state.unavailable.message')" />
         </div>
       </details>
     </section>`
 })
 export class AdminComponent {
+  readonly i18n = inject(I18nService);
   private readonly http = inject(HttpClient);
   readonly failed = signal(false);
   readonly forbidden = signal(false);
@@ -72,4 +74,14 @@ export class AdminComponent {
     else this.failed.set(true);
     return of(null);
   }));
+
+  userStatus(status?: string): string {
+    const statuses = {
+      pending: 'userStatus.pending',
+      active: 'userStatus.active',
+      blocked: 'userStatus.blocked',
+      inactive: 'userStatus.inactive'
+    } as const;
+    return this.i18n.t(statuses[status as keyof typeof statuses] ?? 'userStatus.unknown');
+  }
 }

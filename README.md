@@ -43,7 +43,7 @@ O protótipo estático aprovado não é duplicado na `main`. Ele permanece em:
 
 ## Pré-requisitos
 
-- Node.js 20.19, 22.12 ou versão posterior compatível com Angular 20;
+- Node.js 20.19, 22.13 ou versão posterior compatível com Angular 20;
 - Python 3.11 ou superior;
 - Docker com Docker Compose.
 
