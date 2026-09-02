@@ -38,7 +38,8 @@ PUBLIC = {
 }
 MATRIX_ROW = re.compile(
     r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` "
-    r"\| `(?P<permission>[^`]*)` \|"
+    r"\| `(?P<permission>[^`]*)` \| [^|]+ \| "
+    r"`?(?P<scope>[^`| ]+)`? \|"
 )
 ANGULAR_PATH = re.compile(r"\bpath:\s*'(?P<path>[^']*)'")
 
@@ -56,12 +57,13 @@ def _openapi_operations() -> set[tuple[str, str]]:
     }
 
 
-def _matrix_permissions() -> dict[tuple[str, str], str]:
+def _matrix_contracts() -> dict[tuple[str, str], tuple[str, str]]:
     result = {}
     for line in MATRIX.read_text(encoding="utf-8").splitlines():
         if match := MATRIX_ROW.match(line):
-            result[(match.group("method"), match.group("path"))] = match.group(
-                "permission"
+            result[(match.group("method"), match.group("path"))] = (
+                match.group("permission"),
+                match.group("scope"),
             )
     return result
 
@@ -90,7 +92,7 @@ def validate() -> dict:
         raise ValueError("Caminhos web ausentes ou duplicados")
 
     operations = _openapi_operations()
-    permissions = _matrix_permissions()
+    contracts = _matrix_contracts()
     mapped_prototype = set()
     allowed_statuses = {"implemented", "planned", "deferred"}
 
@@ -131,15 +133,26 @@ def validate() -> dict:
                 raise ValueError(
                     f"Operação OpenAPI inexistente em {route_id}: {operation}"
                 )
-            expected = "public" if operation in PUBLIC else permissions.get(operation)
+            expected = (
+                ("public", "public")
+                if operation in PUBLIC
+                else contracts.get(operation)
+            )
             if expected is None:
                 raise ValueError(
                     f"Operação sem matriz de acesso em {route_id}: {operation}"
                 )
-            if endpoint.get("permission") != expected:
+            expected_permission, expected_scope = expected
+            if endpoint.get("permission") != expected_permission:
                 raise ValueError(
                     f"Permissão divergente em {route_id}: {operation} "
-                    f"esperava {expected}, recebeu {endpoint.get('permission')}"
+                    f"esperava {expected_permission}, "
+                    f"recebeu {endpoint.get('permission')}"
+                )
+            if route.get("scope") != expected_scope:
+                raise ValueError(
+                    f"Escopo divergente em {route_id}: {operation} "
+                    f"esperava {expected_scope}, recebeu {route.get('scope')}"
                 )
 
     if mapped_prototype != PROTOTYPE_PAGES:
@@ -147,9 +160,20 @@ def validate() -> dict:
         raise ValueError(f"Páginas do protótipo sem decisão: {missing}")
 
     mapped_paths = set(paths)
-    current_missing = sorted(_current_routes() - mapped_paths)
+    current_routes = _current_routes()
+    current_missing = sorted(current_routes - mapped_paths)
     if current_missing:
         raise ValueError(f"Rotas Angular atuais fora do mapa: {current_missing}")
+    implemented_missing = sorted(
+        route["route"]
+        for route in routes
+        if route["status"] == "implemented" and route["route"] not in current_routes
+    )
+    if implemented_missing:
+        raise ValueError(
+            f"Rotas marcadas como implementadas ausentes no Angular: "
+            f"{implemented_missing}"
+        )
     return document
 
 

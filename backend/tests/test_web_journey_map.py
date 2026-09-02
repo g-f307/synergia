@@ -61,3 +61,31 @@ def test_web_journey_map_rejects_permission_different_from_matrix(
 
     with pytest.raises(ValueError, match="Permissão divergente"):
         validate_web_journey_map.validate()
+
+
+def test_web_journey_map_rejects_scope_different_from_matrix(
+    tmp_path, monkeypatch
+) -> None:
+    target = _changed_map(
+        tmp_path,
+        lambda document: document["routes"][1].update(scope="global"),
+    )
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(ValueError, match="Escopo divergente"):
+        validate_web_journey_map.validate()
+
+
+def test_web_journey_map_rejects_unimplemented_angular_route(
+    tmp_path, monkeypatch
+) -> None:
+    target = _changed_map(
+        tmp_path,
+        lambda document: document["routes"][1].update(status="implemented"),
+    )
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(
+        ValueError, match="Rotas marcadas como implementadas ausentes no Angular"
+    ):
+        validate_web_journey_map.validate()
