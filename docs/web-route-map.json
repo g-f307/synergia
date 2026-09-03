@@ -55,6 +55,7 @@
       "permission": "import.create",
       "scope": "org",
       "endpoints": [
+        {"method": "GET", "path": "/imports/policy", "permission": "import.create"},
         {"method": "POST", "path": "/imports", "permission": "import.create"}
       ],
       "url_state": [],

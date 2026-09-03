@@ -32,6 +32,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `POST /auth/logout` | revoga a sessão atual | `200` |
 | `POST /auth/logout-all` | revoga as sessões próprias | `200` |
 | `POST /imports` | inicia uma importação rastreável | `201` |
+| `GET /imports/policy` | formatos e tamanho máximo ativos por fonte | `200` |
 | `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
 | `GET /imports/{execution_id}/validation-report` | erros e avisos | `200` |

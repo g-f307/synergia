@@ -5,6 +5,10 @@ A jornada web de importação está disponível em `/imports/new` para usuários
 faz validações locais de conveniência e envia `multipart/form-data` para
 `POST /imports`. A validação do servidor continua soberana.
 
+Formatos e tamanho máximo são obtidos de `GET /imports/policy`, que reflete a
+configuração ativa por fonte do backend. Se essa política estiver indisponível,
+o formulário falha de forma fechada e mantém o envio bloqueado.
+
 Durante o envio, a tela distingue transferência e inspeção/processamento. Não há
 reenvio automático: clique duplo é bloqueado e uma nova tentativa depende de ação
 explícita. Respostas `409` apontam para a execução original sem criar trabalho

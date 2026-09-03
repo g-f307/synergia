@@ -52,6 +52,17 @@ UPLOAD_REJECTED_RETENTION_HOURS=24
 O sufixo da fonte é normalizado em maiúsculas e `_`; por exemplo, `GMES/OQC`
 usa `GMES_OQC`.
 
+A configuração aceita somente extensões para as quais exista um inspetor de
+conteúdo (`csv`, `json` e `xlsx`). Valores desconhecidos tornam a política
+inválida e bloqueiam o upload, evitando anunciar um formato que seria rejeitado
+pelo servidor.
+
+A aplicação web consulta `GET /imports/policy` antes de habilitar o formulário.
+O contrato retorna `allowed_extensions` e `max_bytes` por fonte, calculados pela
+mesma configuração usada na inspeção. Assim, orientações e validações locais
+acompanham a política ativa sem se tornarem uma segunda fonte de verdade. O
+endpoint exige `import.create`.
+
 ## Inspeções aplicadas
 
 - extensão permitida pela política da fonte;
