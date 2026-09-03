@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.authorization import ActorContext, get_actor_context
 from app.execution import reprocessing_fingerprint
 from app.main import app
 from app.queries import ReprocessingConflict, get_query_repository
@@ -334,7 +336,8 @@ class MemoryQueryRepository:
         self.reprocessing_requests[fingerprint] = deepcopy(result)
         return result
 
-    def indicators(self, organization_ids=None) -> dict:
+    def indicators(self, organization_ids=None, date_from=None, date_to=None) -> dict:
+        self.indicator_filters = (organization_ids, date_from, date_to)
         return {
             "executions": {"completed": 1},
             "workorders": {"total": 1, "partially_released": 1},
@@ -346,6 +349,22 @@ class MemoryQueryRepository:
                 "released": 6,
             },
         }
+
+    def indicator_related(
+        self, entity, organization_ids, date_from, date_to, page, page_size
+    ):
+        self.related_filters = (
+            entity,
+            organization_ids,
+            date_from,
+            date_to,
+            page,
+            page_size,
+        )
+        return (
+            [{"identifier": "exec-1", "status": "completed", "occurred_at": NOW}],
+            1,
+        )
 
 
 @pytest.fixture
@@ -477,6 +496,87 @@ def test_returns_basic_indicators(api) -> None:
     assert body["workorders"]["partially_released"] == 1
     assert body["pending_items"]["open"] == 2
     assert body["quantities"]["released"] == 6
+    assert body["source"] == "synergia.operational"
+    assert body["generated_at"]
+    assert body["filters"] == {
+        "organization_id": None,
+        "date_from": None,
+        "date_to": None,
+    }
+
+
+def test_filters_indicators_by_authorized_organization_and_period(api) -> None:
+    client, repository = api
+    organization_id = client.get("/imports/policy").json()["organizations"][0]["id"]
+
+    response = client.get(
+        "/indicators",
+        params={
+            "organization_id": organization_id,
+            "date_from": "2026-08-01",
+            "date_to": "2026-08-31",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["filters"] == {
+        "organization_id": organization_id,
+        "date_from": "2026-08-01",
+        "date_to": "2026-08-31",
+    }
+    assert repository.indicator_filters[1:] == (
+        date(2026, 8, 1),
+        date(2026, 8, 31),
+    )
+
+
+def test_rejects_invalid_indicator_period(api) -> None:
+    client, _ = api
+    response = client.get("/indicators?date_from=2026-09-01&date_to=2026-08-01")
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_period"
+
+
+def test_rejects_indicator_organization_outside_scope(api) -> None:
+    client, _ = api
+    response = client.get(
+        "/indicators?organization_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "organization_access_denied"
+
+
+def test_lists_indicator_records_with_the_same_context(api) -> None:
+    client, repository = api
+    organization_id = client.get("/imports/policy").json()["organizations"][0]["id"]
+    response = client.get(
+        "/indicators/executions",
+        params={
+            "organization_id": organization_id,
+            "date_from": "2026-08-01",
+            "date_to": "2026-08-31",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["items"][0]["identifier"] == "exec-1"
+    assert repository.related_filters[0] == "executions"
+    assert repository.related_filters[2:4] == (date(2026, 8, 1), date(2026, 8, 31))
+
+
+def test_indicator_records_require_the_entity_permission(api) -> None:
+    client, _ = api
+    app.dependency_overrides[get_actor_context] = lambda: ActorContext(
+        user_id=UUID("10000000-0000-4000-8000-000000000001"),
+        session_id=UUID("20000000-0000-4000-8000-000000000002"),
+        token_id=UUID("30000000-0000-4000-8000-000000000003"),
+        permissions={"dashboard.read": frozenset({None})},
+        correlation_id=UUID("40000000-0000-4000-8000-000000000004"),
+    )
+
+    response = client.get("/indicators/workorders")
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "access_denied"
 
 
 @pytest.mark.parametrize(

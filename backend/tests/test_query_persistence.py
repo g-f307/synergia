@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+from datetime import date
+from uuid import uuid4
 
 import psycopg
 import pytest
@@ -8,6 +10,130 @@ import pytest
 from app.queries import PostgresQueryRepository
 
 pytestmark = pytest.mark.integration
+
+
+def test_indicator_filters_and_related_records_use_postgresql() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    suffix = uuid4().hex[:10]
+    organization_a, organization_b = uuid4(), uuid4()
+    execution_a = f"exec-dashboard-a-{suffix}"
+    execution_b = f"exec-dashboard-b-{suffix}"
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """
+            INSERT INTO synergia.iam_organizations (
+                id, organization_code, display_name
+            ) VALUES (%s, %s, %s), (%s, %s, %s)
+            """,
+            (
+                organization_a,
+                f"dashboard-a-{suffix}",
+                "Dashboard A",
+                organization_b,
+                f"dashboard-b-{suffix}",
+                "Dashboard B",
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO synergia.executions (
+                id, status, source, actor_type, actor_identifier,
+                organization_id, started_at, finished_at
+            ) VALUES
+                (%s, 'completed', 'OWM', 'technical', 'synthetic-dashboard',
+                 %s, '2026-08-10T12:00:00Z', now()),
+                (%s, 'completed', 'OWM', 'technical', 'synthetic-dashboard',
+                 %s, '2026-07-10T12:00:00Z', now())
+            """,
+            (execution_a, organization_a, execution_b, organization_b),
+        )
+        source_file = connection.execute(
+            """
+            INSERT INTO synergia.source_files (
+                execution_id, file_name, content_hash
+            ) VALUES (%s, %s, %s) RETURNING id
+            """,
+            (execution_a, f"dashboard-{suffix}.json", "d" * 64),
+        ).fetchone()[0]
+        workorder = connection.execute(
+            """
+            INSERT INTO synergia.workorders (
+                workorder_number, execution_id, source_file_id,
+                processing_status, planned_quantity, produced_quantity,
+                received_quantity, released_quantity, pending_quantity,
+                retained_quantity, partially_released
+            ) VALUES (
+                %s, %s, %s, 'consolidated', 10, 8, 8, 6, 2, 1, true
+            ) RETURNING id
+            """,
+            (f"WO-DASH-{suffix}", execution_a, source_file),
+        ).fetchone()[0]
+        connection.execute(
+            """
+            INSERT INTO synergia.pending_items (
+                workorder_id, execution_id, source_file_id, category, reason
+            ) VALUES (
+                %s, %s, %s, 'long_term_hold', 'Synthetic dashboard'
+            )
+            """,
+            (workorder, execution_a, source_file),
+        )
+
+    repository = PostgresQueryRepository(database_url)
+    try:
+        indicators = repository.indicators(
+            frozenset({organization_a}), date(2026, 8, 1), date(2026, 8, 31)
+        )
+        assert indicators["executions"] == {"completed": 1}
+        assert indicators["workorders"]["total"] == 1
+        for entity in ("executions", "workorders", "pending-items"):
+            rows, total = repository.indicator_related(
+                entity,
+                frozenset({organization_a}),
+                date(2026, 8, 1),
+                date(2026, 8, 31),
+                1,
+                1,
+            )
+            assert total == 1
+            assert len(rows) == 1
+        rows, total = repository.indicator_related(
+            "executions",
+            frozenset({organization_b}),
+            date(2026, 8, 1),
+            date(2026, 8, 31),
+            1,
+            25,
+        )
+        assert rows == []
+        assert total == 0
+    finally:
+        with psycopg.connect(database_url) as connection:
+            connection.execute(
+                "DELETE FROM synergia.audit_events WHERE execution_id IN (%s, %s)",
+                (execution_a, execution_b),
+            )
+            connection.execute(
+                "DELETE FROM synergia.execution_state_transitions "
+                "WHERE execution_id IN (%s, %s)",
+                (execution_a, execution_b),
+            )
+            connection.execute(
+                "DELETE FROM synergia.pending_items WHERE execution_id = %s",
+                (execution_a,),
+            )
+            connection.execute(
+                "DELETE FROM synergia.workorders WHERE execution_id = %s",
+                (execution_a,),
+            )
+            connection.execute(
+                "DELETE FROM synergia.source_files WHERE execution_id = %s",
+                (execution_a,),
+            )
+            connection.execute(
+                "DELETE FROM synergia.executions WHERE id IN (%s, %s)",
+                (execution_a, execution_b),
+            )
 
 
 def test_queries_and_reprocessing_use_the_operational_model() -> None:

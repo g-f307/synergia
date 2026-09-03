@@ -95,9 +95,11 @@ técnica também dependerá da política de rede da TI.
 | `GET /workorders/{workorder_number}/consolidated-result` | `business.read` | consolidado | `org` | gestor, analista, operador, consulta |
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | execução | `org` | gestor |
 | `GET /indicators` | `dashboard.read` | indicadores | `org` | gestor, analista, operador, consulta |
+| `GET /indicators/{entity}` | `dashboard.read` | registros relacionados aos indicadores | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |
+
 | `GET /executions/{execution_id}/evidences` | `artifact.read` | metadados de evidência | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/evidences/{evidence_id}/download` | `artifact.export` | arquivo de evidência | `org` | gestor, analista |
 | `POST /admin/users` | `access.admin` | usuário | global | admin |
@@ -134,6 +136,10 @@ técnica também dependerá da política de rede da TI.
 | `DELETE /admin/access/users/{left_id}/permissions/{right_id}` | `access.admin` | concessão direta | global/org | admin |
 | `GET /admin/access/associations` | `access.admin` | associações de acesso | global | admin |
 | `GET /admin/access/users/{user_id}/effective-permissions` | `access.admin` | permissões efetivas | global/org | admin |
+
+O detalhamento de indicadores exige adicionalmente `execution.read` para
+execuções, `business.read` para Workorders e `pending.read` para pendências. O
+escopo efetivo é a interseção entre `dashboard.read` e a permissão específica.
 
 `GET /health`, `POST /auth/login` e `POST /auth/refresh` permanecem públicos e
 não retornam dados operacionais sem validar sua própria credencial. Upload é

@@ -32,7 +32,7 @@
     {
       "id": "dashboard",
       "route": "/dashboard",
-      "status": "planned",
+      "status": "implemented",
       "issue": 60,
       "prototype_pages": ["index.html"],
       "menu": "Visão geral",
@@ -43,6 +43,22 @@
       ],
       "url_state": ["organization", "dateFrom", "dateTo"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/dashboard"
+    },
+    {
+      "id": "dashboard-related",
+      "route": "/dashboard/related/:entity",
+      "status": "implemented",
+      "issue": 60,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "dashboard.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/indicators/{entity}", "permission": "dashboard.read"}
+      ],
+      "url_state": ["organization", "dateFrom", "dateTo", "page"],
+      "states": ["loading", "empty", "error", "forbidden", "unavailable"],
       "owner": "domains/dashboard"
     },
     {

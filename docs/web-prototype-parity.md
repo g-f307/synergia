@@ -27,7 +27,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | Tela alvo | Protótipo | Contratos principais | Permissão/escopo | Estado |
 | --- | --- | --- | --- | --- |
 | `/login` | ausente | `POST /auth/login`, `POST /auth/refresh` | público | implementado |
-| `/dashboard` | `index.html` | `GET /indicators` | `dashboard.read` / `org` | implementar #60 |
+| `/dashboard` | `index.html` | `GET /indicators` | `dashboard.read` / `org` | implementado #60; filtros reais de organização e período preservados na URL |
 | `/imports/new` | ausente | `POST /imports` | `import.create` / `org` | implementado #58 |
 | `/imports/:executionId` | ausente | consultas `/imports/{execution_id}/*` | `import.read`, `artifact.read` / `org` | implementado #58 |
 | `/executions` e `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementado #59; localização por ID enquanto não existe contrato de listagem global |
