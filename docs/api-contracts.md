@@ -45,6 +45,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /workorders/{workorder_number}/consolidated-result` | consolidado | `200` |
 | `POST /executions/{execution_id}/reprocess` | cria nova tentativa | `202` |
 | `GET /indicators` | totais operacionais básicos; aceita `organization_id`, `date_from` e `date_to` | `200` |
+| `GET /indicators/{entity}` | registros paginados do indicador; exige `dashboard.read` e permissão específica da entidade | `200` |
 | `GET /indicators/{entity}` | registros paginados relacionados aos indicadores com o mesmo escopo e período | `200` |
 | `GET /admin/access/permissions` | catálogo versionado de permissões | `200` |
 | `GET /admin/access/associations` | associações administrativas paginadas | `200` |

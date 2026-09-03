@@ -11,6 +11,10 @@ invertido com `422 invalid_period`. A interface preserva os filtros como
 `organization`, `dateFrom` e `dateTo` na URL e os encaminha à consulta de
 execução relacionada.
 
+As consultas relacionadas são paginadas, preservam organização, período e
+página na URL e exigem, além de `dashboard.read`, a permissão própria da
+entidade. O servidor aplica a interseção dos dois escopos organizacionais.
+
 A resposta informa `generated_at`, a origem lógica `synergia.operational`, as
 organizações ativas visíveis e os filtros efetivamente aplicados. Esse horário
 identifica o cálculo do agregado; a interface também informa quando recebeu a

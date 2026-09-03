@@ -291,6 +291,7 @@
   "dashboard.viewPending": "Find execution and pending items",
   "dashboard.relatedContext": "Persisted results using the same organization and date context as the indicator.",
   "dashboard.relatedRecords": "Related records",
+  "dashboard.relatedTotal": "{count} record(s) found",
   "dashboard.identifier": "Identifier",
   "dashboard.status": "Status",
   "dashboard.occurredAt": "Occurred at",

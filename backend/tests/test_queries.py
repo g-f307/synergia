@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, date, datetime
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.authorization import ActorContext, get_actor_context
 from app.execution import reprocessing_fingerprint
 from app.main import app
 from app.queries import ReprocessingConflict, get_query_repository
@@ -352,7 +354,12 @@ class MemoryQueryRepository:
         self, entity, organization_ids, date_from, date_to, page, page_size
     ):
         self.related_filters = (
-            entity, organization_ids, date_from, date_to, page, page_size
+            entity,
+            organization_ids,
+            date_from,
+            date_to,
+            page,
+            page_size,
         )
         return (
             [{"identifier": "exec-1", "status": "completed", "occurred_at": NOW}],
@@ -525,9 +532,7 @@ def test_filters_indicators_by_authorized_organization_and_period(api) -> None:
 
 def test_rejects_invalid_indicator_period(api) -> None:
     client, _ = api
-    response = client.get(
-        "/indicators?date_from=2026-09-01&date_to=2026-08-01"
-    )
+    response = client.get("/indicators?date_from=2026-09-01&date_to=2026-08-01")
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_period"
 
@@ -556,6 +561,22 @@ def test_lists_indicator_records_with_the_same_context(api) -> None:
     assert response.json()["items"][0]["identifier"] == "exec-1"
     assert repository.related_filters[0] == "executions"
     assert repository.related_filters[2:4] == (date(2026, 8, 1), date(2026, 8, 31))
+
+
+def test_indicator_records_require_the_entity_permission(api) -> None:
+    client, _ = api
+    app.dependency_overrides[get_actor_context] = lambda: ActorContext(
+        user_id=UUID("10000000-0000-4000-8000-000000000001"),
+        session_id=UUID("20000000-0000-4000-8000-000000000002"),
+        token_id=UUID("30000000-0000-4000-8000-000000000003"),
+        permissions={"dashboard.read": frozenset({None})},
+        correlation_id=UUID("40000000-0000-4000-8000-000000000004"),
+    )
+
+    response = client.get("/indicators/workorders")
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "access_denied"
 
 
 @pytest.mark.parametrize(

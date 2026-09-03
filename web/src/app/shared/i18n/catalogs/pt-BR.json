@@ -291,6 +291,7 @@
   "dashboard.viewPending": "Consultar execução e pendências",
   "dashboard.relatedContext": "Resultados persistidos com o mesmo contexto de organização e período do indicador.",
   "dashboard.relatedRecords": "Registros relacionados",
+  "dashboard.relatedTotal": "{count} registro(s) encontrado(s)",
   "dashboard.identifier": "Identificador",
   "dashboard.status": "Estado",
   "dashboard.occurredAt": "Ocorrido em",
