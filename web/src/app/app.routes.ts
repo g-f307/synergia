@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login.component').then((value) => value.LoginComponent)
   },
   {
+    path: 'dashboard',
+    canActivate: [authenticatedGuard, permissionGuard('dashboard.read')],
+    loadComponent: () => import('./domains/dashboard/dashboard.component').then((value) => value.DashboardComponent)
+  },
+  {
     path: 'profile',
     canActivate: [authenticatedGuard],
     loadComponent: () => import('./features/profile.component').then((value) => value.ProfileComponent)

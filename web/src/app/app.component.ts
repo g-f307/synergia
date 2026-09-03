@@ -23,7 +23,7 @@ export class AppComponent {
   readonly isMobile = signal(this.mobileQuery.matches);
   readonly darkTheme = signal(false);
   readonly items: NavigationItem[] = [
-    { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: false },
+    { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: true },
     { label: 'navigation.newImport', route: '/imports/new', permission: 'import.create', icon: 'spreadsheet.svg', implemented: true },
     { label: 'navigation.executions', route: '/executions', permission: 'execution.read', icon: 'dashboard.svg', implemented: true },
     { label: 'navigation.search', route: '/search', permission: 'business.read', icon: 'search.svg', implemented: false },
@@ -36,7 +36,7 @@ export class AppComponent {
     this.destroyRef.onDestroy(() => this.mobileQuery.removeEventListener('change', this.syncMobile));
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
       this.menuOpen.set(false);
-      setTimeout(() => document.getElementById('main-content')?.focus());
+      setTimeout(() => document.getElementById('main-content')?.focus({ preventScroll: true }));
     });
   }
 
