@@ -241,7 +241,11 @@ def test_organization_catalog_respects_scopes_and_active_state() -> None:
 
     with psycopg.connect(database_url) as connection:
         connection.execute(
-            "UPDATE synergia.iam_organizations SET is_active = false WHERE id = %s",
+            """
+            UPDATE synergia.iam_organizations
+            SET is_active = false, deactivated_at = now()
+            WHERE id = %s
+            """,
             (ids["organization_b"],),
         )
     active_ids = {
