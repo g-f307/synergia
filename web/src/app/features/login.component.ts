@@ -15,7 +15,9 @@ export function safeReturnUrl(value: string | null): string {
 @Component({
   imports: [ReactiveFormsModule],
   template: `
-    <section class="card narrow" aria-labelledby="login-title">
+    <div class="login-page">
+    <section class="login-panel"><div class="login-form"><img class="login-logo" src="/assets/logos/logo-horizontal.png" alt="SYNERGIA">
+    <section class="card" aria-labelledby="login-title">
       <div class="login-locale">
         <label for="login-locale">{{ i18n.t('profile.locale') }}</label>
         <select id="login-locale" [value]="i18n.locale()" (change)="changeLocale($event)">
@@ -50,7 +52,9 @@ export function safeReturnUrl(value: string | null): string {
           {{ i18n.t(loading() ? 'auth.submitting' : 'auth.submit') }}
         </button>
       </form>
-    </section>`,
+    </section></div></section>
+    <aside class="login-visual" aria-hidden="true"><div><p class="eyebrow">SYNERGIA</p><h2>{{ i18n.t('auth.visualTitle') }}</h2><p>{{ i18n.t('auth.visualMessage') }}</p></div></aside>
+    </div>`,
   styles: [`
     .narrow { position: relative; }
     .login-locale { align-items: center; display: flex; gap: var(--space-2); position: absolute; right: var(--space-4); top: var(--space-4); }

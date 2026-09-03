@@ -51,14 +51,15 @@ interface Named {
       <details class="card">
         <summary>{{ i18n.t('catalog.title') }}</summary>
         <p>{{ i18n.t('catalog.description') }}</p>
-        <div class="grid">
-          <syn-card><h2>{{ i18n.t('catalog.surface') }}</h2><p>{{ i18n.t('catalog.supportText') }}</p><syn-badge>{{ i18n.t('catalog.success') }}</syn-badge></syn-card>
+        <div class="grid" data-testid="visual-catalog">
+          <syn-card><h2>{{ i18n.t('catalog.surface') }}</h2><p>{{ i18n.t('catalog.supportText') }}</p><div class="catalog-row"><syn-badge tone="success">{{ i18n.t('catalog.success') }}</syn-badge><syn-badge tone="partial">{{ i18n.t('state.partial.title') }}</syn-badge><syn-badge tone="error">{{ i18n.t('state.forbidden.title') }}</syn-badge></div><button>{{ i18n.t('common.confirm') }}</button> <button class="secondary">{{ i18n.t('common.cancel') }}</button></syn-card>
           <syn-state state="partial" [title]="i18n.t('state.partial.title')" [message]="i18n.t('state.partial.message')" />
           <syn-state state="forbidden" [title]="i18n.t('state.forbidden.title')" [message]="i18n.t('state.forbidden.message')" />
           <syn-state state="unavailable" [title]="i18n.t('state.unavailable.title')" [message]="i18n.t('state.unavailable.message')" />
         </div>
       </details>
-    </section>`
+    </section>`,
+  styles: ['details{margin-top:var(--syn-space-6)}summary{cursor:pointer;font-weight:700}.catalog-row{display:flex;flex-wrap:wrap;gap:var(--syn-space-2);margin-bottom:var(--syn-space-4)}']
 })
 export class AdminComponent {
   readonly i18n = inject(I18nService);
