@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login.component').then((value) => value.LoginComponent)
   },
   {
+    path: 'dashboard/related/:entity',
+    canActivate: [authenticatedGuard, permissionGuard('dashboard.read')],
+    loadComponent: () => import('./domains/dashboard/dashboard-related.component').then((value) => value.DashboardRelatedComponent)
+  },
+  {
     path: 'dashboard',
     canActivate: [authenticatedGuard, permissionGuard('dashboard.read')],
     loadComponent: () => import('./domains/dashboard/dashboard.component').then((value) => value.DashboardComponent)

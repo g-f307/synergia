@@ -28,4 +28,12 @@ describe('DashboardService', () => {
     expect(request.request.params.get('date_to')).toBe('2026-08-31');
     request.flush(response);
   });
+
+  it('loads related records with the same filter context', () => {
+    service.getRelated('pending-items', { organizationId: 'org-1', dateFrom: '2026-08-01', dateTo: '2026-08-31' }).subscribe();
+    const request = http.expectOne((candidate) => candidate.url.endsWith('/indicators/pending-items'));
+    expect(request.request.params.get('organization_id')).toBe('org-1');
+    expect(request.request.params.get('date_from')).toBe('2026-08-01');
+    request.flush({ items: [], pagination: { page: 1, pages: 0, total: 0 }, entity: 'pending-items' });
+  });
 });

@@ -95,6 +95,7 @@ técnica também dependerá da política de rede da TI.
 | `GET /workorders/{workorder_number}/consolidated-result` | `business.read` | consolidado | `org` | gestor, analista, operador, consulta |
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | execução | `org` | gestor |
 | `GET /indicators` | `dashboard.read` | indicadores | `org` | gestor, analista, operador, consulta |
+| `GET /indicators/{entity}` | `dashboard.read` | registros relacionados aos indicadores | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |

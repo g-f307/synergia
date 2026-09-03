@@ -46,6 +46,22 @@
       "owner": "domains/dashboard"
     },
     {
+      "id": "dashboard-related",
+      "route": "/dashboard/related/:entity",
+      "status": "implemented",
+      "issue": 60,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "dashboard.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/indicators/{entity}", "permission": "dashboard.read"}
+      ],
+      "url_state": ["organization", "dateFrom", "dateTo", "page"],
+      "states": ["loading", "empty", "error", "forbidden", "unavailable"],
+      "owner": "domains/dashboard"
+    },
+    {
       "id": "import-new",
       "route": "/imports/new",
       "status": "implemented",

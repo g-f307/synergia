@@ -238,6 +238,12 @@ class IndicatorsResponse(BaseModel):
     quantities: dict[str, int]
 
 
+class IndicatorRelatedPage(BaseModel):
+    items: list[dict[str, Any]]
+    pagination: Pagination
+    entity: Literal["executions", "workorders", "pending-items"]
+
+
 class QueryRepository(Protocol):
     def get_execution(self, execution_id: str) -> dict | None: ...
 
@@ -301,6 +307,11 @@ class QueryRepository(Protocol):
         date_from: date | None = None,
         date_to: date | None = None,
     ) -> dict: ...
+
+    def indicator_related(
+        self, entity: str, organization_ids: frozenset | None, date_from: date | None,
+        date_to: date | None, page: int, page_size: int,
+    ) -> tuple[list[dict], int]: ...
 
 
 class PostgresQueryRepository:
@@ -925,6 +936,36 @@ class PostgresQueryRepository:
             },
         }
 
+    def indicator_related(
+        self, entity: str, organization_ids: frozenset | None, date_from: date | None,
+        date_to: date | None, page: int, page_size: int,
+    ) -> tuple[list[dict], int]:
+        filters: list[str] = []
+        parameters: list[object] = []
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
+        if date_from is not None:
+            filters.append("e.started_at::date >= %s")
+            parameters.append(date_from)
+        if date_to is not None:
+            filters.append("e.started_at::date <= %s")
+            parameters.append(date_to)
+        where = f" WHERE {' AND '.join(filters)}" if filters else ""
+        definitions = {
+            "executions": ("synergia.executions e", "e.id AS identifier, e.status, e.started_at AS occurred_at"),
+            "workorders": ("synergia.workorders w JOIN synergia.executions e ON e.id = w.execution_id", "w.workorder_number AS identifier, w.processing_status AS status, e.started_at AS occurred_at"),
+            "pending-items": ("synergia.pending_items p JOIN synergia.executions e ON e.id = p.execution_id JOIN synergia.workorders w ON w.id = p.workorder_id", "p.id::text AS identifier, p.status, p.created_at AS occurred_at, w.workorder_number"),
+        }
+        source, columns = definitions[entity]
+        with self._connect() as connection:
+            total = connection.execute(f"SELECT count(*) AS total FROM {source}{where}", parameters).fetchone()["total"]
+            rows = connection.execute(
+                f"SELECT {columns} FROM {source}{where} ORDER BY occurred_at DESC, identifier DESC LIMIT %s OFFSET %s",
+                [*parameters, page_size, (page - 1) * page_size],
+            ).fetchall()
+        return [dict(row) for row in rows], total
+
 
 def get_query_repository() -> Generator[QueryRepository, None, None]:
     database_url = os.getenv("DATABASE_URL")
@@ -1213,3 +1254,33 @@ def get_indicators(
             "date_to": date_to.isoformat() if date_to else None,
         },
     })
+
+
+@router.get(
+    "/indicators/{entity}",
+    response_model=IndicatorRelatedPage,
+    summary="Listar registros relacionados aos indicadores",
+    responses=ERROR_RESPONSES,
+)
+def get_indicator_related(
+    entity: Literal["executions", "workorders", "pending-items"],
+    actor: Annotated[ActorContext, Depends(require_permission("dashboard.read"))],
+    authorization_repository: AuthorizationRepo,
+    repository: QueryRepository = Depends(get_query_repository),
+    organization_id: Annotated[UUID | None, Query()] = None,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+) -> IndicatorRelatedPage:
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise ApiError(422, "invalid_period", "date_from deve ser anterior ou igual a date_to")
+    if organization_id is not None:
+        visible = authorization_repository.list_active_organizations(actor.scopes_for("dashboard.read"))
+        if not any(item["id"] == organization_id for item in visible):
+            raise ApiError(403, "organization_access_denied", "Organizacao nao autorizada")
+        scope = frozenset({organization_id})
+    else:
+        scope = actor.scope_filter("dashboard.read")
+    items, total = repository.indicator_related(entity, scope, date_from, date_to, page, page_size)
+    return IndicatorRelatedPage(items=items, pagination=_pagination(page, page_size, total), entity=entity)

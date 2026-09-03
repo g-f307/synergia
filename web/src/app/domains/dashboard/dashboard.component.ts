@@ -1,5 +1,6 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { ApiFailure } from '../../shared/api/api-error';
 import { Indicators } from '../../shared/api/operational.models';
@@ -77,19 +78,19 @@ type QuantityKey = keyof Indicators['quantities'];
             <div class="indicator-heading"><img src="/assets/icons/processing.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.executions') }}</h2></div>
             <p class="indicator-value">{{ display(totalExecutions()) }}</p>
             <p class="indicator-detail">{{ i18n.t('dashboard.executionsDetail') }}</p>
-            <a routerLink="/executions" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewExecutions') }} <span aria-hidden="true">→</span></a>
+            <a routerLink="/dashboard/related/executions" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewExecutions') }} <span aria-hidden="true">→</span></a>
           </article>
           <article class="indicator-card">
             <div class="indicator-heading"><img src="/assets/icons/production.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.workorders') }}</h2></div>
             <p class="indicator-value">{{ display(data()?.workorders?.total) }}</p>
             <p class="indicator-detail">{{ i18n.t('dashboard.partialReleases') }}: {{ display(data()?.workorders?.partially_released) }}</p>
-            <a routerLink="/executions" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewWorkorders') }} <span aria-hidden="true">→</span></a>
+            <a routerLink="/dashboard/related/workorders" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewWorkorders') }} <span aria-hidden="true">→</span></a>
           </article>
           <article class="indicator-card">
             <div class="indicator-heading"><img src="/assets/icons/queue.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.pending') }}</h2></div>
             <p class="indicator-value">{{ display(totalPending()) }}</p>
             <p class="indicator-detail">{{ i18n.t('dashboard.pendingDetail') }}</p>
-            <a routerLink="/executions" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewPending') }} <span aria-hidden="true">→</span></a>
+            <a routerLink="/dashboard/related/pending-items" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewPending') }} <span aria-hidden="true">→</span></a>
           </article>
         </div>
 
@@ -113,7 +114,7 @@ type QuantityKey = keyof Indicators['quantities'];
     @media(max-width:600px){.dashboard-filters{grid-template-columns:1fr}.filter-actions{display:grid;grid-template-columns:1fr 1fr}.indicator-grid{grid-template-columns:1fr}.indicator-card:last-child{grid-column:auto}.context dl{display:grid;gap:12px}.page-header{align-items:stretch}.page-header button{width:100%}.quantity-list{grid-template-columns:1fr}.quantity-list div,.quantity-list div:nth-child(3){border-bottom:1px solid var(--syn-border);border-right:0;padding:14px 0}.quantity-list div:last-child{border-bottom:0}}
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   readonly i18n = inject(I18nService);
   private readonly service = inject(DashboardService);
   private readonly session = inject(SessionService);
@@ -126,6 +127,7 @@ export class DashboardComponent implements OnInit {
   readonly dateFrom = signal(this.route.snapshot.queryParamMap.get('dateFrom') ?? '');
   readonly dateTo = signal(this.route.snapshot.queryParamMap.get('dateTo') ?? '');
   readonly filterError = signal('');
+  private request?: Subscription;
   readonly navigationContext = computed(() => ({
     organization: this.organizationId() || null,
     dateFrom: this.dateFrom() || null,
@@ -146,6 +148,7 @@ export class DashboardComponent implements OnInit {
   });
 
   ngOnInit(): void { this.load(); }
+  ngOnDestroy(): void { this.request?.unsubscribe(); }
   applyFilters(event: Event): void {
     event.preventDefault();
     if (this.dateFrom() && this.dateTo() && this.dateFrom() > this.dateTo()) {
@@ -164,8 +167,9 @@ export class DashboardComponent implements OnInit {
     void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }).then(() => this.load());
   }
   load(): void {
+    this.request?.unsubscribe();
     this.state.set('loading');
-    this.service.getIndicators({ organizationId: this.organizationId(), dateFrom: this.dateFrom(), dateTo: this.dateTo() }).subscribe({
+    this.request = this.service.getIndicators({ organizationId: this.organizationId(), dateFrom: this.dateFrom(), dateTo: this.dateTo() }).subscribe({
       next: (data) => {
         this.data.set(data);
         this.receivedAt.set(new Date());

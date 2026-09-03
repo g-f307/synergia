@@ -348,6 +348,17 @@ class MemoryQueryRepository:
             },
         }
 
+    def indicator_related(
+        self, entity, organization_ids, date_from, date_to, page, page_size
+    ):
+        self.related_filters = (
+            entity, organization_ids, date_from, date_to, page, page_size
+        )
+        return (
+            [{"identifier": "exec-1", "status": "completed", "occurred_at": NOW}],
+            1,
+        )
+
 
 @pytest.fixture
 def api():
@@ -528,6 +539,23 @@ def test_rejects_indicator_organization_outside_scope(api) -> None:
     )
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "organization_access_denied"
+
+
+def test_lists_indicator_records_with_the_same_context(api) -> None:
+    client, repository = api
+    organization_id = client.get("/imports/policy").json()["organizations"][0]["id"]
+    response = client.get(
+        "/indicators/executions",
+        params={
+            "organization_id": organization_id,
+            "date_from": "2026-08-01",
+            "date_to": "2026-08-31",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["items"][0]["identifier"] == "exec-1"
+    assert repository.related_filters[0] == "executions"
+    assert repository.related_filters[2:4] == (date(2026, 8, 1), date(2026, 8, 31))
 
 
 @pytest.mark.parametrize(

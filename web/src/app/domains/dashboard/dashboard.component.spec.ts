@@ -12,18 +12,20 @@ import { DashboardService } from './dashboard.service';
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let response: Subject<Indicators>;
+  let currentResponse: Subject<Indicators>;
   let requestedFilters: unknown[];
   const profile = signal<{ permissions: Array<{ key: string; organizations: string[] | null }> }>({ permissions: [{ key: 'dashboard.read', organizations: ['org-synthetic'] }] });
 
   beforeEach(async () => {
     profile.set({ permissions: [{ key: 'dashboard.read', organizations: ['org-synthetic'] }] });
     response = new Subject<Indicators>();
+    currentResponse = response;
     requestedFilters = [];
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: DashboardService, useValue: { getIndicators: (filters: unknown) => { requestedFilters.push(filters); return response.asObservable(); } } },
+        { provide: DashboardService, useValue: { getIndicators: (filters: unknown) => { requestedFilters.push(filters); return currentResponse.asObservable(); } } },
         { provide: SessionService, useValue: { profile } }
       ]
     }).compileComponents();
@@ -110,6 +112,19 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('data inicial');
     expect(requestedFilters.length).toBe(1);
+  });
+
+  it('ignores an older response completed after the current filter request', () => {
+    const newer = new Subject<Indicators>();
+    currentResponse = newer;
+    fixture.componentInstance.dateFrom.set('2026-09-01');
+    fixture.componentInstance.load();
+    response.next({ ...completeIndicators(), workorders: { total: 999, partially_released: 0 } });
+    newer.next({ ...completeIndicators(), workorders: { total: 7, partially_released: 0 } });
+    fixture.detectChanges();
+    const values = [...fixture.nativeElement.querySelectorAll('.indicator-value')].map((node: Element) => node.textContent?.trim());
+    expect(values).toContain('7');
+    expect(values).not.toContain('999');
   });
 });
 
