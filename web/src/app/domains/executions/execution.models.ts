@@ -1,0 +1,11 @@
+export interface Pagination { page: number; page_size: number; total: number; pages: number; }
+export interface Page<T> { items: T[]; pagination: Pagination; sort: string; }
+export interface StateEvent { from_state: string | null; to_state: string; reason: string; state_version: number; occurred_at: string; }
+export interface ExecutionCounts { files: number; files_received: number; files_accepted: number; files_rejected: number; rows_read: number; valid_records: number; rejected_records: number; normalized_records: number; workorders: number; lots: number; serials: number; classifications: number; pending_items: number; errors: number; warnings: number; }
+export interface Execution { execution_id: string; status: string; lifecycle: 'active'|'completed'|'partial'|'failed'|null; attempt: number; source: string|null; reprocessed_from_execution_id: string|null; started_at: string; finished_at: string|null; failure_reason: string|null; pipeline_version: string; rule_catalog_version: string; state_version: number; state_history: StateEvent[]; counts: ExecutionCounts; }
+export interface Divergence { id: number; source: string; severity: string; code: string; scope: string; workorder_number: string|null; reason: string; occurred_at: string; }
+export interface Classification { classification_id: string; workorder_number: string; lot_number: string|null; serial_number: string|null; rule_id: string; state: string; justification: string; data_quality: string; priority: string; classified_at: string; }
+export interface PendingItem { id: number; workorder_number: string; lot_number: string|null; serial_number: string|null; category: string; reason: string|null; status: string; priority: string|null; responsible_area: string|null; created_at: string; }
+export interface Evidence { evidence_id: number; safe_name: string; media_type: string|null; size_bytes: number|null; sha256: string; available: boolean; }
+export interface ReprocessResult { execution_id: string; status: string; attempt: number; reprocessed_from_execution_id: string; previous_execution_id: string; idempotent_replay: boolean; }
+export type ExecutionTab = 'summary'|'history'|'divergences'|'classifications'|'pending'|'evidences';

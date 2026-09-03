@@ -27,6 +27,16 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('import.read')],
     loadComponent: () => import('./domains/imports/import-detail.component').then((value) => value.ImportDetailComponent)
   },
+  {
+    path: 'executions',
+    canActivate: [authenticatedGuard, permissionGuard('execution.read')],
+    loadComponent: () => import('./domains/executions/execution-search.component').then((value) => value.ExecutionSearchComponent)
+  },
+  {
+    path: 'executions/:executionId',
+    canActivate: [authenticatedGuard, permissionGuard('execution.read')],
+    loadComponent: () => import('./domains/executions/execution-detail.component').then((value) => value.ExecutionDetailComponent)
+  },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];
