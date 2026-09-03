@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -6,11 +6,9 @@ import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { TranslationKey } from '../../shared/i18n/i18n.models';
-import { ImportSource, UploadState, importSources } from './import.models';
+import { ImportSource, UploadPolicy, UploadState, importSources } from './import.models';
 import { ImportService } from './import.service';
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = ['csv', 'json', 'xlsx'];
 const STATE_KEYS: Record<UploadState, { title: TranslationKey; message: TranslationKey }> = {
   idle: { title: 'imports.state.idle.title', message: 'imports.state.idle.message' },
   uploading: { title: 'imports.state.uploading.title', message: 'imports.state.uploading.message' },
@@ -18,6 +16,8 @@ const STATE_KEYS: Record<UploadState, { title: TranslationKey; message: Translat
   accepted: { title: 'imports.state.accepted.title', message: 'imports.state.accepted.message' },
   rejected: { title: 'imports.state.rejected.title', message: 'imports.state.rejected.message' },
   duplicate: { title: 'imports.state.duplicate.title', message: 'imports.state.duplicate.message' },
+  forbidden: { title: 'imports.state.forbidden.title', message: 'imports.state.forbidden.message' },
+  unavailable: { title: 'imports.state.unavailable.title', message: 'imports.state.unavailable.message' },
   error: { title: 'imports.state.error.title', message: 'imports.state.error.message' }
 };
 const REJECTION_KEYS: Record<string, TranslationKey> = {
@@ -27,7 +27,10 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
   content_type_mismatch: 'imports.reason.contentTypeMismatch', disguised_active_content: 'imports.reason.disguisedActiveContent',
   invalid_text_encoding: 'imports.reason.invalidTextEncoding', corrupted_file: 'imports.reason.corruptedFile',
   macro_or_active_content: 'imports.reason.macroOrActiveContent', embedded_object: 'imports.reason.embeddedObject',
-  external_link: 'imports.reason.externalLink', dangerous_formula: 'imports.reason.dangerousFormula'
+  external_link: 'imports.reason.externalLink', dangerous_formula: 'imports.reason.dangerousFormula',
+  path_traversal: 'imports.reason.pathTraversal', archive_too_many_entries: 'imports.reason.archiveTooManyEntries',
+  archive_uncompressed_limit: 'imports.reason.archiveUncompressedLimit', archive_compression_ratio: 'imports.reason.archiveCompressionRatio',
+  archive_path_traversal: 'imports.reason.archivePathTraversal', encrypted_archive: 'imports.reason.encryptedArchive'
 };
 
 @Component({
@@ -43,7 +46,7 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
       <div class="imports-grid">
         <form class="card" (submit)="submit($event)">
           <label for="import-source">{{ i18n.t('imports.source') }}</label>
-          <select id="import-source" [disabled]="busy()" [value]="source()" (change)="source.set($any($event.target).value)">
+          <select id="import-source" [disabled]="busy() || policyLoading()" [value]="source()" (change)="selectSource($any($event.target).value)">
             @for (item of sources; track item) { <option [value]="item">{{ item }}</option> }
           </select>
 
@@ -56,10 +59,10 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
           }
 
           <label for="import-file">{{ i18n.t('imports.file') }}</label>
-          <input #fileInput id="import-file" type="file" accept=".csv,.json,.xlsx"
-            [disabled]="busy()" [attr.aria-describedby]="fileError() ? 'import-file-help import-file-error' : 'import-file-help'"
+          <input #fileInput id="import-file" type="file" [accept]="acceptedExtensions()"
+            [disabled]="busy() || policyLoading() || !!policyFailure()" [attr.aria-describedby]="fileError() ? 'import-file-help import-file-error' : 'import-file-help'"
             [attr.aria-invalid]="fileError() ? true : null" (change)="selectFile($event)">
-          <p id="import-file-help" class="help">{{ i18n.t('imports.fileHelp') }}</p>
+          <p id="import-file-help" class="help">{{ policyDescription() }}</p>
           @if (fileError()) { <p id="import-file-error" class="error" role="alert">{{ fileError() }}</p> }
           @if (file(); as selected) {
             <p class="selected-file"><strong>{{ safeName(selected.name) }}</strong><span>{{ formatBytes(selected.size) }}</span></p>
@@ -73,13 +76,16 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
         <aside class="card rules" aria-labelledby="import-rules-title">
           <h2 id="import-rules-title">{{ i18n.t('imports.rulesTitle') }}</h2>
           <ul>
-            <li>{{ i18n.t('imports.ruleFormats') }}</li>
-            <li>{{ i18n.t('imports.ruleSize') }}</li>
+            <li>{{ i18n.t('imports.ruleFormats', { formats: formatsLabel() }) }}</li>
+            <li>{{ i18n.t('imports.ruleSize', { size: sizeLabel() }) }}</li>
             <li>{{ i18n.t('imports.ruleInspection') }}</li>
             <li>{{ i18n.t('imports.ruleServer') }}</li>
           </ul>
         </aside>
       </div>
+
+      @if (policyLoading()) { <p role="status">{{ i18n.t('imports.policyLoading') }}</p> }
+      @if (policyFailure()) { <div class="card error" role="alert"><strong>{{ i18n.t('imports.policyError') }}</strong>@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</div> }
 
       @if (state() !== 'idle') {
         <section class="card result" role="status" aria-live="polite">
@@ -106,7 +112,7 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
     @media(max-width:48rem){.imports-grid{grid-template-columns:1fr}}
   `]
 })
-export class ImportCreateComponent {
+export class ImportCreateComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private readonly imports = inject(ImportService);
   private readonly session = inject(SessionService);
@@ -120,12 +126,34 @@ export class ImportCreateComponent {
   readonly correlationId = signal<string | null>(null);
   readonly rejectionReason = signal('');
   readonly targetExecutionId = signal<string | null>(null);
+  readonly policies = signal<UploadPolicy[]>([]);
+  readonly policyLoading = signal(true);
+  readonly policyFailure = signal<ApiFailure | null>(null);
   readonly organizationOptions = computed(() => this.session.profile()?.permissions.find((item) => item.key === 'import.create')?.organizations ?? []);
   readonly organizationId = signal('');
   readonly busy = computed(() => this.state() === 'uploading' || this.state() === 'inspecting');
-  readonly canSubmit = computed(() => !!this.file() && !this.fileError() && !this.busy() && (this.organizationOptions().length <= 1 || !!this.organizationId()));
+  readonly activePolicy = computed(() => this.policies().find((item) => item.source === this.source()) ?? null);
+  readonly acceptedExtensions = computed(() => this.activePolicy()?.allowed_extensions.map((item) => `.${item}`).join(',') ?? '');
+  readonly formatsLabel = computed(() => this.activePolicy()?.allowed_extensions.map((item) => item.toUpperCase()).join(', ') || this.i18n.t('common.notAvailable'));
+  readonly sizeLabel = computed(() => this.activePolicy() ? this.formatBytes(this.activePolicy()!.max_bytes) : this.i18n.t('common.notAvailable'));
+  readonly policyDescription = computed(() => this.activePolicy()
+    ? this.i18n.t('imports.fileHelp', { formats: this.formatsLabel(), size: this.sizeLabel() })
+    : this.i18n.t('imports.policyLoading'));
+  readonly canSubmit = computed(() => !!this.activePolicy() && !!this.file() && !this.fileError() && !this.busy() && (this.organizationOptions().length <= 1 || !!this.organizationId()));
   readonly stateTitle = computed(() => this.i18n.t(STATE_KEYS[this.state()].title));
   readonly stateMessage = computed(() => this.i18n.t(STATE_KEYS[this.state()].message));
+
+  ngOnInit(): void {
+    this.imports.policy().subscribe({
+      next: (policies) => { this.policies.set(policies); this.policyLoading.set(false); },
+      error: (failure: ApiFailure) => { this.policyFailure.set(failure); this.policyLoading.set(false); }
+    });
+  }
+
+  selectSource(source: ImportSource): void {
+    this.source.set(source);
+    this.fileError.set(this.validate(this.file()));
+  }
 
   selectFile(event: Event): void {
     const selected = (event.target as HTMLInputElement).files?.[0] ?? null;
@@ -164,25 +192,38 @@ export class ImportCreateComponent {
 
   safeName(name: string): string { return name.replaceAll('\\', '/').split('/').pop() || this.i18n.t('common.notAvailable'); }
   shortId(id: string): string { return `${id.slice(0, 8)}…`; }
-  formatBytes(size: number): string { return this.i18n.formatNumber(size / 1024 / 1024, { maximumFractionDigits: 2 }) + ' MB'; }
+  formatBytes(size: number): string {
+    if (size >= 1024 * 1024) return `${this.i18n.formatNumber(size / 1024 / 1024, { maximumFractionDigits: 2 })} MiB`;
+    if (size >= 1024) return `${this.i18n.formatNumber(size / 1024, { maximumFractionDigits: 2 })} KiB`;
+    return `${this.i18n.formatNumber(size)} B`;
+  }
 
   private validate(file: File | null): string {
     if (!file) return this.i18n.t('imports.validation.required');
     const extension = this.safeName(file.name).split('.').pop()?.toLowerCase() ?? '';
-    if (!ALLOWED_EXTENSIONS.includes(extension)) return this.i18n.t('imports.validation.extension');
+    const policy = this.activePolicy();
+    if (!policy) return this.i18n.t('imports.policyError');
+    if (!policy.allowed_extensions.includes(extension)) return this.i18n.t('imports.validation.extension', { formats: this.formatsLabel() });
     if (file.size === 0) return this.i18n.t('imports.validation.empty');
-    if (file.size > MAX_FILE_SIZE) return this.i18n.t('imports.validation.size');
+    if (file.size > policy.max_bytes) return this.i18n.t('imports.validation.size', { size: this.sizeLabel() });
     return '';
   }
 
   private handleFailure(failure: ApiFailure): void {
     this.correlationId.set(failure.correlationId);
-    this.rejectionReason.set(failure.details?.['execution_id']
-      ? this.i18n.t(REJECTION_KEYS[failure.code] ?? 'imports.reason.unknown')
-      : '');
+    const inspectionRejection = failure.code in REJECTION_KEYS;
+    this.rejectionReason.set(inspectionRejection ? this.i18n.t(REJECTION_KEYS[failure.code]) : '');
     const executionId = String(failure.details?.['execution_id'] ?? '');
     const duplicateId = String(failure.details?.['duplicate_of_execution_id'] ?? '');
     this.targetExecutionId.set(duplicateId || executionId || null);
-    this.state.set(failure.kind === 'conflict' ? 'duplicate' : executionId ? 'rejected' : 'error');
+    this.state.set(failure.kind === 'conflict' && failure.code === 'duplicate_file'
+      ? 'duplicate'
+      : inspectionRejection
+        ? 'rejected'
+        : failure.kind === 'forbidden'
+          ? 'forbidden'
+          : failure.kind === 'unavailable'
+            ? 'unavailable'
+            : 'error');
   }
 }

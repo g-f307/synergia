@@ -44,6 +44,7 @@ from app.persistence import PostgresProcessingRepository
 from app.pipeline import read_source, run_pipeline_batch
 from app.upload_security import (
     InspectionResult,
+    policy_for,
     purge_quarantined,
     receive_and_inspect,
     release_to_accepted,
@@ -125,6 +126,12 @@ class FileInspectionRecord(BaseModel):
     analyzed_at: datetime
     retained_until: datetime | None
     discarded_at: datetime | None
+
+
+class UploadPolicyResponse(BaseModel):
+    source: ImportSource
+    allowed_extensions: list[str]
+    max_bytes: int
 
 
 class ImportRepository(Protocol):
@@ -1160,6 +1167,28 @@ async def upload_import(
     if result is None:
         raise RuntimeError("Execução recém-criada não encontrada")
     return ImportStatus.model_validate(result)
+
+
+@router.get(
+    "/policy",
+    response_model=list[UploadPolicyResponse],
+    summary="Consultar a política ativa de upload por fonte",
+    dependencies=[Depends(require_permission("import.create"))],
+)
+async def get_upload_policy() -> list[UploadPolicyResponse]:
+    result = []
+    for source in ImportSource:
+        policy = policy_for(source.value)
+        result.append(
+            UploadPolicyResponse(
+                source=source,
+                allowed_extensions=sorted(
+                    extension.lstrip(".") for extension in policy.allowed_extensions
+                ),
+                max_bytes=policy.max_bytes,
+            )
+        )
+    return result
 
 
 @router.get(

@@ -100,6 +100,12 @@ def policy_for(source: str) -> UploadPolicy:
         for value in allowed_value.split(",")
         if value.strip()
     )
+    unsupported = allowed.difference(MEDIA_TYPES)
+    if unsupported:
+        extensions = ", ".join(sorted(unsupported))
+        raise RuntimeError(
+            f"UPLOAD_ALLOWED_EXTENSIONS contém extensões não suportadas: {extensions}"
+        )
     max_bytes = int(
         os.getenv(
             f"UPLOAD_MAX_BYTES_{source_key}",

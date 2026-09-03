@@ -38,7 +38,13 @@ export interface PipelineSummary {
   warnings: number;
 }
 
-export type UploadState = 'idle' | 'uploading' | 'inspecting' | 'accepted' | 'rejected' | 'duplicate' | 'error';
+export interface UploadPolicy {
+  source: ImportSource;
+  allowed_extensions: string[];
+  max_bytes: number;
+}
+
+export type UploadState = 'idle' | 'uploading' | 'inspecting' | 'accepted' | 'rejected' | 'duplicate' | 'forbidden' | 'unavailable' | 'error';
 export type UploadUpdate =
   | { kind: 'progress'; progress: number | null }
   | { kind: 'complete'; result: ImportStatus };
