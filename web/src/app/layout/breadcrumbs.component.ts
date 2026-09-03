@@ -21,7 +21,7 @@ export class BreadcrumbsComponent {
   label(crumb: Crumb): string { return crumb.translated ? this.i18n.t(crumb.label as TranslationKey) : crumb.label; }
   private fromUrl(url: string): Crumb[] {
     const labels: Record<string, TranslationKey> = { profile: 'navigation.profile', admin: 'navigation.admin', dashboard: 'navigation.dashboard', imports: 'navigation.imports', executions: 'navigation.executions', search: 'navigation.search', workorders: 'navigation.workorders', lots: 'navigation.lots', serials: 'navigation.serials', 'pending-items': 'navigation.pending' };
-    const parts = url.split(/[/?]/).filter(Boolean);
+    const parts = url.split('?')[0].split('/').filter(Boolean);
     return parts.map((part, index) => ({ label: labels[part] ?? part, translated: part in labels, route: index < parts.length - 1 ? `/${parts.slice(0, index + 1).join('/')}` : undefined }));
   }
 }
