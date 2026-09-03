@@ -222,6 +222,35 @@ def test_effective_permission_matrix_by_role(role, expected) -> None:
             )
 
 
+def test_organization_catalog_respects_scopes_and_active_state() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    ids = _bootstrap(database_url, "operador")
+    repository = AuthorizationRepository(database_url)
+
+    scoped = repository.list_active_organizations(
+        frozenset({ids["organization_a"]})
+    )
+    assert [item["id"] for item in scoped] == [ids["organization_a"]]
+
+    global_ids = {
+        item["id"]
+        for item in repository.list_active_organizations(frozenset({None}))
+    }
+    assert ids["organization_a"] in global_ids
+    assert ids["organization_b"] in global_ids
+
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            "UPDATE synergia.iam_organizations SET is_active = false WHERE id = %s",
+            (ids["organization_b"],),
+        )
+    active_ids = {
+        item["id"]
+        for item in repository.list_active_organizations(frozenset({None}))
+    }
+    assert ids["organization_b"] not in active_ids
+
+
 def test_authentication_vertical_and_horizontal_access(monkeypatch) -> None:
     config = _configure(monkeypatch)
     database_url = os.environ["DATABASE_URL"]

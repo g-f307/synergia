@@ -58,10 +58,12 @@ inválida e bloqueiam o upload, evitando anunciar um formato que seria rejeitado
 pelo servidor.
 
 A aplicação web consulta `GET /imports/policy` antes de habilitar o formulário.
-O contrato retorna `allowed_extensions` e `max_bytes` por fonte, calculados pela
-mesma configuração usada na inspeção. Assim, orientações e validações locais
-acompanham a política ativa sem se tornarem uma segunda fonte de verdade. O
-endpoint exige `import.create`.
+O contrato retorna `policies`, com `allowed_extensions` e `max_bytes` por fonte,
+e `organizations`, com as organizações ativas autorizadas para o ator. As
+políticas são calculadas pela mesma configuração usada na inspeção e o catálogo
+organizacional usa os escopos efetivos de `import.create`. Assim, orientações,
+validações locais e seleção de escopo não se tornam fontes paralelas de verdade.
+O endpoint exige `import.create`.
 
 ## Inspeções aplicadas
 

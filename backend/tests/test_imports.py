@@ -264,13 +264,21 @@ def test_exposes_active_upload_policy_per_source(api, monkeypatch) -> None:
     response = client.get("/imports/policy")
 
     assert response.status_code == 200
-    by_source = {item["source"]: item for item in response.json()}
+    body = response.json()
+    by_source = {item["source"]: item for item in body["policies"]}
     assert by_source["N-FP"] == {
         "source": "N-FP",
         "allowed_extensions": ["csv", "xlsx"],
         "max_bytes": 4096,
     }
     assert by_source["OWM"]["max_bytes"] == 25 * 1024 * 1024
+    assert body["organizations"] == [
+        {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "organization_code": "org-001",
+            "display_name": "Organization 001",
+        }
+    ]
 
 
 def test_upload_policy_fails_closed_for_an_unsupported_extension(monkeypatch) -> None:

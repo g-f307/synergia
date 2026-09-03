@@ -134,6 +134,17 @@ class UploadPolicyResponse(BaseModel):
     max_bytes: int
 
 
+class OrganizationOptionResponse(BaseModel):
+    id: UUID
+    organization_code: str
+    display_name: str
+
+
+class UploadConfigurationResponse(BaseModel):
+    policies: list[UploadPolicyResponse]
+    organizations: list[OrganizationOptionResponse]
+
+
 class ImportRepository(Protocol):
     def start(
         self,
@@ -1171,15 +1182,17 @@ async def upload_import(
 
 @router.get(
     "/policy",
-    response_model=list[UploadPolicyResponse],
+    response_model=UploadConfigurationResponse,
     summary="Consultar a política ativa de upload por fonte",
-    dependencies=[Depends(require_permission("import.create"))],
 )
-async def get_upload_policy() -> list[UploadPolicyResponse]:
-    result = []
+async def get_upload_policy(
+    actor: Annotated[ActorContext, Depends(require_permission("import.create"))],
+    authorization_repository: AuthorizationRepo,
+) -> UploadConfigurationResponse:
+    policies = []
     for source in ImportSource:
         policy = policy_for(source.value)
-        result.append(
+        policies.append(
             UploadPolicyResponse(
                 source=source,
                 allowed_extensions=sorted(
@@ -1188,7 +1201,16 @@ async def get_upload_policy() -> list[UploadPolicyResponse]:
                 max_bytes=policy.max_bytes,
             )
         )
-    return result
+    organizations = authorization_repository.list_active_organizations(
+        actor.scopes_for("import.create")
+    )
+    return UploadConfigurationResponse(
+        policies=policies,
+        organizations=[
+            OrganizationOptionResponse.model_validate(organization)
+            for organization in organizations
+        ],
+    )
 
 
 @router.get(
