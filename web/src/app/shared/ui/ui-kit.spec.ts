@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ButtonComponent, ConfirmationComponent, FieldComponent, ModalComponent, StateComponent } from './ui-kit';
+import { BadgeComponent, ButtonComponent, ConfirmationComponent, FieldComponent, ModalComponent, StateComponent } from './ui-kit';
 
 describe('StateComponent', () => {
   it('exposes semantic state without relying on color alone', async () => {
@@ -17,6 +17,15 @@ describe('StateComponent', () => {
 });
 
 describe('shared controls', () => {
+  it('exposes the badge tone as a semantic variant', async () => {
+    await TestBed.configureTestingModule({ imports: [BadgeComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(BadgeComponent);
+    fixture.componentRef.setInput('tone', 'partial');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.badge').dataset['tone']).toBe('partial');
+  });
+
   it('disables the button while loading', async () => {
     await TestBed.configureTestingModule({ imports: [ButtonComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ButtonComponent);

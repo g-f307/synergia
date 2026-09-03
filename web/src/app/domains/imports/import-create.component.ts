@@ -37,7 +37,7 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
   imports: [RouterLink],
   template: `
     <section class="imports-page" aria-labelledby="import-title">
-      <header>
+      <header class="page-header">
         <p class="eyebrow">{{ i18n.t('imports.eyebrow') }}</p>
         <h1 id="import-title">{{ i18n.t('imports.newTitle') }}</h1>
         <p>{{ i18n.t('imports.introduction') }}</p>
@@ -108,10 +108,10 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
     </section>
   `,
   styles: [`
-    .imports-page{display:grid;gap:var(--space-5);max-width:70rem}.imports-grid{display:grid;gap:var(--space-5);grid-template-columns:minmax(18rem,2fr) minmax(16rem,1fr)}
+    .imports-page{display:grid;gap:var(--space-5);max-width:70rem}.page-header{border-bottom:1px solid var(--syn-border);display:block;margin-bottom:0;padding-bottom:var(--syn-space-4)}.imports-grid{display:grid;gap:var(--space-5);grid-template-columns:minmax(18rem,2fr) minmax(16rem,1fr)}
     .help,.rules,p{color:var(--color-muted)}.rules{align-self:start}.selected-file{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:space-between;margin:0}
     .result{border-left:.3rem solid var(--color-info)}progress{accent-color:var(--color-brand);inline-size:100%;min-height:1rem}.button-link{display:inline-block;font-weight:700;margin-top:var(--space-3)}
-    @media(max-width:48rem){.imports-grid{grid-template-columns:1fr}}
+    @media(max-width:48rem){.imports-grid{grid-template-columns:1fr}.rules{order:-1}}
   `]
 })
 export class ImportCreateComponent implements OnInit {

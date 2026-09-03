@@ -20,6 +20,13 @@ transições.
 LGEI é usada em conteúdo e títulos; JetBrains Mono fica reservada a
 identificadores e valores técnicos. Todas possuem fallback de sistema.
 
+Os valores de referência extraídos do protótipo são `#A50034` para a marca,
+`#F3F4F6` para o fundo, sidebar de 260 px e cabeçalho de 72 px. A sidebar passa
+ao modo compacto em 1365 px, vira drawer em 1023 px e recebe o ajuste móvel em
+767 px. `scripts/validate_visual_system.py` impede alterações acidentais nesses
+contratos, valida os ativos usados e verifica o contraste AA das combinações
+críticas.
+
 ## Marca
 
 | Contexto | Variante |
@@ -63,6 +70,9 @@ redireciona silenciosamente para o perfil.
 - menu móvel, skip link e foco visível ampliam a acessibilidade;
 - tokens semânticos substituem cores e espaçamentos específicos por página;
 - ações simuladas não foram copiadas.
+
+A comparação por tela e as evidências responsivas estão na
+[matriz de fidelidade visual](visual-fidelity-matrix.md).
 
 ## Internacionalização e acessibilidade
 

@@ -11,7 +11,7 @@ interface Crumb { label: TranslationKey | string; translated: boolean; route?: s
   selector: 'syn-breadcrumbs',
   imports: [RouterLink],
   template: `<nav [attr.aria-label]="i18n.t('accessibility.breadcrumb')"><ol><li><a routerLink="/profile">{{ i18n.t('navigation.home') }}</a></li>@for (crumb of crumbs(); track crumb.label) {<li>@if (crumb.route) {<a [routerLink]="crumb.route">{{ label(crumb) }}</a>} @else {<span aria-current="page">{{ label(crumb) }}</span>}</li>}</ol></nav>`,
-  styles: ['ol{display:flex;flex-wrap:wrap;gap:var(--space-2);list-style:none;margin:0 0 var(--space-4);padding:0}li+li::before{color:var(--color-muted);content:"/";margin-right:var(--space-2)}']
+  styles: ['ol{display:flex;flex-wrap:wrap;gap:var(--syn-space-2);list-style:none;margin:0 0 var(--syn-space-5);padding:0}li{color:var(--syn-text-secondary);font-size:13px}a{color:inherit;text-decoration:none}a:hover{color:var(--syn-primary);text-decoration:underline}li+li::before{color:var(--syn-text-secondary);content:"›";margin-right:var(--syn-space-2)}']
 })
 export class BreadcrumbsComponent {
   readonly i18n = inject(I18nService);
