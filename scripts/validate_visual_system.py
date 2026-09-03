@@ -19,18 +19,28 @@ def _luminance(value: str) -> float:
     channels = []
     for channel in _rgb(value):
         normalized = channel / 255
-        channels.append(normalized / 12.92 if normalized <= 0.04045 else ((normalized + 0.055) / 1.055) ** 2.4)
+        linear = (
+            normalized / 12.92
+            if normalized <= 0.04045
+            else ((normalized + 0.055) / 1.055) ** 2.4
+        )
+        channels.append(linear)
     return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
 
 
 def _contrast(foreground: str, background: str) -> float:
-    lighter, darker = sorted((_luminance(foreground), _luminance(background)), reverse=True)
+    lighter, darker = sorted(
+        (_luminance(foreground), _luminance(background)), reverse=True
+    )
     return (lighter + 0.05) / (darker + 0.05)
 
 
 def validate() -> None:
     css = STYLES.read_text(encoding="utf-8").lower()
-    shell = (SHELL.read_text(encoding="utf-8") + SHELL_STYLES.read_text(encoding="utf-8")).lower()
+    shell = (
+        SHELL.read_text(encoding="utf-8")
+        + SHELL_STYLES.read_text(encoding="utf-8")
+    ).lower()
     all_css = css + shell
     required_tokens = {
         "--syn-primary:#a50034",
@@ -51,7 +61,12 @@ def validate() -> None:
             raise ValueError(f"Breakpoint responsivo ausente: {breakpoint}")
     if "data.js" in css + shell or "prototype-pages" in css + shell:
         raise ValueError("A aplicação não pode depender do runtime do protótipo")
-    checks = (("#111111", "#ffffff"), ("#a50034", "#ffffff"), ("#ffffff", "#087f62"), ("#ffffff", "#b4232c"))
+    checks = (
+        ("#111111", "#ffffff"),
+        ("#a50034", "#ffffff"),
+        ("#ffffff", "#087f62"),
+        ("#ffffff", "#b4232c"),
+    )
     failures = [pair for pair in checks if _contrast(*pair) < 4.5]
     if failures:
         raise ValueError(f"Contraste AA insuficiente: {failures}")
@@ -59,7 +74,10 @@ def validate() -> None:
         path = EVIDENCE / capture
         if not path.is_file() or path.stat().st_size < 5_000:
             raise ValueError(f"Captura visual ausente ou inválida: {capture}")
-    print("Sistema visual validado: tokens, ativos, contraste AA, 3 breakpoints e capturas.")
+    print(
+        "Sistema visual validado: tokens, ativos, contraste AA, "
+        "3 breakpoints e capturas."
+    )
 
 
 if __name__ == "__main__":
