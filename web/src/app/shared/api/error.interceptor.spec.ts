@@ -45,4 +45,15 @@ describe('apiErrorInterceptor', () => {
     expect(failure?.message).toBe('The operation could not be completed.');
     expect(failure?.message).not.toContain('servidor');
   });
+
+  it('preserves only structured details needed for a safe duplicate journey', () => {
+    let failure: ApiFailure | undefined;
+    http.post('/imports', {}).subscribe({ error: (error: ApiFailure) => { failure = error; } });
+    controller.expectOne('/imports').flush(
+      { error: { code: 'duplicate_file', message: 'Arquivo já importado', details: { execution_id: 'new', duplicate_of_execution_id: 'original', storage_path: '/secret/file' } } },
+      { status: 409, statusText: 'Conflict', headers: { 'x-correlation-id': 'corr-409' } }
+    );
+    expect(failure?.details).toEqual({ execution_id: 'new', duplicate_of_execution_id: 'original' });
+    expect(failure?.message).not.toContain('Arquivo');
+  });
 });

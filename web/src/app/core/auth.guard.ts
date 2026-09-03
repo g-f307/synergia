@@ -20,3 +20,14 @@ export const adminGuard: CanActivateFn = () => {
     map(() => session.isAdministrator() || router.createUrlTree(['/profile']))
   );
 };
+
+export function permissionGuard(permission: string): CanActivateFn {
+  return () => {
+    const session = inject(SessionService);
+    const router = inject(Router);
+    return session.ensureSession().pipe(
+      switchMap(() => session.profile() ? of(session.profile()!) : session.loadProfile()),
+      map(() => session.hasPermission(permission) || router.createUrlTree(['/profile']))
+    );
+  };
+}

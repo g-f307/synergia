@@ -149,6 +149,29 @@ class AuthorizationRepository:
             row = cursor.fetchone()
             return row["organization_id"] if row else None
 
+    def list_active_organizations(
+        self, scopes: frozenset[UUID | None]
+    ) -> list[dict]:
+        """List active organizations visible through an effective permission."""
+        if not scopes:
+            return []
+        filters = ""
+        parameters: tuple[object, ...] = ()
+        if None not in scopes:
+            filters = "AND id = ANY(%s)"
+            parameters = ([scope for scope in scopes if scope is not None],)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT id, organization_code, display_name
+                FROM synergia.iam_organizations
+                WHERE is_active {filters}
+                ORDER BY organization_code, id
+                """,
+                parameters,
+            )
+            return list(cursor.fetchall())
+
     def resource_organization(self, resource: str, identifier: str) -> UUID | None:
         statements = {
             "workorder": """

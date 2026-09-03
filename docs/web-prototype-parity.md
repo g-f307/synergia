@@ -27,8 +27,8 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | --- | --- | --- | --- | --- |
 | `/login` | ausente | `POST /auth/login`, `POST /auth/refresh` | público | implementado |
 | `/dashboard` | `index.html` | `GET /indicators` | `dashboard.read` / `org` | implementar #60 |
-| `/imports/new` | ausente | `POST /imports` | `import.create` / `org` | implementar #58 |
-| `/imports/:executionId` | ausente | consultas `/imports/{execution_id}/*` | `import.read`, `artifact.read` / `org` | implementar #58 |
+| `/imports/new` | ausente | `POST /imports` | `import.create` / `org` | implementado #58 |
+| `/imports/:executionId` | ausente | consultas `/imports/{execution_id}/*` | `import.read`, `artifact.read` / `org` | implementado #58 |
 | `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementar #59 |
 | `/search` | `consulta.html` | `GET /workorders`, `/lots`, `/serials` por ID | `business.read` / `org` | implementar #61 |
 | detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementar #61 |
@@ -60,8 +60,8 @@ O inventário integral e validável de endpoints está em
 | --- | --- | --- | --- |
 | autenticação, perfil e administração | implementar/adaptar | #44, #56, #57 | pendente #63 |
 | dashboard e indicadores | implementar | #60 | pendente #63 |
-| upload manual seguro | implementar, embora ausente no protótipo | #58 | pendente #63 |
-| acompanhamento da importação | implementar | #58 | pendente #63 |
+| upload manual seguro | implementado, embora ausente no protótipo | #58 | evidência da #58; aceite final pendente #63 |
+| acompanhamento da importação | implementado | #58 | evidência da #58; aceite final pendente #63 |
 | execução, histórico, divergências e evidências | adaptar | #59 | pendente #63 |
 | busca e detalhe operacional | adaptar | #61 | pendente #63 |
 | fila e contexto de pendências | adaptar | #62 | pendente #63 |

@@ -48,13 +48,14 @@
     {
       "id": "import-new",
       "route": "/imports/new",
-      "status": "planned",
+      "status": "implemented",
       "issue": 58,
       "prototype_pages": [],
       "menu": "Nova importação",
       "permission": "import.create",
       "scope": "org",
       "endpoints": [
+        {"method": "GET", "path": "/imports/policy", "permission": "import.create"},
         {"method": "POST", "path": "/imports", "permission": "import.create"}
       ],
       "url_state": [],
@@ -64,7 +65,7 @@
     {
       "id": "import-detail",
       "route": "/imports/:executionId",
-      "status": "planned",
+      "status": "implemented",
       "issue": 58,
       "prototype_pages": [],
       "menu": null,

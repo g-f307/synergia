@@ -47,6 +47,17 @@ class PermissiveAuthorizationRepository:
     def audit_denial(self, *args, **kwargs) -> None:
         return None
 
+    def list_active_organizations(self, scopes) -> list[dict]:
+        if not scopes:
+            return []
+        return [
+            {
+                "id": TEST_ORGANIZATION_ID,
+                "organization_code": "org-001",
+                "display_name": "Organization 001",
+            }
+        ]
+
     def execution_organization(self, execution_id: str) -> UUID:
         return TEST_ORGANIZATION_ID
 

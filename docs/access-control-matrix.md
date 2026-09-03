@@ -79,6 +79,7 @@ técnica também dependerá da política de rede da TI.
 | `DELETE /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
 | `GET /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
 | `POST /imports` | `import.create` | importação | `org` | gestor, operador |
+| `GET /imports/policy` | `import.create` | política ativa de upload | `org` | gestor, operador |
 | `GET /imports/{execution_id}` | `import.read` | importação | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/inspections` | `import.read` | inspeções | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/validation-report` | `artifact.read` | validação | `org` | gestor, analista, operador |
