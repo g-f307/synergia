@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { NEVER, Subject, throwError } from 'rxjs';
+import { NEVER, Subject, of, throwError } from 'rxjs';
 
 import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
@@ -11,18 +11,27 @@ import { ImportService } from './import.service';
 
 describe('ImportCreateComponent', () => {
   const upload = jasmine.createSpy('upload');
+  const policy = jasmine.createSpy('policy');
   const session = { profile: () => ({ permissions: [{ key: 'import.create', organizations: ['org-1'] }] }) };
   beforeEach(async () => {
     upload.calls.reset();
     upload.and.returnValue(NEVER);
+    policy.calls.reset();
+    policy.and.returnValue(of([
+      { source: 'N-FP', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+      { source: 'OWM', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+      { source: 'GMES/OQC', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+      { source: 'TMS', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 }
+    ]));
     await TestBed.configureTestingModule({
       imports: [ImportCreateComponent],
-      providers: [provideRouter([]), { provide: ImportService, useValue: { upload } }, { provide: SessionService, useValue: session }]
+      providers: [provideRouter([]), { provide: ImportService, useValue: { upload, policy } }, { provide: SessionService, useValue: session }]
     }).compileComponents();
   });
 
   it('validates empty, excessive and unsupported files before upload', () => {
     const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
     const component = fixture.componentInstance;
     component.file.set(new File([], 'empty.csv'));
     component.selectFile({ target: { files: [new File([], 'empty.csv')] } } as unknown as Event);
@@ -40,6 +49,7 @@ describe('ImportCreateComponent', () => {
     const stream = new Subject<UploadUpdate>();
     upload.and.returnValue(stream);
     const component = TestBed.createComponent(ImportCreateComponent).componentInstance;
+    component.ngOnInit();
     component.file.set(new File(['id\n1'], 'safe.csv'));
     component.submit(new Event('submit'));
     component.submit(new Event('submit'));
@@ -53,6 +63,7 @@ describe('ImportCreateComponent', () => {
     const stream = new Subject<UploadUpdate>();
     upload.and.returnValue(stream);
     const component = TestBed.createComponent(ImportCreateComponent).componentInstance;
+    component.ngOnInit();
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);
     component.file.set(new File(['workorder\nWO-1'], 'plan-reference.csv'));
@@ -66,6 +77,7 @@ describe('ImportCreateComponent', () => {
     const failure: ApiFailure = { kind: 'conflict', status: 409, code: 'duplicate_file', message: 'safe', correlationId: 'corr-1', fields: [], details: { execution_id: 'new', duplicate_of_execution_id: 'original' } };
     upload.and.returnValue(throwError(() => failure));
     const component = TestBed.createComponent(ImportCreateComponent).componentInstance;
+    component.ngOnInit();
     component.file.set(new File(['id\n1'], 'safe.csv'));
     component.submit(new Event('submit'));
     expect(component.state()).toBe('duplicate');
@@ -76,6 +88,7 @@ describe('ImportCreateComponent', () => {
 
   it('distinguishes a server rejection from authorization and network failures', () => {
     const component = TestBed.createComponent(ImportCreateComponent).componentInstance;
+    component.ngOnInit();
     component.file.set(new File(['not-json'], 'bad.json'));
     upload.and.returnValue(throwError(() => ({ kind: 'validation', status: 422, code: 'corrupted_file', message: 'safe', correlationId: null, fields: [], details: { execution_id: 'rejected' } } as ApiFailure)));
     component.submit(new Event('submit'));
@@ -89,12 +102,14 @@ describe('ImportCreateComponent', () => {
 
     upload.and.returnValue(throwError(() => ({ kind: 'forbidden', status: 403, code: 'access_denied', message: 'safe', correlationId: 'corr-403', fields: [] } as ApiFailure)));
     component.submit(new Event('submit'));
-    expect(component.state()).toBe('error');
+    expect(component.state()).toBe('forbidden');
+    expect(component.stateMessage()).toContain('permissão');
     expect(component.targetExecutionId()).toBeNull();
 
     upload.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 0, code: 'unexpected_error', message: 'safe', correlationId: null, fields: [] } as ApiFailure)));
     component.submit(new Event('submit'));
-    expect(component.state()).toBe('error');
+    expect(component.state()).toBe('unavailable');
+    expect(component.stateTitle()).toContain('indisponível');
   });
 
   it('renders the complete upload journey in English', () => {
@@ -102,6 +117,45 @@ describe('ImportCreateComponent', () => {
     const fixture = TestBed.createComponent(ImportCreateComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('New import');
-    expect(fixture.nativeElement.textContent).toContain('Allowed formats');
+    expect(fixture.nativeElement.textContent).toContain('Formats allowed');
   });
+
+  it('uses the active source policy for guidance and client validation', () => {
+    policy.and.returnValue(of([
+      { source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 1024 },
+      { source: 'OWM', allowed_extensions: ['json'], max_bytes: 2048 }
+    ]));
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.acceptedExtensions()).toBe('.csv');
+    expect(component.sizeLabel()).toBe('1 KiB');
+    component.selectFile({ target: { files: [new File(['x'], 'data.json')] } } as unknown as Event);
+    expect(component.fileError()).toContain('CSV');
+    component.selectSource('OWM');
+    expect(component.acceptedExtensions()).toBe('.json');
+    expect(component.fileError()).toBe('');
+  });
+
+  it('fails closed when the upload policy is unavailable', () => {
+    policy.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 500, code: 'internal_error', message: 'safe', correlationId: 'corr-policy', fields: [] } as ApiFailure)));
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canSubmit()).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('envio permanece bloqueado');
+    expect(fixture.nativeElement.textContent).toContain('corr-policy');
+  });
+
+  for (const code of ['storage_error', 'pipeline_error']) {
+    it(`treats ${code} with an execution ID as an operational failure`, () => {
+      upload.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 500, code, message: 'safe', correlationId: 'corr-500', fields: [], details: { execution_id: 'failed-execution' } } as ApiFailure)));
+      const component = TestBed.createComponent(ImportCreateComponent).componentInstance;
+      component.ngOnInit();
+      component.file.set(new File(['id\n1'], 'safe.csv'));
+      component.submit(new Event('submit'));
+      expect(component.state()).toBe('unavailable');
+      expect(component.rejectionReason()).toBe('');
+      expect(component.targetExecutionId()).toBe('failed-execution');
+    });
+  }
 });

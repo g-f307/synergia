@@ -9,7 +9,7 @@ import pytest
 from openpyxl import Workbook
 from starlette.datastructures import Headers, UploadFile
 
-from app.upload_security import purge_quarantined, receive_and_inspect
+from app.upload_security import policy_for, purge_quarantined, receive_and_inspect
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -167,6 +167,13 @@ def test_applies_allowed_formats_per_source(tmp_path, monkeypatch) -> None:
     result = _inspect(tmp_path, "book.xlsx", _xlsx_bytes(), XLSX_MIME)
 
     assert result.reason_code == "unsupported_extension"
+
+
+def test_rejects_configured_extension_without_an_inspector(monkeypatch) -> None:
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS_N_FP", "csv,xml")
+
+    with pytest.raises(RuntimeError, match=r"extensões não suportadas: \.xml"):
+        policy_for("N-FP")
 
 
 def test_accepts_valid_content_with_random_internal_name(tmp_path) -> None:

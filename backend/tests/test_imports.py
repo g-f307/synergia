@@ -256,6 +256,34 @@ def test_accepts_supported_files(api, filename, content, content_type) -> None:
     assert stored[0].read_bytes() == original
 
 
+def test_exposes_active_upload_policy_per_source(api, monkeypatch) -> None:
+    client, _, _ = api
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS_N_FP", "csv,xlsx")
+    monkeypatch.setenv("UPLOAD_MAX_BYTES_N_FP", "4096")
+
+    response = client.get("/imports/policy")
+
+    assert response.status_code == 200
+    by_source = {item["source"]: item for item in response.json()}
+    assert by_source["N-FP"] == {
+        "source": "N-FP",
+        "allowed_extensions": ["csv", "xlsx"],
+        "max_bytes": 4096,
+    }
+    assert by_source["OWM"]["max_bytes"] == 25 * 1024 * 1024
+
+
+def test_upload_policy_fails_closed_for_an_unsupported_extension(monkeypatch) -> None:
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS_N_FP", "csv,xml")
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/imports/policy")
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "internal_error"
+    assert "xml" not in response.text
+
+
 def test_rejects_unsupported_extension_and_keeps_failure_trace(api) -> None:
     client, _, _ = api
     response = client.post(

@@ -30,6 +30,15 @@ describe('ImportService', () => {
     ]);
   });
 
+  it('loads the active upload policy from the backend contract', () => {
+    let maxBytes = 0;
+    service.policy().subscribe((items) => { maxBytes = items[0].max_bytes; });
+    const request = http.expectOne('http://localhost:8000/imports/policy');
+    expect(request.request.method).toBe('GET');
+    request.flush([{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }]);
+    expect(maxBytes).toBe(4096);
+  });
+
   it('uses encoded execution identifiers in tracking requests', () => {
     service.get('exec/unsafe').subscribe();
     const request = http.expectOne('http://localhost:8000/imports/exec%2Funsafe');
