@@ -70,7 +70,13 @@ def validate() -> None:
     failures = [pair for pair in checks if _contrast(*pair) < 4.5]
     if failures:
         raise ValueError(f"Contraste AA insuficiente: {failures}")
-    for capture in ("issue-69-login-desktop.png", "issue-69-login-mobile.png"):
+    journeys = ("login", "profile", "import", "execution")
+    viewports = ("desktop", "mobile")
+    for capture in (
+        f"issue-69-{journey}-{viewport}.png"
+        for journey in journeys
+        for viewport in viewports
+    ):
         path = EVIDENCE / capture
         if not path.is_file() or path.stat().st_size < 5_000:
             raise ValueError(f"Captura visual ausente ou inválida: {capture}")

@@ -34,13 +34,19 @@ breakpoints e ausência de dependência do runtime congelado. A suíte Angular
 cobre shell autenticado, drawer móvel, foco, modal, componentes semânticos,
 guards, permissões e os fluxos funcionais remodelados.
 
-Capturas reproduzíveis da jornada pública, sem credenciais ou respostas reais:
+Capturas reproduzíveis das jornadas pública e autenticadas. As telas privadas
+foram geradas com conta, organização e execução exclusivamente sintéticas:
 
 - [login desktop, 1440 × 1000](evidence/issue-69-login-desktop.png);
 - [login móvel, 390 × 844](evidence/issue-69-login-mobile.png).
+- [perfil desktop, 1440 × 1000](evidence/issue-69-profile-desktop.png);
+- [perfil móvel, 390 × 844](evidence/issue-69-profile-mobile.png);
+- [importação desktop, 1440 × 1000](evidence/issue-69-import-desktop.png);
+- [importação móvel, 390 × 844](evidence/issue-69-import-mobile.png);
+- [execução desktop, 1440 × 1000](evidence/issue-69-execution-desktop.png);
+- [execução móvel, 390 × 844](evidence/issue-69-execution-mobile.png).
 
-As telas autenticadas devem ser recapturadas no ambiente de homologação com
-dados sintéticos autorizados. Credenciais, tokens e respostas reais não são
-versionados. Um vídeo não faz parte do repositório para evitar a publicação
+Credenciais, tokens e respostas reais não são versionados. Um vídeo não faz
+parte do repositório para evitar a publicação
 acidental de identidade ou dados de sessão; a regressão verificável é mantida
 pelos testes e pelas capturas versionadas acima.

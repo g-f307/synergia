@@ -68,4 +68,15 @@ describe('LoginComponent', () => {
     expect(logo.getAttribute('alt')).toBe('SYNERGIA');
     expect(visual.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('anchors the locale selector to the login form on desktop', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const form = fixture.nativeElement.querySelector('.login-form') as HTMLElement;
+    const locale = fixture.nativeElement.querySelector('.login-locale') as HTMLElement;
+    expect(getComputedStyle(form).position).toBe('relative');
+    expect(getComputedStyle(locale).position).toBe('absolute');
+    expect(locale.offsetParent).toBe(form);
+  });
 });

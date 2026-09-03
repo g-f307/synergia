@@ -9,11 +9,14 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
 @Component({
   imports: [ReactiveFormsModule],
   template: `
-    <section class="card" aria-labelledby="profile-title">
-      <p class="eyebrow">{{ i18n.t('profile.eyebrow') }}</p>
-      <h1 id="profile-title">{{ i18n.t('profile.title') }}</h1>
+    <section class="profile-page" aria-labelledby="profile-title">
+      <header class="page-header"><div>
+        <p class="eyebrow">{{ i18n.t('profile.eyebrow') }}</p>
+        <h1 id="profile-title">{{ i18n.t('profile.title') }}</h1>
+      </div></header>
       @if (session.profile(); as profile) {
-        <p>{{ profile.emails[0]?.email }}</p>
+        <div class="profile-grid"><section class="card profile-settings">
+        <p class="profile-email">{{ profile.emails[0]?.email }}</p>
         <form [formGroup]="form" (ngSubmit)="save()">
           <label for="profile-display-name">{{ i18n.t('profile.displayName') }}</label>
           <input id="profile-display-name" formControlName="display_name"
@@ -45,7 +48,7 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
             {{ i18n.t('profile.save') }}
           </button>
         </form>
-        <div class="avatar-panel">
+        </section><aside class="card avatar-panel">
           <h2>{{ i18n.t('profile.avatarTitle') }}</h2>
           @if (avatarUrl(); as source) {
             <img class="avatar-preview" [src]="source" [alt]="i18n.t('profile.avatarAlt')">
@@ -59,13 +62,21 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
               {{ i18n.t('profile.avatarRemove') }}
             </button>
           }
-        </div>
+        </aside></div>
         @if (message()) { <p class="success" role="status">{{ message() }}</p> }
         @if (error()) {
           <p class="error" role="alert">{{ i18n.t('profile.error') }}</p>
         }
       }
-    </section>`
+    </section>`,
+  styles: [`
+    .profile-page{display:grid;gap:var(--syn-space-5);max-width:72rem}
+    .page-header{border-bottom:1px solid var(--syn-border);margin-bottom:0;padding-bottom:var(--syn-space-4)}
+    .profile-grid{display:grid;gap:var(--syn-space-5);grid-template-columns:minmax(0,2fr) minmax(17rem,1fr)}
+    .profile-email{color:var(--syn-text-secondary);margin-bottom:var(--syn-space-5)}
+    .avatar-panel{align-self:start;margin-top:0;text-align:center}.avatar-panel label{text-align:left}.avatar-preview{margin:0 auto var(--syn-space-5)}
+    @media(max-width:767px){.profile-grid{grid-template-columns:1fr}.avatar-panel{order:-1}}
+  `]
 })
 export class ProfileComponent {
   readonly session = inject(SessionService);

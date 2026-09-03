@@ -56,12 +56,13 @@ export function safeReturnUrl(value: string | null): string {
     <aside class="login-visual" aria-hidden="true"><div><p class="eyebrow">SYNERGIA</p><h2>{{ i18n.t('auth.visualTitle') }}</h2><p>{{ i18n.t('auth.visualMessage') }}</p></div></aside>
     </div>`,
   styles: [`
-    .narrow { position: relative; }
+    .login-form { position: relative; }
+    .login-logo { max-width: 13.75rem; width: 56%; }
     .login-locale { align-items: center; display: flex; gap: var(--space-2); position: absolute; right: var(--space-4); top: var(--space-4); }
     .login-locale label { color: var(--color-muted); display: block; font-size: .75rem; font-weight: 600; }
     .login-locale select { background: transparent; color: var(--color-muted); font-size: .8125rem; min-height: 2rem; padding: var(--space-1) var(--space-2); }
     @media (max-width: 30rem) {
-      .login-locale { position: static; justify-content: flex-end; }
+      .login-locale { position: static; justify-content: flex-end; margin-bottom: var(--space-4); }
     }
   `]
 })

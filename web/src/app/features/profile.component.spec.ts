@@ -77,4 +77,13 @@ describe('ProfileComponent', () => {
     expect(session.loadAvatar).toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('img.avatar-preview')).not.toBeNull();
   });
+
+  it('renders the remodeled profile as separate settings and avatar surfaces', () => {
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.page-header')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.profile-settings')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.avatar-panel')).not.toBeNull();
+  });
 });
