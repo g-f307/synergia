@@ -41,7 +41,7 @@ describe('AppComponent', () => {
     expect(fixture.componentInstance.title).toBe('SYNERGIA');
     expect(element.querySelector('.brand img')?.getAttribute('alt')).toBe('SYNERGIA');
     expect(element.textContent).toContain('Perfil');
-    expect(element.textContent).not.toContain('Visão geral');
+    expect(element.textContent).toContain('Visão geral');
     expect(element.textContent).not.toContain('Administração');
   });
 

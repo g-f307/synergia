@@ -26,6 +26,7 @@ ou capacidades sem contrato.
 | `/imports/:id` | estados e cards | resumo, inspeções e contagens | coluna única | conteúdo vem exclusivamente das APIs persistidas |
 | `/executions` | `monitor.html` | localização por ID dentro do shell oficial | formulário compacto | não existe `GET /executions`; lista sintética não foi copiada |
 | `/executions/:id` | `monitor.html` | KPIs, abas, filtros, estados e ações | abas roláveis e cards empilhados | detalhe real substitui modal e logs sintéticos do protótipo |
+| `/dashboard` | `index.html` | cabeçalho, filtros, contexto da fonte, cards operacionais e quantidades | filtros, cards e quantidades empilhados | gráficos simulados foram omitidos; os agregados reais exibem geração, recepção, origem e limitação auditável |
 
 ## Evidência automatizada
 
@@ -45,6 +46,8 @@ foram geradas com conta, organização e execução exclusivamente sintéticas:
 - [importação móvel, 390 × 844](evidence/issue-69-import-mobile.png);
 - [execução desktop, 1440 × 1000](evidence/issue-69-execution-desktop.png);
 - [execução móvel, 390 × 844](evidence/issue-69-execution-mobile.png).
+- [dashboard desktop com dados sintéticos, 1440 × 1000](evidence/issue-60-dashboard-desktop.png);
+- [dashboard móvel com dados sintéticos, 390 × 844](evidence/issue-60-dashboard-mobile.png).
 
 Credenciais, tokens e respostas reais não são versionados. Um vídeo não faz
 parte do repositório para evitar a publicação

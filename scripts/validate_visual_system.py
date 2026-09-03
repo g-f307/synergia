@@ -80,6 +80,13 @@ def validate() -> None:
         path = EVIDENCE / capture
         if not path.is_file() or path.stat().st_size < 5_000:
             raise ValueError(f"Captura visual ausente ou inválida: {capture}")
+    for capture in (
+        "issue-60-dashboard-desktop.png",
+        "issue-60-dashboard-mobile.png",
+    ):
+        path = EVIDENCE / capture
+        if not path.is_file() or path.stat().st_size < 5_000:
+            raise ValueError(f"Captura visual ausente ou inválida: {capture}")
     print(
         "Sistema visual validado: tokens, ativos, contraste AA, "
         "3 breakpoints e capturas."

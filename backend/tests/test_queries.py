@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -334,7 +334,8 @@ class MemoryQueryRepository:
         self.reprocessing_requests[fingerprint] = deepcopy(result)
         return result
 
-    def indicators(self, organization_ids=None) -> dict:
+    def indicators(self, organization_ids=None, date_from=None, date_to=None) -> dict:
+        self.indicator_filters = (organization_ids, date_from, date_to)
         return {
             "executions": {"completed": 1},
             "workorders": {"total": 1, "partially_released": 1},
@@ -477,6 +478,56 @@ def test_returns_basic_indicators(api) -> None:
     assert body["workorders"]["partially_released"] == 1
     assert body["pending_items"]["open"] == 2
     assert body["quantities"]["released"] == 6
+    assert body["source"] == "synergia.operational"
+    assert body["generated_at"]
+    assert body["filters"] == {
+        "organization_id": None,
+        "date_from": None,
+        "date_to": None,
+    }
+
+
+def test_filters_indicators_by_authorized_organization_and_period(api) -> None:
+    client, repository = api
+    organization_id = client.get("/imports/policy").json()["organizations"][0]["id"]
+
+    response = client.get(
+        "/indicators",
+        params={
+            "organization_id": organization_id,
+            "date_from": "2026-08-01",
+            "date_to": "2026-08-31",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["filters"] == {
+        "organization_id": organization_id,
+        "date_from": "2026-08-01",
+        "date_to": "2026-08-31",
+    }
+    assert repository.indicator_filters[1:] == (
+        date(2026, 8, 1),
+        date(2026, 8, 31),
+    )
+
+
+def test_rejects_invalid_indicator_period(api) -> None:
+    client, _ = api
+    response = client.get(
+        "/indicators?date_from=2026-09-01&date_to=2026-08-01"
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_period"
+
+
+def test_rejects_indicator_organization_outside_scope(api) -> None:
+    client, _ = api
+    response = client.get(
+        "/indicators?organization_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "organization_access_denied"
 
 
 @pytest.mark.parametrize(
