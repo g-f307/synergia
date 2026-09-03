@@ -32,11 +32,19 @@ describe('ImportService', () => {
 
   it('loads the active upload policy from the backend contract', () => {
     let maxBytes = 0;
-    service.policy().subscribe((items) => { maxBytes = items[0].max_bytes; });
+    let organizationName = '';
+    service.policy().subscribe((configuration) => {
+      maxBytes = configuration.policies[0].max_bytes;
+      organizationName = configuration.organizations[0].display_name;
+    });
     const request = http.expectOne('http://localhost:8000/imports/policy');
     expect(request.request.method).toBe('GET');
-    request.flush([{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }]);
+    request.flush({
+      policies: [{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }],
+      organizations: [{ id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' }]
+    });
     expect(maxBytes).toBe(4096);
+    expect(organizationName).toBe('Organization 1');
   });
 
   it('uses encoded execution identifiers in tracking requests', () => {

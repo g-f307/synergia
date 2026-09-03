@@ -3,14 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { FileInspection, ImportSource, ImportStatus, PipelineSummary, UploadPolicy, UploadUpdate } from './import.models';
+import { FileInspection, ImportSource, ImportStatus, PipelineSummary, UploadConfiguration, UploadUpdate } from './import.models';
 
 @Injectable({ providedIn: 'root' })
 export class ImportService {
   private readonly http = inject(HttpClient);
 
-  policy(): Observable<UploadPolicy[]> {
-    return this.http.get<UploadPolicy[]>(`${environment.apiUrl}/imports/policy`);
+  policy(): Observable<UploadConfiguration> {
+    return this.http.get<UploadConfiguration>(`${environment.apiUrl}/imports/policy`);
   }
 
   upload(source: ImportSource, file: File, organizationId?: string): Observable<UploadUpdate> {

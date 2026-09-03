@@ -44,6 +44,17 @@ export interface UploadPolicy {
   max_bytes: number;
 }
 
+export interface OrganizationOption {
+  id: string;
+  organization_code: string;
+  display_name: string;
+}
+
+export interface UploadConfiguration {
+  policies: UploadPolicy[];
+  organizations: OrganizationOption[];
+}
+
 export type UploadState = 'idle' | 'uploading' | 'inspecting' | 'accepted' | 'rejected' | 'duplicate' | 'forbidden' | 'unavailable' | 'error';
 export type UploadUpdate =
   | { kind: 'progress'; progress: number | null }

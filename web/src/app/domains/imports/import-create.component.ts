@@ -6,7 +6,7 @@ import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { TranslationKey } from '../../shared/i18n/i18n.models';
-import { ImportSource, UploadPolicy, UploadState, importSources } from './import.models';
+import { ImportSource, OrganizationOption, UploadPolicy, UploadState, importSources } from './import.models';
 import { ImportService } from './import.service';
 
 const STATE_KEYS: Record<UploadState, { title: TranslationKey; message: TranslationKey }> = {
@@ -50,11 +50,13 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
             @for (item of sources; track item) { <option [value]="item">{{ item }}</option> }
           </select>
 
-          @if (organizationOptions().length > 1) {
+          @if (!policyLoading() && organizationSelectionRequired()) {
             <label for="import-organization">{{ i18n.t('imports.organization') }}</label>
-            <select id="import-organization" [disabled]="busy()" [value]="organizationId()" (change)="organizationId.set($any($event.target).value)">
+            <select id="import-organization" [disabled]="busy() || !!policyFailure()" [value]="organizationId()" (change)="organizationId.set($any($event.target).value)">
               <option value="">{{ i18n.t('imports.selectOrganization') }}</option>
-              @for (id of organizationOptions(); track id) { <option [value]="id">{{ shortId(id) }}</option> }
+              @for (organization of organizationOptions(); track organization.id) {
+                <option [value]="organization.id">{{ organization.display_name }} — {{ organization.organization_code }}</option>
+              }
             </select>
           }
 
@@ -129,8 +131,16 @@ export class ImportCreateComponent implements OnInit {
   readonly policies = signal<UploadPolicy[]>([]);
   readonly policyLoading = signal(true);
   readonly policyFailure = signal<ApiFailure | null>(null);
-  readonly organizationOptions = computed(() => this.session.profile()?.permissions.find((item) => item.key === 'import.create')?.organizations ?? []);
+  readonly organizationOptions = signal<OrganizationOption[]>([]);
+  readonly permissionOrganizationIds = computed(() => {
+    const permission = this.session.profile()?.permissions.find((item) => item.key === 'import.create');
+    return permission ? permission.organizations : [];
+  });
   readonly organizationId = signal('');
+  readonly organizationSelectionRequired = computed(() => {
+    const scopes = this.permissionOrganizationIds();
+    return scopes === null || scopes.length !== 1 || this.organizationOptions().length !== 1;
+  });
   readonly busy = computed(() => this.state() === 'uploading' || this.state() === 'inspecting');
   readonly activePolicy = computed(() => this.policies().find((item) => item.source === this.source()) ?? null);
   readonly acceptedExtensions = computed(() => this.activePolicy()?.allowed_extensions.map((item) => `.${item}`).join(',') ?? '');
@@ -139,13 +149,23 @@ export class ImportCreateComponent implements OnInit {
   readonly policyDescription = computed(() => this.activePolicy()
     ? this.i18n.t('imports.fileHelp', { formats: this.formatsLabel(), size: this.sizeLabel() })
     : this.i18n.t('imports.policyLoading'));
-  readonly canSubmit = computed(() => !!this.activePolicy() && !!this.file() && !this.fileError() && !this.busy() && (this.organizationOptions().length <= 1 || !!this.organizationId()));
+  readonly canSubmit = computed(() => !!this.activePolicy() && !!this.file() && !this.fileError() && !this.busy()
+    && this.organizationOptions().some((organization) => organization.id === this.organizationId()));
   readonly stateTitle = computed(() => this.i18n.t(STATE_KEYS[this.state()].title));
   readonly stateMessage = computed(() => this.i18n.t(STATE_KEYS[this.state()].message));
 
   ngOnInit(): void {
     this.imports.policy().subscribe({
-      next: (policies) => { this.policies.set(policies); this.policyLoading.set(false); },
+      next: (configuration) => {
+        this.policies.set(configuration.policies);
+        this.organizationOptions.set(configuration.organizations);
+        const scopes = this.permissionOrganizationIds();
+        const inferred = scopes?.length === 1
+          ? configuration.organizations.find((organization) => organization.id === scopes[0])
+          : undefined;
+        this.organizationId.set(inferred?.id ?? '');
+        this.policyLoading.set(false);
+      },
       error: (failure: ApiFailure) => { this.policyFailure.set(failure); this.policyLoading.set(false); }
     });
   }
@@ -171,9 +191,7 @@ export class ImportCreateComponent implements OnInit {
     this.progress.set(0);
     this.correlationId.set(null);
     this.rejectionReason.set('');
-    const options = this.organizationOptions();
-    const organization = options.length === 1 ? options[0] : this.organizationId() || undefined;
-    this.imports.upload(this.source(), file, organization).pipe(finalize(() => {
+    this.imports.upload(this.source(), file, this.organizationId()).pipe(finalize(() => {
       if (this.state() === 'uploading') this.state.set('inspecting');
     })).subscribe({
       next: (update) => {
@@ -191,7 +209,6 @@ export class ImportCreateComponent implements OnInit {
   }
 
   safeName(name: string): string { return name.replaceAll('\\', '/').split('/').pop() || this.i18n.t('common.notAvailable'); }
-  shortId(id: string): string { return `${id.slice(0, 8)}…`; }
   formatBytes(size: number): string {
     if (size >= 1024 * 1024) return `${this.i18n.formatNumber(size / 1024 / 1024, { maximumFractionDigits: 2 })} MiB`;
     if (size >= 1024) return `${this.i18n.formatNumber(size / 1024, { maximumFractionDigits: 2 })} KiB`;

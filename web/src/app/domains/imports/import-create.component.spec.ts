@@ -12,17 +12,22 @@ import { ImportService } from './import.service';
 describe('ImportCreateComponent', () => {
   const upload = jasmine.createSpy('upload');
   const policy = jasmine.createSpy('policy');
-  const session = { profile: () => ({ permissions: [{ key: 'import.create', organizations: ['org-1'] }] }) };
+  let permissionOrganizations: string[] | null;
+  const session = { profile: () => ({ permissions: [{ key: 'import.create', organizations: permissionOrganizations }] }) };
   beforeEach(async () => {
+    permissionOrganizations = ['org-1'];
     upload.calls.reset();
     upload.and.returnValue(NEVER);
     policy.calls.reset();
-    policy.and.returnValue(of([
-      { source: 'N-FP', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
-      { source: 'OWM', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
-      { source: 'GMES/OQC', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
-      { source: 'TMS', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 }
-    ]));
+    policy.and.returnValue(of({
+      policies: [
+        { source: 'N-FP', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+        { source: 'OWM', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+        { source: 'GMES/OQC', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+        { source: 'TMS', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 }
+      ],
+      organizations: [{ id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' }]
+    }));
     await TestBed.configureTestingModule({
       imports: [ImportCreateComponent],
       providers: [provideRouter([]), { provide: ImportService, useValue: { upload, policy } }, { provide: SessionService, useValue: session }]
@@ -57,6 +62,66 @@ describe('ImportCreateComponent', () => {
     stream.next({ kind: 'progress', progress: 50 });
     expect(component.progress()).toBe(50);
     expect(component.state()).toBe('uploading');
+  });
+
+  it('infers and sends the only scoped organization without showing a selector', () => {
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const file = new File(['id\n1'], 'safe.csv');
+    component.selectFile({ target: { files: [file] } } as unknown as Event);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#import-organization')).toBeNull();
+    expect(component.organizationId()).toBe('org-1');
+    component.submit(new Event('submit'));
+    expect(upload).toHaveBeenCalledWith('N-FP', file, 'org-1');
+  });
+
+  it('requires an explicit organization and sends it for a global permission', () => {
+    permissionOrganizations = null;
+    policy.and.returnValue(of({
+      policies: [{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }],
+      organizations: [
+        { id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' },
+        { id: 'org-2', organization_code: 'ORG-2', display_name: 'Organization 2' }
+      ]
+    }));
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const file = new File(['id\n1'], 'safe.csv');
+    component.selectFile({ target: { files: [file] } } as unknown as Event);
+    fixture.detectChanges();
+    const selector = fixture.nativeElement.querySelector('#import-organization') as HTMLSelectElement;
+    expect(selector).not.toBeNull();
+    expect(component.canSubmit()).toBeFalse();
+    selector.value = 'org-2';
+    selector.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(component.canSubmit()).toBeTrue();
+    component.submit(new Event('submit'));
+    expect(upload).toHaveBeenCalledWith('N-FP', file, 'org-2');
+  });
+
+  it('preserves explicit selection for multiple organization scopes', () => {
+    permissionOrganizations = ['org-1', 'org-2'];
+    policy.and.returnValue(of({
+      policies: [{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }],
+      organizations: [
+        { id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' },
+        { id: 'org-2', organization_code: 'ORG-2', display_name: 'Organization 2' }
+      ]
+    }));
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const file = new File(['id\n1'], 'safe.csv');
+    component.selectFile({ target: { files: [file] } } as unknown as Event);
+    expect(component.organizationSelectionRequired()).toBeTrue();
+    expect(component.canSubmit()).toBeFalse();
+    component.organizationId.set('org-1');
+    component.submit(new Event('submit'));
+    expect(upload).toHaveBeenCalledWith('N-FP', file, 'org-1');
   });
 
   it('redirects to the created import after acceptance', () => {
@@ -121,10 +186,13 @@ describe('ImportCreateComponent', () => {
   });
 
   it('uses the active source policy for guidance and client validation', () => {
-    policy.and.returnValue(of([
-      { source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 1024 },
-      { source: 'OWM', allowed_extensions: ['json'], max_bytes: 2048 }
-    ]));
+    policy.and.returnValue(of({
+      policies: [
+        { source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 1024 },
+        { source: 'OWM', allowed_extensions: ['json'], max_bytes: 2048 }
+      ],
+      organizations: [{ id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' }]
+    }));
     const fixture = TestBed.createComponent(ImportCreateComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
