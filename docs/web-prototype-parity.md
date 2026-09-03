@@ -1,8 +1,9 @@
 # Matriz de paridade funcional com o protótipo
 
 Referência: branch `prototype-pages`, tag `prototype-v1.0`. Esta matriz mede
-capacidade funcional, não identidade pixel a pixel. O aceite final será
-atualizado pela #63.
+capacidade funcional. A identidade e a composição visual das telas existentes
+foram alinhadas na #69 e são verificadas separadamente na
+[matriz de fidelidade visual](visual-fidelity-matrix.md).
 
 ## Inventário do protótipo
 
@@ -34,8 +35,8 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementar #61 |
 | `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementar #62 |
 | `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementar #62 |
-| `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | adaptar #56/#57 |
-| `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | adaptar #56/#57 |
+| `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
+| `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado; visual alinhado #69 |
 | `/reports` e detalhe | páginas de relatório | nenhum contrato atual | `report.export` reservado / `org` | adiar Etapa 4 |
 
 O inventário integral e validável de endpoints está em
@@ -45,9 +46,9 @@ O inventário integral e validável de endpoints está em
 
 | Elemento do protótipo | Tratamento de produção |
 | --- | --- |
-| shell lateral, cabeçalho e breadcrumbs | implementar na #56 com navegação por permissão |
-| cards, badges, tabelas, filtros, paginação, alertas e modais | adaptar como componentes acessíveis da #56 |
-| temas, tipografia e responsividade | adaptar tokens; evitar estilos por página |
+| shell lateral, cabeçalho e breadcrumbs | implementado na #56 e alinhado ao protótipo na #69 |
+| cards, badges, tabelas, filtros, paginação, alertas e modais | componentes acessíveis compartilhados, alinhados na #69 |
+| temas, tipografia e responsividade | tokens extraídos e validados na #69; evitar estilos por página |
 | foco, skip link, labels e redução de movimento | preservar e testar nas #56/#57 |
 | dados de `data.js` | remover; somente fixtures de teste podem conter valores fixos |
 | `localStorage` de sessão | remover; access token permanece em memória |

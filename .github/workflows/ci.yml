@@ -28,6 +28,8 @@ jobs:
         run: npm run lint
       - name: Validar ativos visuais incorporados
         run: python ../scripts/validate_web_assets.py
+      - name: Validar fidelidade da fundação visual
+        run: python ../scripts/validate_visual_system.py
       - name: Validar catálogos de internacionalização
         run: python ../scripts/validate_i18n.py
       - name: Executar testes com cobertura

@@ -57,4 +57,15 @@ describe('LoginComponent', () => {
       'synthetic-password'
     );
   });
+
+  it('uses the approved brand asset and keeps the decorative panel out of the accessibility tree', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const logo = fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement;
+    const visual = fixture.nativeElement.querySelector('.login-visual') as HTMLElement;
+    expect(logo.getAttribute('src')).toBe('/assets/logos/logo-horizontal.png');
+    expect(logo.getAttribute('alt')).toBe('SYNERGIA');
+    expect(visual.getAttribute('aria-hidden')).toBe('true');
+  });
 });
