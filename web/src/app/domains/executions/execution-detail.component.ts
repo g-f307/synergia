@@ -1,0 +1,65 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
+import { ApiFailure } from '../../shared/api/api-error';
+import { SessionService } from '../../core/session.service';
+import { I18nService } from '../../shared/i18n/i18n.service';
+import { TranslationKey } from '../../shared/i18n/i18n.models';
+import { ConfirmationComponent, PaginationComponent, StateComponent, UiState } from '../../shared/ui/ui-kit';
+import { Classification, Divergence, Evidence, Execution, ExecutionCounts, ExecutionTab, Page, PendingItem } from './execution.models';
+import { ExecutionService } from './execution.service';
+
+const TABS: ExecutionTab[] = ['summary','history','divergences','classifications','pending','evidences'];
+const TAB_KEYS: Record<ExecutionTab, TranslationKey> = { summary:'executions.tab.summary',history:'executions.tab.history',divergences:'executions.tab.divergences',classifications:'executions.tab.classifications',pending:'executions.tab.pending',evidences:'executions.tab.evidences' };
+const LIFECYCLE_KEYS: Record<NonNullable<Execution['lifecycle']>, TranslationKey> = { active:'executions.lifecycle.active',completed:'executions.lifecycle.completed',partial:'executions.lifecycle.partial',failed:'executions.lifecycle.failed' };
+const COUNT_KEYS: Record<keyof ExecutionCounts, TranslationKey> = {
+ files:'executions.count.files',files_received:'executions.count.filesReceived',files_accepted:'executions.count.filesAccepted',files_rejected:'executions.count.filesRejected',rows_read:'executions.count.rowsRead',valid_records:'executions.count.validRecords',rejected_records:'executions.count.rejectedRecords',normalized_records:'executions.count.normalizedRecords',workorders:'executions.count.workorders',lots:'executions.count.lots',serials:'executions.count.serials',classifications:'executions.count.classifications',pending_items:'executions.count.pendingItems',errors:'executions.count.errors',warnings:'executions.count.warnings'
+};
+type RecordItem = Divergence|Classification|PendingItem|Evidence;
+@Component({ imports: [RouterLink, NgTemplateOutlet, ConfirmationComponent, PaginationComponent, StateComponent], template: `
+<section class="execution" aria-labelledby="execution-title"><a routerLink="/executions">{{ i18n.t('executions.back') }}</a>
+<p class="eyebrow">{{ i18n.t('executions.eyebrow') }}</p><h1 id="execution-title">{{ i18n.t('executions.detailTitle') }}</h1>
+@if(loading()){<p role="status">{{ i18n.t('executions.loading') }}</p>}
+@if(loadFailureState(); as state){<syn-state [state]="state" [title]="loadFailureTitle()" [message]="loadFailureMessage()" />}
+@if(item(); as current){
+  @if(current.lifecycle==='partial'){<div class="partial" role="status"><strong>{{ i18n.t('executions.partial') }}</strong></div>}
+  <header class="card"><div><h2 class="technical">{{ current.execution_id }}</h2><span class="badge" [attr.data-lifecycle]="current.lifecycle">{{ lifecycle(current) }}</span></div>
+  <dl><div><dt>{{ i18n.t('executions.persistedState') }}</dt><dd>{{ current.status }}</dd></div><div><dt>{{ i18n.t('executions.attempt') }}</dt><dd>{{ current.attempt }}</dd></div><div><dt>{{ i18n.t('executions.source') }}</dt><dd>{{ current.source || '-' }}</dd></div><div><dt>{{ i18n.t('executions.pipeline') }}</dt><dd>{{ current.pipeline_version }}</dd></div><div><dt>{{ i18n.t('executions.rules') }}</dt><dd>{{ current.rule_catalog_version }}</dd></div></dl></header>
+  <nav class="tabs" [attr.aria-label]="i18n.t('executions.tabs')">@for(option of visibleTabs();track option){<button type="button" class="secondary" [attr.aria-current]="tab()===option?'page':null" (click)="selectTab(option)">{{ tabLabel(option) }}</button>}</nav>
+  @if(tab()==='summary'){<section class="card"><h2>{{ i18n.t('executions.counts') }}</h2><div class="metrics">@for(entry of countEntries();track entry[0]){<div><strong>{{ i18n.formatNumber(entry[1]) }}</strong><span>{{ countLabel(entry[0]) }}</span></div>}</div></section>}
+  @if(tab()==='history'){<section class="card"><h2>{{ i18n.t('executions.tab.history') }}</h2>@if(!current.state_history.length){<p>{{ i18n.t('executions.empty') }}</p>}@for(event of current.state_history;track event.state_version){<article><strong>{{ event.to_state }}</strong><span>{{ i18n.formatDate(event.occurred_at,{dateStyle:'medium',timeStyle:'short'}) }}</span><p>{{ event.reason }}</p></article>}</section>}
+  @if(tab()==='divergences'){<section class="card"><h2>{{ i18n.t('executions.tab.divergences') }}</h2><div class="filters"><select [value]="severity()" (change)="severity.set($any($event.target).value);loadTab(1)"><option value="">{{ i18n.t('executions.allSeverities') }}</option><option value="error">error</option><option value="warning">warning</option></select><input [value]="source()" (change)="source.set($any($event.target).value);loadTab(1)" [placeholder]="i18n.t('executions.source')"></div><ng-container [ngTemplateOutlet]="paged" /></section>}
+  @if(tab()==='classifications'||tab()==='pending'||tab()==='evidences'){<section class="card"><h2>{{ tabLabel(tab()) }}</h2><ng-container [ngTemplateOutlet]="paged" /></section>}
+  <ng-template #paged>@if(sectionLoading()){<p role="status">{{ i18n.t('executions.loading') }}</p>}@else if(sectionFailure()){<p class="error" role="alert">{{ sectionFailure()?.message }}</p>}@else if(!pageData()?.items?.length){<p>{{ i18n.t('executions.empty') }}</p>}@else{<div class="records">@for(record of pageData()!.items;track recordKey(record)){<article><strong>{{ recordTitle(record) }}</strong><p>{{ recordDescription(record) }}</p>@if(isEvidence(record)&&record.available&&canDownload()){<button type="button" (click)="download(record)">{{ i18n.t('executions.download') }}</button>}@else if(isEvidence(record)){<span>{{ i18n.t('executions.unavailableEvidence') }}</span>}</article>}</div><syn-pagination [page]="pageData()!.pagination.page" [pages]="pageData()!.pagination.pages" (pageChange)="loadTab($event)" />}</ng-template>
+  @if(canReprocess()){<button type="button" (click)="confirming.set(true)">{{ i18n.t('executions.reprocess') }}</button>}
+  @if(actionFailure()){<syn-state state="error" [title]="actionFailureTitle()" [message]="actionFailureMessage()" />}
+  @if(reprocessedId()){<p role="status">{{ i18n.t('executions.reprocessed') }} <a [routerLink]="['/executions',reprocessedId()]">{{ reprocessedId() }}</a></p>}
+}
+@if(confirming()){<syn-confirmation [title]="i18n.t('executions.confirmTitle')" [message]="i18n.t('executions.confirmMessage')" (cancelled)="confirming.set(false)" (confirmed)="reprocess()" />}
+</section>`, styles: ['.execution{display:grid;gap:var(--space-4);max-width:75rem}.partial{border-left:.3rem solid var(--color-partial);padding:var(--space-3)}dl,.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:var(--space-3)}dt,span{color:var(--color-muted)}dd{margin:0}.tabs,.filters{display:flex;flex-wrap:wrap;gap:var(--space-2)}article{border-bottom:1px solid var(--color-border);padding:var(--space-3) 0}.metrics div{display:grid}.metrics strong{font-size:1.5rem}.records{display:grid;gap:var(--space-2)}'] })
+export class ExecutionDetailComponent implements OnInit {
+ readonly i18n=inject(I18nService); private route=inject(ActivatedRoute); private router=inject(Router); private api=inject(ExecutionService); private session=inject(SessionService);
+ readonly tabs=TABS; readonly item=signal<Execution|null>(null); readonly loading=signal(true); readonly failure=signal<ApiFailure|null>(null); readonly tab=signal<ExecutionTab>('summary'); readonly pageData=signal<Page<Divergence|Classification|PendingItem|Evidence>|null>(null); readonly sectionLoading=signal(false); readonly sectionFailure=signal<ApiFailure|null>(null); readonly actionFailure=signal<ApiFailure|null>(null); readonly severity=signal(''); readonly source=signal(''); readonly confirming=signal(false); readonly reprocessedId=signal(''); private id='';
+ readonly countEntries=computed(()=>Object.entries(this.item()?.counts??{}) as [keyof ExecutionCounts,number][]);
+ readonly loadFailureState=computed<UiState|null>(()=>{const failure=this.failure();if(!failure||failure.kind==='unauthorized')return null;if(failure.kind==='forbidden')return 'forbidden';if(failure.kind==='not-found')return 'empty';if(failure.kind==='unavailable')return 'unavailable';return 'error'});
+ readonly visibleTabs=computed(()=>TABS.filter(tab=>!['divergences','evidences'].includes(tab)||this.session.hasPermission('artifact.read')));
+ ngOnInit():void{this.id=this.route.snapshot.paramMap.get('executionId')??'';const query=this.route.snapshot.queryParamMap;const requested=query.get('tab') as ExecutionTab;const initialTab=TABS.includes(requested)&&this.visibleTabs().includes(requested)?requested:'summary';this.tab.set(initialTab);this.severity.set(query.get('severity')??'');this.source.set(query.get('source')??'');const requestedPage=Number(query.get('page')??1);const page=Number.isInteger(requestedPage)&&requestedPage>0?requestedPage:1;this.api.get(this.id).subscribe({next:value=>{this.item.set(value);this.loading.set(false);this.loadTab(page,false)},error:(e:ApiFailure)=>{this.failure.set(e);this.loading.set(false)}})}
+ selectTab(tab:ExecutionTab):void{if(!this.visibleTabs().includes(tab))return;this.tab.set(tab);this.loadTab(1)}
+ loadTab(page:number,syncUrl=true):void{if(syncUrl)void this.router.navigate([], {relativeTo:this.route,queryParams:{tab:this.tab(),page,severity:this.severity()||null,source:this.source()||null},queryParamsHandling:'merge',replaceUrl:true});this.pageData.set(null);this.sectionFailure.set(null);const tab=this.tab();if(tab==='summary'||tab==='history')return;this.sectionLoading.set(true);let request:Observable<Page<RecordItem>>;if(tab==='divergences')request=this.api.divergences(this.id,page,this.severity(),this.source());else if(tab==='classifications')request=this.api.classifications(this.id,page);else if(tab==='pending')request=this.api.pending(this.id,page);else request=this.api.evidences(this.id,page);request.subscribe({next:value=>{this.pageData.set(value);this.sectionLoading.set(false)},error:(e:ApiFailure)=>{this.sectionFailure.set(e);this.sectionLoading.set(false)}})}
+ canReprocess():boolean{return this.session.hasPermission('execution.reprocess')&&!!this.item()&&!['active','reprocessing'].includes(this.item()!.lifecycle??'')}
+ canDownload():boolean{return this.session.hasPermission('artifact.export')}
+ loadFailureTitle():string{const kind=this.failure()?.kind;if(kind==='forbidden')return this.i18n.t('executions.error.forbidden.title');if(kind==='not-found')return this.i18n.t('executions.error.notFound.title');if(kind==='unavailable')return this.i18n.t('executions.error.unavailable.title');return this.i18n.t('executions.error.generic.title')}
+ loadFailureMessage():string{const kind=this.failure()?.kind;if(kind==='forbidden')return this.i18n.t('executions.error.forbidden.message');if(kind==='not-found')return this.i18n.t('executions.error.notFound.message');if(kind==='unavailable')return this.i18n.t('executions.error.unavailable.message');return this.i18n.t('executions.error.generic.message')}
+ actionFailureTitle():string{return this.i18n.t(this.actionFailure()?.kind==='conflict'?'executions.error.reprocessConflict.title':'executions.error.reprocess.title')}
+ actionFailureMessage():string{return this.i18n.t(this.actionFailure()?.kind==='conflict'?'executions.error.reprocessConflict.message':'executions.error.reprocess.message')}
+ countLabel(key:keyof ExecutionCounts):string{return this.i18n.t(COUNT_KEYS[key])}
+ lifecycle(item:Execution):string{return this.i18n.t(LIFECYCLE_KEYS[item.lifecycle??'active'])}
+ tabLabel(tab:ExecutionTab):string{return this.i18n.t(TAB_KEYS[tab])}
+ recordKey(item:RecordItem):string|number{return 'id' in item?item.id:'classification_id' in item?item.classification_id:item.evidence_id}
+ recordTitle(item:RecordItem):string{return 'safe_name' in item?item.safe_name:'code' in item?item.code:'category' in item?item.category:item.rule_id}
+ recordDescription(item:RecordItem):string{return 'reason' in item&&item.reason?item.reason:'justification' in item?item.justification:'sha256' in item?item.sha256:'status' in item?item.status:''}
+ isEvidence(item:RecordItem):item is Evidence{return 'evidence_id' in item}
+ download(item:Evidence):void{if(!item.available||!this.canDownload())return;this.api.download(this.id,item.evidence_id).subscribe({next:blob=>{const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=item.safe_name;anchor.click();URL.revokeObjectURL(url)},error:(e:ApiFailure)=>this.sectionFailure.set(e)})}
+ reprocess():void{this.confirming.set(false);this.actionFailure.set(null);this.api.reprocess(this.id,'web-execution-monitor').subscribe({next:value=>{this.reprocessedId.set(value.execution_id);this.actionFailure.set(null)},error:(e:ApiFailure)=>this.actionFailure.set(e)})}
+}

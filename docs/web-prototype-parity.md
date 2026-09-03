@@ -29,7 +29,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/dashboard` | `index.html` | `GET /indicators` | `dashboard.read` / `org` | implementar #60 |
 | `/imports/new` | ausente | `POST /imports` | `import.create` / `org` | implementado #58 |
 | `/imports/:executionId` | ausente | consultas `/imports/{execution_id}/*` | `import.read`, `artifact.read` / `org` | implementado #58 |
-| `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementar #59 |
+| `/executions` e `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementado #59; localização por ID enquanto não existe contrato de listagem global |
 | `/search` | `consulta.html` | `GET /workorders`, `/lots`, `/serials` por ID | `business.read` / `org` | implementar #61 |
 | detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementar #61 |
 | `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementar #62 |

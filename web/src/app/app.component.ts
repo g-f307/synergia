@@ -25,6 +25,7 @@ export class AppComponent {
   readonly items: NavigationItem[] = [
     { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: false },
     { label: 'navigation.newImport', route: '/imports/new', permission: 'import.create', icon: 'spreadsheet.svg', implemented: true },
+    { label: 'navigation.executions', route: '/executions', permission: 'execution.read', icon: 'dashboard.svg', implemented: true },
     { label: 'navigation.search', route: '/search', permission: 'business.read', icon: 'search.svg', implemented: false },
     { label: 'navigation.pending', route: '/pending-items', permission: 'pending.read', icon: 'queue.svg', implemented: false }
   ];
