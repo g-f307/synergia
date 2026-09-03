@@ -92,9 +92,15 @@ def test_web_journey_map_rejects_primary_permission_outside_contracts(
 def test_web_journey_map_rejects_unimplemented_angular_route(
     tmp_path, monkeypatch
 ) -> None:
+    def mark_planned_route_as_implemented(document: dict) -> None:
+        planned = next(
+            route for route in document["routes"] if route["status"] == "planned"
+        )
+        planned["status"] = "implemented"
+
     target = _changed_map(
         tmp_path,
-        lambda document: document["routes"][1].update(status="implemented"),
+        mark_planned_route_as_implemented,
     )
     monkeypatch.setattr(validate_web_journey_map, "MAP", target)
 
