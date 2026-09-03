@@ -37,7 +37,7 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
   imports: [RouterLink],
   template: `
     <section class="imports-page" aria-labelledby="import-title">
-      <header>
+      <header class="page-header">
         <p class="eyebrow">{{ i18n.t('imports.eyebrow') }}</p>
         <h1 id="import-title">{{ i18n.t('imports.newTitle') }}</h1>
         <p>{{ i18n.t('imports.introduction') }}</p>

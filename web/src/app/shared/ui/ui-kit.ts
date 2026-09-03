@@ -4,16 +4,16 @@ import { I18nService } from '../i18n/i18n.service';
 
 export type UiState = 'loading' | 'empty' | 'partial' | 'stale' | 'error' | 'forbidden' | 'unavailable' | 'success';
 
-@Component({ selector: 'syn-card', template: '<section class="ui-card"><ng-content /></section>', styles: ['.ui-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-5)}'] })
+@Component({ selector: 'syn-card', template: '<section class="ui-card"><ng-content /></section>' })
 export class CardComponent {}
 
-@Component({ selector: 'syn-badge', template: '<span class="badge" [attr.data-tone]="tone()"><ng-content /></span>', styles: ['.badge{border:1px solid currentColor;border-radius:99rem;display:inline-flex;font-size:.875rem;font-weight:600;padding:var(--space-1) var(--space-2)}'] })
+@Component({ selector: 'syn-badge', template: '<span class="badge" [attr.data-tone]="tone()"><ng-content /></span>' })
 export class BadgeComponent { readonly tone = input<UiState>('success'); }
 
-@Component({ selector: 'syn-state', template: '<section class="state" [attr.data-state]="state()" role="status"><h2>{{ title() }}</h2><p>{{ message() }}</p><ng-content /></section>', styles: ['.state{border-left:.25rem solid currentColor;padding:var(--space-4)}.state[data-state=error]{color:var(--color-error)}.state[data-state=partial]{color:var(--color-partial)}.state[data-state=unavailable]{color:var(--color-unavailable)}.state[data-state=success]{color:var(--color-success)}'] })
+@Component({ selector: 'syn-state', template: '<section class="state" [attr.data-state]="state()" role="status"><h2>{{ title() }}</h2><p>{{ message() }}</p><ng-content /></section>' })
 export class StateComponent { readonly state = input.required<UiState>(); readonly title = input.required<string>(); readonly message = input.required<string>(); }
 
-@Component({ selector: 'syn-alert', template: '<div class="alert" role="alert"><strong>{{ title() }}</strong><p>{{ message() }}</p></div>', styles: ['.alert{border:1px solid currentColor;border-radius:var(--radius-sm);padding:var(--space-4)}'] })
+@Component({ selector: 'syn-alert', template: '<div class="state" data-state="error" role="alert"><strong>{{ title() }}</strong><p>{{ message() }}</p></div>' })
 export class AlertComponent { readonly title = input.required<string>(); readonly message = input.required<string>(); }
 
 @Component({ selector: 'syn-pagination', template: '<nav [attr.aria-label]="i18n.t(\'pagination.label\')"><button type="button" class="secondary" [disabled]="page() <= 1" (click)="pageChange.emit(page()-1)">{{ i18n.t(\'pagination.previous\') }}</button><span aria-live="polite">{{ i18n.t(\'pagination.status\', { page: i18n.formatNumber(page()), pages: i18n.formatNumber(pages()) }) }}</span><button type="button" class="secondary" [disabled]="page() >= pages()" (click)="pageChange.emit(page()+1)">{{ i18n.t(\'pagination.next\') }}</button></nav>', styles: ['nav{align-items:center;display:flex;gap:var(--space-3);justify-content:flex-end}'] })
