@@ -82,12 +82,28 @@
       "owner": "domains/imports"
     },
     {
-      "id": "execution-detail",
-      "route": "/executions/:executionId",
-      "status": "planned",
+      "id": "execution-search",
+      "route": "/executions",
+      "status": "implemented",
       "issue": 59,
       "prototype_pages": ["monitor.html"],
-      "menu": "Execuções",
+      "menu": "Execucoes",
+      "permission": "execution.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/executions/{execution_id}", "permission": "execution.read"}
+      ],
+      "url_state": [],
+      "states": ["empty"],
+      "owner": "domains/executions"
+    },
+    {
+      "id": "execution-detail",
+      "route": "/executions/:executionId",
+      "status": "implemented",
+      "issue": 59,
+      "prototype_pages": ["monitor.html"],
+      "menu": null,
       "permission": "execution.read",
       "scope": "org",
       "endpoints": [
