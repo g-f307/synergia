@@ -186,7 +186,13 @@ def test_operational_search_paginates_sorts_and_isolates_organizations() -> None
                 (executions,),
             )
             connection.execute(
-                "DELETE FROM synergia.iam_organizations WHERE id = ANY(%s)",
+                """
+                UPDATE synergia.iam_organizations
+                SET is_active = false,
+                    deactivated_at = now(),
+                    updated_at = now()
+                WHERE id = ANY(%s)
+                """,
                 ([organization_a, organization_b],),
             )
 
