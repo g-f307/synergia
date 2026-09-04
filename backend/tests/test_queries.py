@@ -476,14 +476,22 @@ def test_consults_execution_workorder_lot_and_serial(api) -> None:
     )
 
 
-@pytest.mark.parametrize("path", ["/lots/LOT-MISSING", "/serials/SER-MISSING"])
-def test_lot_and_serial_details_distinguish_missing_resources(api, path: str) -> None:
+@pytest.mark.parametrize(
+    ("path", "expected_code"),
+    [
+        ("/lots/LOT-MISSING", "lot_not_found"),
+        ("/serials/SER-MISSING", "serial_not_found"),
+    ],
+)
+def test_lot_and_serial_details_distinguish_missing_resources(
+    api, path: str, expected_code: str
+) -> None:
     client, _ = api
 
     response = client.get(path)
 
     assert response.status_code == 404
-    assert response.json()["error"]["code"] == "resource_not_found"
+    assert response.json()["error"]["code"] == expected_code
 
 
 @pytest.mark.parametrize(
