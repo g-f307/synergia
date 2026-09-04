@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { EMPTY, catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
@@ -58,16 +59,31 @@ export class OperationalSearchComponent {
   });
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const type = params.get('type');
-      const sort = params.get('sort');
-      const page = this.positiveInt(params.get('page'), 1);
-      this.type.set(type === 'lot' || type === 'serial' ? type : 'workorder');
-      this.query.set(params.get('query') ?? '');
-      this.sort.set(sort === 'identifier_asc' ? sort : 'updated_desc');
-      this.pageSize.set(this.positiveInt(params.get('pageSize'), 25, [10, 25, 50]));
-      if (this.query().length) this.load(page);
-      else { this.loading.set(false); this.result.set(null); this.failure.set(null); }
+    this.route.queryParamMap.pipe(
+      tap((params) => {
+        const type = params.get('type');
+        const sort = params.get('sort');
+        this.type.set(type === 'lot' || type === 'serial' ? type : 'workorder');
+        this.query.set(params.get('query') ?? '');
+        this.sort.set(sort === 'identifier_asc' ? sort : 'updated_desc');
+        this.pageSize.set(this.positiveInt(params.get('pageSize'), 25, [10, 25, 50]));
+        this.loading.set(this.query().length > 0);
+        this.result.set(null);
+        this.failure.set(null);
+      }),
+      switchMap((params) => {
+        if (!this.query().length) return EMPTY;
+        const page = this.positiveInt(params.get('page'), 1);
+        return this.api.search(this.type(), this.query(), page, this.pageSize(), this.sort()).pipe(
+          map((value) => ({ value, failure: null })),
+          catchError((failure: ApiFailure) => of({ value: null, failure }))
+        );
+      }),
+      takeUntilDestroyed()
+    ).subscribe(({ value, failure }) => {
+      this.result.set(value);
+      this.failure.set(failure);
+      this.loading.set(false);
     });
   }
 
@@ -81,9 +97,5 @@ export class OperationalSearchComponent {
   failureMessage(): string { return this.i18n.t(this.failure()?.kind === 'forbidden' ? 'queries.forbidden' : this.failure()?.kind === 'unavailable' ? 'queries.unavailable' : 'queries.error'); }
 
   private navigate(page: number): void { void this.router.navigate([], { relativeTo: this.route, queryParams: { type: this.type(), query: this.query(), page, pageSize: this.pageSize(), sort: this.sort() } }); }
-  private load(page: number): void {
-    this.loading.set(true); this.result.set(null); this.failure.set(null);
-    this.api.search(this.type(), this.query(), page, this.pageSize(), this.sort()).subscribe({ next: (value) => { this.result.set(value); this.loading.set(false); }, error: (failure: ApiFailure) => { this.failure.set(failure); this.loading.set(false); } });
-  }
   private positiveInt(value: string | null, fallback: number, allowed?: number[]): number { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 && (!allowed || allowed.includes(parsed)) ? parsed : fallback; }
 }

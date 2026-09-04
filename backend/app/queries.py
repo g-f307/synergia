@@ -281,7 +281,10 @@ class QueryRepository(Protocol):
     def get_execution(self, execution_id: str) -> dict | None: ...
 
     def get_workorder(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None: ...
 
     def get_lot(
@@ -293,7 +296,10 @@ class QueryRepository(Protocol):
     ) -> dict | None: ...
 
     def get_serial(
-        self, serial_number: str, execution_id: str | None = None
+        self,
+        serial_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None: ...
 
     def list_pending(
@@ -325,7 +331,10 @@ class QueryRepository(Protocol):
     ) -> tuple[list[dict], int]: ...
 
     def get_consolidated(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None: ...
 
     def request_reprocessing(
@@ -529,13 +538,19 @@ class PostgresQueryRepository:
             return result
 
     def get_workorder(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None:
         filters = ["w.workorder_number = %s"]
         parameters: list[Any] = [workorder_number]
         if execution_id:
             filters.append("w.execution_id = %s")
             parameters.append(execution_id)
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         where = " AND ".join(filters)
         with self._connect() as connection:
             row = connection.execute(
@@ -547,6 +562,7 @@ class PostgresQueryRepository:
                        w.pending_quantity, w.retained_quantity,
                        w.partially_released, w.updated_at, w.id
                 FROM synergia.workorders w
+                JOIN synergia.executions e ON e.id = w.execution_id
                 LEFT JOIN synergia.organizations o ON o.id = w.organization_id
                 WHERE {where}
                 ORDER BY w.updated_at DESC, w.id DESC
@@ -624,13 +640,19 @@ class PostgresQueryRepository:
             return result
 
     def get_serial(
-        self, serial_number: str, execution_id: str | None = None
+        self,
+        serial_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None:
         filters = ["s.serial_number = %s"]
         parameters: list[Any] = [serial_number]
         if execution_id:
             filters.append("s.execution_id = %s")
             parameters.append(execution_id)
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         with self._connect() as connection:
             return connection.execute(
                 f"""
@@ -638,6 +660,7 @@ class PostgresQueryRepository:
                        s.serial_number, s.container_number, s.updated_at
                 FROM synergia.serials s
                 JOIN synergia.workorders w ON w.id = s.workorder_id
+                JOIN synergia.executions e ON e.id = s.execution_id
                 LEFT JOIN synergia.lots l ON l.id = s.lot_id
                 WHERE {" AND ".join(filters)}
                 ORDER BY s.updated_at DESC, s.id DESC
@@ -796,9 +819,12 @@ class PostgresQueryRepository:
         return [dict(row) for row in rows], total
 
     def get_consolidated(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids: frozenset | None = None,
     ) -> dict | None:
-        workorder = self.get_workorder(workorder_number, execution_id)
+        workorder = self.get_workorder(workorder_number, execution_id, organization_ids)
         if workorder is None:
             return None
         execution_id = workorder["execution_id"]
@@ -1203,22 +1229,18 @@ def get_execution(
     response_model=WorkorderResponse,
     summary="Consultar uma Workorder consolidada",
     responses=ERROR_RESPONSES,
-    dependencies=[
-        Depends(
-            require_resource_permission(
-                "business.read", "workorder", "workorder_number"
-            )
-        )
-    ],
 )
 def get_workorder(
     workorder_number: str,
+    actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
     execution_id: str | None = Query(
         default=None, description="Restringe a consulta a uma execução"
     ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> WorkorderResponse:
-    item = repository.get_workorder(workorder_number, execution_id)
+    item = repository.get_workorder(
+        workorder_number, execution_id, actor.scope_filter("business.read")
+    )
     if item is None:
         raise _not_found("workorder", workorder_number)
     return WorkorderResponse.model_validate(item)
@@ -1257,18 +1279,18 @@ def get_lot(
     response_model=SerialResponse,
     summary="Consultar um serial",
     responses=ERROR_RESPONSES,
-    dependencies=[
-        Depends(require_resource_permission("business.read", "serial", "serial_number"))
-    ],
 )
 def get_serial(
     serial_number: str,
+    actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
     execution_id: str | None = Query(
         default=None, description="Mantém o detalhe na execução localizada"
     ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> SerialResponse:
-    item = repository.get_serial(serial_number, execution_id)
+    item = repository.get_serial(
+        serial_number, execution_id, actor.scope_filter("business.read")
+    )
     if item is None:
         raise _not_found("serial", serial_number)
     return SerialResponse.model_validate(item)
@@ -1369,22 +1391,18 @@ def list_history(
     response_model=ConsolidatedResultResponse,
     summary="Consultar o resultado consolidado de uma Workorder",
     responses=ERROR_RESPONSES,
-    dependencies=[
-        Depends(
-            require_resource_permission(
-                "business.read", "workorder", "workorder_number"
-            )
-        )
-    ],
 )
 def get_consolidated_result(
     workorder_number: str,
+    actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
     execution_id: str | None = Query(
         default=None, description="Mantém o detalhe na execução localizada"
     ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> ConsolidatedResultResponse:
-    item = repository.get_consolidated(workorder_number, execution_id)
+    item = repository.get_consolidated(
+        workorder_number, execution_id, actor.scope_filter("business.read")
+    )
     if item is None:
         raise _not_found("consolidated_result", workorder_number)
     return ConsolidatedResultResponse.model_validate(item)

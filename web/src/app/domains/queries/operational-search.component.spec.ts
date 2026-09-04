@@ -52,6 +52,20 @@ describe('OperationalSearchComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Nenhum resultado');
     expect(fixture.nativeElement.querySelector('[data-state="error"]')).toBeNull();
   });
+
+  it('ignores a stale response after the URL starts a newer search', () => {
+    const staleResponse = response;
+    response = new Subject<OperationalSearchPage>();
+    params.next(convertToParamMap({ type: 'serial', query: 'NEW-SERIAL', page: '2', pageSize: '10', sort: 'identifier_asc' }));
+
+    response.next({ ...page(), entity_type: 'serial', query: 'NEW-SERIAL', items: [{ ...page().items[0], entity_type: 'serial', identifier: 'NEW-SERIAL', serial_number: 'NEW-SERIAL' }] });
+    staleResponse.next(page());
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.result()?.query).toBe('NEW-SERIAL');
+    expect(fixture.nativeElement.textContent).toContain('NEW-SERIAL');
+    expect(fixture.nativeElement.textContent).not.toContain('000123');
+  });
 });
 
 function page(): OperationalSearchPage { return { items: [{ entity_type:'workorder',identifier:'000123',execution_id:'exec-001',workorder_number:'000123',lot_number:null,serial_number:null,organization_code:'ORG-1',processing_status:'consolidated',updated_at:'2026-09-04T12:00:00Z' }],pagination:{page:1,page_size:10,total:1,pages:1},sort:'updated_desc',entity_type:'workorder',query:'000123',source:'synergia.operational',generated_at:'2026-09-04T12:00:00Z' }; }

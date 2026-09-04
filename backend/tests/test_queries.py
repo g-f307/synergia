@@ -13,6 +13,7 @@ from app.main import app
 from app.queries import ReprocessingConflict, get_query_repository
 
 NOW = datetime(2026, 8, 27, 12, tzinfo=UTC)
+ORGANIZATION_ID = UUID("44444444-4444-4444-8444-444444444444")
 
 
 class MemoryQueryRepository:
@@ -187,6 +188,8 @@ class MemoryQueryRepository:
             ],
         }[entity_type]
         records = [item for item in records if item["identifier"] == query]
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            records = []
         offset = (page - 1) * page_size
         return deepcopy(records[offset : offset + page_size]), len(records)
 
@@ -194,8 +197,13 @@ class MemoryQueryRepository:
         return deepcopy(self.executions.get(execution_id))
 
     def get_workorder(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids=None,
     ) -> dict | None:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return None
         if workorder_number != self.workorder["workorder_number"]:
             return None
         if execution_id and execution_id != self.workorder["execution_id"]:
@@ -209,6 +217,8 @@ class MemoryQueryRepository:
         organization_ids=None,
         execution_id: str | None = None,
     ) -> dict | None:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return None
         if lot_number != self.lot["lot_number"]:
             return None
         if workorder_number and workorder_number != self.lot["workorder_number"]:
@@ -218,8 +228,13 @@ class MemoryQueryRepository:
         return deepcopy(self.lot)
 
     def get_serial(
-        self, serial_number: str, execution_id: str | None = None
+        self,
+        serial_number: str,
+        execution_id: str | None = None,
+        organization_ids=None,
     ) -> dict | None:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return None
         if execution_id and execution_id != self.serial["execution_id"]:
             return None
         return deepcopy(self.serial) if serial_number == "SER-SYN-001" else None
@@ -289,8 +304,13 @@ class MemoryQueryRepository:
         return deepcopy(items[offset : offset + page_size]), total
 
     def get_consolidated(
-        self, workorder_number: str, execution_id: str | None = None
+        self,
+        workorder_number: str,
+        execution_id: str | None = None,
+        organization_ids=None,
     ) -> dict | None:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return None
         if workorder_number != "WO-SYN-001":
             return None
         if execution_id and execution_id != self.workorder["execution_id"]:
@@ -456,6 +476,16 @@ def test_consults_execution_workorder_lot_and_serial(api) -> None:
     )
 
 
+@pytest.mark.parametrize("path", ["/lots/LOT-MISSING", "/serials/SER-MISSING"])
+def test_lot_and_serial_details_distinguish_missing_resources(api, path: str) -> None:
+    client, _ = api
+
+    response = client.get(path)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "resource_not_found"
+
+
 @pytest.mark.parametrize(
     ("entity_type", "identifier"),
     [
@@ -516,6 +546,33 @@ def test_operational_search_applies_actor_scope_and_keeps_detail_execution(api) 
         {UUID("44444444-4444-4444-8444-444444444444")}
     )
     assert mismatched_detail.status_code == 404
+
+
+def test_operational_queries_block_records_outside_actor_scope(api) -> None:
+    client, _ = api
+    denied_organization = UUID("99999999-9999-4999-8999-999999999999")
+
+    def restricted_actor() -> ActorContext:
+        return ActorContext(
+            user_id=UUID("00000000-0000-0000-0000-000000000001"),
+            session_id=UUID("22222222-2222-4222-8222-222222222222"),
+            token_id=UUID("33333333-3333-4333-8333-333333333333"),
+            permissions={"business.read": frozenset({denied_organization})},
+            correlation_id=UUID("55555555-5555-4555-8555-555555555555"),
+        )
+
+    app.dependency_overrides[get_actor_context] = restricted_actor
+
+    search = client.get("/search", params={"type": "workorder", "query": "WO-SYN-001"})
+    assert search.status_code == 200
+    assert search.json()["items"] == []
+    for path in (
+        "/workorders/WO-SYN-001",
+        "/lots/LOT-SYN-001",
+        "/serials/SER-SYN-001",
+        "/workorders/WO-SYN-001/consolidated-result",
+    ):
+        assert client.get(path).status_code == 404
 
 
 def test_lists_active_pending_items_with_filters_pagination_and_sort(api) -> None:
