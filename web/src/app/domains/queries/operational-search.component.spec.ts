@@ -57,14 +57,15 @@ describe('OperationalSearchComponent', () => {
     const staleResponse = response;
     response = new Subject<OperationalSearchPage>();
     params.next(convertToParamMap({ type: 'serial', query: 'NEW-SERIAL', page: '2', pageSize: '10', sort: 'identifier_asc' }));
+    expect(staleResponse.observers.length).toBe(0);
 
-    response.next({ ...page(), entity_type: 'serial', query: 'NEW-SERIAL', items: [{ ...page().items[0], entity_type: 'serial', identifier: 'NEW-SERIAL', serial_number: 'NEW-SERIAL' }] });
+    response.next({ ...page(), entity_type: 'serial', query: 'NEW-SERIAL', items: [{ ...page().items[0], entity_type: 'serial', identifier: 'NEW-SERIAL', workorder_number: 'WO-NEW', serial_number: 'NEW-SERIAL' }] });
     staleResponse.next(page());
     fixture.detectChanges();
 
     expect(fixture.componentInstance.result()?.query).toBe('NEW-SERIAL');
+    expect(fixture.componentInstance.result()?.items[0].identifier).toBe('NEW-SERIAL');
     expect(fixture.nativeElement.textContent).toContain('NEW-SERIAL');
-    expect(fixture.nativeElement.textContent).not.toContain('000123');
   });
 });
 

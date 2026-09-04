@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { ActivatedRoute, Router, RouterLink, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { Lot, Serial } from './query.models';
@@ -15,9 +14,9 @@ describe('EntityDetailComponent', () => {
     setup.lotResponse.next(lot());
     setup.fixture.detectChanges();
 
-    expect(hasLink(setup.fixture, ['/workorders', 'WO-001'], 'exec-001')).toBeTrue();
-    expect(hasLink(setup.fixture, ['/serials', 'SER-001'], 'exec-001')).toBeTrue();
-    expect(hasLink(setup.fixture, ['/executions', 'exec-001'])).toBeTrue();
+    expect(hasLink(setup.router, ['/workorders', 'WO-001'], 'exec-001')).toBeTrue();
+    expect(hasLink(setup.router, ['/serials', 'SER-001'], 'exec-001')).toBeTrue();
+    expect(hasLink(setup.router, ['/executions', 'exec-001'])).toBeTrue();
     setup.fixture.componentInstance.back();
     expect(setup.router.navigateByUrl).toHaveBeenCalledWith('/search?type=lot&query=LOT-001');
   });
@@ -28,8 +27,8 @@ describe('EntityDetailComponent', () => {
     setup.fixture.detectChanges();
 
     expect(setup.fixture.nativeElement.textContent).toContain('SER-001');
-    expect(hasLink(setup.fixture, ['/workorders', 'WO-001'], 'exec-001')).toBeTrue();
-    expect(hasLink(setup.fixture, ['/executions', 'exec-001'])).toBeTrue();
+    expect(hasLink(setup.router, ['/workorders', 'WO-001'], 'exec-001')).toBeTrue();
+    expect(hasLink(setup.router, ['/executions', 'exec-001'])).toBeTrue();
     setup.fixture.componentInstance.back();
     expect(setup.router.navigateByUrl).toHaveBeenCalledWith('/search?type=serial&query=SER-001');
   });
@@ -74,11 +73,10 @@ async function createComponent(entityType: 'lot' | 'serial'): Promise<{
   return { fixture, router, lotResponse, serialResponse };
 }
 
-function hasLink(fixture: ComponentFixture<EntityDetailComponent>, commands: unknown[], executionId?: string): boolean {
-  return fixture.debugElement.queryAll(By.directive(RouterLink)).some((element) => {
-    const link = element.injector.get(RouterLink);
-    return JSON.stringify(link.routerLink) === JSON.stringify(commands)
-      && (!executionId || link.queryParams?.['execution_id'] === executionId);
+function hasLink(router: jasmine.SpyObj<Router>, commands: unknown[], executionId?: string): boolean {
+  return router.createUrlTree.calls.allArgs().some(([actualCommands, options]) => {
+    return JSON.stringify(actualCommands) === JSON.stringify(commands)
+      && (!executionId || options?.queryParams?.['execution_id'] === executionId);
   });
 }
 
