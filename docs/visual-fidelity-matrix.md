@@ -49,6 +49,18 @@ foram geradas com conta, organização e execução exclusivamente sintéticas:
 - [dashboard desktop com dados sintéticos, 1440 × 1000](evidence/issue-60-dashboard-desktop.png);
 - [dashboard móvel com dados sintéticos, 390 × 844](evidence/issue-60-dashboard-mobile.png).
 
+Os ajustes de composição e marca da issue #72 possuem evidências nos dois temas
+e nos viewports de referência:
+
+- [login claro desktop](evidence/issue-72-login-light-desktop.png) e
+  [móvel](evidence/issue-72-login-light-mobile.png);
+- [login escuro desktop](evidence/issue-72-login-dark-desktop.png) e
+  [móvel](evidence/issue-72-login-dark-mobile.png);
+- [shell claro desktop](evidence/issue-72-shell-light-desktop.png) e
+  [móvel](evidence/issue-72-shell-light-mobile.png);
+- [shell escuro desktop](evidence/issue-72-shell-dark-desktop.png) e
+  [móvel](evidence/issue-72-shell-dark-mobile.png).
+
 Credenciais, tokens e respostas reais não são versionados. Um vídeo não faz
 parte do repositório para evitar a publicação
 acidental de identidade ou dados de sessão; a regressão verificável é mantida

@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STYLES = ROOT / "web/src/styles.css"
 SHELL = ROOT / "web/src/app/app.component.html"
 SHELL_STYLES = ROOT / "web/src/app/app.component.css"
+THEME = ROOT / "web/src/app/core/theme.service.ts"
 EVIDENCE = ROOT / "docs/evidence"
 
 
@@ -40,6 +41,7 @@ def validate() -> None:
     shell = (
         SHELL.read_text(encoding="utf-8")
         + SHELL_STYLES.read_text(encoding="utf-8")
+        + THEME.read_text(encoding="utf-8")
     ).lower()
     all_css = css + shell
     required_tokens = {
@@ -53,7 +55,13 @@ def validate() -> None:
     missing = sorted(token for token in required_tokens if token not in css)
     if missing:
         raise ValueError(f"Tokens visuais ausentes: {missing}")
-    for asset in ("logo-horizontal.png", "simbolo.png", "lgeitextttf-regular.ttf"):
+    for asset in (
+        "logo-horizontal.png",
+        "logo-negativa-horizontal.png",
+        "simbolo.png",
+        "simbolo-negativo.png",
+        "lgeitextttf-regular.ttf",
+    ):
         if asset not in css + shell:
             raise ValueError(f"Ativo visual oficial não utilizado: {asset}")
     for breakpoint in ("1365px", "1023px", "767px"):
@@ -87,6 +95,15 @@ def validate() -> None:
         path = EVIDENCE / capture
         if not path.is_file() or path.stat().st_size < 5_000:
             raise ValueError(f"Captura visual ausente ou inválida: {capture}")
+    for capture in (
+        f"issue-72-{surface}-{theme}-{viewport}.png"
+        for surface in ("login", "shell")
+        for theme in ("light", "dark")
+        for viewport in ("desktop", "mobile")
+    ):
+        path = EVIDENCE / capture
+        if not path.is_file() or path.stat().st_size < 5_000:
+            raise ValueError(f"Captura visual ausente ou invalida: {capture}")
     print(
         "Sistema visual validado: tokens, ativos, contraste AA, "
         "3 breakpoints e capturas."
