@@ -317,6 +317,11 @@
   "queries.loadingTitle": "Querying persisted data",
   "queries.loading": "Applying the query and organization scope…",
   "queries.loadingDetail": "Loading traceable details…",
+  "queries.partialTitle": "Partial response",
+  "queries.partial": "Some results have no processing status or organization. The available data remains usable.",
+  "queries.partialDetail": "The response does not include every expected relationship or quality indicator. Missing fields remain identified.",
+  "queries.staleTitle": "Outdated data",
+  "queries.stale": "The reference time is more than 24 hours old. Confirm an update before making operational decisions.",
   "queries.results": "Results",
   "queries.total": "{count} result(s)",
   "queries.source": "Logical source",
@@ -354,7 +359,5 @@
   "queries.provenance": "Field provenance",
   "queries.provenanceHelp": "The logical source is shown without exposing internal file paths or identifiers.",
   "queries.none": "No related records.",
-  "queries.container": "Container",
-  "queries.priority": "Priority",
-  "queries.reason": "Reason"
+  "queries.container": "Container"
 }

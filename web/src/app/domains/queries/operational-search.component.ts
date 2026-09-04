@@ -8,6 +8,7 @@ import { I18nService } from '../../shared/i18n/i18n.service';
 import { PaginationComponent, ResponsiveTableComponent, StateComponent, UiState } from '../../shared/ui/ui-kit';
 import { OperationalEntityType, OperationalSearchItem, OperationalSearchPage, OperationalSort } from './query.models';
 import { QueryService } from './query.service';
+import { isSearchPartial, isStale } from './query-response-state';
 
 @Component({
   imports: [RouterLink, PaginationComponent, ResponsiveTableComponent, StateComponent],
@@ -25,6 +26,8 @@ import { QueryService } from './query.service';
       @if (loading()) { <syn-state state="loading" [title]="i18n.t('queries.loadingTitle')" [message]="i18n.t('queries.loading')" /> }
       @if (failureState(); as state) { <syn-state [state]="state" [title]="failureTitle()" [message]="failureMessage()" /> }
       @if (result(); as current) {
+        @if (isPartial(current)) { <syn-state state="partial" [title]="i18n.t('queries.partialTitle')" [message]="i18n.t('queries.partial')" /> }
+        @if (isOutdated(current)) { <syn-state state="stale" [title]="i18n.t('queries.staleTitle')" [message]="i18n.t('queries.stale')" /> }
         <section class="card results" aria-live="polite">
           <header><div><h2>{{ i18n.t('queries.results') }}</h2><p>{{ i18n.t('queries.total', { count: i18n.formatNumber(current.pagination.total) }) }}</p></div><div class="reference"><span>{{ i18n.t('queries.source') }}: <strong>{{ current.source }}</strong></span><span>{{ i18n.t('queries.referenceTime') }}: <time [attr.datetime]="current.generated_at">{{ i18n.formatDate(current.generated_at,{dateStyle:'medium',timeStyle:'short'}) }}</time></span></div></header>
           @if (!current.items.length) { <syn-state state="empty" [title]="i18n.t('queries.emptyTitle')" [message]="current.pagination.total ? i18n.t('queries.emptyPage') : i18n.t('queries.empty')" /> }
@@ -92,6 +95,8 @@ export class OperationalSearchComponent {
   detailRoute(item: OperationalSearchItem): (string | number)[] { return [`/${item.entity_type === 'workorder' ? 'workorders' : item.entity_type === 'lot' ? 'lots' : 'serials'}`, item.identifier]; }
   detailParams(item: OperationalSearchItem): Record<string, string> { return { from: this.currentUrl(), execution_id: item.execution_id }; }
   resultKey(item: OperationalSearchItem): string { return `${item.entity_type}:${item.execution_id}:${item.identifier}`; }
+  isPartial(page: OperationalSearchPage): boolean { return isSearchPartial(page); }
+  isOutdated(page: OperationalSearchPage): boolean { return isStale(page.generated_at); }
   currentUrl(): string { return this.router.url; }
   failureTitle(): string { return this.i18n.t(this.failure()?.kind === 'forbidden' ? 'queries.forbiddenTitle' : this.failure()?.kind === 'unavailable' ? 'queries.unavailableTitle' : 'queries.errorTitle'); }
   failureMessage(): string { return this.i18n.t(this.failure()?.kind === 'forbidden' ? 'queries.forbidden' : this.failure()?.kind === 'unavailable' ? 'queries.unavailable' : 'queries.error'); }

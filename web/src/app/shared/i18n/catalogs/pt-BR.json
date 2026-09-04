@@ -317,6 +317,11 @@
   "queries.loadingTitle": "Consultando dados persistidos",
   "queries.loading": "Aplicando consulta e escopo organizacional…",
   "queries.loadingDetail": "Carregando detalhes rastreáveis…",
+  "queries.partialTitle": "Resposta parcial",
+  "queries.partial": "Alguns resultados não possuem estado de processamento ou organização. Os dados disponíveis continuam utilizáveis.",
+  "queries.partialDetail": "A resposta não possui todos os relacionamentos ou indicadores de qualidade esperados. Os campos ausentes permanecem identificados.",
+  "queries.staleTitle": "Dados desatualizados",
+  "queries.stale": "O horário de referência é anterior a 24 horas. Confirme uma atualização antes de tomar decisões operacionais.",
   "queries.results": "Resultados",
   "queries.total": "{count} resultado(s)",
   "queries.source": "Fonte lógica",
@@ -354,7 +359,5 @@
   "queries.provenance": "Proveniência por informação",
   "queries.provenanceHelp": "A origem lógica é exibida sem expor caminhos ou identificadores internos de arquivos.",
   "queries.none": "Nenhum registro relacionado.",
-  "queries.container": "Contêiner",
-  "queries.priority": "Prioridade",
-  "queries.reason": "Motivo"
+  "queries.container": "Contêiner"
 }

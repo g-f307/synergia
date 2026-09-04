@@ -98,6 +98,21 @@ internas conhecidas.
 | `forbidden` | sessão válida sem permissão; não tenta refresh repetido |
 | `unavailable` | API ou dependência temporariamente indisponível, com nova tentativa |
 
+Nas consultas operacionais da #61, os estados possuem critérios determinísticos:
+
+- `partial` na busca indica que ao menos um item não informa estado de
+  processamento ou organização;
+- `partial` na Workorder indica ausência desses mesmos dados, do indicador de
+  liberação parcial ou uma classificação cuja qualidade não seja `complete`;
+- `partial` em lote ou serial indica ausência da execução, da Workorder ou de
+  um relacionamento esperado (lote e contêiner no caso do serial);
+- `stale` indica que `generated_at`, na busca, ou `updated_at`, nos detalhes,
+  está há mais de 24 horas do relógio do cliente.
+
+Os dois estados são avisos não destrutivos: os dados disponíveis continuam
+visíveis, campos ausentes não são convertidos em zero e links só são oferecidos
+para jornadas já implementadas pelo domínio responsável.
+
 `404` fora do escopo não revela existência. `409` preserva conflito e oferece
 recarga; `422` associa erros aos campos; erros `5xx` nunca exibem stack trace,
 SQL, token ou caminho interno.

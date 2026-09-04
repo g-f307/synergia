@@ -53,6 +53,15 @@ describe('OperationalSearchComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-state="error"]')).toBeNull();
   });
 
+  it('keeps usable results visible while identifying partial and stale responses', () => {
+    const partial = { ...page(), generated_at: '2000-01-01T00:00:00Z', items: [{ ...page().items[0], processing_status: null }] };
+    response.next(partial); fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-state="partial"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-state="stale"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('000123');
+  });
+
   it('ignores a stale response after the URL starts a newer search', () => {
     const staleResponse = response;
     response = new Subject<OperationalSearchPage>();

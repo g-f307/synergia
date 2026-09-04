@@ -32,6 +32,16 @@ describe('EntityDetailComponent', () => {
     setup.fixture.componentInstance.back();
     expect(setup.router.navigateByUrl).toHaveBeenCalledWith('/search?type=serial&query=SER-001');
   });
+
+  it('identifies an incomplete and outdated serial without hiding its traceable data', async () => {
+    const setup = await createComponent('serial');
+    setup.serialResponse.next({ ...serial(), container_number: null, updated_at: '2000-01-01T00:00:00Z' });
+    setup.fixture.detectChanges();
+
+    expect(setup.fixture.nativeElement.querySelector('[data-state="partial"]')).not.toBeNull();
+    expect(setup.fixture.nativeElement.querySelector('[data-state="stale"]')).not.toBeNull();
+    expect(setup.fixture.nativeElement.textContent).toContain('SER-001');
+  });
 });
 
 async function createComponent(entityType: 'lot' | 'serial'): Promise<{

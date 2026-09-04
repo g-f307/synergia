@@ -33,6 +33,13 @@ describe('WorkorderDetailComponent', () => {
     expect(text).not.toContain('/internal/imports');expect(text).not.toContain('source_file_id');
   });
 
+  it('distinguishes response quality warnings from partial release',()=>{
+    response.next({ ...result(), workorder: { ...result().workorder, updated_at: '2000-01-01T00:00:00Z' } });fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-state="partial"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-state="stale"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Workorder com liberação parcial');
+  });
+
   it('returns to the exact originating search URL',()=>{fixture.componentInstance.back();expect(router.navigateByUrl).toHaveBeenCalledWith('/search?query=WO-001')});
 });
 
