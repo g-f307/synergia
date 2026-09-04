@@ -18,7 +18,7 @@ const COUNT_KEYS: Record<keyof ExecutionCounts, TranslationKey> = {
 };
 type RecordItem = Divergence|Classification|PendingItem|Evidence;
 @Component({ imports: [RouterLink, NgTemplateOutlet, ConfirmationComponent, PaginationComponent, StateComponent], template: `
-<section class="execution" aria-labelledby="execution-title"><a class="back-link" routerLink="/executions">← {{ i18n.t('executions.back') }}</a>
+<section class="execution" aria-labelledby="execution-title"><button type="button" class="link-button back-link" (click)="back()">← {{ i18n.t('executions.back') }}</button>
 <header class="page-header"><div><p class="eyebrow">{{ i18n.t('executions.eyebrow') }}</p><h1 id="execution-title">{{ i18n.t('executions.detailTitle') }}</h1></div></header>
 @if(loading()){<p role="status">{{ i18n.t('executions.loading') }}</p>}
 @if(loadFailureState(); as state){<syn-state [state]="state" [title]="loadFailureTitle()" [message]="loadFailureMessage()" />}
@@ -46,6 +46,7 @@ export class ExecutionDetailComponent implements OnInit {
  readonly visibleTabs=computed(()=>TABS.filter(tab=>!['divergences','evidences'].includes(tab)||this.session.hasPermission('artifact.read')));
  ngOnInit():void{this.id=this.route.snapshot.paramMap.get('executionId')??'';const query=this.route.snapshot.queryParamMap;const requested=query.get('tab') as ExecutionTab;const initialTab=TABS.includes(requested)&&this.visibleTabs().includes(requested)?requested:'summary';this.tab.set(initialTab);this.severity.set(query.get('severity')??'');this.source.set(query.get('source')??'');const requestedPage=Number(query.get('page')??1);const page=Number.isInteger(requestedPage)&&requestedPage>0?requestedPage:1;this.api.get(this.id).subscribe({next:value=>{this.item.set(value);this.loading.set(false);this.loadTab(page,false)},error:(e:ApiFailure)=>{this.failure.set(e);this.loading.set(false)}})}
  selectTab(tab:ExecutionTab):void{if(!this.visibleTabs().includes(tab))return;this.tab.set(tab);this.loadTab(1)}
+ back():void{const from=this.route.snapshot.queryParamMap.get('from');void this.router.navigateByUrl(from?.startsWith('/search?')||from==='/search'?from:'/executions')}
  loadTab(page:number,syncUrl=true):void{if(syncUrl)void this.router.navigate([], {relativeTo:this.route,queryParams:{tab:this.tab(),page,severity:this.severity()||null,source:this.source()||null},queryParamsHandling:'merge',replaceUrl:true});this.pageData.set(null);this.sectionFailure.set(null);const tab=this.tab();if(tab==='summary'||tab==='history')return;this.sectionLoading.set(true);let request:Observable<Page<RecordItem>>;if(tab==='divergences')request=this.api.divergences(this.id,page,this.severity(),this.source());else if(tab==='classifications')request=this.api.classifications(this.id,page);else if(tab==='pending')request=this.api.pending(this.id,page);else request=this.api.evidences(this.id,page);request.subscribe({next:value=>{this.pageData.set(value);this.sectionLoading.set(false)},error:(e:ApiFailure)=>{this.sectionFailure.set(e);this.sectionLoading.set(false)}})}
  canReprocess():boolean{return this.session.hasPermission('execution.reprocess')&&!!this.item()&&!['active','reprocessing'].includes(this.item()!.lifecycle??'')}
  canDownload():boolean{return this.session.hasPermission('artifact.export')}

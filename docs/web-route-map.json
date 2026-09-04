@@ -137,13 +137,14 @@
     {
       "id": "search",
       "route": "/search",
-      "status": "planned",
+      "status": "implemented",
       "issue": 61,
       "prototype_pages": ["consulta.html"],
       "menu": "Consulta operacional",
       "permission": "business.read",
       "scope": "org",
       "endpoints": [
+        {"method": "GET", "path": "/search", "permission": "business.read"},
         {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
         {"method": "GET", "path": "/lots/{lot_number}", "permission": "business.read"},
         {"method": "GET", "path": "/serials/{serial_number}", "permission": "business.read"}
@@ -155,7 +156,7 @@
     {
       "id": "workorder-detail",
       "route": "/workorders/:workorderNumber",
-      "status": "planned",
+      "status": "implemented",
       "issue": 61,
       "prototype_pages": [],
       "menu": null,
@@ -165,14 +166,14 @@
         {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
         {"method": "GET", "path": "/workorders/{workorder_number}/consolidated-result", "permission": "business.read"}
       ],
-      "url_state": ["from"],
+      "url_state": ["from", "execution_id"],
       "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/queries"
     },
     {
       "id": "lot-detail",
       "route": "/lots/:lotNumber",
-      "status": "planned",
+      "status": "implemented",
       "issue": 61,
       "prototype_pages": [],
       "menu": null,
@@ -181,14 +182,14 @@
       "endpoints": [
         {"method": "GET", "path": "/lots/{lot_number}", "permission": "business.read"}
       ],
-      "url_state": ["from"],
+      "url_state": ["from", "execution_id"],
       "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/queries"
     },
     {
       "id": "serial-detail",
       "route": "/serials/:serialNumber",
-      "status": "planned",
+      "status": "implemented",
       "issue": 61,
       "prototype_pages": [],
       "menu": null,
@@ -197,7 +198,7 @@
       "endpoints": [
         {"method": "GET", "path": "/serials/{serial_number}", "permission": "business.read"}
       ],
-      "url_state": ["from"],
+      "url_state": ["from", "execution_id"],
       "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/queries"
     },

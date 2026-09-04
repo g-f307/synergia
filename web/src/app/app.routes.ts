@@ -47,6 +47,28 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('execution.read')],
     loadComponent: () => import('./domains/executions/execution-detail.component').then((value) => value.ExecutionDetailComponent)
   },
+  {
+    path: 'search',
+    canActivate: [authenticatedGuard, permissionGuard('business.read')],
+    loadComponent: () => import('./domains/queries/operational-search.component').then((value) => value.OperationalSearchComponent)
+  },
+  {
+    path: 'workorders/:workorderNumber',
+    canActivate: [authenticatedGuard, permissionGuard('business.read')],
+    loadComponent: () => import('./domains/queries/workorder-detail.component').then((value) => value.WorkorderDetailComponent)
+  },
+  {
+    path: 'lots/:lotNumber',
+    data: { entityType: 'lot' },
+    canActivate: [authenticatedGuard, permissionGuard('business.read')],
+    loadComponent: () => import('./domains/queries/entity-detail.component').then((value) => value.EntityDetailComponent)
+  },
+  {
+    path: 'serials/:serialNumber',
+    data: { entityType: 'serial' },
+    canActivate: [authenticatedGuard, permissionGuard('business.read')],
+    loadComponent: () => import('./domains/queries/entity-detail.component').then((value) => value.EntityDetailComponent)
+  },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];

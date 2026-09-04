@@ -98,6 +98,21 @@ internas conhecidas.
 | `forbidden` | sessão válida sem permissão; não tenta refresh repetido |
 | `unavailable` | API ou dependência temporariamente indisponível, com nova tentativa |
 
+Nas consultas operacionais da #61, os estados possuem critérios determinísticos:
+
+- `partial` na busca indica que ao menos um item não informa estado de
+  processamento ou organização;
+- `partial` na Workorder indica ausência desses mesmos dados, do indicador de
+  liberação parcial ou uma classificação cuja qualidade não seja `complete`;
+- `partial` em lote ou serial indica ausência da execução, da Workorder ou de
+  um relacionamento esperado (lote e contêiner no caso do serial);
+- `stale` indica que `generated_at`, na busca, ou `updated_at`, nos detalhes,
+  está há mais de 24 horas do relógio do cliente.
+
+Os dois estados são avisos não destrutivos: os dados disponíveis continuam
+visíveis, campos ausentes não são convertidos em zero e links só são oferecidos
+para jornadas já implementadas pelo domínio responsável.
+
 `404` fora do escopo não revela existência. `409` preserva conflito e oferece
 recarga; `422` associa erros aos campos; erros `5xx` nunca exibem stack trace,
 SQL, token ou caminho interno.
@@ -145,7 +160,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | --- | --- | --- | --- |
 | WEB-G01 | protótipo usa dados fixos e ações locais | remover; produção usa API real | #56–#62 |
 | WEB-G02 | monitor simula lista global de execuções, mas não há `GET /executions` | adaptar para localização/detalhe; novo endpoint exige contrato aprovado | #59 |
-| WEB-G03 | busca exibe coleção, mas API atual consulta identificador exato | adaptar para busca exata; paginação geral depende de extensão contratual | #61 |
+| WEB-G03 | busca exibe coleção, mas a API original consultava apenas um identificador | implementar busca exata paginada, com ordem estável e escopo no servidor | #61 |
 | WEB-G04 | protótipo aprova, rejeita, atribui e altera responsável | remover da Etapa 3 | Etapa 4 — decisão humana |
 | WEB-G05 | catálogo, geração e exportação de relatórios não possuem API | adiar e retirar do menu | Etapa 4 — relatórios |
 | WEB-G06 | notificações e e-mail são apenas apresentação | remover da Etapa 3 | Etapa 4 — notificações/SMTP |

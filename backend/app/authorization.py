@@ -382,11 +382,16 @@ def require_lot_permission(permission: str) -> Callable:
         actor: CurrentActor,
         repository: AuthorizationRepo,
         workorder_number: str | None = None,
+        execution_id: str | None = None,
     ) -> ActorContext:
         if not actor.scopes_for(permission):
             repository.audit_denial(actor, permission, request)
             raise ApiError(403, "access_denied", "Acao nao autorizada")
-        organization_id = repository.lot_organization(lot_number, workorder_number)
+        organization_id = (
+            repository.execution_organization(execution_id)
+            if execution_id
+            else repository.lot_organization(lot_number, workorder_number)
+        )
         if organization_id is not None and not actor.allows(
             permission, organization_id
         ):
