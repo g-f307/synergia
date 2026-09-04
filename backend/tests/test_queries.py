@@ -134,6 +134,62 @@ class MemoryQueryRepository:
             },
         ]
 
+    def search_operational(
+        self,
+        *,
+        entity_type,
+        query,
+        page,
+        page_size,
+        sort,
+        organization_ids=None,
+    ):
+        self.search_organization_ids = organization_ids
+        records = {
+            "workorder": [
+                {
+                    "entity_type": "workorder",
+                    "identifier": self.workorder["workorder_number"],
+                    "execution_id": self.workorder["execution_id"],
+                    "workorder_number": self.workorder["workorder_number"],
+                    "lot_number": None,
+                    "serial_number": None,
+                    "organization_code": self.workorder["organization_code"],
+                    "processing_status": self.workorder["processing_status"],
+                    "updated_at": self.workorder["updated_at"],
+                }
+            ],
+            "lot": [
+                {
+                    "entity_type": "lot",
+                    "identifier": self.lot["lot_number"],
+                    "execution_id": self.lot["execution_id"],
+                    "workorder_number": self.lot["workorder_number"],
+                    "lot_number": self.lot["lot_number"],
+                    "serial_number": None,
+                    "organization_code": self.workorder["organization_code"],
+                    "processing_status": self.workorder["processing_status"],
+                    "updated_at": self.lot["updated_at"],
+                }
+            ],
+            "serial": [
+                {
+                    "entity_type": "serial",
+                    "identifier": self.serial["serial_number"],
+                    "execution_id": self.serial["execution_id"],
+                    "workorder_number": self.serial["workorder_number"],
+                    "lot_number": self.serial["lot_number"],
+                    "serial_number": self.serial["serial_number"],
+                    "organization_code": self.workorder["organization_code"],
+                    "processing_status": self.workorder["processing_status"],
+                    "updated_at": self.serial["updated_at"],
+                }
+            ],
+        }[entity_type]
+        records = [item for item in records if item["identifier"] == query]
+        offset = (page - 1) * page_size
+        return deepcopy(records[offset : offset + page_size]), len(records)
+
     def get_execution(self, execution_id: str) -> dict | None:
         return deepcopy(self.executions.get(execution_id))
 
@@ -151,14 +207,21 @@ class MemoryQueryRepository:
         lot_number: str,
         workorder_number: str | None = None,
         organization_ids=None,
+        execution_id: str | None = None,
     ) -> dict | None:
         if lot_number != self.lot["lot_number"]:
             return None
         if workorder_number and workorder_number != self.lot["workorder_number"]:
             return None
+        if execution_id and execution_id != self.lot["execution_id"]:
+            return None
         return deepcopy(self.lot)
 
-    def get_serial(self, serial_number: str) -> dict | None:
+    def get_serial(
+        self, serial_number: str, execution_id: str | None = None
+    ) -> dict | None:
+        if execution_id and execution_id != self.serial["execution_id"]:
+            return None
         return deepcopy(self.serial) if serial_number == "SER-SYN-001" else None
 
     def list_pending(
@@ -225,8 +288,12 @@ class MemoryQueryRepository:
         offset = (page - 1) * page_size
         return deepcopy(items[offset : offset + page_size]), total
 
-    def get_consolidated(self, workorder_number: str) -> dict | None:
+    def get_consolidated(
+        self, workorder_number: str, execution_id: str | None = None
+    ) -> dict | None:
         if workorder_number != "WO-SYN-001":
+            return None
+        if execution_id and execution_id != self.workorder["execution_id"]:
             return None
         return {
             "workorder": deepcopy(self.workorder),
@@ -387,6 +454,68 @@ def test_consults_execution_workorder_lot_and_serial(api) -> None:
     assert (
         client.get("/serials/SER-SYN-001").json()["container_number"] == "CONT-SYN-001"
     )
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "identifier"),
+    [
+        ("workorder", "WO-SYN-001"),
+        ("lot", "LOT-SYN-001"),
+        ("serial", "SER-SYN-001"),
+    ],
+)
+def test_searches_operational_identifiers_with_context(
+    api, entity_type: str, identifier: str
+) -> None:
+    client, _ = api
+
+    response = client.get(
+        "/search",
+        params={
+            "type": entity_type,
+            "query": identifier,
+            "page": 1,
+            "page_size": 1,
+            "sort": "updated_desc",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"][0]["identifier"] == identifier
+    assert body["items"][0]["execution_id"] == "exec-1"
+    assert body["pagination"] == {"page": 1, "page_size": 1, "total": 1, "pages": 1}
+    assert body["source"] == "synergia.operational"
+    assert body["generated_at"]
+
+
+def test_operational_search_preserves_text_and_distinguishes_not_found(api) -> None:
+    client, _ = api
+
+    missing = client.get("/search", params={"type": "workorder", "query": "000123-A"})
+
+    assert missing.status_code == 200
+    assert missing.json()["query"] == "000123-A"
+    assert missing.json()["items"] == []
+    assert missing.json()["pagination"]["total"] == 0
+
+
+def test_operational_search_applies_actor_scope_and_keeps_detail_execution(api) -> None:
+    client, repository = api
+
+    response = client.get(
+        "/search", params={"type": "workorder", "query": "WO-SYN-001"}
+    )
+    mismatched_detail = client.get(
+        "/workorders/WO-SYN-001/consolidated-result",
+        params={"execution_id": "different-execution"},
+    )
+
+    assert response.status_code == 200
+    assert repository.search_organization_ids == frozenset(
+        {UUID("44444444-4444-4444-8444-444444444444")}
+    )
+    assert mismatched_detail.status_code == 404
 
 
 def test_lists_active_pending_items_with_filters_pagination_and_sort(api) -> None:
@@ -658,6 +787,7 @@ def test_openapi_documents_all_public_contracts(api) -> None:
         "/workorders/{workorder_number}/consolidated-result",
         "/executions/{execution_id}/reprocess",
         "/indicators",
+        "/search",
     }
 
     assert expected <= schema["paths"].keys()

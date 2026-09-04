@@ -216,6 +216,21 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     assert repository.get_workorder("WO-API-001")["lots"] == ["LOT-API-001"]
     assert repository.get_lot("LOT-API-001")["serials"] == ["SER-API-001"]
     assert repository.get_serial("SER-API-001")["container_number"] == ("CONT-API-001")
+    for entity_type, identifier in (
+        ("workorder", "WO-API-001"),
+        ("lot", "LOT-API-001"),
+        ("serial", "SER-API-001"),
+    ):
+        rows, total = repository.search_operational(
+            entity_type=entity_type,
+            query=identifier,
+            page=1,
+            page_size=1,
+            sort="updated_desc",
+        )
+        assert total == 1
+        assert rows[0]["identifier"] == identifier
+        assert rows[0]["execution_id"] == execution_id
     pending, total = repository.list_pending(
         status_filter="open",
         category="long_term_hold",

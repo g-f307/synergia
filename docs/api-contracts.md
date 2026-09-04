@@ -37,6 +37,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
 | `GET /imports/{execution_id}/validation-report` | erros e avisos | `200` |
 | `GET /workorders/{workorder_number}` | Workorder, lotes e seriais | `200` |
+| `GET /search` | busca exata e paginada por Workorder, lote ou serial | `200` |
 | `GET /lots/{lot_number}` | lote e seus seriais | `200` |
 | `GET /serials/{serial_number}` | serial, lote e Workorder | `200` |
 | `GET /pending-items` | fila de pendências | `200` |

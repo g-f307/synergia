@@ -145,7 +145,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | --- | --- | --- | --- |
 | WEB-G01 | protótipo usa dados fixos e ações locais | remover; produção usa API real | #56–#62 |
 | WEB-G02 | monitor simula lista global de execuções, mas não há `GET /executions` | adaptar para localização/detalhe; novo endpoint exige contrato aprovado | #59 |
-| WEB-G03 | busca exibe coleção, mas API atual consulta identificador exato | adaptar para busca exata; paginação geral depende de extensão contratual | #61 |
+| WEB-G03 | busca exibe coleção, mas a API original consultava apenas um identificador | implementar busca exata paginada, com ordem estável e escopo no servidor | #61 |
 | WEB-G04 | protótipo aprova, rejeita, atribui e altera responsável | remover da Etapa 3 | Etapa 4 — decisão humana |
 | WEB-G05 | catálogo, geração e exportação de relatórios não possuem API | adiar e retirar do menu | Etapa 4 — relatórios |
 | WEB-G06 | notificações e e-mail são apenas apresentação | remover da Etapa 3 | Etapa 4 — notificações/SMTP |

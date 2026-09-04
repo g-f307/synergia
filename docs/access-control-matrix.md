@@ -87,6 +87,7 @@ técnica também dependerá da política de rede da TI.
 | `GET /imports/{execution_id}/pipeline-summary` | `import.read` | resumo do pipeline | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}` | `execution.read` | execução | `org` | gestor, analista, operador, consulta |
 | `GET /workorders/{workorder_number}` | `business.read` | Workorder | `org` | gestor, analista, operador, consulta |
+| `GET /search` | `business.read` | busca operacional persistida | `org` | gestor, analista, operador, consulta |
 | `GET /lots/{lot_number}` | `business.read` | lote | `org` | gestor, analista, operador, consulta |
 | `GET /serials/{serial_number}` | `business.read` | serial | `org` | gestor, analista, operador, consulta |
 | `GET /pending-items` | `pending.read` | pendências | `org` | gestor, analista, operador, consulta |
