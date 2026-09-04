@@ -23,6 +23,7 @@ describe('LoginComponent', () => {
   const session = { login: jasmine.createSpy('login').and.returnValue(NEVER) };
 
   beforeEach(async () => {
+    document.documentElement.dataset['theme'] = 'light';
     session.login.calls.reset();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
@@ -32,6 +33,17 @@ describe('LoginComponent', () => {
       ]
     }).compileComponents();
     TestBed.inject(I18nService).configure('pt-BR');
+  });
+
+  it('updates the login brand when the active theme changes', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.theme.toggle();
+    fixture.detectChanges();
+
+    const logo = fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement;
+    expect(logo.getAttribute('src')).toBe('/assets/logos/logo-negativa-horizontal.png');
   });
 
   it('allows an anonymous user to display and use login in English', () => {
@@ -58,15 +70,16 @@ describe('LoginComponent', () => {
     );
   });
 
-  it('uses the approved brand asset and keeps the decorative panel out of the accessibility tree', () => {
+  it('uses the approved brand asset without redundant promotional content', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
 
     const logo = fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement;
-    const visual = fixture.nativeElement.querySelector('.login-visual') as HTMLElement;
     expect(logo.getAttribute('src')).toBe('/assets/logos/logo-horizontal.png');
     expect(logo.getAttribute('alt')).toBe('SYNERGIA');
-    expect(visual.getAttribute('aria-hidden')).toBe('true');
+    expect(fixture.nativeElement.querySelector('.login-visual')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Acesso seguro');
   });
 
   it('anchors the locale selector to the login form on desktop', () => {

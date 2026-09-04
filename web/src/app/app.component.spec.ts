@@ -19,6 +19,7 @@ describe('AppComponent', () => {
   };
 
   beforeEach(async () => {
+    document.documentElement.dataset['theme'] = 'light';
     authenticated.set(false);
     administrator.set(false);
     profile.set(null);
@@ -39,10 +40,28 @@ describe('AppComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     expect(fixture.componentInstance.title).toBe('SYNERGIA');
-    expect(element.querySelector('.brand img')?.getAttribute('alt')).toBe('SYNERGIA');
+    expect(element.querySelector('.brand')?.getAttribute('aria-label')).toContain('SYNERGIA');
+    expect(element.querySelector('.topbar-context')).toBeNull();
     expect(element.textContent).toContain('Perfil');
     expect(element.textContent).toContain('Visão geral');
     expect(element.textContent).not.toContain('Administração');
+  });
+
+  it('updates the authenticated brand variant when the theme changes', () => {
+    authenticated.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const logo = () => fixture.nativeElement.querySelector('.brand-full') as HTMLImageElement;
+    expect(logo().getAttribute('src')).toBe('/assets/logos/logo-horizontal.png');
+
+    fixture.componentInstance.toggleTheme();
+    fixture.detectChanges();
+
+    expect(logo().getAttribute('src')).toBe('/assets/logos/logo-negativa-horizontal.png');
+    const compact = fixture.nativeElement.querySelector('.brand-compact') as HTMLImageElement;
+    expect(compact.getAttribute('src')).toBe('/assets/logos/simbolo-negativo.png');
   });
 
   it('shows administration only with a global administrative permission', () => {

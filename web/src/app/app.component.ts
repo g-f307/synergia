@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 
 import { SessionService } from './core/session.service';
+import { ThemeService } from './core/theme.service';
 import { BreadcrumbsComponent } from './layout/breadcrumbs.component';
 import { I18nService } from './shared/i18n/i18n.service';
 import { TranslationKey } from './shared/i18n/i18n.models';
@@ -14,6 +15,7 @@ export class AppComponent {
   readonly title = 'SYNERGIA';
   readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
+  readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
@@ -21,7 +23,6 @@ export class AppComponent {
   private readonly syncMobile = (event: MediaQueryListEvent): void => this.isMobile.set(event.matches);
   readonly menuOpen = signal(false);
   readonly isMobile = signal(this.mobileQuery.matches);
-  readonly darkTheme = signal(false);
   readonly items: NavigationItem[] = [
     { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: true },
     { label: 'navigation.newImport', route: '/imports/new', permission: 'import.create', icon: 'spreadsheet.svg', implemented: true },
@@ -41,7 +42,7 @@ export class AppComponent {
   }
 
   toggleMenu(): void { this.menuOpen.update((value) => !value); }
-  toggleTheme(): void { this.darkTheme.update((value) => !value); document.documentElement.dataset['theme'] = this.darkTheme() ? 'dark' : 'light'; }
+  toggleTheme(): void { this.theme.toggle(); }
   logout(): void { this.session.logout().subscribe(); }
 
   @HostListener('document:keydown.escape')

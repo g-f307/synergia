@@ -2,7 +2,10 @@
 @if (session.isAuthenticated()) {
   <div class="shell">
     <aside class="sidebar" [class.open]="menuOpen()" [attr.inert]="isMobile() && !menuOpen() ? '' : null" [attr.aria-hidden]="isMobile() && !menuOpen() ? true : null">
-      <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')"><img src="/assets/logos/logo-horizontal.png" alt="SYNERGIA"></a>
+      <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')">
+        <img class="brand-full" [src]="theme.brandLogo()" alt="">
+        <img class="brand-compact" [src]="theme.brandLogo(true)" alt="">
+      </a>
       <nav id="main-navigation" [attr.aria-label]="i18n.t('accessibility.mainNavigation')">
         @for (item of visibleItems(); track item.route) { <a [routerLink]="item.route" routerLinkActive="active"><img [src]="'/assets/icons/' + item.icon" alt="" aria-hidden="true"><span>{{ i18n.t(item.label) }}</span></a> }
         <a routerLink="/profile" routerLinkActive="active"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true"><span>{{ i18n.t('navigation.profile') }}</span></a>
@@ -13,7 +16,6 @@
     <div class="main-wrapper">
       <header class="topbar">
         <button #menuButton class="menu-button" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-controls="main-navigation" [attr.aria-label]="i18n.t(menuOpen() ? 'accessibility.closeMenu' : 'accessibility.openMenu')"><span aria-hidden="true">☰</span></button>
-        <div class="topbar-context"><strong>SYNERGIA</strong><span>{{ i18n.t('navigation.home') }}</span></div>
         <div class="account"><span class="user-name">{{ session.profile()?.display_name }}</span><button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
       </header>
       <main id="main-content" class="content" tabindex="-1"><syn-breadcrumbs /><router-outlet /></main>
