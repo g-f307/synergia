@@ -157,6 +157,15 @@ def test_operational_search_paginates_sorts_and_isolates_organizations() -> None
     finally:
         with psycopg.connect(database_url) as connection:
             connection.execute(
+                "DELETE FROM synergia.audit_events WHERE execution_id = ANY(%s)",
+                (executions,),
+            )
+            connection.execute(
+                "DELETE FROM synergia.execution_state_transitions "
+                "WHERE execution_id = ANY(%s)",
+                (executions,),
+            )
+            connection.execute(
                 "DELETE FROM synergia.serials WHERE execution_id = ANY(%s)",
                 (executions,),
             )
