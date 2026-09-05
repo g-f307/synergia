@@ -92,15 +92,22 @@ def test_web_journey_map_rejects_primary_permission_outside_contracts(
 def test_web_journey_map_rejects_unimplemented_angular_route(
     tmp_path, monkeypatch
 ) -> None:
-    def mark_planned_route_as_implemented(document: dict) -> None:
-        planned = next(
-            route for route in document["routes"] if route["status"] == "planned"
+    def add_an_implemented_route_missing_from_angular(document: dict) -> None:
+        implemented = next(
+            route for route in document["routes"] if route["status"] == "implemented"
         )
-        planned["status"] = "implemented"
+        document["routes"].append(
+            {
+                **implemented,
+                "id": "route-not-present-in-angular",
+                "route": "/route-not-present-in-angular",
+                "prototype_pages": [],
+            }
+        )
 
     target = _changed_map(
         tmp_path,
-        mark_planned_route_as_implemented,
+        add_an_implemented_route_missing_from_angular,
     )
     monkeypatch.setattr(validate_web_journey_map, "MAP", target)
 
