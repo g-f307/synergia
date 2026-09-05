@@ -380,8 +380,13 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
             """
             INSERT INTO synergia.pending_items (
                 workorder_id, lot_id, serial_id, execution_id, source_file_id,
-                category, reason
-            ) VALUES (%s, %s, %s, %s, %s, 'long_term_hold', 'Synthetic API')
+                category, reason, rule_id, rule_catalog_version, priority,
+                priority_score, responsible_area, evidence
+            ) VALUES (
+                %s, %s, %s, %s, %s, 'long_term_hold', 'Synthetic API',
+                'long_term_hold', '1.0.0', 'critical', 90, 'Quality',
+                '{"source":"synthetic"}'
+            )
             RETURNING id
             """,
             (workorder_id, lot_id, serial_id, execution_id, source_file_id),
@@ -421,6 +426,10 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
         category="long_term_hold",
         workorder_number="WO-API-001",
         execution_id=execution_id,
+        lot_number="LOT-API-001",
+        serial_number="SER-API-001",
+        priority="critical",
+        responsible_area="Quality",
         page=1,
         page_size=10,
         sort="oldest",
@@ -428,6 +437,9 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     assert total == 1
     assert pending[0]["id"] == pending_id
     assert pending[0]["priority"] == "critical"
+    detail = repository.get_pending(pending_id)
+    assert detail["rule_catalog_version"] == "1.0.0"
+    assert detail["evidence"] == {"source": "synthetic"}
     history, total = repository.list_history(
         execution_id=execution_id,
         entity_type="workorder",
