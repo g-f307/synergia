@@ -205,7 +205,7 @@
     {
       "id": "pending-list",
       "route": "/pending-items",
-      "status": "planned",
+      "status": "implemented",
       "issue": 62,
       "prototype_pages": ["pendencias.html"],
       "menu": "Pendências",
@@ -214,14 +214,14 @@
       "endpoints": [
         {"method": "GET", "path": "/pending-items", "permission": "pending.read"}
       ],
-      "url_state": ["status", "category", "priority", "area", "workorder", "page", "pageSize", "sort"],
+      "url_state": ["status", "category", "priority", "area", "workorder", "lot", "serial", "execution", "page", "pageSize", "sort"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/pending"
     },
     {
       "id": "pending-detail",
       "route": "/pending-items/:pendingId",
-      "status": "planned",
+      "status": "implemented",
       "issue": 62,
       "prototype_pages": ["detalhe-pendencia.html"],
       "menu": null,

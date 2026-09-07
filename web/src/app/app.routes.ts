@@ -69,6 +69,16 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('business.read')],
     loadComponent: () => import('./domains/queries/entity-detail.component').then((value) => value.EntityDetailComponent)
   },
+  {
+    path: 'pending-items',
+    canActivate: [authenticatedGuard, permissionGuard('pending.read')],
+    loadComponent: () => import('./domains/pending/pending-list.component').then((value) => value.PendingListComponent)
+  },
+  {
+    path: 'pending-items/:pendingId',
+    canActivate: [authenticatedGuard, permissionGuard('pending.read')],
+    loadComponent: () => import('./domains/pending/pending-detail.component').then((value) => value.PendingDetailComponent)
+  },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];

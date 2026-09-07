@@ -28,7 +28,7 @@ export class AppComponent {
     { label: 'navigation.newImport', route: '/imports/new', permission: 'import.create', icon: 'spreadsheet.svg', implemented: true },
     { label: 'navigation.executions', route: '/executions', permission: 'execution.read', icon: 'dashboard.svg', implemented: true },
     { label: 'navigation.search', route: '/search', permission: 'business.read', icon: 'search.svg', implemented: true },
-    { label: 'navigation.pending', route: '/pending-items', permission: 'pending.read', icon: 'queue.svg', implemented: false }
+    { label: 'navigation.pending', route: '/pending-items', permission: 'pending.read', icon: 'queue.svg', implemented: true }
   ];
   readonly visibleItems = computed(() => this.items.filter((item) => item.implemented && this.session.hasPermission(item.permission)));
 

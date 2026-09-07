@@ -80,6 +80,15 @@ class MemoryQueryRepository:
                 "priority_score": 90,
                 "priority": "critical",
                 "responsible_area": "Qualidade",
+                "classification_id": "class-1",
+                "rule_id": "long_term_hold",
+                "rule_catalog_version": "1.0.0",
+                "evidence": {
+                    "source": "synthetic",
+                    "days": 45,
+                    "source_file_id": "private-id",
+                    "nested": {"storage_path": "/private/path", "safe": True},
+                },
                 "created_at": datetime(2026, 7, 1, tzinfo=UTC),
                 "updated_at": NOW,
             },
@@ -246,11 +255,17 @@ class MemoryQueryRepository:
         category: str | None,
         workorder_number: str | None,
         execution_id: str | None,
+        lot_number: str | None = None,
+        serial_number: str | None = None,
+        priority: str | None = None,
+        responsible_area: str | None = None,
         page: int,
         page_size: int,
         sort: str,
         organization_ids=None,
     ) -> tuple[list[dict], int]:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return [], 0
         items = [
             item
             for item in self.pending
@@ -260,11 +275,26 @@ class MemoryQueryRepository:
                 workorder_number is None or item["workorder_number"] == workorder_number
             )
             and (execution_id is None or item["execution_id"] == execution_id)
+            and (lot_number is None or item["lot_number"] == lot_number)
+            and (serial_number is None or item["serial_number"] == serial_number)
+            and (priority is None or item["priority"] == priority)
+            and (
+                responsible_area is None
+                or item.get("responsible_area") == responsible_area
+            )
         ]
         reverse = sort == "newest"
         key = (
             (lambda item: (item["category"], item["created_at"], item["id"]))
             if sort == "category"
+            else (
+                lambda item: (
+                    -item.get("priority_score", 0),
+                    item["created_at"],
+                    item["id"],
+                )
+            )
+            if sort == "priority"
             else (lambda item: (item["created_at"], item["id"]))
         )
         items.sort(key=key, reverse=reverse)
@@ -272,7 +302,11 @@ class MemoryQueryRepository:
         offset = (page - 1) * page_size
         return deepcopy(items[offset : offset + page_size]), total
 
-    def get_pending(self, pending_id: int) -> dict | None:
+    def get_pending(
+        self, pending_id: int, organization_ids=None
+    ) -> dict | None:
+        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
+            return None
         return next(
             (deepcopy(item) for item in self.pending if item["id"] == pending_id),
             None,
@@ -583,6 +617,24 @@ def test_operational_queries_block_records_outside_actor_scope(api) -> None:
         assert client.get(path).status_code == 404
 
 
+def test_pending_queries_do_not_reveal_records_outside_actor_scope(api) -> None:
+    client, _ = api
+    denied_organization = UUID("99999999-9999-4999-8999-999999999999")
+
+    app.dependency_overrides[get_actor_context] = lambda: ActorContext(
+        user_id=UUID("00000000-0000-0000-0000-000000000001"),
+        session_id=UUID("22222222-2222-4222-8222-222222222222"),
+        token_id=UUID("33333333-3333-4333-8333-333333333333"),
+        permissions={"pending.read": frozenset({denied_organization})},
+        correlation_id=UUID("55555555-5555-4555-8555-555555555555"),
+    )
+
+    assert client.get("/pending-items").json()["items"] == []
+    hidden = client.get("/pending-items/1")
+    assert hidden.status_code == 404
+    assert hidden.json()["error"]["code"] == "pending_item_not_found"
+
+
 def test_lists_active_pending_items_with_filters_pagination_and_sort(api) -> None:
     client, _ = api
 
@@ -601,12 +653,30 @@ def test_lists_active_pending_items_with_filters_pagination_and_sort(api) -> Non
     assert [item["id"] for item in filtered["items"]] == [2]
     by_execution = client.get("/pending-items?execution_id=missing").json()
     assert by_execution["pagination"]["total"] == 0
+    filtered_context = client.get(
+        "/pending-items",
+        params={
+            "lot_number": "LOT-SYN-001",
+            "serial_number": "SER-SYN-001",
+            "priority": "critical",
+            "responsible_area": "Qualidade",
+            "sort": "priority",
+        },
+    ).json()
+    assert [item["id"] for item in filtered_context["items"]] == [1]
 
 
 def test_consults_pending_detail_history_and_consolidated_result(api) -> None:
     client, _ = api
 
-    assert client.get("/pending-items/1").json()["priority"] == "critical"
+    pending = client.get("/pending-items/1").json()
+    assert pending["priority"] == "critical"
+    assert pending["rule_catalog_version"] == "1.0.0"
+    assert pending["evidence"] == {
+        "source": "synthetic",
+        "days": 45,
+        "nested": {"safe": True},
+    }
     history = client.get(
         "/history?entity_type=serial&entity_id=SER-SYN-001&page_size=1"
     ).json()

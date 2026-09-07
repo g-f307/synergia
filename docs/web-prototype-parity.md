@@ -33,8 +33,8 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/executions` e `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementado #59; localização por ID enquanto não existe contrato de listagem global |
 | `/search` | `consulta.html` | `GET /workorders`, `/lots`, `/serials` por ID | `business.read` / `org` | implementar #61 |
 | detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementar #61 |
-| `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementar #62 |
-| `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementar #62 |
+| `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementado #62 |
+| `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementado #62 |
 | `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
 | `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado; visual alinhado #69 |
 | `/reports` e detalhe | páginas de relatório | nenhum contrato atual | `report.export` reservado / `org` | adiar Etapa 4 |

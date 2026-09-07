@@ -21,7 +21,6 @@ from app.authorization import (
     require_execution_permission,
     require_lot_permission,
     require_permission,
-    require_resource_permission,
 )
 from app.business_rules import RULE_CATALOG
 from app.errors import ApiError, ErrorResponse
@@ -161,6 +160,10 @@ class PendingItemResponse(BaseModel):
     priority_score: int
     priority: str
     responsible_area: str | None = None
+    classification_id: str | None = None
+    rule_id: str | None = None
+    rule_catalog_version: str | None = None
+    evidence: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 
@@ -169,6 +172,7 @@ class PendingPage(BaseModel):
     items: list[PendingItemResponse]
     pagination: Pagination
     sort: str
+    generated_at: datetime
 
 
 class HistoryEventResponse(BaseModel):
@@ -179,6 +183,28 @@ class HistoryEventResponse(BaseModel):
     event_type: str
     payload: dict[str, Any]
     occurred_at: datetime
+
+
+_PRIVATE_EVIDENCE_KEYS = {
+    "source_file_id",
+    "storage_path",
+    "path",
+    "token",
+    "password",
+    "secret",
+}
+
+
+def _public_evidence(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _public_evidence(item)
+            for key, item in value.items()
+            if key.lower() not in _PRIVATE_EVIDENCE_KEYS
+        }
+    if isinstance(value, list):
+        return [_public_evidence(item) for item in value]
+    return value
 
 
 class HistoryPage(BaseModel):
@@ -309,13 +335,19 @@ class QueryRepository(Protocol):
         category: str | None,
         workorder_number: str | None,
         execution_id: str | None,
+        lot_number: str | None = None,
+        serial_number: str | None = None,
+        priority: str | None = None,
+        responsible_area: str | None = None,
         page: int,
         page_size: int,
         sort: str,
         organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]: ...
 
-    def get_pending(self, pending_id: int) -> dict | None: ...
+    def get_pending(
+        self, pending_id: int, organization_ids: frozenset | None = None
+    ) -> dict | None: ...
 
     def list_history(
         self,
@@ -686,6 +718,10 @@ class PostgresQueryRepository:
         category: str | None,
         workorder_number: str | None,
         execution_id: str | None,
+        lot_number: str | None = None,
+        serial_number: str | None = None,
+        priority: str | None = None,
+        responsible_area: str | None = None,
         page: int,
         page_size: int,
         sort: str,
@@ -708,11 +744,24 @@ class PostgresQueryRepository:
         if execution_id:
             filters.append("p.execution_id = %s")
             parameters.append(execution_id)
+        if lot_number:
+            filters.append("l.lot_number = %s")
+            parameters.append(lot_number)
+        if serial_number:
+            filters.append("s.serial_number = %s")
+            parameters.append(serial_number)
+        if priority:
+            filters.append("p.priority = %s")
+            parameters.append(priority)
+        if responsible_area:
+            filters.append("p.responsible_area = %s")
+            parameters.append(responsible_area)
         where = f"WHERE {' AND '.join(filters)}" if filters else ""
         order = {
             "oldest": "p.created_at ASC, p.id ASC",
             "newest": "p.created_at DESC, p.id DESC",
             "category": "p.category ASC, p.created_at ASC, p.id ASC",
+            "priority": "p.priority_score DESC NULLS LAST, p.created_at ASC, p.id ASC",
         }[sort]
         base = self._pending_base()
         with self._connect() as connection:
@@ -724,7 +773,9 @@ class PostgresQueryRepository:
                 SELECT p.id, p.execution_id, w.workorder_number,
                        l.lot_number, s.serial_number, p.category, p.reason,
                        p.status, p.priority_score, p.priority,
-                       p.responsible_area, p.created_at, p.updated_at
+                       p.responsible_area, p.classification_id, p.rule_id,
+                       p.rule_catalog_version, p.evidence,
+                       p.created_at, p.updated_at
                 {base} {where}
                 ORDER BY {order}
                 LIMIT %s OFFSET %s
@@ -733,18 +784,27 @@ class PostgresQueryRepository:
             ).fetchall()
         return [self._decorate_pending(dict(row)) for row in rows], total
 
-    def get_pending(self, pending_id: int) -> dict | None:
+    def get_pending(
+        self, pending_id: int, organization_ids: frozenset | None = None
+    ) -> dict | None:
+        filters = ["p.id = %s"]
+        parameters: list[Any] = [pending_id]
+        if organization_ids is not None:
+            filters.append("e.organization_id = ANY(%s)")
+            parameters.append(list(organization_ids))
         with self._connect() as connection:
             row = connection.execute(
                 f"""
                 SELECT p.id, p.execution_id, w.workorder_number,
                        l.lot_number, s.serial_number, p.category, p.reason,
                        p.status, p.priority_score, p.priority,
-                       p.responsible_area, p.created_at, p.updated_at
+                       p.responsible_area, p.classification_id, p.rule_id,
+                       p.rule_catalog_version, p.evidence,
+                       p.created_at, p.updated_at
                 {self._pending_base()}
-                WHERE p.id = %s
+                WHERE {" AND ".join(filters)}
                 """,
-                (pending_id,),
+                parameters,
             ).fetchone()
         return self._decorate_pending(dict(row)) if row else None
 
@@ -767,6 +827,7 @@ class PostgresQueryRepository:
             )
         if item.get("responsible_area") is None:
             item["responsible_area"] = rule.get("responsible_area")
+        item["evidence"] = _public_evidence(item.get("evidence", {}))
         return item
 
     def list_history(
@@ -1311,9 +1372,13 @@ def list_pending_items(
     category: str | None = Query(default=None),
     workorder_number: str | None = Query(default=None),
     execution_id: str | None = Query(default=None),
+    lot_number: str | None = Query(default=None),
+    serial_number: str | None = Query(default=None),
+    priority: Literal["critical", "high", "normal", "low"] | None = Query(default=None),
+    responsible_area: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100),
-    sort: Literal["oldest", "newest", "category"] = Query(default="oldest"),
+    sort: Literal["oldest", "newest", "category", "priority"] = Query(default="oldest"),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> PendingPage:
     items, total = repository.list_pending(
@@ -1321,15 +1386,25 @@ def list_pending_items(
         category=category,
         workorder_number=workorder_number,
         execution_id=execution_id,
+        lot_number=lot_number,
+        serial_number=serial_number,
+        priority=priority,
+        responsible_area=responsible_area,
         page=page,
         page_size=page_size,
         sort=sort,
         organization_ids=actor.scope_filter("pending.read"),
     )
     return PendingPage(
-        items=[PendingItemResponse.model_validate(item) for item in items],
+        items=[
+            PendingItemResponse.model_validate(
+                {**item, "evidence": _public_evidence(item.get("evidence", {}))}
+            )
+            for item in items
+        ],
         pagination=_pagination(page, page_size, total),
         sort=sort,
+        generated_at=datetime.now(UTC),
     )
 
 
@@ -1338,18 +1413,20 @@ def list_pending_items(
     response_model=PendingItemResponse,
     summary="Consultar o detalhe de uma pendência",
     responses=ERROR_RESPONSES,
-    dependencies=[
-        Depends(require_resource_permission("pending.read", "pending", "pending_id"))
-    ],
 )
 def get_pending_item(
     pending_id: int,
+    actor: Annotated[ActorContext, Depends(require_permission("pending.read"))],
     repository: QueryRepository = Depends(get_query_repository),
 ) -> PendingItemResponse:
-    item = repository.get_pending(pending_id)
+    item = repository.get_pending(
+        pending_id, actor.scope_filter("pending.read")
+    )
     if item is None:
         raise _not_found("pending_item", pending_id)
-    return PendingItemResponse.model_validate(item)
+    return PendingItemResponse.model_validate(
+        {**item, "evidence": _public_evidence(item.get("evidence", {}))}
+    )
 
 
 @router.get(

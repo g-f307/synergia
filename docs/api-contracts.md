@@ -104,13 +104,16 @@ limites, inspeções de conteúdo e retenção estão em
 {
   "items": [],
   "pagination": {"page": 1, "page_size": 25, "total": 0, "pages": 0},
-  "sort": "oldest"
+  "sort": "oldest",
+  "generated_at": "2026-09-04T12:00:00Z"
 }
 ```
 
 A fila retorna apenas pendências `open` por padrão. Ela pode ser filtrada por
-`status`, `category`, `workorder_number` e `execution_id`, e ordenada por
-`oldest`, `newest` ou `category`. O histórico pode ser filtrado por
+`status`, `category`, `priority`, `responsible_area`, `workorder_number`,
+`lot_number`, `serial_number` e `execution_id`, e ordenada por `oldest`,
+`newest`, `priority` ou `category`. O detalhe inclui o código e a versão da
+regra, a área responsável e a evidência persistida como objeto JSON. O histórico pode ser filtrado por
 `execution_id`, `entity_type`, `entity_id` e `event_type`, com ordem `newest`
 ou `oldest`. Critérios de desempate por ID deixam os resultados determinísticos.
 
