@@ -21,4 +21,3 @@
 
 Essas capacidades não são simuladas na aplicação atual. Cada uma exige contrato
 de API, controle de acesso, persistência, rastreabilidade e evidência própria.
-

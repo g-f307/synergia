@@ -30,4 +30,3 @@ A Etapa 3 permanece operacional e somente leitura onde o backend ainda não
 oferece decisão humana. Aprovação/rejeição de pendências, atribuição,
 notificações externas, relatórios finais e exportações continuam registradas
 como capacidades da Etapa 4; não são simuladas pela interface atual.
-

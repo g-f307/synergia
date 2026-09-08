@@ -30,4 +30,3 @@ descartável do teste. O script não imprime senha, hash ou token.
 O relatório navegável fica em `web/reports/e2e-html/index.html`. Vídeos,
 capturas e traces ficam em `web/reports/e2e-results/` e são publicados pela CI
 como o artefato `fluxo-web-e2e`.
-
