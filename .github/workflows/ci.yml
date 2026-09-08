@@ -73,7 +73,7 @@ jobs:
       - name: Validar build Python
         run: python -m compileall -q app
       - name: Publicar relatório FastAPI
-        if: always()
+        if: always() && hashFiles('backend/reports/pytest.xml') != ''
         uses: actions/upload-artifact@v4
         with:
           name: testes-fastapi
