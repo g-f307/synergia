@@ -187,6 +187,8 @@ def validate_manifest(path: Path) -> dict:
         if not file_path.is_file():
             raise ValueError(f"Arquivo ausente: {item['file']}")
         content = file_path.read_bytes()
+        if file_path.suffix.lower() in {".csv", ".json"}:
+            content = content.replace(b"\r\n", b"\n")
         if len(content) != item["bytes"]:
             raise ValueError(f"Tamanho divergente: {item['file']}")
         if hashlib.sha256(content).hexdigest() != item["sha256"]:

@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "e2e": "playwright test",
     "lint": "eslint .",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -32,6 +33,8 @@
     "@angular-eslint/template-parser": "^20.7.0",
     "@angular/cli": "^20.3.30",
     "@angular/compiler-cli": "^20.3.30",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@types/jasmine": "~5.1.0",
     "angular-eslint": "^20.7.0",
     "eslint": "^9.39.5",

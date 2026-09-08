@@ -205,6 +205,30 @@ describe('ImportCreateComponent', () => {
     expect(component.fileError()).toBe('');
   });
 
+  it('revalidates a file selected while the upload policy is loading', () => {
+    const configuration = new Subject<{
+      policies: { source: string; allowed_extensions: string[]; max_bytes: number }[];
+      organizations: { id: string; organization_code: string; display_name: string }[];
+    }>();
+    policy.and.returnValue(configuration.asObservable());
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.selectFile({
+      target: { files: [new File(['id\n1'], 'safe.csv')] },
+    } as unknown as Event);
+    expect(component.canSubmit()).toBeFalse();
+
+    configuration.next({
+      policies: [{ source: 'N-FP', allowed_extensions: ['csv'], max_bytes: 4096 }],
+      organizations: [{ id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' }],
+    });
+    fixture.detectChanges();
+
+    expect(component.fileError()).toBe('');
+    expect(component.canSubmit()).toBeTrue();
+  });
+
   it('fails closed when the upload policy is unavailable', () => {
     policy.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 500, code: 'internal_error', message: 'safe', correlationId: 'corr-policy', fields: [] } as ApiFailure)));
     const fixture = TestBed.createComponent(ImportCreateComponent);

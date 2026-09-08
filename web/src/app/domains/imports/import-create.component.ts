@@ -164,6 +164,7 @@ export class ImportCreateComponent implements OnInit {
           ? configuration.organizations.find((organization) => organization.id === scopes[0])
           : undefined;
         this.organizationId.set(inferred?.id ?? '');
+        if (this.file()) this.fileError.set(this.validate(this.file()));
         this.policyLoading.set(false);
       },
       error: (failure: ApiFailure) => { this.policyFailure.set(failure); this.policyLoading.set(false); }
