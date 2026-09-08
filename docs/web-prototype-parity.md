@@ -31,8 +31,8 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/imports/new` | ausente | `POST /imports` | `import.create` / `org` | implementado #58 |
 | `/imports/:executionId` | ausente | consultas `/imports/{execution_id}/*` | `import.read`, `artifact.read` / `org` | implementado #58 |
 | `/executions` e `/executions/:executionId` | `monitor.html` | consultas `/executions/{execution_id}/*` | `execution.read`, `artifact.read` / `org` | implementado #59; localização por ID enquanto não existe contrato de listagem global |
-| `/search` | `consulta.html` | `GET /workorders`, `/lots`, `/serials` por ID | `business.read` / `org` | implementar #61 |
-| detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementar #61 |
+| `/search` | `consulta.html` | busca e detalhes de Workorders, lotes e seriais | `business.read` / `org` | implementado #61; validado E2E #63 |
+| detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementado #61; validado E2E #63 |
 | `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementado #62 |
 | `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementado #62 |
 | `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
@@ -59,13 +59,13 @@ O inventário integral e validável de endpoints está em
 
 | Capacidade | Decisão | Issue | Aceite final |
 | --- | --- | --- | --- |
-| autenticação, perfil e administração | implementar/adaptar | #44, #56, #57 | pendente #63 |
-| dashboard e indicadores | implementar | #60 | pendente #63 |
-| upload manual seguro | implementado, embora ausente no protótipo | #58 | evidência da #58; aceite final pendente #63 |
-| acompanhamento da importação | implementado | #58 | evidência da #58; aceite final pendente #63 |
-| execução, histórico, divergências e evidências | adaptar | #59 | pendente #63 |
-| busca e detalhe operacional | adaptar | #61 | pendente #63 |
-| fila e contexto de pendências | adaptar | #62 | pendente #63 |
+| autenticação, perfil e administração | implementado/adaptado | #44, #56, #57 | validado #63 |
+| dashboard e indicadores | implementado | #60 | validado #63 |
+| upload manual seguro | implementado, embora ausente no protótipo | #58 | validado no fluxo real #63 |
+| acompanhamento da importação | implementado | #58 | validado no fluxo real #63 |
+| execução, histórico, divergências e evidências | adaptado | #59 | validado #63 |
+| busca e detalhe operacional | adaptado | #61 | validado #63 |
+| fila e contexto de pendências | adaptado | #62 | validado #63 |
 | aprovação, rejeição, atribuição e decisão OQC | remover da etapa | Etapa 4 | decisão registrada |
 | relatórios e exportação final | adiar | Etapa 4 | decisão registrada |
 | notificações externas | remover da etapa | Etapa 4 | decisão registrada |

@@ -18,6 +18,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
 - [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
+- [roadmap e estado das etapas](docs/roadmap.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [contratos da API](docs/api-contracts.md);
@@ -27,6 +28,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
 - [mapa de jornadas, rotas e estados da aplicação web](docs/web-journey-map.md);
 - [paridade funcional com o protótipo](docs/web-prototype-parity.md);
+- [relatório final e demonstração reproduzível da Etapa 3](docs/stage-3-validation-report.md);
 - [design system, ativos e fundação web](docs/web-design-system.md);
 - [administração de grupos, papéis, permissões e associações](docs/access-control-administration.md);
 - [modelo persistente de identidade e acesso](docs/identity-data-model.md);
