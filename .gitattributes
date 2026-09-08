@@ -1,0 +1,3 @@
+data/synthetic/fixtures/**/*.csv text eol=lf
+data/synthetic/fixtures/**/*.json text eol=lf
+

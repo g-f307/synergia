@@ -455,6 +455,8 @@ def _write_file(
 
 
 def _file_sha256(path: Path) -> str:
+    if path.suffix.lower() in {".csv", ".json"}:
+        return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         while chunk := stream.read(1024 * 1024):

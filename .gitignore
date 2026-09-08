@@ -4,9 +4,12 @@ __pycache__/
 .venv/
 .pytest_cache/
 .pytest-*/
+.test-tmp/
 backend/reports/
+backend/.pytest-tmp/
 artifacts/synthetic/
 .data/
 .DS_Store
 Thumbs.db
 docs/GUIA_GITFLOW_AGENTES.md
+web/reports/e2e-*/
