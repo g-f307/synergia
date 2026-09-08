@@ -119,6 +119,11 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - name: Instalar dependências de persistência
         run: pip install -r backend/requirements-dev.txt
       - name: Confirmar disponibilidade do PostgreSQL
@@ -129,12 +134,38 @@ jobs:
         env:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci
         run: pytest -q -m integration backend/tests --junitxml=backend/reports/integration.xml
+      - name: Preparar banco isolado do fluxo web
+        run: |
+          createdb synergia_e2e
+          PGDATABASE=synergia_e2e python scripts/validate_project_assets.py
+          DATABASE_URL=postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e python scripts/bootstrap_web_e2e.py
+      - name: Instalar navegador do E2E
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Validar fluxo web ponta a ponta
+        working-directory: web
+        env:
+          DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e
+          E2E_API_COMMAND: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+          E2E_PYTHON: python
+        run: npm run e2e
       - name: Publicar relatório de segurança PostgreSQL
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: seguranca-postgresql
           path: backend/reports/integration.xml
+          if-no-files-found: error
+      - name: Publicar evidências do fluxo web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluxo-web-e2e
+          path: |
+            web/reports/e2e-html/
+            web/reports/e2e-results/
           if-no-files-found: error
       - name: Validar Docker Compose
         run: docker compose config
