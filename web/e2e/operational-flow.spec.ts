@@ -71,6 +71,22 @@ test.describe.serial('integrated operational journey', () => {
     );
   });
 
+  test('shows internal notifications and persists individual and batch reads', async ({ page }, testInfo) => {
+    await login(page);
+    const trigger = page.locator('a.notification-button');
+    await expect(trigger).toHaveAttribute('aria-label', /[1-9]\d* (não lidas|unread)/i);
+    await trigger.click();
+    await expect(page).toHaveURL(/\/notifications/);
+    await expect(page.locator('.notification-list li').first()).toBeVisible();
+    await expectAccessible(page, testInfo, 'notifications-desktop');
+    await testInfo.attach('notifications-desktop', {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    });
+    await page.getByRole('button', { name: /marcar como lida|mark as read/i }).first().click();
+    await page.getByRole('button', { name: /marcar todas como lidas|mark all as read/i }).click();
+    await expect(page.getByRole('button', { name: /marcar todas como lidas|mark all as read/i })).toBeDisabled();
+  });
+
   test('consults the resulting Workorder and expected pending queue', async ({ page }, testInfo) => {
     await login(page);
     await page.locator('a[href="/search"]').click();

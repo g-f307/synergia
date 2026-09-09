@@ -1,9 +1,10 @@
-import { Component, DestroyRef, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
 import { SessionService } from './core/session.service';
 import { ThemeService } from './core/theme.service';
+import { NotificationService } from './domains/notifications/notification.service';
 import { BreadcrumbsComponent } from './layout/breadcrumbs.component';
 import { I18nService } from './shared/i18n/i18n.service';
 import { TranslationKey } from './shared/i18n/i18n.models';
@@ -16,6 +17,7 @@ export class AppComponent {
   readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
   readonly theme = inject(ThemeService);
+  readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
@@ -34,17 +36,22 @@ export class AppComponent {
   readonly visibleItems = computed(() => this.items.filter((item) => item.implemented && this.session.hasPermission(item.permission)));
 
   constructor() {
+    effect(() => {
+      if (this.session.isAuthenticated() && this.session.hasPermission('notification.read')) this.notifications.refreshUnreadCount();
+      else this.notifications.reset();
+    });
     this.mobileQuery.addEventListener('change', this.syncMobile);
     this.destroyRef.onDestroy(() => this.mobileQuery.removeEventListener('change', this.syncMobile));
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
       this.menuOpen.set(false);
+      if (this.session.isAuthenticated() && this.session.hasPermission('notification.read')) this.notifications.refreshUnreadCount();
       setTimeout(() => document.getElementById('main-content')?.focus({ preventScroll: true }));
     });
   }
 
   toggleMenu(): void { this.menuOpen.update((value) => !value); }
   toggleTheme(): void { this.theme.toggle(); }
-  logout(): void { this.session.logout().subscribe(); }
+  logout(): void { this.notifications.reset(); this.session.logout().subscribe(); }
 
   @HostListener('document:keydown.escape')
   closeMenu(): void {

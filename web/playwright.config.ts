@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const databaseUrl = process.env.DATABASE_URL ??
   'postgresql://synergia:synergia-local-only@127.0.0.1:5432/synergia_e2e';
+const browserChannel = process.env.E2E_BROWSER_CHANNEL;
+const recordVideo = process.env.E2E_RECORD_VIDEO !== 'false';
 
 export default defineConfig({
   testDir: './e2e',
@@ -14,7 +16,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4200',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'on',
+    video: recordVideo ? 'on' : 'off',
   },
   webServer: [
     {
@@ -44,5 +46,11 @@ export default defineConfig({
       timeout: 120_000,
     },
   ],
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{
+    name: 'chromium',
+    use: {
+      ...devices['Desktop Chrome'],
+      ...(browserChannel ? { channel: browserChannel } : {}),
+    },
+  }],
 });

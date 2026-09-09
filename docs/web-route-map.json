@@ -307,6 +307,25 @@
       "url_state": ["version", "tab", "page", "pageSize", "historyPage", "from"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/reports"
+    },
+    {
+      "id": "notifications",
+      "route": "/notifications",
+      "status": "implemented",
+      "issue": 79,
+      "prototype_pages": [],
+      "menu": "Indicador no cabeçalho",
+      "permission": "notification.read",
+      "scope": "org",
+      "endpoints": [
+        {"method": "GET", "path": "/notifications", "permission": "notification.read"},
+        {"method": "GET", "path": "/notifications/unread-count", "permission": "notification.read"},
+        {"method": "PATCH", "path": "/notifications/{notification_id}/read", "permission": "notification.read"},
+        {"method": "POST", "path": "/notifications/read-all", "permission": "notification.read"}
+      ],
+      "url_state": ["filter", "sort", "page", "pageSize"],
+      "states": ["loading", "empty", "error", "forbidden", "unavailable"],
+      "owner": "domains/notifications"
     }
   ]
 }
