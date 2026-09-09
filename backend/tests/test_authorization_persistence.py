@@ -39,6 +39,7 @@ ROLE_PERMISSIONS = {
         "report.generate",
         "report.read",
         "report.cancel",
+        "notification.read",
     },
     "analista": {
         "dashboard.read",
@@ -52,6 +53,7 @@ ROLE_PERMISSIONS = {
         "report.export",
         "session.revoke.own",
         "report.read",
+        "notification.read",
     },
     "operador": {
         "dashboard.read",
@@ -62,6 +64,7 @@ ROLE_PERMISSIONS = {
         "import.read",
         "artifact.read",
         "session.revoke.own",
+        "notification.read",
     },
     "consulta": {
         "dashboard.read",
@@ -70,6 +73,7 @@ ROLE_PERMISSIONS = {
         "pending.read",
         "session.revoke.own",
         "report.read",
+        "notification.read",
     },
 }
 

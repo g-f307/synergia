@@ -5,16 +5,19 @@ import { of } from 'rxjs';
 
 import { AppComponent } from './app.component';
 import { SessionService } from './core/session.service';
+import { NotificationService } from './domains/notifications/notification.service';
 
 describe('AppComponent', () => {
   const authenticated = signal(false);
   const administrator = signal(false);
+  const notificationPermission = signal(false);
   const profile = signal<{ display_name: string } | null>(null);
+  const notifications = { unreadCount: signal(0), refreshUnreadCount: jasmine.createSpy(), reset: jasmine.createSpy() };
   const session = {
     isAuthenticated: authenticated,
     isAdministrator: administrator,
     profile,
-    hasPermission: (key: string) => key === 'dashboard.read',
+    hasPermission: (key: string) => key === 'dashboard.read' || (key === 'notification.read' && notificationPermission()),
     logout: () => of(undefined)
   };
 
@@ -22,12 +25,15 @@ describe('AppComponent', () => {
     document.documentElement.dataset['theme'] = 'light';
     authenticated.set(false);
     administrator.set(false);
+    notificationPermission.set(false);
+    notifications.unreadCount.set(0);
     profile.set(null);
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
         provideRouter([]),
-        { provide: SessionService, useValue: session }
+        { provide: SessionService, useValue: session },
+        { provide: NotificationService, useValue: notifications }
       ]
     }).compileComponents();
   });
@@ -72,6 +78,19 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Administração');
+  });
+
+  it('shows an accessible unread notification count with permission', () => {
+    authenticated.set(true);
+    notificationPermission.set(true);
+    notifications.unreadCount.set(3);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.notification-button') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/notifications');
+    expect(link.getAttribute('aria-label')).toContain('3 não lidas');
+    expect(link.querySelector('.notification-badge')?.textContent).toContain('3');
   });
 
   it('removes closed mobile navigation from focus and restores it when opened', () => {
