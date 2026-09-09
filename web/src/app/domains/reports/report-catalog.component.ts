@@ -58,6 +58,7 @@ export class ReportCatalogComponent {
   readonly hasPartial = computed(() => this.result()?.items.some((item) => item.completeness === 'partial') ?? false);
   readonly hasStale = computed(() => this.result()?.items.some((item) => this.isStale(item)) ?? false);
   readonly failureState = computed<UiState | null>(() => this.toState(this.failure()));
+  readonly policyFailureState = computed<UiState>(() => this.policyFailure()?.kind === 'forbidden' ? 'forbidden' : 'unavailable');
 
   constructor() {
     this.api.policy().pipe(takeUntilDestroyed()).subscribe({
@@ -145,6 +146,8 @@ export class ReportCatalogComponent {
   isStale(item: ReportVersion): boolean { return item.state === 'generating' && Date.now() - Date.parse(item.created_at) > (this.policy()?.stale_after_seconds ?? 900) * 1000; }
   failureTitle(failure = this.failure()): string { return this.i18n.t(failure?.kind === 'forbidden' ? 'reports.forbiddenTitle' : failure?.kind === 'unavailable' ? 'reports.unavailableTitle' : 'reports.errorTitle'); }
   failureMessage(failure = this.failure()): string { return this.i18n.t(failure?.kind === 'forbidden' ? 'reports.forbidden' : failure?.kind === 'unavailable' ? 'reports.unavailable' : 'reports.error'); }
+  policyFailureTitle(): string { return this.i18n.t(this.policyFailure()?.kind === 'forbidden' ? 'reports.forbiddenTitle' : 'reports.policyUnavailableTitle'); }
+  policyFailureMessage(): string { return this.i18n.t(this.policyFailure()?.kind === 'forbidden' ? 'reports.forbidden' : 'reports.policyUnavailable'); }
 
   private readParams(params: ParamMap): void {
     this.organizationId.set(params.get('organization') ?? '');

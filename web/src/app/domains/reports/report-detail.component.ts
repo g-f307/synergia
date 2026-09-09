@@ -46,6 +46,7 @@ export class ReportDetailComponent {
   readonly cancelBusy = signal(false);
   readonly cancelFailure = signal<ApiFailure | null>(null);
   readonly failureState = computed<UiState | null>(() => this.toState(this.failure()));
+  readonly policyFailureState = computed<UiState>(() => this.policyFailure()?.kind === 'forbidden' ? 'forbidden' : 'unavailable');
   readonly rows = computed<Array<WorkorderReportRow | OqcReportRow>>(() => {
     const data = this.report()?.data;
     if (!data) return [];
@@ -142,6 +143,8 @@ export class ReportDetailComponent {
   countEntries(value: Record<string, number> | undefined): Array<[string, number]> { return Object.entries(value ?? {}); }
   failureTitle(failure = this.failure()): string { if (failure?.kind === 'not-found') return this.i18n.t('reports.notFoundTitle'); return this.i18n.t(failure?.kind === 'forbidden' ? 'reports.forbiddenTitle' : failure?.kind === 'unavailable' ? 'reports.unavailableTitle' : 'reports.errorTitle'); }
   failureMessage(failure = this.failure()): string { if (failure?.kind === 'not-found') return this.i18n.t('reports.notFound'); return this.i18n.t(failure?.kind === 'forbidden' ? 'reports.forbidden' : failure?.kind === 'unavailable' ? 'reports.unavailable' : 'reports.error'); }
+  policyFailureTitle(): string { return this.i18n.t(this.policyFailure()?.kind === 'forbidden' ? 'reports.forbiddenTitle' : 'reports.policyUnavailableTitle'); }
+  policyFailureMessage(): string { return this.i18n.t(this.policyFailure()?.kind === 'forbidden' ? 'reports.forbidden' : 'reports.policyUnavailable'); }
   currentUrl(): string { return this.router.url; }
 
   private readParams(params: ParamMap): void { this.tab.set(this.validTab(params.get('tab'))); this.rowPage.set(this.positive(params.get('page'), 1)); this.pageSize.set(this.positive(params.get('pageSize'), 25, [10, 25, 50])); this.historyPage.set(this.positive(params.get('historyPage'), 1)); }

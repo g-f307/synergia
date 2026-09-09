@@ -14,7 +14,7 @@
     <div class="filter-actions"><button type="button" class="secondary" (click)="clear()">{{ i18n.t('reports.clear') }}</button><button type="submit">{{ i18n.t('reports.apply') }}</button></div>
   </form>
 
-  @if(policyFailure()){<syn-state state="unavailable" [title]="i18n.t('reports.policyUnavailableTitle')" [message]="i18n.t('reports.policyUnavailable')">@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</syn-state>}
+  @if(policyFailure()){<syn-state [state]="policyFailureState()" [title]="policyFailureTitle()" [message]="policyFailureMessage()">@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</syn-state>}
   @if(downloadFailure()){<syn-state [state]="downloadFailure()?.kind === 'forbidden' ? 'forbidden' : 'unavailable'" [title]="i18n.t('reports.exportErrorTitle')" [message]="i18n.t('reports.exportError')">@if(downloadFailure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ downloadFailure()?.correlationId }}</p>}</syn-state>}
   @if(loading()){<syn-state state="loading" [title]="i18n.t('reports.loadingTitle')" [message]="i18n.t('reports.loading')" />}
   @if(failureState();as currentState){<syn-state [state]="currentState" [title]="failureTitle()" [message]="failureMessage()">@if(failure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ failure()?.correlationId }}</p>}</syn-state>}

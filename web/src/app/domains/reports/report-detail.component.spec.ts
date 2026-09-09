@@ -28,6 +28,16 @@ describe('ReportDetailComponent', () => {
   it('renders OQC pending relationships without interpreting content as HTML', () => { api.get.and.returnValue(of(reportDetail({ report_type: 'oqc_summary', data: { kind: 'oqc_summary', count: 1, distinct_lots: 1, by_reason: { hold: 1 }, by_priority: { high: 1 }, by_organization: { ORG: 1 }, items: [{ workorder_number: 'WO-002', lot_number: 'LOT-002', organization_code: 'ORG', decision_state: 'pending', reason: '<script>unsafe()</script>', pending_item_id: 7, priority: 'high', priority_score: 90, pending_reason: 'Review', pending_status: 'open' }] } }))); params.next(convertToParamMap({ version: '1', tab: 'data' })); fixture.detectChanges(); const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[]; expect(fixture.nativeElement.textContent).toContain('<script>unsafe()</script>'); expect(fixture.nativeElement.querySelector('script')).toBeNull(); expect(links.some((link) => link.textContent?.includes('Review'))).toBeTrue(); });
   it('supports arrow-key navigation between accessible tabs', () => { const tablist = fixture.nativeElement.querySelector('[role="tablist"]') as HTMLElement; tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { tab: 'history', page: 1 } })); expect(document.activeElement?.id).toBe('report-tab-history'); });
   it('represents policy failures and withholds export controls', () => { fixture.destroy(); api.policy.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 503, code: 'unavailable', message: 'safe', correlationId: 'policy-correlation', fields: [] } as ApiFailure))); fixture = TestBed.createComponent(ReportDetailComponent); fixture.detectChanges(); expect(fixture.nativeElement.textContent).toContain('Opções indisponíveis'); expect(fixture.componentInstance.canExport()).toBeFalse(); });
+  it('represents a forbidden policy distinctly from temporary unavailability', () => {
+    fixture.destroy();
+    api.policy.and.returnValue(throwError(() => ({ kind: 'forbidden', status: 403, code: 'access_denied', message: 'safe', correlationId: 'policy-403', fields: [] } as ApiFailure)));
+    fixture = TestBed.createComponent(ReportDetailComponent); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-state="forbidden"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Acesso não permitido');
+    expect(fixture.nativeElement.textContent).toContain('policy-403');
+    expect(fixture.nativeElement.textContent).not.toContain('Opções indisponíveis');
+    expect(fixture.componentInstance.canExport()).toBeFalse();
+  });
   it('distinguishes generating, completed, partial, stale and failed reports', () => {
     const cases = [
       { report: reportDetail({ state: 'generating', completed_at: null, data: null, created_at: new Date().toISOString() }), expected: 'Em geração' },
