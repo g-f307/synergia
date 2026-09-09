@@ -157,9 +157,18 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
         with TestClient(app) as client:
             catalog = client.get("/admin/access/permissions", headers=headers)
             assert catalog.status_code == 200
-            assert len(catalog.json()) == 14
-            assert {item["catalog_version"] for item in catalog.json()} == {"1.0.0"}
-            assert all(item["is_reserved"] for item in catalog.json())
+            catalog_items = catalog.json()
+            assert len(catalog_items) == 17
+            assert {item["catalog_version"] for item in catalog_items} == {
+                "1.0.0",
+                "1.1.0",
+            }
+            assert {
+                "report.generate",
+                "report.read",
+                "report.cancel",
+            } <= {item["permission_key"] for item in catalog_items}
+            assert all(item["is_reserved"] for item in catalog_items)
 
             group = client.post(
                 "/admin/access/groups",
