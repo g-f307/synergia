@@ -79,6 +79,16 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('pending.read')],
     loadComponent: () => import('./domains/pending/pending-detail.component').then((value) => value.PendingDetailComponent)
   },
+  {
+    path: 'reports',
+    canActivate: [authenticatedGuard, permissionGuard('report.read')],
+    loadComponent: () => import('./domains/reports/report-catalog.component').then((value) => value.ReportCatalogComponent)
+  },
+  {
+    path: 'reports/:reportId',
+    canActivate: [authenticatedGuard, permissionGuard('report.read')],
+    loadComponent: () => import('./domains/reports/report-detail.component').then((value) => value.ReportDetailComponent)
+  },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];
