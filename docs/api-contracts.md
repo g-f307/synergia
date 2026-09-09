@@ -60,6 +60,10 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /reports/{report_id}/versions/{version}` | metadados e snapshot de uma versão | `200` |
 | `GET /reports/{report_id}/versions/{version}/export` | exporta o snapshot persistido em CSV ou JSON | `200` |
 | `POST /reports/{report_id}/versions/{version}/cancel` | cancela uma geração ainda em andamento | `200` |
+| `GET /notifications` | lista paginada de notificações internas próprias | `200` |
+| `GET /notifications/unread-count` | conta notificações próprias não lidas | `200` |
+| `PATCH /notifications/{notification_id}/read` | persiste a leitura individual com versão otimista | `200` |
+| `POST /notifications/read-all` | persiste a leitura em lote dentro do escopo atual | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
 ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,

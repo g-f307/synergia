@@ -145,6 +145,7 @@ web/src/app/
     ├── dashboard/        indicadores operacionais                       #60
     ├── queries/          busca e detalhes de entidades                  #61
     ├── pending/          fila e detalhe                                 #62
+    ├── notifications/    caixa interna e indicador não lido             #79
     ├── profile/          perfil e preferências                          #44
     └── admin/            identidades e acesso                           #44
 ```
@@ -163,7 +164,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | WEB-G03 | busca exibe coleção, mas a API original consultava apenas um identificador | implementar busca exata paginada, com ordem estável e escopo no servidor | #61 |
 | WEB-G04 | protótipo aprova, rejeita, atribui e altera responsável | remover da Etapa 3 | Etapa 4 — decisão humana |
 | WEB-G05 | catálogo, geração e exportação não existiam na Etapa 3 | resolvido com snapshots #77 e jornada real #78 | Etapa 4 — relatórios |
-| WEB-G06 | notificações e e-mail são apenas apresentação | remover da Etapa 3 | Etapa 4 — notificações/SMTP |
+| WEB-G06 | notificações e e-mail eram apenas apresentação | notificações internas reais implementadas; SMTP permanece separado | #79 / Etapa 4 |
 | WEB-G07 | parâmetros operacionais aparecem em configurações | remover até existir contrato e autorização específicos | etapa futura |
 | WEB-G08 | configuração pessoal do protótipo se sobrepõe ao perfil existente | adaptar para `/profile`; manter apenas preferências suportadas | #56/#57 |
 | WEB-G09 | protótipo não possui login, upload ou administração real | implementar com contratos existentes | #56/#58 e #44 |

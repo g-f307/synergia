@@ -45,6 +45,7 @@ Não há herança implícita nem papel `superuser`.
 | `report.generate` | nova versão de relatório | — | ✓ | — | — | — |
 | `report.read` | catálogo, histórico e snapshot | — | ✓ | ✓ | — | ✓ |
 | `report.cancel` | geração de relatório em andamento | — | ✓ | — | — | — |
+| `notification.read` | notificações internas próprias | — | ✓ | ✓ | ✓ | ✓ |
 | `access.admin` | usuário, vínculo, papel e escopo futuros | ✓ | — | — | — | — |
 | `session.revoke.any` | sessão de outro usuário futura | ✓ | — | — | — | — |
 | `session.revoke.own` | própria sessão futura | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -109,6 +110,10 @@ técnica também dependerá da política de rede da TI.
 | `GET /reports/{report_id}/versions/{version}` | `report.read` | dados de uma versão | `org` | gestor, analista, consulta |
 | `GET /reports/{report_id}/versions/{version}/export` | `report.export` | exportação de snapshot concluído | `org` | gestor, analista |
 | `POST /reports/{report_id}/versions/{version}/cancel` | `report.cancel` | geração em andamento | `org` | gestor |
+| `GET /notifications` | `notification.read` | notificações internas próprias | `org` | gestor, analista, operador, consulta |
+| `GET /notifications/unread-count` | `notification.read` | total próprio não lido | `org` | gestor, analista, operador, consulta |
+| `PATCH /notifications/{notification_id}/read` | `notification.read` | leitura de notificação própria | `org` | gestor, analista, operador, consulta |
+| `POST /notifications/read-all` | `notification.read` | leitura em lote das notificações próprias | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |
