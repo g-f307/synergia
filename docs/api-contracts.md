@@ -57,6 +57,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /reports/{report_id}` | dados da versão mais recente | `200` |
 | `GET /reports/{report_id}/versions` | histórico paginado | `200` |
 | `GET /reports/{report_id}/versions/{version}` | metadados e snapshot de uma versão | `200` |
+| `POST /reports/{report_id}/versions/{version}/cancel` | cancela uma geração ainda em andamento | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
 ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,

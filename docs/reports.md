@@ -21,9 +21,10 @@ persistido. Uma classificação automática pode aparecer como contexto, mas nã
 
 `generating` é o estado inicial. A única transição aceita é para `succeeded`,
 `failed` ou `cancelled`. Estados terminais não podem ser reabertos. Falhas
-preservam código seguro, mensagem limitada e eventos auditáveis. `cancelled`
-está reservado para geração que possa ser interrompida; a geração síncrona
-atual não expõe uma operação de cancelamento.
+preservam código seguro, mensagem limitada e eventos auditáveis. Uma geração
+persistida que ainda esteja em `generating` pode ser cancelada por usuário com
+`report.cancel` em `POST /reports/{report_id}/versions/{version}/cancel`; motivo,
+ator e correlação ficam registrados. Versões terminais retornam `409`.
 
 `complete` corresponde a uma execução `completed`; `partial` corresponde a
 `completed_with_errors`. Execuções ainda ativas, canceladas ou falhas retornam
@@ -47,8 +48,9 @@ relatório. O histórico e os dados exatos são consultados em
 
 Filtros aceitos: `date_from`, `date_to`, `state`, `workorder_number`,
 `lot_number` e `priority`. Campos sem aplicação ao tipo são inócuos. A data é
-aplicada ao `updated_at` persistido da entidade principal. O `reference_at`
-explicita o corte solicitado e permanece no histórico.
+aplicada ao `updated_at` persistido da entidade principal. `reference_at` é o
+limite superior efetivo: registros atualizados depois dele não entram no
+snapshot. Filtros incompatíveis com o tipo retornam `422`.
 
 Veja um payload sintético em
 [`data/synthetic/report_examples.json`](../data/synthetic/report_examples.json).
