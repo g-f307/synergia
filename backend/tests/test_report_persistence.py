@@ -149,8 +149,11 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
             lot_id = connection.execute(
                 """
                 INSERT INTO synergia.lots (
-                    lot_number, workorder_id, execution_id, source_file_id
-                ) VALUES (%s, %s, %s, %s) RETURNING id
+                    lot_number, workorder_id, execution_id, source_file_id,
+                    updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, '2026-09-03T10:00:00Z'
+                ) RETURNING id
                 """,
                 (
                     f"LOT-{index}-{suffix[:8]}",
@@ -173,9 +176,10 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
                 """
                 INSERT INTO synergia.pending_items (
                     workorder_id, lot_id, execution_id, source_file_id,
-                    category, reason, priority, priority_score, responsible_area
+                    category, reason, priority, priority_score, responsible_area,
+                    updated_at
                 ) VALUES (%s, %s, %s, %s, 'oqc_pending', 'Awaiting OQC',
-                          'high', 80, 'Quality')
+                          'high', 80, 'Quality', '2026-09-03T10:00:00Z')
                 """,
                 (workorder_ids[2], lot_id, execution_id, source_id),
             )
