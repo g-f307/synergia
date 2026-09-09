@@ -50,6 +50,10 @@ python scripts/validate_project_assets.py
   otimista;
 - `identity_access_events` preserva um histórico append-only sem exclusão em
   cascata;
+- `reports` identifica um relatório e `report_versions` preserva cada pedido,
+  execução, organização, responsável, filtros, horário de referência e estado;
+- `report_artifacts` guarda o snapshot JSON reproduzível e seu hash, enquanto
+  `report_events` registra início, sucesso, falha e consultas relevantes;
 - quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
   não negativas e a liberação parcial exige quantidade liberada maior que zero
   e menor que a recebida.
@@ -102,6 +106,10 @@ erDiagram
     identity_users ||--o{ identity_sessions : autentica
     identity_sessions ||--o{ session_refresh_tokens : renova
     identity_users o|--o{ identity_access_events : audita
+    reports ||--|{ report_versions : versiona
+    executions ||--o{ report_versions : referencia
+    report_versions ||--o| report_artifacts : materializa
+    report_versions ||--o{ report_events : audita
 ```
 
 Entidades, invariantes, índices e rollback do núcleo IAM são detalhados em
