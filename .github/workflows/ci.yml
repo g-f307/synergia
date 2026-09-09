@@ -139,16 +139,16 @@ jobs:
           createdb synergia_e2e
           PGDATABASE=synergia_e2e python scripts/validate_project_assets.py
           DATABASE_URL=postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e python scripts/bootstrap_web_e2e.py
-      - name: Instalar navegador do E2E
+      - name: Instalar dependências do E2E
         working-directory: web
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
       - name: Validar fluxo web ponta a ponta
+        id: e2e
         working-directory: web
         env:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e
           E2E_API_COMMAND: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+          E2E_BROWSER_CHANNEL: chrome
           E2E_PYTHON: python
         run: npm run e2e
       - name: Publicar relatório de segurança PostgreSQL
@@ -159,7 +159,7 @@ jobs:
           path: backend/reports/integration.xml
           if-no-files-found: error
       - name: Publicar evidências do fluxo web
-        if: always()
+        if: always() && steps.e2e.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: fluxo-web-e2e
