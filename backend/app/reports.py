@@ -3,7 +3,9 @@ from __future__ import annotations
 # Reporting SQL is kept as readable, aligned blocks.
 # ruff: noqa: E501, I001
 
+import csv
 import hashlib
+import io
 import json
 import math
 import os
@@ -14,7 +16,7 @@ from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID, uuid4
 
 import psycopg
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -38,6 +40,36 @@ ERROR_RESPONSES = {
 ReportType = Literal["workorder_consolidated", "oqc_summary"]
 ReportState = Literal["generating", "succeeded", "failed", "cancelled"]
 Completeness = Literal["complete", "partial"]
+ReportSort = Literal["newest", "oldest", "type"]
+ExportFormat = Literal["csv", "json"]
+
+REPORT_STALE_AFTER_SECONDS = 15 * 60
+REPORT_ALLOWED_STATES = {
+    "workorder_consolidated": ["pending", "validated", "consolidated", "failed"],
+    "oqc_summary": [
+        "pending",
+        "approved",
+        "partially_approved",
+        "rejected",
+        "not_applicable",
+    ],
+}
+REPORT_ALLOWED_FILTERS = {
+    "workorder_consolidated": [
+        "date_from",
+        "date_to",
+        "state",
+        "workorder_number",
+    ],
+    "oqc_summary": [
+        "date_from",
+        "date_to",
+        "state",
+        "workorder_number",
+        "lot_number",
+        "priority",
+    ],
+}
 
 
 class ReportGenerationCancelled(Exception):
@@ -74,24 +106,9 @@ class CreateReportRequest(BaseModel):
     def validate_reference_timezone(self) -> CreateReportRequest:
         if self.reference_at.tzinfo is None:
             raise ValueError("reference_at deve incluir fuso horário")
-        allowed_states = {
-            "workorder_consolidated": {
-                "pending",
-                "validated",
-                "consolidated",
-                "failed",
-            },
-            "oqc_summary": {
-                "pending",
-                "approved",
-                "partially_approved",
-                "rejected",
-                "not_applicable",
-            },
-        }
         if (
             self.filters.state
-            and self.filters.state not in allowed_states[self.report_type]
+            and self.filters.state not in REPORT_ALLOWED_STATES[self.report_type]
         ):
             raise ValueError("state não é aplicável ao tipo de relatório")
         if self.report_type == "workorder_consolidated" and (
@@ -126,6 +143,7 @@ class ReportVersionResponse(BaseModel):
     organization_id: UUID
     execution_id: str
     requested_by_user_id: UUID
+    requested_by_display_name: str | None = None
     reference_at: datetime
     filters: dict[str, Any]
     schema_version: str
@@ -150,6 +168,27 @@ class Pagination(BaseModel):
 class ReportPage(BaseModel):
     items: list[ReportVersionResponse]
     pagination: Pagination
+    sort: str
+
+
+class OrganizationOptionResponse(BaseModel):
+    id: UUID
+    organization_code: str
+    display_name: str
+
+
+class ReportTypePolicyResponse(BaseModel):
+    report_type: ReportType
+    allowed_states: list[str]
+    allowed_filters: list[str]
+
+
+class ReportPolicyResponse(BaseModel):
+    report_types: list[ReportTypePolicyResponse]
+    export_formats: list[ExportFormat]
+    read_organizations: list[OrganizationOptionResponse]
+    generation_organizations: list[OrganizationOptionResponse]
+    stale_after_seconds: int
 
 
 class ReportRepository(Protocol):
@@ -165,6 +204,7 @@ class ReportRepository(Protocol):
         report_type: str | None,
         state: str | None,
         execution_id: str | None,
+        sort: ReportSort,
         page: int,
         page_size: int,
     ) -> tuple[list[dict], int]: ...
@@ -189,10 +229,18 @@ class ReportRepository(Protocol):
         actor: ActorContext,
         reason: str,
     ) -> dict | None: ...
+    def export_version(
+        self,
+        report_id: UUID,
+        version: int,
+        actor: ActorContext,
+        export_format: ExportFormat,
+    ) -> dict | None: ...
+    def version_organization(self, report_id: UUID, version: int) -> UUID | None: ...
 
 
 class PostgresReportRepository:
-    SCHEMA_VERSION = "1.0.0"
+    SCHEMA_VERSION = "1.1.0"
     TERMINAL_EXECUTIONS = {"completed", "completed_with_errors"}
 
     def __init__(self, database_url: str) -> None:
@@ -213,6 +261,7 @@ class PostgresReportRepository:
             "organization_id": row["organization_id"],
             "execution_id": row["execution_id"],
             "requested_by_user_id": row["requested_by_user_id"],
+            "requested_by_display_name": row.get("requested_by_display_name"),
             "reference_at": row["reference_at"],
             "filters": row["filters"],
             "schema_version": row["schema_version"],
@@ -406,7 +455,8 @@ class PostgresReportRepository:
             f"""
             SELECT w.workorder_number, l.lot_number, o.organization_code,
                    q.decision_state, q.reason,
-                   p.priority, p.priority_score, p.reason AS pending_reason,
+                   p.id AS pending_item_id, p.priority, p.priority_score,
+                   p.reason AS pending_reason,
                    p.status AS pending_status
             FROM synergia.oqc_decisions q
             JOIN synergia.workorders w ON w.id = q.workorder_id AND w.execution_id = q.execution_id
@@ -556,7 +606,7 @@ class PostgresReportRepository:
         return f" AND {alias}.organization_id = ANY(%s)", [list(organization_ids)]
 
     def list_reports(
-        self, organization_ids, report_type, state, execution_id, page, page_size
+        self, organization_ids, report_type, state, execution_id, sort, page, page_size
     ):
         scope, scope_params = self._scope(organization_ids)
         filters = ["v.version_rank = 1"]
@@ -573,16 +623,24 @@ class PostgresReportRepository:
         values.extend(scope_params)
         where = " AND ".join(filters) + scope
         base = """WITH ranked AS (SELECT rv.*, r.report_type,
+                  u.display_name AS requested_by_display_name,
                   row_number() OVER (PARTITION BY rv.report_id ORDER BY rv.version DESC) AS version_rank
-                  FROM synergia.report_versions rv JOIN synergia.reports r ON r.id = rv.report_id), v AS
+                  FROM synergia.report_versions rv
+                  JOIN synergia.reports r ON r.id = rv.report_id
+                  LEFT JOIN synergia.identity_users u ON u.id = rv.requested_by_user_id), v AS
                   (SELECT * FROM ranked)"""
+        order_by = {
+            "newest": "created_at DESC, report_id",
+            "oldest": "created_at ASC, report_id",
+            "type": "report_type ASC, created_at DESC, report_id",
+        }[sort]
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 f"{base} SELECT count(*) AS total FROM v WHERE {where}", values
             )
             total = cursor.fetchone()["total"]
             cursor.execute(
-                f"{base} SELECT * FROM v WHERE {where} ORDER BY created_at DESC, report_id LIMIT %s OFFSET %s",
+                f"{base} SELECT * FROM v WHERE {where} ORDER BY {order_by} LIMIT %s OFFSET %s",
                 [*values, page_size, (page - 1) * page_size],
             )
             return [self._metadata(row) for row in cursor.fetchall()], total
@@ -597,8 +655,12 @@ class PostgresReportRepository:
             )
             total = cursor.fetchone()["total"]
             cursor.execute(
-                f"""SELECT rv.*, r.report_type FROM synergia.report_versions rv
-                JOIN synergia.reports r ON r.id = rv.report_id WHERE rv.report_id = %s{scope}
+                f"""SELECT rv.*, r.report_type,
+                u.display_name AS requested_by_display_name
+                FROM synergia.report_versions rv
+                JOIN synergia.reports r ON r.id = rv.report_id
+                LEFT JOIN synergia.identity_users u ON u.id = rv.requested_by_user_id
+                WHERE rv.report_id = %s{scope}
                 ORDER BY rv.version DESC LIMIT %s OFFSET %s""",
                 [*values, page_size, (page - 1) * page_size],
             )
@@ -613,9 +675,11 @@ class PostgresReportRepository:
         values.extend(params)
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
-                f"""SELECT rv.*, r.report_type, a.content AS data
+                f"""SELECT rv.*, r.report_type, a.content AS data,
+                u.display_name AS requested_by_display_name
                 FROM synergia.report_versions rv JOIN synergia.reports r ON r.id = rv.report_id
                 LEFT JOIN synergia.report_artifacts a ON a.report_version_id = rv.id AND a.artifact_type = 'data'
+                LEFT JOIN synergia.identity_users u ON u.id = rv.requested_by_user_id
                 WHERE rv.report_id = %s{version_filter}{scope}
                 ORDER BY rv.version DESC LIMIT 1""",
                 values,
@@ -671,6 +735,55 @@ class PostgresReportRepository:
             )
             return self._metadata({**cancelled, "report_type": row["report_type"]})
 
+    def export_version(self, report_id, version, actor, export_format):
+        scope, params = self._scope(actor.scope_filter("report.export"), "rv")
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""SELECT rv.*, r.report_type, a.content AS data,
+                u.display_name AS requested_by_display_name
+                FROM synergia.report_versions rv
+                JOIN synergia.reports r ON r.id = rv.report_id
+                LEFT JOIN synergia.report_artifacts a
+                  ON a.report_version_id = rv.id AND a.artifact_type = 'data'
+                LEFT JOIN synergia.identity_users u ON u.id = rv.requested_by_user_id
+                WHERE rv.report_id = %s AND rv.version = %s{scope}
+                LIMIT 1""",
+                [report_id, version, *params],
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            if row["state"] != "succeeded" or row["data"] is None:
+                raise ApiError(
+                    409,
+                    "report_not_exportable",
+                    "Somente relatórios concluídos podem ser exportados",
+                )
+            cursor.execute(
+                """INSERT INTO synergia.report_events
+                (report_version_id, event_type, actor_user_id, actor_session_id,
+                 correlation_id, payload)
+                VALUES (%s, 'report.exported', %s, %s, %s, %s)""",
+                (
+                    row["id"],
+                    actor.user_id,
+                    actor.session_id,
+                    actor.correlation_id,
+                    Jsonb({"format": export_format, "version": version}),
+                ),
+            )
+            return {**self._metadata(row), "data": row["data"]}
+
+    def version_organization(self, report_id, version):
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """SELECT organization_id FROM synergia.report_versions
+                WHERE report_id = %s AND version = %s""",
+                (report_id, version),
+            )
+            row = cursor.fetchone()
+            return row["organization_id"] if row else None
+
 
 def get_report_repository() -> Generator[ReportRepository, None, None]:
     database_url = os.getenv("DATABASE_URL")
@@ -681,7 +794,9 @@ def get_report_repository() -> Generator[ReportRepository, None, None]:
     yield PostgresReportRepository(database_url)
 
 
-def _page(items: list[dict], total: int, page: int, page_size: int) -> ReportPage:
+def _page(
+    items: list[dict], total: int, page: int, page_size: int, sort: str
+) -> ReportPage:
     return ReportPage(
         items=[ReportVersionResponse.model_validate(i) for i in items],
         pagination=Pagination(
@@ -690,7 +805,91 @@ def _page(items: list[dict], total: int, page: int, page_size: int) -> ReportPag
             total=total,
             pages=math.ceil(total / page_size) if total else 0,
         ),
+        sort=sort,
     )
+
+
+def _safe_csv_value(value: Any) -> str | int | float:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return value
+    if isinstance(value, list | dict):
+        value = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    text = str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
+
+def _export_payload(item: dict, export_format: ExportFormat) -> tuple[bytes, str, str]:
+    report = ReportDataResponse.model_validate(item)
+    filename = f"{report.report_type}-{report.report_id}-v{report.version}.{export_format}"
+    if export_format == "json":
+        content = json.dumps(
+            report.model_dump(mode="json"),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ).encode("utf-8")
+        return content, "application/json; charset=utf-8", filename
+
+    data = report.data or {}
+    if report.report_type == "workorder_consolidated":
+        row_fields = [
+            "workorder_number",
+            "organization_code",
+            "processing_status",
+            "planned_quantity",
+            "produced_quantity",
+            "received_quantity",
+            "released_quantity",
+            "pending_quantity",
+            "retained_quantity",
+            "partially_released",
+            "lots",
+            "serial_count",
+            "open_pending_count",
+        ]
+        rows = data.get("workorders", [])
+    else:
+        row_fields = [
+            "workorder_number",
+            "lot_number",
+            "organization_code",
+            "decision_state",
+            "reason",
+            "pending_item_id",
+            "priority",
+            "priority_score",
+            "pending_reason",
+            "pending_status",
+        ]
+        rows = data.get("items", [])
+    metadata = {
+        "report_id": str(report.report_id),
+        "version": report.version,
+        "report_type": report.report_type,
+        "completeness": report.completeness or "",
+        "execution_id": report.execution_id,
+        "reference_at": report.reference_at.isoformat(),
+    }
+    fieldnames = [*metadata, *row_fields]
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=fieldnames, lineterminator="\r\n")
+    writer.writeheader()
+    for source in rows:
+        writer.writerow(
+            {
+                key: _safe_csv_value(
+                    metadata[key] if key in metadata else source.get(key)
+                )
+                for key in fieldnames
+            }
+        )
+    return stream.getvalue().encode("utf-8"), "text/csv; charset=utf-8", filename
 
 
 def _authorize_organization(
@@ -746,6 +945,44 @@ def create_report_version(
 
 
 @router.get(
+    "/policy",
+    response_model=ReportPolicyResponse,
+    responses=ERROR_RESPONSES,
+    summary="Consultar opções contratuais da jornada de relatórios",
+)
+def get_report_policy(
+    actor: Annotated[ActorContext, Depends(require_permission("report.read"))],
+    authorization: AuthorizationRepo,
+) -> ReportPolicyResponse:
+    read_organizations = authorization.list_active_organizations(
+        actor.scopes_for("report.read")
+    )
+    generation_organizations = authorization.list_active_organizations(
+        actor.scopes_for("report.generate")
+    )
+    return ReportPolicyResponse(
+        report_types=[
+            ReportTypePolicyResponse(
+                report_type=report_type,
+                allowed_states=list(REPORT_ALLOWED_STATES[report_type]),
+                allowed_filters=list(REPORT_ALLOWED_FILTERS[report_type]),
+            )
+            for report_type in ("workorder_consolidated", "oqc_summary")
+        ],
+        export_formats=["csv", "json"],
+        read_organizations=[
+            OrganizationOptionResponse.model_validate(item)
+            for item in read_organizations
+        ],
+        generation_organizations=[
+            OrganizationOptionResponse.model_validate(item)
+            for item in generation_organizations
+        ],
+        stale_after_seconds=REPORT_STALE_AFTER_SECONDS,
+    )
+
+
+@router.get(
     "",
     response_model=ReportPage,
     responses=ERROR_RESPONSES,
@@ -757,6 +994,7 @@ def list_reports(
     state: ReportState | None = None,
     execution_id: str | None = None,
     organization_id: UUID | None = None,
+    sort: ReportSort = "newest",
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     repository: ReportRepository = Depends(get_report_repository),
@@ -773,10 +1011,11 @@ def list_reports(
         report_type,
         state,
         execution_id,
+        sort,
         page,
         page_size,
     )
-    return _page(items, total, page, page_size)
+    return _page(items, total, page, page_size, sort)
 
 
 @router.get(
@@ -797,7 +1036,7 @@ def list_report_versions(
     )
     if total == 0:
         raise ApiError(404, "resource_not_found", "Recurso não encontrado")
-    return _page(items, total, page, page_size)
+    return _page(items, total, page, page_size, "version_desc")
 
 
 @router.get(
@@ -837,6 +1076,44 @@ def get_report_version(
     if item is None:
         raise ApiError(404, "resource_not_found", "Recurso não encontrado")
     return ReportDataResponse.model_validate(item)
+
+
+@router.get(
+    "/{report_id}/versions/{version}/export",
+    responses=ERROR_RESPONSES,
+    summary="Exportar uma versão persistida de relatório",
+)
+def export_report_version(
+    report_id: UUID,
+    version: int,
+    request: Request,
+    actor: Annotated[ActorContext, Depends(require_permission("report.export"))],
+    authorization: AuthorizationRepo,
+    format: ExportFormat = Query("csv"),
+    repository: ReportRepository = Depends(get_report_repository),
+) -> Response:
+    item = repository.export_version(report_id, version, actor, format)
+    if item is None:
+        organization_id = repository.version_organization(report_id, version)
+        if organization_id is not None and not actor.allows(
+            "report.export", organization_id
+        ):
+            authorization.audit_denial(
+                actor,
+                "report.export",
+                request,
+                organization_id=organization_id,
+            )
+        raise ApiError(404, "resource_not_found", "Recurso não encontrado")
+    content, media_type, filename = _export_payload(item, format)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post(
