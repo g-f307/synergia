@@ -367,14 +367,20 @@ class PostgresReportRepository:
                    count(DISTINCT p.id) FILTER (WHERE p.status = 'open') AS open_pending_count
             FROM synergia.workorders w
             LEFT JOIN synergia.organizations o ON o.id = w.organization_id
-            LEFT JOIN synergia.lots l ON l.workorder_id = w.id AND l.execution_id = w.execution_id
-            LEFT JOIN synergia.serials s ON s.workorder_id = w.id AND s.execution_id = w.execution_id
-            LEFT JOIN synergia.pending_items p ON p.workorder_id = w.id AND p.execution_id = w.execution_id
+            LEFT JOIN synergia.lots l
+              ON l.workorder_id = w.id AND l.execution_id = w.execution_id
+             AND l.updated_at <= %s
+            LEFT JOIN synergia.serials s
+              ON s.workorder_id = w.id AND s.execution_id = w.execution_id
+             AND s.updated_at <= %s
+            LEFT JOIN synergia.pending_items p
+              ON p.workorder_id = w.id AND p.execution_id = w.execution_id
+             AND p.updated_at <= %s
             WHERE {" AND ".join(clauses)}
             GROUP BY w.id, o.organization_code
             ORDER BY w.workorder_number
             """,
-            params,
+            [payload.reference_at, payload.reference_at, payload.reference_at, *params],
         )
         rows = list(cursor.fetchall())
         return {
@@ -409,10 +415,12 @@ class PostgresReportRepository:
             LEFT JOIN synergia.pending_items p
               ON p.workorder_id = q.workorder_id AND p.execution_id = q.execution_id
              AND p.lot_id IS NOT DISTINCT FROM q.lot_id
+             AND p.serial_id IS NOT DISTINCT FROM q.serial_id
+             AND p.updated_at <= %s
             WHERE {" AND ".join(clauses)}
             ORDER BY coalesce(p.priority_score, 0) DESC, w.workorder_number, l.lot_number
             """,
-            params,
+            [payload.reference_at, *params],
         )
         rows = list(cursor.fetchall())
 

@@ -353,3 +353,209 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
             ).fetchone()[0]
             == 1
         )
+
+
+def test_report_snapshots_match_pending_scope_and_cut_off_related_data() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    suffix = uuid4().hex[:10]
+    execution_id = f"report-oqc-scope-{suffix}"
+
+    with psycopg.connect(database_url, row_factory=psycopg.rows.dict_row) as connection:
+        connection.execute(
+            """
+            INSERT INTO synergia.executions (
+                id, status, source, actor_type, actor_identifier
+            ) VALUES (%s, 'completed', 'OWM', 'technical', 'report-test')
+            """,
+            (execution_id,),
+        )
+        source_id = connection.execute(
+            """
+            INSERT INTO synergia.source_files (
+                execution_id, file_name, content_hash
+            ) VALUES (%s, %s, %s) RETURNING id
+            """,
+            (
+                execution_id,
+                f"{execution_id}.json",
+                uuid4().hex * 2,
+            ),
+        ).fetchone()["id"]
+        workorder_id = connection.execute(
+            """
+            INSERT INTO synergia.workorders (
+                workorder_number, execution_id, source_file_id,
+                processing_status, updated_at
+            ) VALUES (%s, %s, %s, 'consolidated', '2026-09-03T10:00:00Z')
+            RETURNING id
+            """,
+            (f"WO-OQC-{suffix}", execution_id, source_id),
+        ).fetchone()["id"]
+        lot_id = connection.execute(
+            """
+            INSERT INTO synergia.lots (
+                lot_number, workorder_id, execution_id, source_file_id, updated_at
+            ) VALUES (%s, %s, %s, %s, '2026-09-03T10:00:00Z') RETURNING id
+            """,
+            (f"LOT-OQC-{suffix}", workorder_id, execution_id, source_id),
+        ).fetchone()["id"]
+        serial_rows = connection.execute(
+            """
+            INSERT INTO synergia.serials (
+                serial_number, workorder_id, lot_id, execution_id,
+                source_file_id, updated_at
+            ) VALUES
+                (%s, %s, %s, %s, %s, '2026-09-03T10:00:00Z'),
+                (%s, %s, %s, %s, %s, '2026-09-03T10:00:00Z')
+            RETURNING id, serial_number
+            """,
+            (
+                f"SER-A-{suffix}",
+                workorder_id,
+                lot_id,
+                execution_id,
+                source_id,
+                f"SER-B-{suffix}",
+                workorder_id,
+                lot_id,
+                execution_id,
+                source_id,
+            ),
+        ).fetchall()
+        serial_ids = {row["serial_number"]: row["id"] for row in serial_rows}
+
+        scopes = (
+            (lot_id, serial_ids[f"SER-A-{suffix}"], "serial-a", "high", 80),
+            (lot_id, serial_ids[f"SER-B-{suffix}"], "serial-b", "low", 20),
+            (lot_id, None, "lot", "normal", 50),
+            (None, None, "workorder", "critical", 100),
+        )
+        for scope_lot_id, serial_id, reason, priority, priority_score in scopes:
+            connection.execute(
+                """
+                INSERT INTO synergia.oqc_decisions (
+                    workorder_id, lot_id, serial_id, execution_id,
+                    source_file_id, decision_state, reason, updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, 'pending', %s,
+                    '2026-09-03T10:00:00Z'
+                )
+                """,
+                (
+                    workorder_id,
+                    scope_lot_id,
+                    serial_id,
+                    execution_id,
+                    source_id,
+                    f"decision-{reason}",
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO synergia.pending_items (
+                    workorder_id, lot_id, serial_id, execution_id,
+                    source_file_id, category, reason, priority, priority_score,
+                    updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, 'oqc_pending', %s, %s, %s,
+                    '2026-09-03T10:00:00Z'
+                )
+                """,
+                (
+                    workorder_id,
+                    scope_lot_id,
+                    serial_id,
+                    execution_id,
+                    source_id,
+                    f"pending-{reason}",
+                    priority,
+                    priority_score,
+                ),
+            )
+
+        connection.execute(
+            """
+            INSERT INTO synergia.lots (
+                lot_number, workorder_id, execution_id, source_file_id, updated_at
+            ) VALUES (%s, %s, %s, %s, '2026-09-09T10:00:00Z')
+            """,
+            (f"LOT-FUTURE-{suffix}", workorder_id, execution_id, source_id),
+        )
+        connection.execute(
+            """
+            INSERT INTO synergia.serials (
+                serial_number, workorder_id, lot_id, execution_id,
+                source_file_id, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, '2026-09-09T10:00:00Z'
+            )
+            """,
+            (
+                f"SER-FUTURE-{suffix}",
+                workorder_id,
+                lot_id,
+                execution_id,
+                source_id,
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO synergia.pending_items (
+                workorder_id, lot_id, serial_id, execution_id,
+                source_file_id, category, reason, priority, priority_score,
+                updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, 'oqc_pending', 'pending-future',
+                'critical', 200, '2026-09-09T10:00:00Z'
+            )
+            """,
+            (
+                workorder_id,
+                lot_id,
+                serial_ids[f"SER-A-{suffix}"],
+                execution_id,
+                source_id,
+            ),
+        )
+
+        repository = PostgresReportRepository(database_url)
+        request = _request(execution_id, uuid4(), "oqc_summary")
+        oqc_result = repository._oqc_data(  # noqa: SLF001
+            connection.cursor(),
+            request,
+        )
+        workorder_result = repository._workorder_data(  # noqa: SLF001
+            connection.cursor(),
+            _request(execution_id, uuid4()),
+        )
+        connection.rollback()
+
+    workorder = workorder_result["workorders"][0]
+    assert workorder_result["count"] == 1
+    assert workorder["lots"] == [f"LOT-OQC-{suffix}"]
+    assert workorder["serial_count"] == 2
+    assert workorder["open_pending_count"] == 4
+
+    items_by_reason = {item["reason"]: item for item in oqc_result["items"]}
+    assert oqc_result["count"] == 4
+    assert oqc_result["by_reason"] == {
+        "decision-lot": 1,
+        "decision-serial-a": 1,
+        "decision-serial-b": 1,
+        "decision-workorder": 1,
+    }
+    assert oqc_result["by_priority"] == {
+        "critical": 1,
+        "high": 1,
+        "low": 1,
+        "normal": 1,
+    }
+    assert {
+        reason: (item["pending_reason"], item["priority"])
+        for reason, item in items_by_reason.items()
+    } == {
+        "decision-serial-a": ("pending-serial-a", "high"),
+        "decision-serial-b": ("pending-serial-b", "low"),
+        "decision-lot": ("pending-lot", "normal"),
+        "decision-workorder": ("pending-workorder", "critical"),
+    }

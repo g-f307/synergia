@@ -49,8 +49,11 @@ relatório. O histórico e os dados exatos são consultados em
 Filtros aceitos: `date_from`, `date_to`, `state`, `workorder_number`,
 `lot_number` e `priority`. Campos sem aplicação ao tipo são inócuos. A data é
 aplicada ao `updated_at` persistido da entidade principal. `reference_at` é o
-limite superior efetivo: registros atualizados depois dele não entram no
-snapshot. Filtros incompatíveis com o tipo retornam `422`.
+limite superior efetivo de todo o snapshot: a entidade principal e cada lote,
+serial ou pendência relacionada só entram quando seu próprio `updated_at` é
+menor ou igual ao corte. Não se reconstrói uma versão anterior de uma linha que
+foi atualizada depois do corte; essa linha é excluída integralmente. Filtros
+incompatíveis com o tipo retornam `422`.
 
 Veja um payload sintético em
 [`data/synthetic/report_examples.json`](../data/synthetic/report_examples.json).
