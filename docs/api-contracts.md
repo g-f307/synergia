@@ -51,6 +51,13 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /admin/access/permissions` | catálogo versionado de permissões | `200` |
 | `GET /admin/access/associations` | associações administrativas paginadas | `200` |
 | `GET /admin/access/users/{user_id}/effective-permissions` | permissões efetivas e origens | `200` |
+| `POST /reports` | gera e persiste o primeiro snapshot de um relatório | `201` |
+| `POST /reports/{report_id}/versions` | gera uma nova versão sem sobrescrever anteriores | `201` |
+| `GET /reports` | catálogo paginado, mostrando a versão mais recente | `200` |
+| `GET /reports/{report_id}` | dados da versão mais recente | `200` |
+| `GET /reports/{report_id}/versions` | histórico paginado | `200` |
+| `GET /reports/{report_id}/versions/{version}` | metadados e snapshot de uma versão | `200` |
+| `POST /reports/{report_id}/versions/{version}/cancel` | cancela uma geração ainda em andamento | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
 ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,

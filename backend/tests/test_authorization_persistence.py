@@ -24,22 +24,52 @@ KEY = "authorization-test-signing-key-with-at-least-32-bytes"
 ROLE_PERMISSIONS = {
     "admin": {"audit.read", "access.admin", "session.revoke.any", "session.revoke.own"},
     "gestor": {
-        "dashboard.read", "execution.read", "business.read", "pending.read",
-        "import.create", "import.read", "artifact.read", "execution.reprocess",
-        "audit.read", "artifact.export", "report.export", "session.revoke.own",
+        "dashboard.read",
+        "execution.read",
+        "business.read",
+        "pending.read",
+        "import.create",
+        "import.read",
+        "artifact.read",
+        "execution.reprocess",
+        "audit.read",
+        "artifact.export",
+        "report.export",
+        "session.revoke.own",
+        "report.generate",
+        "report.read",
+        "report.cancel",
     },
     "analista": {
-        "dashboard.read", "execution.read", "business.read", "pending.read",
-        "import.read", "artifact.read", "audit.read", "artifact.export",
-        "report.export", "session.revoke.own",
+        "dashboard.read",
+        "execution.read",
+        "business.read",
+        "pending.read",
+        "import.read",
+        "artifact.read",
+        "audit.read",
+        "artifact.export",
+        "report.export",
+        "session.revoke.own",
+        "report.read",
     },
     "operador": {
-        "dashboard.read", "execution.read", "business.read", "pending.read",
-        "import.create", "import.read", "artifact.read", "session.revoke.own",
+        "dashboard.read",
+        "execution.read",
+        "business.read",
+        "pending.read",
+        "import.create",
+        "import.read",
+        "artifact.read",
+        "session.revoke.own",
     },
     "consulta": {
-        "dashboard.read", "execution.read", "business.read", "pending.read",
+        "dashboard.read",
+        "execution.read",
+        "business.read",
+        "pending.read",
         "session.revoke.own",
+        "report.read",
     },
 }
 
@@ -138,9 +168,7 @@ def _token(config: AuthConfig, ids: dict[str, UUID | str]) -> str:
     return TokenCodec(config).issue_access(ids["user"], ids["session"])[0]
 
 
-def _seed_duplicate_lots(
-    database_url: str, ids: dict[str, UUID | str]
-) -> None:
+def _seed_duplicate_lots(database_url: str, ids: dict[str, UUID | str]) -> None:
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         resources = []
         for label, execution_id in (
@@ -204,9 +232,7 @@ def test_effective_permission_matrix_by_role(role, expected) -> None:
     claims = AccessClaims(
         user_id=ids["user"], session_id=ids["session"], token_id=uuid4()
     )
-    resolved = AuthorizationRepository(database_url).resolve(
-        claims, datetime.now(UTC)
-    )
+    resolved = AuthorizationRepository(database_url).resolve(claims, datetime.now(UTC))
     assert resolved is not None
     assert set(resolved) == expected
     assert all(scopes == {ids["organization_a"]} for scopes in resolved.values())
@@ -227,14 +253,11 @@ def test_organization_catalog_respects_scopes_and_active_state() -> None:
     ids = _bootstrap(database_url, "operador")
     repository = AuthorizationRepository(database_url)
 
-    scoped = repository.list_active_organizations(
-        frozenset({ids["organization_a"]})
-    )
+    scoped = repository.list_active_organizations(frozenset({ids["organization_a"]}))
     assert [item["id"] for item in scoped] == [ids["organization_a"]]
 
     global_ids = {
-        item["id"]
-        for item in repository.list_active_organizations(frozenset({None}))
+        item["id"] for item in repository.list_active_organizations(frozenset({None}))
     }
     assert ids["organization_a"] in global_ids
     assert ids["organization_b"] in global_ids
@@ -249,8 +272,7 @@ def test_organization_catalog_respects_scopes_and_active_state() -> None:
             (ids["organization_b"],),
         )
     active_ids = {
-        item["id"]
-        for item in repository.list_active_organizations(frozenset({None}))
+        item["id"] for item in repository.list_active_organizations(frozenset({None}))
     }
     assert ids["organization_b"] not in active_ids
 
@@ -263,13 +285,17 @@ def test_authentication_vertical_and_horizontal_access(monkeypatch) -> None:
 
     with TestClient(app) as client:
         assert client.get(f"/executions/{ids['execution_a']}").status_code == 401
-        assert client.get(
-            f"/executions/{ids['execution_a']}",
-            headers={"Authorization": "Bearer invalid"},
-        ).status_code == 401
-        assert client.get(
-            f"/executions/{ids['execution_a']}", headers=headers
-        ).status_code == 200
+        assert (
+            client.get(
+                f"/executions/{ids['execution_a']}",
+                headers={"Authorization": "Bearer invalid"},
+            ).status_code
+            == 401
+        )
+        assert (
+            client.get(f"/executions/{ids['execution_a']}", headers=headers).status_code
+            == 200
+        )
         outside = client.get(f"/executions/{ids['execution_b']}", headers=headers)
         assert outside.status_code == 404
         evidence_outside = client.get(
@@ -436,16 +462,12 @@ def test_lot_query_uses_the_same_workorder_and_organization_scope(monkeypatch) -
     }
 
     with TestClient(app) as client:
-        allowed = client.get(
-            "/lots/LOT-001?workorder_number=WO-B", headers=headers
-        )
+        allowed = client.get("/lots/LOT-001?workorder_number=WO-B", headers=headers)
         assert allowed.status_code == 200
         assert allowed.json()["workorder_number"] == "WO-B"
         assert allowed.json()["serials"] == [f"SER-{ids['execution_b']}"]
 
-        crossed = client.get(
-            "/lots/LOT-001?workorder_number=WO-A", headers=headers
-        )
+        crossed = client.get("/lots/LOT-001?workorder_number=WO-A", headers=headers)
         assert crossed.status_code == 404
         assert crossed.json()["error"]["code"] == "lot_not_found"
         assert "WO-A" not in crossed.text

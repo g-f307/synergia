@@ -42,6 +42,9 @@ Não há herança implícita nem papel `superuser`.
 | `audit.read` | histórico auditável | ✓ | ✓ | ✓ | — | — |
 | `artifact.export` | download de evidência aceita | — | ✓ | ✓ | — | — |
 | `report.export` | relatório/sumário futuro | — | ✓ | ✓ | — | — |
+| `report.generate` | nova versão de relatório | — | ✓ | — | — | — |
+| `report.read` | catálogo, histórico e snapshot | — | ✓ | ✓ | — | ✓ |
+| `report.cancel` | geração de relatório em andamento | — | ✓ | — | — | — |
 | `access.admin` | usuário, vínculo, papel e escopo futuros | ✓ | — | — | — | — |
 | `session.revoke.any` | sessão de outro usuário futura | ✓ | — | — | — | — |
 | `session.revoke.own` | própria sessão futura | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -97,6 +100,13 @@ técnica também dependerá da política de rede da TI.
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | execução | `org` | gestor |
 | `GET /indicators` | `dashboard.read` | indicadores | `org` | gestor, analista, operador, consulta |
 | `GET /indicators/{entity}` | `dashboard.read` | registros relacionados aos indicadores | `org` | gestor, analista, operador, consulta |
+| `POST /reports` | `report.generate` | novo relatório | `org` | gestor |
+| `POST /reports/{report_id}/versions` | `report.generate` | nova versão imutável | `org` | gestor |
+| `GET /reports` | `report.read` | catálogo de relatórios | `org` | gestor, analista, consulta |
+| `GET /reports/{report_id}` | `report.read` | dados da versão mais recente | `org` | gestor, analista, consulta |
+| `GET /reports/{report_id}/versions` | `report.read` | histórico de versões | `org` | gestor, analista, consulta |
+| `GET /reports/{report_id}/versions/{version}` | `report.read` | dados de uma versão | `org` | gestor, analista, consulta |
+| `POST /reports/{report_id}/versions/{version}/cancel` | `report.cancel` | geração em andamento | `org` | gestor |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |

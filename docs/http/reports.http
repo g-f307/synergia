@@ -1,0 +1,32 @@
+@baseUrl = http://localhost:8000
+@token = substitua-pelo-access-token
+@organizationId = 44444444-4444-4444-8444-444444444444
+@executionId = exec-synthetic-complete
+
+### Gerar relatório consolidado
+POST {{baseUrl}}/reports
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "report_type": "workorder_consolidated",
+  "execution_id": "{{executionId}}",
+  "organization_id": "{{organizationId}}",
+  "reference_at": "2026-09-08T12:00:00Z",
+  "filters": {"state": "consolidated"}
+}
+
+### Catálogo paginado
+GET {{baseUrl}}/reports?page=1&page_size=25
+Authorization: Bearer {{token}}
+
+### Histórico (substitua o UUID)
+GET {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/versions
+Authorization: Bearer {{token}}
+
+### Cancelar uma geração ainda em andamento
+POST {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/versions/1/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reason": "Solicitação substituída por um novo corte"}

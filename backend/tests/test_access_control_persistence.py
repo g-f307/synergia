@@ -157,9 +157,18 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
         with TestClient(app) as client:
             catalog = client.get("/admin/access/permissions", headers=headers)
             assert catalog.status_code == 200
-            assert len(catalog.json()) == 14
-            assert {item["catalog_version"] for item in catalog.json()} == {"1.0.0"}
-            assert all(item["is_reserved"] for item in catalog.json())
+            catalog_items = catalog.json()
+            assert len(catalog_items) == 17
+            assert {item["catalog_version"] for item in catalog_items} == {
+                "1.0.0",
+                "1.1.0",
+            }
+            assert {
+                "report.generate",
+                "report.read",
+                "report.cancel",
+            } <= {item["permission_key"] for item in catalog_items}
+            assert all(item["is_reserved"] for item in catalog_items)
 
             group = client.post(
                 "/admin/access/groups",
@@ -555,5 +564,71 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
                 (preexisting_role_id, permission_id),
             )
             assert cursor.fetchone()[0] == granted_at
+        finally:
+            connection.rollback()
+
+
+def test_migration_0019_rollback_removes_direct_report_permission_grants() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    rollback_sql = (
+        ROOT / "database/rollbacks/0019_create_reports.down.sql"
+    ).read_text(encoding="utf-8")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        try:
+            cursor.execute(
+                """
+                INSERT INTO synergia.identity_users (status, display_name)
+                VALUES ('active', %s)
+                RETURNING id
+                """,
+                (f"Report rollback {uuid4().hex[:10]}",),
+            )
+            user_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_permission_assignments (
+                    user_id, permission_id
+                )
+                SELECT %s, id
+                FROM synergia.permissions
+                WHERE normalized_key IN (
+                    'report.generate', 'report.read', 'report.cancel'
+                )
+                """,
+                (user_id,),
+            )
+
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.user_permission_assignments
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            assert cursor.fetchone()[0] == 3
+
+            cursor.execute(rollback_sql, prepare=False)
+
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.user_permission_assignments
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            assert cursor.fetchone()[0] == 0
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.permissions
+                WHERE normalized_key IN (
+                    'report.generate', 'report.read', 'report.cancel'
+                )
+                """
+            )
+            assert cursor.fetchone()[0] == 0
         finally:
             connection.rollback()

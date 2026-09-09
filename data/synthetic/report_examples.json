@@ -1,0 +1,32 @@
+{
+  "workorder_consolidated": {
+    "request": {
+      "report_type": "workorder_consolidated",
+      "execution_id": "exec-synthetic-complete",
+      "organization_id": "44444444-4444-4444-8444-444444444444",
+      "reference_at": "2026-09-08T12:00:00Z",
+      "filters": {
+        "date_from": "2026-09-01",
+        "state": "consolidated"
+      }
+    },
+    "quantity_semantics": {
+      "missing": null,
+      "actual_zero": 0,
+      "positive": 12
+    }
+  },
+  "oqc_summary": {
+    "request": {
+      "report_type": "oqc_summary",
+      "execution_id": "exec-synthetic-partial",
+      "organization_id": "44444444-4444-4444-8444-444444444444",
+      "reference_at": "2026-09-08T12:00:00Z",
+      "filters": {
+        "priority": "high",
+        "lot_number": "LOT-SYN-001"
+      }
+    },
+    "expected_completeness": "partial"
+  }
+}
