@@ -288,6 +288,7 @@ def test_cors_uses_configured_allowed_origins(monkeypatch) -> None:
 
     with TestClient(cors_app) as client:
         accepted = client.options("/auth/login", headers=headers)
+        browser_response = client.get("/health", headers={"Origin": allowed})
         rejected = client.options(
             "/auth/login",
             headers={**headers, "Origin": "https://untrusted.example"},
@@ -295,6 +296,9 @@ def test_cors_uses_configured_allowed_origins(monkeypatch) -> None:
 
     assert accepted.status_code == 200
     assert accepted.headers["access-control-allow-origin"] == allowed
+    exposed = browser_response.headers["access-control-expose-headers"].lower()
+    assert "content-disposition" in exposed
+    assert "x-correlation-id" in exposed
     assert rejected.status_code == 400
     assert "access-control-allow-origin" not in rejected.headers
 
