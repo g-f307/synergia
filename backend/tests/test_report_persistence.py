@@ -21,19 +21,27 @@ def _actor(user_id, session_id, organization_id) -> ActorContext:
         permissions={
             "report.generate": frozenset({organization_id}),
             "report.read": frozenset({organization_id}),
+            "report.cancel": frozenset({organization_id}),
         },
         correlation_id=uuid4(),
     )
 
 
-def _request(execution_id, organization_id, report_type="workorder_consolidated"):
+def _request(
+    execution_id,
+    organization_id,
+    report_type="workorder_consolidated",
+    *,
+    reference_at="2026-09-08T12:00:00Z",
+    filters=None,
+):
     return CreateReportRequest.model_validate(
         {
             "report_type": report_type,
             "execution_id": execution_id,
             "organization_id": organization_id,
-            "reference_at": "2026-09-08T12:00:00Z",
-            "filters": {},
+            "reference_at": reference_at,
+            "filters": filters or {},
         }
     )
 
@@ -106,23 +114,35 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
                 """,
                 (execution_id, f"{execution_id}.json", str(index + 1) * 64),
             ).fetchone()[0]
-            quantities = ((None, None), (0, 0), (12, 8))
+            quantities = (
+                (None, None, "consolidated", "2026-08-31T10:00:00Z"),
+                (0, 0, "consolidated", "2026-09-02T10:00:00Z"),
+                (12, 8, "failed", "2026-09-03T10:00:00Z"),
+            )
             workorder_ids = []
-            for quantity_index, (planned, produced) in enumerate(quantities):
+            for quantity_index, (
+                planned,
+                produced,
+                processing_status,
+                updated_at,
+            ) in enumerate(quantities):
                 workorder_ids.append(
                     connection.execute(
                         """
                         INSERT INTO synergia.workorders (
                             workorder_number, execution_id, source_file_id,
-                            processing_status, planned_quantity, produced_quantity
-                        ) VALUES (%s, %s, %s, 'consolidated', %s, %s) RETURNING id
+                            processing_status, planned_quantity, produced_quantity,
+                            updated_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
                         """,
                         (
                             f"WO-{index}-{quantity_index}-{suffix[:8]}",
                             execution_id,
                             source_id,
+                            processing_status,
                             planned,
                             produced,
+                            updated_at,
                         ),
                     ).fetchone()[0]
                 )
@@ -143,8 +163,9 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
                 """
                 INSERT INTO synergia.oqc_decisions (
                     workorder_id, lot_id, execution_id, source_file_id,
-                    decision_state, reason
-                ) VALUES (%s, %s, %s, %s, 'pending', 'Synthetic reason')
+                    decision_state, reason, updated_at
+                ) VALUES (%s, %s, %s, %s, 'pending', 'Synthetic reason',
+                          '2026-09-03T10:00:00Z')
                 """,
                 (workorder_ids[2], lot_id, execution_id, source_id),
             )
@@ -168,6 +189,24 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
         for row in complete["data"]["workorders"]
     ] == [(None, None), (0, 0), (12, 8)]
 
+    filtered = repository.generate(
+        _request(
+            complete_id,
+            organization_id,
+            reference_at="2026-09-02T12:00:00Z",
+            filters={
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-02",
+                "state": "consolidated",
+            },
+        ),
+        actor,
+    )
+    assert [
+        (row["planned_quantity"], row["produced_quantity"])
+        for row in filtered["data"]["workorders"]
+    ] == [(0, 0)]
+
     second = repository.generate(
         _request(complete_id, organization_id), actor, complete["report_id"]
     )
@@ -187,15 +226,48 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
     partial = repository.generate(_request(partial_id, organization_id), actor)
     assert partial["completeness"] == "partial"
     oqc = repository.generate(
-        _request(partial_id, organization_id, "oqc_summary"), actor
+        _request(
+            partial_id,
+            organization_id,
+            "oqc_summary",
+            filters={
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-04",
+                "state": "pending",
+                "lot_number": f"LOT-1-{suffix[:8]}",
+                "priority": "high",
+            },
+        ),
+        actor,
     )
     assert oqc["data"]["items"][0]["priority"] == "high"
     assert oqc["data"]["items"][0]["organization_code"] is None
 
-    for invalid_execution in (active_id, f"missing-{suffix[:10]}"):
-        with pytest.raises(ApiError) as error:
-            repository.generate(_request(invalid_execution, organization_id), actor)
-        assert error.value.status_code in {404, 409}
+    with pytest.raises(ApiError) as active_error:
+        repository.generate(_request(active_id, organization_id), actor)
+    assert active_error.value.status_code == 409
+    assert active_error.value.code == "execution_not_reportable"
+
+    with pytest.raises(ApiError) as missing_error:
+        repository.generate(_request(f"missing-{suffix[:10]}", organization_id), actor)
+    assert missing_error.value.status_code == 404
+    assert missing_error.value.code == "resource_not_found"
+
+    catalog, catalog_total = repository.list_reports(
+        frozenset({organization_id}),
+        "workorder_consolidated",
+        "succeeded",
+        complete_id,
+        1,
+        2,
+    )
+    assert catalog_total >= 2
+    assert len(catalog) == 2
+    hidden_catalog, hidden_total = repository.list_reports(
+        frozenset({other_organization_id}), None, None, None, 1, 25
+    )
+    assert hidden_catalog == []
+    assert hidden_total == 0
 
     with psycopg.connect(database_url) as connection:
         with pytest.raises(psycopg.errors.CheckViolation):
@@ -232,6 +304,39 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
             "report.generation_started",
             "report.generation_failed",
         ]
+
+        success_events = connection.execute(
+            """
+            SELECT array_agg(event_type ORDER BY occurred_at, id) AS events
+            FROM synergia.report_events WHERE report_version_id = %s
+            """,
+            (complete["version_id"],),
+        ).fetchone()["events"]
+        assert success_events == [
+            "report.generation_started",
+            "report.generation_succeeded",
+        ]
+
+    pending_generation = repository._create_generation(  # noqa: SLF001
+        _request(complete_id, organization_id), actor, None
+    )
+    cancelled = repository.cancel(
+        pending_generation["report_id"],
+        pending_generation["version"],
+        actor,
+        "Solicitação substituída por novo corte",
+    )
+    assert cancelled is not None
+    assert cancelled["state"] == "cancelled"
+    assert cancelled["cancellation_reason"] == "Solicitação substituída por novo corte"
+    with pytest.raises(ApiError) as cancellation_conflict:
+        repository.cancel(
+            pending_generation["report_id"],
+            pending_generation["version"],
+            actor,
+            "Segunda tentativa",
+        )
+    assert cancellation_conflict.value.status_code == 409
 
     consulted = repository.get_version(
         complete["report_id"], 1, frozenset({organization_id}), actor

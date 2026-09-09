@@ -36,6 +36,7 @@ ALL_PERMISSIONS = {
         "report.export",
         "report.generate",
         "report.read",
+        "report.cancel",
         "access.admin",
         "session.revoke.any",
         "session.revoke.own",

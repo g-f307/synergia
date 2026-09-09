@@ -38,6 +38,7 @@ ROLE_PERMISSIONS = {
         "session.revoke.own",
         "report.generate",
         "report.read",
+        "report.cancel",
     },
     "analista": {
         "dashboard.read",
