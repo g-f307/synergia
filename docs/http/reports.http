@@ -17,11 +17,19 @@ Content-Type: application/json
 }
 
 ### Catálogo paginado
-GET {{baseUrl}}/reports?page=1&page_size=25
+GET {{baseUrl}}/reports?page=1&page_size=25&sort=newest
+Authorization: Bearer {{token}}
+
+### Política da jornada web
+GET {{baseUrl}}/reports/policy
 Authorization: Bearer {{token}}
 
 ### Histórico (substitua o UUID)
 GET {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/versions
+Authorization: Bearer {{token}}
+
+### Exportar uma versão concluída
+GET {{baseUrl}}/reports/00000000-0000-4000-8000-000000000000/versions/1/export?format=csv
 Authorization: Bearer {{token}}
 
 ### Cancelar uma geração ainda em andamento

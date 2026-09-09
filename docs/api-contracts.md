@@ -54,9 +54,11 @@ escopo organizacional a todas as operações existentes será incremental.
 | `POST /reports` | gera e persiste o primeiro snapshot de um relatório | `201` |
 | `POST /reports/{report_id}/versions` | gera uma nova versão sem sobrescrever anteriores | `201` |
 | `GET /reports` | catálogo paginado, mostrando a versão mais recente | `200` |
+| `GET /reports/policy` | tipos, filtros, formatos e organizações disponíveis na jornada web | `200` |
 | `GET /reports/{report_id}` | dados da versão mais recente | `200` |
 | `GET /reports/{report_id}/versions` | histórico paginado | `200` |
 | `GET /reports/{report_id}/versions/{version}` | metadados e snapshot de uma versão | `200` |
+| `GET /reports/{report_id}/versions/{version}/export` | exporta o snapshot persistido em CSV ou JSON | `200` |
 | `POST /reports/{report_id}/versions/{version}/cancel` | cancela uma geração ainda em andamento | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo

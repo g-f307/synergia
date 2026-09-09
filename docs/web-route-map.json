@@ -273,32 +273,40 @@
     {
       "id": "reports",
       "route": "/reports",
-      "status": "deferred",
-      "issue": "stage-4",
+      "status": "implemented",
+      "issue": 78,
       "prototype_pages": ["relatorios.html"],
-      "menu": null,
-      "permission": "report.export",
+      "menu": "Relatórios",
+      "permission": "report.read",
       "scope": "org",
-      "endpoints": [],
-      "url_state": ["period", "type", "status", "query", "page"],
+      "endpoints": [
+        {"method": "GET", "path": "/reports", "permission": "report.read"},
+        {"method": "GET", "path": "/reports/policy", "permission": "report.read"},
+        {"method": "POST", "path": "/reports", "permission": "report.generate"}
+      ],
+      "url_state": ["organization", "type", "state", "execution", "sort", "page", "pageSize"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
-      "owner": "deferred/stage-4",
-      "decision": "Adiar catálogo, geração e exportação até existir contrato de relatórios na Etapa 4."
+      "owner": "domains/reports"
     },
     {
       "id": "report-detail",
       "route": "/reports/:reportId",
-      "status": "deferred",
-      "issue": "stage-4",
+      "status": "implemented",
+      "issue": 78,
       "prototype_pages": ["visualizar-relatorio.html"],
       "menu": null,
-      "permission": "report.export",
+      "permission": "report.read",
       "scope": "org",
-      "endpoints": [],
-      "url_state": ["tab", "page"],
+      "endpoints": [
+        {"method": "GET", "path": "/reports/{report_id}", "permission": "report.read"},
+        {"method": "GET", "path": "/reports/{report_id}/versions", "permission": "report.read"},
+        {"method": "GET", "path": "/reports/{report_id}/versions/{version}", "permission": "report.read"},
+        {"method": "GET", "path": "/reports/{report_id}/versions/{version}/export", "permission": "report.export"},
+        {"method": "POST", "path": "/reports/{report_id}/versions/{version}/cancel", "permission": "report.cancel"}
+      ],
+      "url_state": ["version", "tab", "page", "pageSize", "historyPage", "from"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
-      "owner": "deferred/stage-4",
-      "decision": "Adiar visualização e exportação final; consultas operacionais da Etapa 3 não serão chamadas de relatório."
+      "owner": "domains/reports"
     }
   ]
 }
