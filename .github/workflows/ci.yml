@@ -149,6 +149,7 @@ jobs:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e
           E2E_API_COMMAND: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
           E2E_BROWSER_CHANNEL: chrome
+          E2E_RECORD_VIDEO: "false"
           E2E_PYTHON: python
         run: npm run e2e
       - name: Publicar relatório de segurança PostgreSQL
