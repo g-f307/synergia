@@ -40,6 +40,10 @@ ReportState = Literal["generating", "succeeded", "failed", "cancelled"]
 Completeness = Literal["complete", "partial"]
 
 
+class ReportGenerationCancelled(Exception):
+    pass
+
+
 class ReportFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -70,6 +74,45 @@ class CreateReportRequest(BaseModel):
     def validate_reference_timezone(self) -> CreateReportRequest:
         if self.reference_at.tzinfo is None:
             raise ValueError("reference_at deve incluir fuso horário")
+        allowed_states = {
+            "workorder_consolidated": {
+                "pending",
+                "validated",
+                "consolidated",
+                "failed",
+            },
+            "oqc_summary": {
+                "pending",
+                "approved",
+                "partially_approved",
+                "rejected",
+                "not_applicable",
+            },
+        }
+        if (
+            self.filters.state
+            and self.filters.state not in allowed_states[self.report_type]
+        ):
+            raise ValueError("state não é aplicável ao tipo de relatório")
+        if self.report_type == "workorder_consolidated" and (
+            self.filters.lot_number or self.filters.priority
+        ):
+            raise ValueError(
+                "lot_number e priority são aplicáveis somente ao sumário OQC"
+            )
+        return self
+
+
+class CancelReportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def normalize_reason(self) -> CancelReportRequest:
+        self.reason = self.reason.strip()
+        if not self.reason:
+            raise ValueError("reason deve conter texto")
         return self
 
 
@@ -90,6 +133,7 @@ class ReportVersionResponse(BaseModel):
     completed_at: datetime | None = None
     failure_code: str | None = None
     failure_message: str | None = None
+    cancellation_reason: str | None = None
 
 
 class ReportDataResponse(ReportVersionResponse):
@@ -138,6 +182,13 @@ class ReportRepository(Protocol):
         organization_ids: frozenset[UUID] | None,
         audit_actor: ActorContext | None = None,
     ) -> dict | None: ...
+    def cancel(
+        self,
+        report_id: UUID,
+        version: int,
+        actor: ActorContext,
+        reason: str,
+    ) -> dict | None: ...
 
 
 class PostgresReportRepository:
@@ -169,6 +220,7 @@ class PostgresReportRepository:
             "completed_at": row["completed_at"],
             "failure_code": row["failure_code"],
             "failure_message": row["failure_message"],
+            "cancellation_reason": row["cancellation_reason"],
         }
 
     def _create_generation(
@@ -281,9 +333,11 @@ class PostgresReportRepository:
             return self._metadata({**row, "report_type": payload.report_type})
 
     @staticmethod
-    def _filter_sql(filters: ReportFilters, alias: str) -> tuple[list[str], list[Any]]:
-        clauses: list[str] = []
-        params: list[Any] = []
+    def _filter_sql(
+        filters: ReportFilters, alias: str, reference_at: datetime
+    ) -> tuple[list[str], list[Any]]:
+        clauses: list[str] = [f"{alias}.updated_at <= %s"]
+        params: list[Any] = [reference_at]
         if filters.date_from:
             clauses.append(f"{alias}.updated_at::date >= %s")
             params.append(filters.date_from)
@@ -296,7 +350,7 @@ class PostgresReportRepository:
         return clauses, params
 
     def _workorder_data(self, cursor, payload: CreateReportRequest) -> dict:
-        clauses, params = self._filter_sql(payload.filters, "w")
+        clauses, params = self._filter_sql(payload.filters, "w", payload.reference_at)
         clauses.insert(0, "w.execution_id = %s")
         params.insert(0, payload.execution_id)
         if payload.filters.state:
@@ -330,7 +384,7 @@ class PostgresReportRepository:
         }
 
     def _oqc_data(self, cursor, payload: CreateReportRequest) -> dict:
-        clauses, params = self._filter_sql(payload.filters, "q")
+        clauses, params = self._filter_sql(payload.filters, "q", payload.reference_at)
         clauses.insert(0, "q.execution_id = %s")
         params.insert(0, payload.execution_id)
         if payload.filters.state:
@@ -426,6 +480,8 @@ class PostgresReportRepository:
                     (metadata["version_id"],),
                 )
                 row = cursor.fetchone()
+                if row is None:
+                    raise ReportGenerationCancelled
                 cursor.execute(
                     """INSERT INTO synergia.report_events
                     (report_version_id, event_type, actor_user_id, correlation_id, payload)
@@ -441,6 +497,17 @@ class PostgresReportRepository:
                     **self._metadata({**row, "report_type": metadata["report_type"]}),
                     "data": data,
                 }
+        except ReportGenerationCancelled:
+            cancelled = self.get_version(
+                metadata["report_id"], metadata["version"], None
+            )
+            if cancelled is None:
+                raise ApiError(
+                    500,
+                    "report_generation_state_lost",
+                    "O estado persistido da geração não foi localizado",
+                )
+            return cancelled
         except Exception as exc:
             with self._connect() as connection, connection.cursor() as cursor:
                 cursor.execute(
@@ -552,6 +619,47 @@ class PostgresReportRepository:
                     (row["id"], audit_actor.user_id, audit_actor.correlation_id),
                 )
             return {**self._metadata(row), "data": row["data"]} if row else None
+
+    def cancel(self, report_id, version, actor, reason):
+        scope, params = self._scope(actor.scope_filter("report.cancel"), "rv")
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""SELECT rv.*, r.report_type
+                FROM synergia.report_versions rv
+                JOIN synergia.reports r ON r.id = rv.report_id
+                WHERE rv.report_id = %s AND rv.version = %s{scope}
+                FOR UPDATE""",
+                [report_id, version, *params],
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            if row["state"] != "generating":
+                raise ApiError(
+                    409,
+                    "report_not_generating",
+                    "Somente uma geração em andamento pode ser cancelada",
+                )
+            cursor.execute(
+                """UPDATE synergia.report_versions
+                SET state = 'cancelled', completed_at = now(),
+                    cancellation_reason = %s
+                WHERE id = %s RETURNING *""",
+                (reason, row["id"]),
+            )
+            cancelled = cursor.fetchone()
+            cursor.execute(
+                """INSERT INTO synergia.report_events
+                (report_version_id, event_type, actor_user_id, correlation_id, payload)
+                VALUES (%s, 'report.generation_cancelled', %s, %s, %s)""",
+                (
+                    row["id"],
+                    actor.user_id,
+                    actor.correlation_id,
+                    Jsonb({"reason": reason}),
+                ),
+            )
+            return self._metadata({**cancelled, "report_type": row["report_type"]})
 
 
 def get_report_repository() -> Generator[ReportRepository, None, None]:
@@ -719,3 +827,22 @@ def get_report_version(
     if item is None:
         raise ApiError(404, "resource_not_found", "Recurso não encontrado")
     return ReportDataResponse.model_validate(item)
+
+
+@router.post(
+    "/{report_id}/versions/{version}/cancel",
+    response_model=ReportVersionResponse,
+    responses=ERROR_RESPONSES,
+    summary="Cancelar uma geração de relatório em andamento",
+)
+def cancel_report_version(
+    report_id: UUID,
+    version: int,
+    payload: CancelReportRequest,
+    actor: Annotated[ActorContext, Depends(require_permission("report.cancel"))],
+    repository: ReportRepository = Depends(get_report_repository),
+) -> ReportVersionResponse:
+    item = repository.cancel(report_id, version, actor, payload.reason)
+    if item is None:
+        raise ApiError(404, "resource_not_found", "Recurso não encontrado")
+    return ReportVersionResponse.model_validate(item)

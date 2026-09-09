@@ -7,13 +7,16 @@ INSERT INTO synergia.permissions (
     permission_key, resource_type, description, catalog_version, is_reserved
 ) VALUES
     ('report.generate', 'report', 'Gerar versões persistentes de relatórios', '1.1.0', true),
-    ('report.read', 'report', 'Consultar catálogo, histórico e dados de relatórios', '1.1.0', true)
+    ('report.read', 'report', 'Consultar catálogo, histórico e dados de relatórios', '1.1.0', true),
+    ('report.cancel', 'report', 'Cancelar geração de relatório em andamento', '1.1.0', true)
 ON CONFLICT (normalized_key) DO NOTHING;
 
 INSERT INTO synergia.role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM synergia.roles r
-JOIN synergia.permissions p ON p.normalized_key IN ('report.generate', 'report.read')
+JOIN synergia.permissions p ON p.normalized_key IN (
+    'report.generate', 'report.read', 'report.cancel'
+)
 WHERE
     (r.normalized_key = 'gestor')
     OR (r.normalized_key = 'analista' AND p.normalized_key = 'report.read')
@@ -49,6 +52,7 @@ CREATE TABLE synergia.report_versions (
     completeness text CHECK (completeness IN ('complete', 'partial')),
     failure_code text,
     failure_message text,
+    cancellation_reason text,
     correlation_id uuid,
     created_at timestamptz NOT NULL DEFAULT now(),
     completed_at timestamptz,
@@ -60,10 +64,14 @@ CREATE TABLE synergia.report_versions (
         REFERENCES synergia.executions(id, organization_id),
     CHECK (completed_at IS NULL OR completed_at >= created_at),
     CHECK (
-        (state = 'generating' AND completed_at IS NULL AND failure_code IS NULL)
-        OR (state = 'succeeded' AND completed_at IS NOT NULL AND failure_code IS NULL)
-        OR (state = 'failed' AND completed_at IS NOT NULL AND failure_code IS NOT NULL)
-        OR (state = 'cancelled' AND completed_at IS NOT NULL)
+        (state = 'generating' AND completed_at IS NULL
+            AND failure_code IS NULL AND cancellation_reason IS NULL)
+        OR (state = 'succeeded' AND completed_at IS NOT NULL
+            AND failure_code IS NULL AND cancellation_reason IS NULL)
+        OR (state = 'failed' AND completed_at IS NOT NULL
+            AND failure_code IS NOT NULL AND cancellation_reason IS NULL)
+        OR (state = 'cancelled' AND completed_at IS NOT NULL
+            AND failure_code IS NULL AND btrim(cancellation_reason) <> '')
     )
 );
 

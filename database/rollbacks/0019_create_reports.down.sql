@@ -16,11 +16,11 @@ ALTER TABLE synergia.executions
 DELETE FROM synergia.role_permissions
 WHERE permission_id IN (
     SELECT id FROM synergia.permissions
-    WHERE normalized_key IN ('report.generate', 'report.read')
+    WHERE normalized_key IN ('report.generate', 'report.read', 'report.cancel')
 );
 ALTER TABLE synergia.permissions DISABLE TRIGGER trg_permissions_no_delete;
 DELETE FROM synergia.permissions
-WHERE normalized_key IN ('report.generate', 'report.read');
+WHERE normalized_key IN ('report.generate', 'report.read', 'report.cancel');
 ALTER TABLE synergia.permissions ENABLE TRIGGER trg_permissions_no_delete;
 DELETE FROM synergia.permission_catalog_versions WHERE version = '1.1.0';
 UPDATE synergia.permission_catalog_versions SET is_active = true WHERE version = '1.0.0';
