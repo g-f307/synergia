@@ -410,7 +410,9 @@ class PostgresReportRepository:
                    p.status AS pending_status
             FROM synergia.oqc_decisions q
             JOIN synergia.workorders w ON w.id = q.workorder_id AND w.execution_id = q.execution_id
-            LEFT JOIN synergia.lots l ON l.id = q.lot_id AND l.execution_id = q.execution_id
+            LEFT JOIN synergia.lots l
+              ON l.id = q.lot_id AND l.execution_id = q.execution_id
+             AND l.updated_at <= %s
             LEFT JOIN synergia.organizations o ON o.id = w.organization_id
             LEFT JOIN synergia.pending_items p
               ON p.workorder_id = q.workorder_id AND p.execution_id = q.execution_id
@@ -420,7 +422,7 @@ class PostgresReportRepository:
             WHERE {" AND ".join(clauses)}
             ORDER BY coalesce(p.priority_score, 0) DESC, w.workorder_number, l.lot_number
             """,
-            [payload.reference_at, *params],
+            [payload.reference_at, payload.reference_at, *params],
         )
         rows = list(cursor.fetchall())
 

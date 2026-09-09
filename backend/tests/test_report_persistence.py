@@ -477,13 +477,26 @@ def test_report_snapshots_match_pending_scope_and_cut_off_related_data() -> None
                 ),
             )
 
-        connection.execute(
+        future_lot_id = connection.execute(
             """
             INSERT INTO synergia.lots (
                 lot_number, workorder_id, execution_id, source_file_id, updated_at
             ) VALUES (%s, %s, %s, %s, '2026-09-09T10:00:00Z')
+            RETURNING id
             """,
             (f"LOT-FUTURE-{suffix}", workorder_id, execution_id, source_id),
+        ).fetchone()["id"]
+        connection.execute(
+            """
+            INSERT INTO synergia.oqc_decisions (
+                workorder_id, lot_id, execution_id, source_file_id,
+                decision_state, reason, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, 'pending', 'decision-future-lot',
+                '2026-09-03T10:00:00Z'
+            )
+            """,
+            (workorder_id, future_lot_id, execution_id, source_id),
         )
         connection.execute(
             """
@@ -541,8 +554,9 @@ def test_report_snapshots_match_pending_scope_and_cut_off_related_data() -> None
     assert workorder["open_pending_count"] == 4
 
     items_by_reason = {item["reason"]: item for item in oqc_result["items"]}
-    assert oqc_result["count"] == 4
+    assert oqc_result["count"] == 5
     assert oqc_result["by_reason"] == {
+        "decision-future-lot": 1,
         "decision-lot": 1,
         "decision-serial-a": 1,
         "decision-serial-b": 1,
@@ -553,13 +567,16 @@ def test_report_snapshots_match_pending_scope_and_cut_off_related_data() -> None
         "high": 1,
         "low": 1,
         "normal": 1,
+        "not_informed": 1,
     }
     assert {
         reason: (item["pending_reason"], item["priority"])
         for reason, item in items_by_reason.items()
     } == {
+        "decision-future-lot": (None, None),
         "decision-serial-a": ("pending-serial-a", "high"),
         "decision-serial-b": ("pending-serial-b", "low"),
         "decision-lot": ("pending-lot", "normal"),
         "decision-workorder": ("pending-workorder", "critical"),
     }
+    assert items_by_reason["decision-future-lot"]["lot_number"] is None
