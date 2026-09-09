@@ -162,7 +162,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | WEB-G02 | monitor simula lista global de execuções, mas não há `GET /executions` | adaptar para localização/detalhe; novo endpoint exige contrato aprovado | #59 |
 | WEB-G03 | busca exibe coleção, mas a API original consultava apenas um identificador | implementar busca exata paginada, com ordem estável e escopo no servidor | #61 |
 | WEB-G04 | protótipo aprova, rejeita, atribui e altera responsável | remover da Etapa 3 | Etapa 4 — decisão humana |
-| WEB-G05 | catálogo, geração e exportação de relatórios não possuem API | adiar e retirar do menu | Etapa 4 — relatórios |
+| WEB-G05 | catálogo, geração e exportação não existiam na Etapa 3 | resolvido com snapshots #77 e jornada real #78 | Etapa 4 — relatórios |
 | WEB-G06 | notificações e e-mail são apenas apresentação | remover da Etapa 3 | Etapa 4 — notificações/SMTP |
 | WEB-G07 | parâmetros operacionais aparecem em configurações | remover até existir contrato e autorização específicos | etapa futura |
 | WEB-G08 | configuração pessoal do protótipo se sobrepõe ao perfil existente | adaptar para `/profile`; manter apenas preferências suportadas | #56/#57 |
@@ -183,5 +183,5 @@ atualização, proteção contra exposição e aceite do PO.
 Antes do merge, o PO e ao menos um responsável técnico devem registrar no PR:
 
 - aceite das rotas e decisões `WEB-G01` a `WEB-G10`;
-- concordância com o adiamento de relatórios, decisão humana e Modo TV;
+- concordância com o contrato real de relatórios e com o adiamento de decisão humana e Modo TV;
 - confirmação de que o protótipo continua referência funcional congelada.

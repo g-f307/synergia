@@ -3,9 +3,9 @@
 Relatório determinístico da suíte da issue #43. `permitido` e `negado`
 representam os casos positivos e negativos exigidos para cada papel.
 
-- operações privadas cobertas: 72
+- operações privadas cobertas: 74
 - papéis iniciais: 5
-- combinações papel x operação: 360
+- combinações papel x operação: 370
 - rotas públicas explicitamente verificadas: 3
 
 | Operação | Permissão | Escopo | Permitido | Negado |
@@ -39,9 +39,11 @@ representam os casos positivos e negativos exigidos para cada papel.
 | `POST /reports` | `report.generate` | `org` | gestor | admin, analista, operador, consulta |
 | `POST /reports/{report_id}/versions` | `report.generate` | `org` | gestor | admin, analista, operador, consulta |
 | `GET /reports` | `report.read` | `org` | gestor, analista, consulta | admin, operador |
+| `GET /reports/policy` | `report.read` | `org` | gestor, analista, consulta | admin, operador |
 | `GET /reports/{report_id}` | `report.read` | `org` | gestor, analista, consulta | admin, operador |
 | `GET /reports/{report_id}/versions` | `report.read` | `org` | gestor, analista, consulta | admin, operador |
 | `GET /reports/{report_id}/versions/{version}` | `report.read` | `org` | gestor, analista, consulta | admin, operador |
+| `GET /reports/{report_id}/versions/{version}/export` | `report.export` | `org` | gestor, analista | admin, operador, consulta |
 | `POST /reports/{report_id}/versions/{version}/cancel` | `report.cancel` | `org` | gestor | admin, analista, operador, consulta |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | `org` | gestor, analista, operador | admin, consulta |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | `org` | gestor, analista, operador, consulta | admin |
@@ -85,7 +87,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 
 ## Evidências automatizadas
 
-- `test_security_matrix_persistence.py`: 360 requisições HTTP reais
+- `test_security_matrix_persistence.py`: 370 requisições HTTP reais
   com JWT, papéis e permissões carregados do PostgreSQL;
 - `test_security_regression.py`: completude OpenAPI, mass assignment,
   respostas uniformes e ausência de segredos;

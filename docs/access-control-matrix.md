@@ -41,7 +41,7 @@ Não há herança implícita nem papel `superuser`.
 | `execution.reprocess` | execução | — | ✓ | — | — | — |
 | `audit.read` | histórico auditável | ✓ | ✓ | ✓ | — | — |
 | `artifact.export` | download de evidência aceita | — | ✓ | ✓ | — | — |
-| `report.export` | relatório/sumário futuro | — | ✓ | ✓ | — | — |
+| `report.export` | exportar versão concluída de relatório | — | ✓ | ✓ | — | — |
 | `report.generate` | nova versão de relatório | — | ✓ | — | — | — |
 | `report.read` | catálogo, histórico e snapshot | — | ✓ | ✓ | — | ✓ |
 | `report.cancel` | geração de relatório em andamento | — | ✓ | — | — | — |
@@ -49,9 +49,9 @@ Não há herança implícita nem papel `superuser`.
 | `session.revoke.any` | sessão de outro usuário futura | ✓ | — | — | — | — |
 | `session.revoke.own` | própria sessão futura | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-`report.export`, `access.admin` e as ações de sessão reservam a política dos
-endpoints planejados; não afirmam que eles já existem. Um novo endpoint privado
-deve reutilizar ou acrescentar uma ação e entrar no inventário antes do merge.
+As ações desta tabela são contratos efetivos dos endpoints inventariados
+abaixo. Um novo endpoint privado deve reutilizar ou acrescentar uma ação e
+entrar no inventário antes do merge.
 
 ### Capacidades por papel
 
@@ -103,9 +103,11 @@ técnica também dependerá da política de rede da TI.
 | `POST /reports` | `report.generate` | novo relatório | `org` | gestor |
 | `POST /reports/{report_id}/versions` | `report.generate` | nova versão imutável | `org` | gestor |
 | `GET /reports` | `report.read` | catálogo de relatórios | `org` | gestor, analista, consulta |
+| `GET /reports/policy` | `report.read` | tipos, formatos e organizações permitidas | `org` | gestor, analista, consulta |
 | `GET /reports/{report_id}` | `report.read` | dados da versão mais recente | `org` | gestor, analista, consulta |
 | `GET /reports/{report_id}/versions` | `report.read` | histórico de versões | `org` | gestor, analista, consulta |
 | `GET /reports/{report_id}/versions/{version}` | `report.read` | dados de uma versão | `org` | gestor, analista, consulta |
+| `GET /reports/{report_id}/versions/{version}/export` | `report.export` | exportação de snapshot concluído | `org` | gestor, analista |
 | `POST /reports/{report_id}/versions/{version}/cancel` | `report.cancel` | geração em andamento | `org` | gestor |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
@@ -191,8 +193,8 @@ fornecer o catálogo e os responsáveis de produção.
 - `operador` não reprocessa nem exporta; `analista` não importa nem reprocessa;
 - reprocessamento exige justificativa/origem técnica e preserva a execução
   anterior; o ator e a sessão são auditados;
-- exportação exige organização autorizada, registra ator, sessão, filtros e
-  recurso, e nunca amplia o conjunto consultável;
+- exportação exige organização autorizada, registra ator, sessão, versão,
+  formato e correlação, e nunca amplia o conjunto consultável;
 - conta de serviço não recebe papel humano nem acesso interativo. Suas
   permissões são específicas ao conector e fora desta matriz humana;
 - decisão OQC, liberação, planejamento e correção de sistemas de origem
@@ -220,5 +222,5 @@ Além dos portões `ID-P01` a `ID-P07` da ADR:
 | AUTH-P01 | confirmar se operador pode importar para qualquer organização concedida ou apenas para uma organização primária | Gestor |
 | AUTH-P02 | definir dupla aprovação e retenção para concessões administrativas | TI/Gestor |
 | AUTH-P03 | classificar campos sensíveis de normalizados, evidências e exportações | Segurança/DPO/Gestor |
-| AUTH-P04 | decidir formato e limite dos relatórios exportáveis | Gestor |
+| AUTH-P04 | definir limite operacional para exportações; os formatos iniciais aprovados são CSV e JSON | Gestor |
 | AUTH-P05 | revisar esta matriz por integrante diferente do autor antes do merge | Revisor do PR |

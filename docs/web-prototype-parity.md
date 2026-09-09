@@ -14,8 +14,8 @@ foram alinhadas na #69 e são verificadas separadamente na
 | `monitor.html` | KPIs, tabela, paginação, logs e modal de execução | ID, resultado, tipo, fonte e página | nova execução, detalhe e reprocessamento | detalhe #59; nova execução aponta para #58; lista adapta-se à API |
 | `pendencias.html` | KPIs, fila, badges e paginação | texto, estado, impacto, área, fonte, categoria, organização, tipo de WO e ordem | limpar, abrir detalhe e Workorder | fila #62; organização limitada ao escopo efetivo |
 | `detalhe-pendencia.html` | contexto, histórico, observações, execução e decisão | ID da pendência | reprocessar, atribuir, anotar, aprovar/rejeitar | contexto somente leitura #62; decisão, atribuição e anotação são adiadas |
-| `relatorios.html` | catálogo, cards, histórico e paginação | período, tipo, situação e texto | atualizar, visualizar e exportar | adiado para Etapa 4 |
-| `visualizar-relatorio.html` | resumo, abas de Workorders/OQC/pendências e paginação | ID, aba e página | voltar, navegar para entidades e exportar | consultas distribuídas entre #59–#62; relatório adiado |
+| `relatorios.html` | catálogo, cards, histórico e paginação | organização, tipo, estado, execução, ordenação e página | atualizar, gerar, visualizar e exportar | implementado #78 com filtros do contrato real |
+| `visualizar-relatorio.html` | resumo, abas de dados e histórico e paginação | ID, versão, aba e página | voltar, navegar para entidades, cancelar e exportar | implementado #78 sobre snapshots persistidos |
 | `configuracoes.html` | seletores, toggles e parâmetros bloqueados | tema, densidade, fonte, TV, atualização, período e tamanho de página | salvar preferências e solicitar acesso | preferências suportadas em `/profile`; TV, solicitação e parâmetros adiados |
 
 O menu observado contém Dashboard, Consulta, Monitor, Pendências, Relatórios e
@@ -37,7 +37,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementado #62 |
 | `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
 | `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado; visual alinhado #69 |
-| `/reports` e detalhe | páginas de relatório | nenhum contrato atual | `report.export` reservado / `org` | adiar Etapa 4 |
+| `/reports` e detalhe | páginas de relatório | `/reports`, `/reports/policy` e versões/exportação | `report.read`, `report.generate`, `report.export`, `report.cancel` / `org` | implementado #78 |
 
 O inventário integral e validável de endpoints está em
 [`web-route-map.json`](web-route-map.json).
@@ -67,7 +67,7 @@ O inventário integral e validável de endpoints está em
 | busca e detalhe operacional | adaptado | #61 | validado #63 |
 | fila e contexto de pendências | adaptado | #62 | validado #63 |
 | aprovação, rejeição, atribuição e decisão OQC | remover da etapa | Etapa 4 | decisão registrada |
-| relatórios e exportação final | adiar | Etapa 4 | decisão registrada |
+| relatórios e exportação final | implementado com CSV/JSON gerados pelo backend | #77/#78 | catálogo, versão, estados e exportação segura cobertos |
 | notificações externas | remover da etapa | Etapa 4 | decisão registrada |
 | Modo TV | adiar | futura | decisão registrada |
 

@@ -22,6 +22,7 @@ def _actor(user_id, session_id, organization_id) -> ActorContext:
             "report.generate": frozenset({organization_id}),
             "report.read": frozenset({organization_id}),
             "report.cancel": frozenset({organization_id}),
+            "report.export": frozenset({organization_id}),
         },
         correlation_id=uuid4(),
     )
@@ -262,13 +263,14 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
         "workorder_consolidated",
         "succeeded",
         complete_id,
+        "newest",
         1,
         2,
     )
     assert catalog_total >= 2
     assert len(catalog) == 2
     hidden_catalog, hidden_total = repository.list_reports(
-        frozenset({other_organization_id}), None, None, None, 1, 25
+        frozenset({other_organization_id}), None, None, None, "newest", 1, 25
     )
     assert hidden_catalog == []
     assert hidden_total == 0
@@ -346,6 +348,17 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
         complete["report_id"], 1, frozenset({organization_id}), actor
     )
     assert consulted is not None
+    exported = repository.export_version(complete["report_id"], 1, actor, "csv")
+    assert exported is not None
+    assert exported["version"] == 1
+    hidden_actor = _actor(user_id, session_id, other_organization_id)
+    assert (
+        repository.export_version(
+            complete["report_id"], 1, hidden_actor, "json"
+        )
+        is None
+    )
+    assert repository.version_organization(complete["report_id"], 1) == organization_id
     with psycopg.connect(database_url) as connection:
         assert (
             connection.execute(
@@ -357,6 +370,21 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
             ).fetchone()[0]
             == 1
         )
+        export_event = connection.execute(
+            """
+            SELECT actor_user_id, actor_session_id, correlation_id, payload
+            FROM synergia.report_events
+            WHERE report_version_id = %s AND event_type = 'report.exported'
+            """,
+            (complete["version_id"],),
+        ).fetchone()
+        assert export_event[0] == user_id
+        assert export_event[1] == session_id
+        assert export_event[2] == actor.correlation_id
+        assert export_event[3] == {"format": "csv", "version": 1}
+        serialized_event = str(export_event[3])
+        assert complete_id not in serialized_event
+        assert "workorder_number" not in serialized_event
 
 
 def test_report_snapshots_match_pending_scope_and_cut_off_related_data() -> None:

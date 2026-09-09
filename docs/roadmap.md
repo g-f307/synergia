@@ -10,13 +10,14 @@
 - **Etapa 3 — aplicação web operacional:** design system, i18n, upload,
   dashboard, execuções, consultas e pendências. O aceite integrado está
   documentado em [stage-3-validation-report.md](stage-3-validation-report.md).
+- **Etapa 4 — relatórios:** snapshots persistentes e versionados, catálogo web,
+  visualização, histórico e exportação segura em CSV/JSON.
 
-## Etapa 4 — capacidades planejadas
+## Próximas capacidades planejadas
 
 - decisão humana de aprovação e rejeição;
 - atribuição e observações em pendências;
 - notificações externas;
-- relatórios finais e exportação;
 - integrações corporativas e automação RPA.
 
 Essas capacidades não são simuladas na aplicação atual. Cada uma exige contrato

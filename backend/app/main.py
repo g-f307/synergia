@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Disposition", "X-Correlation-ID"],
     )
     application.add_middleware(CorrelationIdMiddleware)
     install_error_handlers(application)
