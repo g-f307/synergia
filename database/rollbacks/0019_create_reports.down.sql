@@ -13,6 +13,11 @@ DROP TABLE IF EXISTS synergia.reports;
 ALTER TABLE synergia.executions
     DROP CONSTRAINT IF EXISTS executions_id_organization_key;
 
+DELETE FROM synergia.user_permission_assignments
+WHERE permission_id IN (
+    SELECT id FROM synergia.permissions
+    WHERE normalized_key IN ('report.generate', 'report.read', 'report.cancel')
+);
 DELETE FROM synergia.role_permissions
 WHERE permission_id IN (
     SELECT id FROM synergia.permissions

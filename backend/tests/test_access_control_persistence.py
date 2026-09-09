@@ -566,3 +566,69 @@ def test_migration_0015_rollback_preserves_preexisting_access_data() -> None:
             assert cursor.fetchone()[0] == granted_at
         finally:
             connection.rollback()
+
+
+def test_migration_0019_rollback_removes_direct_report_permission_grants() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    rollback_sql = (
+        ROOT / "database/rollbacks/0019_create_reports.down.sql"
+    ).read_text(encoding="utf-8")
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        try:
+            cursor.execute(
+                """
+                INSERT INTO synergia.identity_users (status, display_name)
+                VALUES ('active', %s)
+                RETURNING id
+                """,
+                (f"Report rollback {uuid4().hex[:10]}",),
+            )
+            user_id = cursor.fetchone()[0]
+            cursor.execute(
+                """
+                INSERT INTO synergia.user_permission_assignments (
+                    user_id, permission_id
+                )
+                SELECT %s, id
+                FROM synergia.permissions
+                WHERE normalized_key IN (
+                    'report.generate', 'report.read', 'report.cancel'
+                )
+                """,
+                (user_id,),
+            )
+
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.user_permission_assignments
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            assert cursor.fetchone()[0] == 3
+
+            cursor.execute(rollback_sql, prepare=False)
+
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.user_permission_assignments
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            assert cursor.fetchone()[0] == 0
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM synergia.permissions
+                WHERE normalized_key IN (
+                    'report.generate', 'report.read', 'report.cancel'
+                )
+                """
+            )
+            assert cursor.fetchone()[0] == 0
+        finally:
+            connection.rollback()
