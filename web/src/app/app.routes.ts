@@ -89,6 +89,11 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('report.read')],
     loadComponent: () => import('./domains/reports/report-detail.component').then((value) => value.ReportDetailComponent)
   },
+  {
+    path: 'notifications',
+    canActivate: [authenticatedGuard, permissionGuard('notification.read')],
+    loadComponent: () => import('./domains/notifications/notification-center.component').then((value) => value.NotificationCenterComponent)
+  },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];

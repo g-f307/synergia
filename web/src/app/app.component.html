@@ -16,7 +16,7 @@
     <div class="main-wrapper">
       <header class="topbar">
         <button #menuButton class="menu-button" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-controls="main-navigation" [attr.aria-label]="i18n.t(menuOpen() ? 'accessibility.closeMenu' : 'accessibility.openMenu')"><span aria-hidden="true">☰</span></button>
-        <div class="account"><span class="user-name">{{ session.profile()?.display_name }}</span><button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
+        <div class="account"><span class="user-name">{{ session.profile()?.display_name }}</span>@if(session.hasPermission('notification.read')){<a class="notification-button" routerLink="/notifications" [attr.aria-label]="i18n.t('notifications.open',{count:notifications.unreadCount()})"><img src="/assets/icons/notification.svg" alt="" aria-hidden="true">@if(notifications.unreadCount()>0){<span class="notification-badge" aria-hidden="true">{{ notifications.unreadCount()>99?'99+':notifications.unreadCount() }}</span>}</a>}<button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
       </header>
       <main id="main-content" class="content" tabindex="-1"><syn-breadcrumbs /><router-outlet /></main>
     </div>
