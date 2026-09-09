@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .pytest-*/
 .test-tmp/
+.test-tmp-*/
 backend/reports/
 backend/.pytest-tmp/
 artifacts/synthetic/
@@ -13,3 +14,4 @@ artifacts/synthetic/
 Thumbs.db
 docs/GUIA_GITFLOW_AGENTES.md
 web/reports/e2e-*/
+data/email-capture/

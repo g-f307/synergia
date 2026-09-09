@@ -52,3 +52,6 @@ não são copiados.
 supressão, falha técnica e leitura. Leituras incluem usuário, sessão e
 correlation ID. `notification_occurrences` garante idempotência e mantém o
 vínculo técnico com o evento fonte sem reproduzir seu conteúdo.
+
+O canal assíncrono e opcional de e-mail reutiliza essa projeção e está descrito
+em [`email-notifications.md`](email-notifications.md).

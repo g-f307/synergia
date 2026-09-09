@@ -578,6 +578,9 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
     notification_rollback_sql = (
         ROOT / "database/rollbacks/0021_create_internal_notifications.down.sql"
     ).read_text(encoding="utf-8")
+    email_rollback_sql = (
+        ROOT / "database/rollbacks/0022_create_email_deliveries.down.sql"
+    ).read_text(encoding="utf-8")
 
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         try:
@@ -614,6 +617,7 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
             )
             assert cursor.fetchone()[0] == 3
 
+            cursor.execute(email_rollback_sql, prepare=False)
             cursor.execute(notification_rollback_sql, prepare=False)
             cursor.execute(rollback_sql, prepare=False)
 
