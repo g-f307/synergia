@@ -34,6 +34,8 @@ ALL_PERMISSIONS = {
         "audit.read",
         "artifact.export",
         "report.export",
+        "report.generate",
+        "report.read",
         "access.admin",
         "session.revoke.any",
         "session.revoke.own",
@@ -77,6 +79,7 @@ def synthetic_authorization(request):
         return
     previous_actor = app.dependency_overrides.get(get_actor_context)
     previous_repository = app.dependency_overrides.get(get_authorization_repository)
+
     def actor_context(http_request: Request) -> ActorContext:
         supplied = http_request.headers.get("X-Actor-Id")
         user_id = UUID(supplied) if supplied else TEST_USER_ID
