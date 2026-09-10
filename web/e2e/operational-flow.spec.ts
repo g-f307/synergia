@@ -112,9 +112,17 @@ test.describe.serial('integrated operational journey', () => {
     await login(page, managerEmail);
     await page.locator('a[href="/reports"]').click();
     await page.getByRole('button', { name: /generate report/i }).click();
-    await page.getByLabel(/organization/i).last().selectOption({ index: 1 });
-    await page.getByLabel(/execution/i).last().fill(executionId);
-    await page.getByRole('button', { name: /generate report/i }).last().click();
+    const generationDialog = page.getByRole('dialog', {
+      name: /new report generation|nova geração de relatório/i,
+    });
+    await expect(generationDialog).toBeVisible();
+    await generationDialog.getByLabel(/organization|organização/i).selectOption({ index: 1 });
+    await generationDialog.getByLabel(/execution|execução/i).fill(executionId);
+    const reportCreated = page.waitForResponse((response) =>
+      response.url().endsWith('/reports') && response.request().method() === 'POST',
+    );
+    await generationDialog.getByRole('button', { name: /generate report|gerar relatório/i }).click();
+    expect((await reportCreated).status()).toBe(201);
     await expect(page).toHaveURL(/\/reports\/[0-9a-f-]+\?/, { timeout: 30_000 });
     await expect(page.getByRole('heading', { name: /report viewer/i })).toBeVisible();
     await expect(page.getByText(executionId).first()).toBeVisible();
