@@ -320,3 +320,89 @@ def test_recovery_is_idempotent_and_stops_at_attempt_limit(tmp_path) -> None:
     assert recovered == ("sent", 2)
     assert exhausted_state == ("failed", 3, "max_attempts_exceeded")
     assert outcomes == [(1, "started"), (2, "started"), (2, "sent")]
+
+
+def test_expired_worker_cannot_finalize_recovered_attempt() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    org_id = uuid4()
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """INSERT INTO synergia.iam_organizations (
+                 id, organization_code, display_name
+               ) VALUES (%s, %s, 'Email Lease Ownership Org')""",
+            (org_id, f"email-lease-{org_id.hex[:8]}"),
+        )
+        user_id = _recipient(connection)
+        notification_id = _notification(
+            connection,
+            user_id,
+            org_id,
+            uuid4().int % 2_000_000_000,
+        )
+
+    repository = EmailDeliveryRepository(database_url)
+    first = repository.claim(
+        limit=1,
+        provider="local_capture",
+        max_attempts=3,
+        consolidation_seconds=0,
+    )[0]
+    assert first["notification_id"] == notification_id
+    assert first["attempt_count"] == 1
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """UPDATE synergia.email_deliveries
+               SET claimed_at = now() - interval '6 minutes'
+               WHERE id = %s""",
+            (first["id"],),
+        )
+
+    recovered = repository.claim(
+        limit=1,
+        provider="local_capture",
+        max_attempts=3,
+        consolidation_seconds=0,
+    )[0]
+    assert recovered["id"] == first["id"]
+    assert recovered["attempt_count"] == 2
+
+    assert repository.complete(first["id"], 1, "stale-worker") is False
+    assert (
+        repository.fail(
+            first["id"],
+            1,
+            code="stale_failure",
+            retry=False,
+            retry_after=None,
+        )
+        is False
+    )
+    with psycopg.connect(database_url) as connection:
+        current = connection.execute(
+            """SELECT state, attempt_count, provider_reference, failure_code
+               FROM synergia.email_deliveries WHERE id = %s""",
+            (first["id"],),
+        ).fetchone()
+        terminal_count = connection.execute(
+            """SELECT count(*) FROM synergia.email_delivery_attempts
+               WHERE delivery_id = %s AND outcome <> 'started'""",
+            (first["id"],),
+        ).fetchone()[0]
+    assert current == ("processing", 2, None, None)
+    assert terminal_count == 0
+
+    assert repository.complete(first["id"], 2, "current-worker") is True
+    with psycopg.connect(database_url) as connection:
+        final = connection.execute(
+            """SELECT state, attempt_count, provider_reference
+               FROM synergia.email_deliveries WHERE id = %s""",
+            (first["id"],),
+        ).fetchone()
+        terminal = connection.execute(
+            """SELECT attempt_number, outcome
+               FROM synergia.email_delivery_attempts
+               WHERE delivery_id = %s AND outcome <> 'started'""",
+            (first["id"],),
+        ).fetchall()
+    assert final == ("sent", 2, "current-worker")
+    assert terminal == [(2, "sent")]

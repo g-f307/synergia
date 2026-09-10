@@ -331,19 +331,30 @@ class EmailDeliveryRepository:
                 delivery.update(content)
             return [item for item in deliveries if "recipient" in item]
 
-    def complete(self, delivery_id: UUID, provider_reference: str) -> None:
-        self._finish(delivery_id, "sent", None, provider_reference, None)
+    def complete(
+        self, delivery_id: UUID, attempt_number: int, provider_reference: str
+    ) -> bool:
+        return self._finish(
+            delivery_id,
+            attempt_number,
+            "sent",
+            None,
+            provider_reference,
+            None,
+        )
 
     def fail(
         self,
         delivery_id: UUID,
+        attempt_number: int,
         *,
         code: str,
         retry: bool,
         retry_after: datetime | None,
-    ) -> None:
-        self._finish(
+    ) -> bool:
+        return self._finish(
             delivery_id,
+            attempt_number,
             "retry" if retry else "failed",
             code,
             None,
@@ -353,11 +364,12 @@ class EmailDeliveryRepository:
     def _finish(
         self,
         delivery_id: UUID,
+        attempt_number: int,
         state: str,
         failure_code: str | None,
         provider_reference: str | None,
         available_at: datetime | None,
-    ) -> None:
+    ) -> bool:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -366,7 +378,8 @@ class EmailDeliveryRepository:
                        available_at = COALESCE(%s, available_at),
                        sent_at = CASE WHEN %s = 'sent' THEN now() ELSE sent_at END,
                        claimed_at = NULL, updated_at = now()
-                 WHERE id = %s
+                 WHERE id = %s AND state = 'processing'
+                   AND attempt_count = %s
                  RETURNING attempt_count, recipient_user_id, notification_id,
                            correlation_id
                 """,
@@ -377,11 +390,12 @@ class EmailDeliveryRepository:
                     available_at,
                     state,
                     delivery_id,
+                    attempt_number,
                 ),
             )
             row = cursor.fetchone()
             if row is None:
-                raise RuntimeError("email delivery does not exist")
+                return False
             cursor.execute(
                 """
                 INSERT INTO synergia.email_delivery_attempts (
@@ -397,6 +411,7 @@ class EmailDeliveryRepository:
                     row["correlation_id"],
                 ),
             )
+            return True
 
 
 class EmailDeliveryService:
@@ -448,50 +463,70 @@ class EmailDeliveryService:
             )
             try:
                 reference = self.provider.send(message)
-                self.repository.complete(delivery["id"], reference)
-                sent += 1
+                completed = self.repository.complete(
+                    delivery["id"], delivery["attempt_count"], reference
+                )
+                if completed:
+                    sent += 1
+                else:
+                    logger.info(
+                        "stale email completion ignored",
+                        extra={"delivery_id": str(delivery["id"])},
+                    )
             except TemporaryEmailError:
                 attempt = delivery["attempt_count"]
                 can_retry = attempt < self.config.max_attempts
                 delay = self.config.retry_seconds * (2 ** (attempt - 1))
-                self.repository.fail(
+                finalized = self.repository.fail(
                     delivery["id"],
+                    attempt,
                     code="provider_temporarily_unavailable",
                     retry=can_retry,
                     retry_after=datetime.now(UTC) + timedelta(seconds=delay),
                 )
-                failed += 1
-                logger.warning(
-                    "email delivery temporarily failed",
-                    extra={"delivery_id": str(delivery["id"]), "attempt": attempt},
-                )
+                if finalized:
+                    failed += 1
+                    logger.warning(
+                        "email delivery temporarily failed",
+                        extra={
+                            "delivery_id": str(delivery["id"]),
+                            "attempt": attempt,
+                        },
+                    )
             except PermanentEmailError:
-                self.repository.fail(
+                finalized = self.repository.fail(
                     delivery["id"],
+                    delivery["attempt_count"],
                     code="provider_rejected",
                     retry=False,
                     retry_after=None,
                 )
-                failed += 1
-                logger.warning(
-                    "email delivery rejected",
-                    extra={"delivery_id": str(delivery["id"])},
-                )
+                if finalized:
+                    failed += 1
+                    logger.warning(
+                        "email delivery rejected",
+                        extra={"delivery_id": str(delivery["id"])},
+                    )
             except Exception:
                 attempt = delivery["attempt_count"]
                 can_retry = attempt < self.config.max_attempts
                 delay = self.config.retry_seconds * (2 ** (attempt - 1))
-                self.repository.fail(
+                finalized = self.repository.fail(
                     delivery["id"],
+                    attempt,
                     code="provider_unavailable",
                     retry=can_retry,
                     retry_after=datetime.now(UTC) + timedelta(seconds=delay),
                 )
-                failed += 1
-                logger.warning(
-                    "email provider unavailable",
-                    extra={"delivery_id": str(delivery["id"]), "attempt": attempt},
-                )
+                if finalized:
+                    failed += 1
+                    logger.warning(
+                        "email provider unavailable",
+                        extra={
+                            "delivery_id": str(delivery["id"]),
+                            "attempt": attempt,
+                        },
+                    )
         return {
             "status": "enabled",
             "processed": len(deliveries),

@@ -64,3 +64,8 @@ reserva a entrega, antes da chamada ao provedor. Recuperações de leases vencid
 também consomem tentativa e nunca ultrapassam `EMAIL_MAX_ATTEMPTS`. Todo adaptador
 de provedor deve usar `delivery_id` como chave de idempotência; o capturador local
 devolve a primeira referência sem duplicar a mensagem.
+
+Cada finalização também informa o número da tentativa reservada. A atualização
+só ocorre se a entrega ainda estiver em `processing` e continuar pertencendo à
+mesma tentativa. Assim, um worker cujo lease expirou não pode concluir, falhar
+ou produzir auditoria em nome do worker que recuperou a entrega.

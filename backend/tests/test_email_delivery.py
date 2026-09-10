@@ -33,11 +33,15 @@ class FakeRepository:
         assert consolidation_seconds >= 0
         return self.deliveries
 
-    def complete(self, delivery_id, provider_reference):
+    def complete(self, delivery_id, attempt_number, provider_reference):
+        assert attempt_number > 0
         self.completed.append((delivery_id, provider_reference))
+        return True
 
-    def fail(self, delivery_id, *, code, retry, retry_after):
+    def fail(self, delivery_id, attempt_number, *, code, retry, retry_after):
+        assert attempt_number > 0
         self.failures.append((delivery_id, code, retry, retry_after))
+        return True
 
 
 class FailingProvider:
@@ -47,7 +51,7 @@ class FailingProvider:
         raise TemporaryEmailError("credential=must-never-be-logged")
 
 
-def _delivery(locale="pt-BR", attempts=0):
+def _delivery(locale="pt-BR", attempts=1):
     return {
         "id": uuid4(),
         "recipient": "verified@example.invalid",
