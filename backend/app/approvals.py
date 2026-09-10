@@ -275,11 +275,47 @@ class ApprovalRepository:
                 )
             eligible = connection.execute(
                 """
-                SELECT status = 'active'
-                   AND synergia.user_has_effective_permission(id, 'approval.decide', %s) AS eligible
-                FROM synergia.identity_users WHERE id = %s
+                SELECT u.status = 'active'
+                   AND synergia.user_has_effective_permission(
+                       u.id, 'approval.decide', %s
+                   )
+                   AND (
+                       EXISTS (
+                           SELECT 1
+                           FROM synergia.user_role_assignments ura
+                           JOIN synergia.roles r
+                             ON r.id = ura.role_id AND r.is_active
+                           WHERE ura.user_id = u.id
+                             AND ura.organization_id = %s
+                             AND ura.revoked_at IS NULL
+                             AND (ura.expires_at IS NULL OR ura.expires_at > now())
+                             AND r.normalized_key = %s
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM synergia.user_group_memberships ugm
+                           JOIN synergia.identity_groups g
+                             ON g.id = ugm.group_id AND g.is_active
+                           JOIN synergia.group_role_assignments gra
+                             ON gra.group_id = g.id AND gra.revoked_at IS NULL
+                           JOIN synergia.roles r
+                             ON r.id = gra.role_id AND r.is_active
+                           WHERE ugm.user_id = u.id
+                             AND ugm.revoked_at IS NULL
+                             AND gra.organization_id = %s
+                             AND r.normalized_key = %s
+                       )
+                   ) AS eligible
+                FROM synergia.identity_users u WHERE u.id = %s
                 """,
-                (row["organization_id"], assignee_id),
+                (
+                    row["organization_id"],
+                    row["organization_id"],
+                    row["review_group"],
+                    row["organization_id"],
+                    row["review_group"],
+                    assignee_id,
+                ),
             ).fetchone()
             if eligible is None or not eligible["eligible"]:
                 raise ApiError(
@@ -301,9 +337,15 @@ class ApprovalRepository:
                 """
                 UPDATE synergia.approval_stages
                 SET assignee_user_id = %s, state = 'in_review'
-                WHERE request_id = %s AND sequence = 1
+                WHERE request_id = %s
+                  AND sequence = (
+                      SELECT max(current_stage.sequence)
+                      FROM synergia.approval_stages current_stage
+                      WHERE current_stage.request_id = %s
+                        AND current_stage.state IN ('waiting', 'in_review')
+                  )
                 """,
-                (assignee_id, request_id),
+                (assignee_id, request_id, request_id),
             )
             event_id = self._event(
                 connection,
@@ -379,9 +421,19 @@ class ApprovalRepository:
                 """
                 UPDATE synergia.approval_stages
                 SET state = %s, closed_at = now()
-                WHERE request_id = %s AND sequence = 1
+                WHERE request_id = %s
+                  AND sequence = (
+                      SELECT max(current_stage.sequence)
+                      FROM synergia.approval_stages current_stage
+                      WHERE current_stage.request_id = %s
+                        AND current_stage.state = 'in_review'
+                  )
                 """,
-                ("returned" if action == "returned" else "completed", request_id),
+                (
+                    "returned" if action == "returned" else "completed",
+                    request_id,
+                    request_id,
+                ),
             )
             event_id = self._event(
                 connection,

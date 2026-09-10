@@ -35,6 +35,10 @@ A política `pending.standard`, versão 1, é deliberadamente conservadora:
 Essa política não representa alçadas corporativas adicionais. Novas etapas,
 limites ou grupos somente podem ser adicionados em uma nova versão após
 confirmação do negócio; solicitações existentes preservam a versão original.
+Versões publicadas são imutáveis no banco: qualquer alteração de regra deve
+ser publicada com outro número de versão. Nesta entrega, a única política
+homologada exige aprovador distinto; autoaprovação configurável permanece fora
+do escopo até que uma política sem segregação seja aprovada pelo negócio.
 
 ## Contratos
 

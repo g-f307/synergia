@@ -185,6 +185,21 @@ def test_full_flow_segregation_version_scope_history_and_notifications() -> None
     ]
 
     with psycopg.connect(database_url) as connection:
+        stages = connection.execute(
+            """
+            SELECT sequence, state, assignee_user_id, closed_at IS NOT NULL
+            FROM synergia.approval_stages
+            WHERE request_id = %s
+            ORDER BY sequence
+            """,
+            (approved["id"],),
+        ).fetchall()
+    assert stages == [
+        (1, "returned", manager_id, True),
+        (2, "completed", manager_id, True),
+    ]
+
+    with psycopg.connect(database_url) as connection:
         self_pending_id = _pending(connection, org_id, manager_id)
         rejected_pending_id = _pending(connection, org_id, requester_id)
     self_request = repository.create(self_pending_id, "Manager requested", manager)
@@ -247,4 +262,74 @@ def test_full_flow_segregation_version_scope_history_and_notifications() -> None
                 SET justification = 'tampered' WHERE request_id = %s
                 """,
                 (approved["id"],),
+            )
+
+
+def test_assignee_must_belong_to_policy_review_role() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    repository = ApprovalRepository(database_url)
+    org_id = uuid4()
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """
+            INSERT INTO synergia.iam_organizations (
+                id, organization_code, display_name
+            ) VALUES (%s, %s, 'Approval Eligibility Org')
+            """,
+            (org_id, f"approval-role-{org_id.hex[:10]}"),
+        )
+        requester_id, requester_session = _user(
+            connection, "Eligibility Requester", "operador", org_id
+        )
+        direct_id, _ = _user(
+            connection, "Direct Permission User", "consulta", org_id
+        )
+        connection.execute(
+            """
+            INSERT INTO synergia.user_permission_assignments (
+                user_id, permission_id, organization_id
+            )
+            SELECT %s, id, %s FROM synergia.permissions
+            WHERE normalized_key = 'approval.decide'
+            """,
+            (direct_id, org_id),
+        )
+        pending_id = _pending(connection, org_id, requester_id)
+    requester = _actor(
+        requester_id, requester_session, org_id, "approval.read", "approval.submit"
+    )
+    assigner = _actor(
+        requester_id, requester_session, org_id, "approval.assign"
+    )
+    created = repository.create(pending_id, "Needs eligible reviewer", requester)
+    with pytest.raises(ApiError) as error:
+        repository.assign(
+            created["id"],
+            direct_id,
+            created["version"],
+            "Direct grant only",
+            assigner,
+        )
+    assert error.value.status_code == 422
+    assert error.value.code == "assignee_not_eligible"
+
+
+def test_published_policy_version_is_immutable() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    with pytest.raises(psycopg.errors.ObjectNotInPrerequisiteState):
+        with psycopg.connect(database_url) as connection:
+            connection.execute(
+                """
+                UPDATE synergia.approval_policies
+                SET require_distinct_approver = false
+                WHERE policy_key = 'pending.standard' AND version = 1
+                """
+            )
+    with pytest.raises(psycopg.errors.ObjectNotInPrerequisiteState):
+        with psycopg.connect(database_url) as connection:
+            connection.execute(
+                """
+                DELETE FROM synergia.approval_policies
+                WHERE policy_key = 'pending.standard' AND version = 1
+                """
             )

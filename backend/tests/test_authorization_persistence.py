@@ -369,6 +369,16 @@ def test_role_change_and_session_revocation_are_immediate(monkeypatch) -> None:
             )
         response = client.get(f"/executions/{ids['execution_a']}", headers=headers)
         assert response.status_code == 401
+        decision = client.post(
+            f"/approvals/{uuid4()}/approve",
+            headers=headers,
+            json={
+                "version": 1,
+                "justification": "Revoked sessions cannot decide",
+                "consent": True,
+            },
+        )
+        assert decision.status_code == 401
 
 
 def test_organization_and_global_scope_denials_are_audited(monkeypatch) -> None:

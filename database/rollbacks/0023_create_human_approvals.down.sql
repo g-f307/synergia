@@ -3,6 +3,9 @@ DROP FUNCTION IF EXISTS synergia.prevent_approval_event_mutation();
 DROP TABLE IF EXISTS synergia.approval_events;
 DROP TABLE IF EXISTS synergia.approval_stages;
 DROP TABLE IF EXISTS synergia.approval_requests;
+DROP TRIGGER IF EXISTS approval_policies_published_immutable
+    ON synergia.approval_policies;
+DROP FUNCTION IF EXISTS synergia.prevent_published_approval_policy_mutation();
 DROP TABLE IF EXISTS synergia.approval_policies;
 ALTER TABLE synergia.email_delivery_attempts
     DISABLE TRIGGER email_delivery_attempts_immutable;

@@ -84,6 +84,20 @@ INSERT INTO synergia.approval_policies (
     require_return_justification, is_active
 ) VALUES ('pending.standard', 1, 'gestor', true, true, true, true, true);
 
+CREATE FUNCTION synergia.prevent_published_approval_policy_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'published_approval_policy_is_immutable' USING ERRCODE = '55000';
+END;
+$$;
+
+CREATE TRIGGER approval_policies_published_immutable
+BEFORE UPDATE OR DELETE ON synergia.approval_policies
+FOR EACH ROW WHEN (OLD.is_active)
+EXECUTE FUNCTION synergia.prevent_published_approval_policy_mutation();
+
 CREATE TABLE synergia.approval_requests (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     pending_item_id bigint NOT NULL REFERENCES synergia.pending_items(id),
