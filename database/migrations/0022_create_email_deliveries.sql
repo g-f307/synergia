@@ -40,7 +40,7 @@ CREATE TABLE synergia.email_deliveries (
     correlation_id uuid,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (notification_id, notification_version)
+    UNIQUE (notification_id)
 );
 
 CREATE INDEX idx_email_deliveries_ready
@@ -53,17 +53,22 @@ CREATE TABLE synergia.email_delivery_attempts (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     delivery_id uuid NOT NULL REFERENCES synergia.email_deliveries(id),
     attempt_number integer NOT NULL CHECK (attempt_number > 0),
-    outcome text NOT NULL CHECK (outcome IN ('sent', 'retry', 'failed')),
+    outcome text NOT NULL CHECK (outcome IN ('started', 'sent', 'retry', 'failed')),
     failure_code text,
     correlation_id uuid,
     occurred_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (delivery_id, attempt_number),
-    CHECK ((outcome = 'sent' AND failure_code IS NULL)
-        OR (outcome <> 'sent' AND failure_code IS NOT NULL))
+    CHECK ((outcome IN ('started', 'sent') AND failure_code IS NULL)
+        OR (outcome IN ('retry', 'failed') AND failure_code IS NOT NULL))
 );
 
 CREATE INDEX idx_email_delivery_attempts_delivery
     ON synergia.email_delivery_attempts (delivery_id, occurred_at, id);
+CREATE UNIQUE INDEX uq_email_delivery_attempt_started
+    ON synergia.email_delivery_attempts (delivery_id, attempt_number)
+    WHERE outcome = 'started';
+CREATE UNIQUE INDEX uq_email_delivery_attempt_finished
+    ON synergia.email_delivery_attempts (delivery_id, attempt_number)
+    WHERE outcome <> 'started';
 
 CREATE FUNCTION synergia.prevent_email_delivery_attempt_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$

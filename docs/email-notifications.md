@@ -24,7 +24,9 @@ Eles não pertencem ao banco, frontend, documentação ou repositório. Nesta
 versão, qualquer provedor diferente de `local_capture` é rejeitado.
 
 O lote, máximo de tentativas e intervalo inicial são limitados por
-`EMAIL_BATCH_SIZE`, `EMAIL_MAX_ATTEMPTS` e `EMAIL_RETRY_SECONDS`. Execute:
+`EMAIL_BATCH_SIZE`, `EMAIL_MAX_ATTEMPTS` e `EMAIL_RETRY_SECONDS`. A janela
+`EMAIL_CONSOLIDATION_SECONDS` posterga o primeiro envio para absorver ocorrências
+relacionadas. Execute:
 
 ```bash
 python scripts/process_email_notifications.py
@@ -41,6 +43,9 @@ Assunto e corpo são versionados em `pt-BR` e `en-US`; idiomas não suportados
 usam `pt-BR`. Apenas identificador de execução, contagem e versão podem ser
 interpolados. A consolidação reutiliza a chave atômica da caixa interna, então
 um resumo de pendências produz uma mensagem, não uma mensagem por ocorrência.
+Enquanto a entrega não começou, novas versões substituem o conteúdo reservado e
+reiniciam a janela. Depois de enviada, a mesma notificação interna não gera novo
+e-mail; uma notificação criada após a leitura possui outro identificador.
 
 ## Auditoria e privacidade
 
@@ -53,3 +58,9 @@ Falhas temporárias usam espera exponencial limitada. Exceções viram códigos
 estáveis; o texto do provedor não é registrado, evitando vazamento de token,
 senha, corpo ou autenticação. A captura local contém a mensagem para inspeção
 controlada e sua pasta está excluída do versionamento.
+
+A tentativa é incrementada e registrada como `started` na mesma transação que
+reserva a entrega, antes da chamada ao provedor. Recuperações de leases vencidos
+também consomem tentativa e nunca ultrapassam `EMAIL_MAX_ATTEMPTS`. Todo adaptador
+de provedor deve usar `delivery_id` como chave de idempotência; o capturador local
+devolve a primeira referência sem duplicar a mensagem.

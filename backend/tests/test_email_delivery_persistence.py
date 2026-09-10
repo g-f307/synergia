@@ -12,6 +12,7 @@ from app.email_delivery import (
     EmailConfig,
     EmailDeliveryRepository,
     EmailDeliveryService,
+    EmailMessage,
     LocalCaptureEmailProvider,
     TemporaryEmailError,
 )
@@ -91,6 +92,7 @@ def test_local_capture_respects_recipient_eligibility_and_audits(tmp_path) -> No
         provider="local_capture",
         sender="no-reply@example.invalid",
         capture_path=capture,
+        consolidation_seconds=0,
     )
     result = EmailDeliveryService(
         config,
@@ -127,7 +129,7 @@ def test_local_capture_respects_recipient_eligibility_and_audits(tmp_path) -> No
             """SELECT a.outcome, a.failure_code, a.correlation_id
                FROM synergia.email_delivery_attempts a
                JOIN synergia.email_deliveries d ON d.id = a.delivery_id
-               WHERE d.notification_id = %s""",
+               WHERE d.notification_id = %s AND a.outcome = 'sent'""",
             (notification_id,),
         ).fetchone()
         assert attempt[0:2] == ("sent", None)
@@ -153,7 +155,7 @@ def test_local_capture_respects_recipient_eligibility_and_audits(tmp_path) -> No
                       a.outcome, a.failure_code
                FROM synergia.email_deliveries d
                JOIN synergia.email_delivery_attempts a ON a.delivery_id = d.id
-               WHERE d.notification_id = %s""",
+               WHERE d.notification_id = %s AND a.outcome = 'retry'""",
             (failing_notification,),
         ).fetchone()
         assert failure == (
@@ -163,3 +165,158 @@ def test_local_capture_respects_recipient_eligibility_and_audits(tmp_path) -> No
             "retry",
             "provider_temporarily_unavailable",
         )
+
+
+def test_worker_waits_for_consolidation_and_sends_latest_version(tmp_path) -> None:
+    database_url = os.environ["DATABASE_URL"]
+    org_id, source_id = uuid4(), uuid4().int % 2_000_000_000
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """INSERT INTO synergia.iam_organizations (
+                 id, organization_code, display_name
+               ) VALUES (%s, %s, 'Email Consolidation Org')""",
+            (org_id, f"email-window-{org_id.hex[:8]}"),
+        )
+        user_id = _recipient(connection)
+        notification_id = _notification(connection, user_id, org_id, source_id)
+
+    capture = tmp_path / "consolidated.jsonl"
+    delayed = EmailConfig(
+        enabled=True,
+        provider="local_capture",
+        sender="no-reply@example.invalid",
+        capture_path=capture,
+        consolidation_seconds=3600,
+    )
+    service = EmailDeliveryService(
+        delayed,
+        EmailDeliveryRepository(database_url),
+        LocalCaptureEmailProvider(capture),
+    )
+    assert service.run_once()["processed"] == 0
+    assert not capture.exists()
+
+    with psycopg.connect(database_url) as connection:
+        assert (
+            _notification(
+                connection,
+                user_id,
+                org_id,
+                uuid4().int % 2_000_000_000,
+                count=7,
+            )
+            == notification_id
+        )
+    assert service.run_once()["processed"] == 0
+    with psycopg.connect(database_url) as connection:
+        delivery = connection.execute(
+            """SELECT id, notification_version, attempt_count
+               FROM synergia.email_deliveries
+               WHERE notification_id = %s""",
+            (notification_id,),
+        ).fetchone()
+        assert delivery[1:] == (2, 0)
+        connection.execute(
+            "UPDATE synergia.email_deliveries SET available_at = now() WHERE id = %s",
+            (delivery[0],),
+        )
+
+    result = service.run_once()
+    assert result["sent"] == 1
+    records = capture.read_text(encoding="utf-8").splitlines()
+    assert len(records) == 1
+    assert "7 pendência" in json.loads(records[0])["body"]
+
+
+def test_recovery_is_idempotent_and_stops_at_attempt_limit(tmp_path) -> None:
+    database_url = os.environ["DATABASE_URL"]
+    org_id = uuid4()
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """INSERT INTO synergia.iam_organizations (
+                 id, organization_code, display_name
+               ) VALUES (%s, %s, 'Email Recovery Org')""",
+            (org_id, f"email-recovery-{org_id.hex[:8]}"),
+        )
+        accepted_user = _recipient(connection)
+        exhausted_user = _recipient(connection)
+        accepted_notification = _notification(
+            connection,
+            accepted_user,
+            org_id,
+            uuid4().int % 2_000_000_000,
+        )
+        exhausted_notification = _notification(
+            connection,
+            exhausted_user,
+            org_id,
+            uuid4().int % 2_000_000_000,
+        )
+
+    repository = EmailDeliveryRepository(database_url)
+    claimed = repository.claim(
+        limit=2,
+        provider="local_capture",
+        max_attempts=3,
+        consolidation_seconds=0,
+    )
+    by_notification = {item["notification_id"]: item for item in claimed}
+    accepted = by_notification[accepted_notification]
+    exhausted = by_notification[exhausted_notification]
+    capture = tmp_path / "recovery.jsonl"
+    provider = LocalCaptureEmailProvider(capture)
+    provider.send(
+        EmailMessage(
+            delivery_id=accepted["id"],
+            recipient=accepted["recipient"],
+            sender="no-reply@example.invalid",
+            subject=accepted["subject_template"],
+            body=accepted["body_template"],
+            locale=accepted["locale"],
+            correlation_id=accepted["correlation_id"],
+        )
+    )
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """UPDATE synergia.email_deliveries
+               SET claimed_at = now() - interval '6 minutes'
+               WHERE id = ANY(%s)""",
+            ([accepted["id"], exhausted["id"]],),
+        )
+        connection.execute(
+            """UPDATE synergia.email_deliveries SET attempt_count = 3
+               WHERE id = %s""",
+            (exhausted["id"],),
+        )
+
+    config = EmailConfig(
+        enabled=True,
+        provider="local_capture",
+        sender="no-reply@example.invalid",
+        capture_path=capture,
+        max_attempts=3,
+        consolidation_seconds=0,
+    )
+    result = EmailDeliveryService(config, repository, provider).run_once()
+    assert result["sent"] == 1
+    assert len(capture.read_text(encoding="utf-8").splitlines()) == 1
+    with psycopg.connect(database_url) as connection:
+        recovered = connection.execute(
+            """SELECT state, attempt_count FROM synergia.email_deliveries
+               WHERE id = %s""",
+            (accepted["id"],),
+        ).fetchone()
+        exhausted_state = connection.execute(
+            """SELECT state, attempt_count, failure_code
+               FROM synergia.email_deliveries WHERE id = %s""",
+            (exhausted["id"],),
+        ).fetchone()
+        outcomes = connection.execute(
+            """SELECT attempt_number, outcome
+               FROM synergia.email_delivery_attempts
+               WHERE delivery_id = %s ORDER BY id""",
+            (accepted["id"],),
+        ).fetchall()
+    assert recovered == ("sent", 2)
+    assert exhausted_state == ("failed", 3, "max_attempts_exceeded")
+    assert outcomes == [(1, "started"), (2, "started"), (2, "sent")]

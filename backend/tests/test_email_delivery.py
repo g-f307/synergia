@@ -23,10 +23,14 @@ class FakeRepository:
         self.completed = []
         self.failures = []
 
-    def claim(self, *, limit, provider):
+    def claim(
+        self, *, limit, provider, max_attempts, consolidation_seconds
+    ):
         self.claims += 1
         assert limit > 0
         assert provider == "local_capture"
+        assert max_attempts > 0
+        assert consolidation_seconds >= 0
         return self.deliveries
 
     def complete(self, delivery_id, provider_reference):
@@ -99,7 +103,7 @@ def test_local_provider_captures_versioned_content_without_network(tmp_path) -> 
 def test_temporary_failure_is_bounded_and_does_not_log_provider_details(
     caplog,
 ) -> None:
-    delivery = _delivery(attempts=1)
+    delivery = _delivery(attempts=2)
     repository = FakeRepository([delivery])
     config = EmailConfig(
         enabled=True,
@@ -137,8 +141,7 @@ def test_environment_configuration_is_explicit_and_bounded(
 def test_capture_contract_contains_no_credential_fields(tmp_path: Path) -> None:
     capture = tmp_path / "capture.jsonl"
     provider = LocalCaptureEmailProvider(capture)
-    provider.send(
-        EmailMessage(
+    message = EmailMessage(
             delivery_id=UUID("00000000-0000-4000-8000-000000000080"),
             recipient="person@example.invalid",
             sender="no-reply@example.invalid",
@@ -147,6 +150,10 @@ def test_capture_contract_contains_no_credential_fields(tmp_path: Path) -> None:
             locale="pt-BR",
             correlation_id=None,
         )
-    )
-    keys = set(json.loads(capture.read_text(encoding="utf-8")))
+    first_reference = provider.send(message)
+    second_reference = provider.send(message)
+    captured_lines = capture.read_text(encoding="utf-8").splitlines()
+    assert first_reference == second_reference
+    assert len(captured_lines) == 1
+    keys = set(json.loads(captured_lines[0]))
     assert not keys.intersection({"password", "token", "api_key", "credential"})

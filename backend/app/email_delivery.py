@@ -34,6 +34,7 @@ class EmailConfig:
     batch_size: int = 50
     max_attempts: int = 3
     retry_seconds: int = 60
+    consolidation_seconds: int = 60
 
     @classmethod
     def from_env(cls) -> EmailConfig:
@@ -57,6 +58,9 @@ class EmailConfig:
             batch_size=_bounded_env("EMAIL_BATCH_SIZE", 50, 1, 500),
             max_attempts=_bounded_env("EMAIL_MAX_ATTEMPTS", 3, 1, 10),
             retry_seconds=_bounded_env("EMAIL_RETRY_SECONDS", 60, 1, 86_400),
+            consolidation_seconds=_bounded_env(
+                "EMAIL_CONSOLIDATION_SECONDS", 60, 0, 86_400
+            ),
         )
 
 
@@ -79,6 +83,8 @@ class EmailMessage:
 
 
 class EmailProvider(Protocol):
+    """Provider contract: ``delivery_id`` is the mandatory idempotency key."""
+
     name: str
 
     def send(self, message: EmailMessage) -> str: ...
@@ -95,6 +101,11 @@ class LocalCaptureEmailProvider:
     def send(self, message: EmailMessage) -> str:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         provider_reference = f"local-{message.delivery_id}"
+        if self.path.exists():
+            for line in self.path.read_text(encoding="utf-8").splitlines():
+                captured = json.loads(line)
+                if captured.get("delivery_id") == str(message.delivery_id):
+                    return str(captured["provider_reference"])
         record = {
             "delivery_id": str(message.delivery_id),
             "provider_reference": provider_reference,
@@ -126,14 +137,21 @@ class EmailDeliveryRepository:
     def _connect(self):
         return psycopg.connect(self.database_url, row_factory=dict_row)
 
-    def claim(self, *, limit: int, provider: str) -> list[dict[str, Any]]:
+    def claim(
+        self,
+        *,
+        limit: int,
+        provider: str,
+        max_attempts: int,
+        consolidation_seconds: int,
+    ) -> list[dict[str, Any]]:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 """
                 INSERT INTO synergia.email_deliveries (
                     notification_id, notification_version, recipient_user_id,
                     locale, template_version, state, provider, correlation_id,
-                    failure_code
+                    failure_code, available_at
                 )
                 SELECT n.id, n.version, n.recipient_user_id,
                        CASE WHEN u.locale = 'en-US' THEN 'en-US' ELSE 'pt-BR' END,
@@ -155,7 +173,8 @@ class EmailDeliveryRepository:
                          ) THEN 'preference_disabled'
                          WHEN address.normalized_email IS NULL THEN 'unverified_address'
                          ELSE NULL
-                       END
+                       END,
+                       n.last_occurred_at + make_interval(secs => %s)
                 FROM synergia.notifications n
                 JOIN synergia.identity_users u ON u.id = n.recipient_user_id
                 LEFT JOIN LATERAL (
@@ -173,39 +192,101 @@ class EmailDeliveryRepository:
                     ORDER BY id DESC LIMIT 1
                 ) event ON true
                 WHERE n.state IN ('unread', 'read')
-                  AND NOT EXISTS (
-                    SELECT 1 FROM synergia.email_deliveries d
-                    WHERE d.notification_id = n.id
-                      AND d.notification_version = n.version
+                  AND (
+                    NOT EXISTS (
+                      SELECT 1 FROM synergia.email_deliveries existing
+                      WHERE existing.notification_id = n.id
+                    )
+                    OR EXISTS (
+                      SELECT 1 FROM synergia.email_deliveries existing
+                      WHERE existing.notification_id = n.id
+                        AND existing.state IN ('queued', 'retry', 'skipped')
+                        AND existing.notification_version < n.version
+                    )
                   )
                 ORDER BY n.last_occurred_at, n.id
                 LIMIT %s
-                ON CONFLICT (notification_id, notification_version) DO NOTHING
+                ON CONFLICT (notification_id) DO UPDATE SET
+                    notification_version = EXCLUDED.notification_version,
+                    locale = EXCLUDED.locale,
+                    template_version = EXCLUDED.template_version,
+                    state = EXCLUDED.state,
+                    failure_code = EXCLUDED.failure_code,
+                    available_at = EXCLUDED.available_at,
+                    updated_at = now()
+                WHERE synergia.email_deliveries.state IN (
+                    'queued', 'retry', 'skipped'
+                )
+                  AND synergia.email_deliveries.notification_version
+                      < EXCLUDED.notification_version
                 """,
-                (provider, limit),
+                (provider, consolidation_seconds, limit),
             )
+            cursor.execute(
+                """
+                SELECT id, attempt_count, correlation_id
+                FROM synergia.email_deliveries
+                WHERE state = 'processing'
+                  AND claimed_at < now() - interval '5 minutes'
+                  AND attempt_count >= %s
+                FOR UPDATE
+                """,
+                (max_attempts,),
+            )
+            exhausted = cursor.fetchall()
+            for delivery in exhausted:
+                cursor.execute(
+                    """UPDATE synergia.email_deliveries
+                       SET state = 'failed', failure_code = 'max_attempts_exceeded',
+                           claimed_at = NULL, updated_at = now()
+                       WHERE id = %s""",
+                    (delivery["id"],),
+                )
+                cursor.execute(
+                    """INSERT INTO synergia.email_delivery_attempts (
+                         delivery_id, attempt_number, outcome, failure_code,
+                         correlation_id
+                       ) VALUES (%s, %s, 'failed', 'max_attempts_exceeded', %s)
+                       ON CONFLICT DO NOTHING""",
+                    (
+                        delivery["id"],
+                        delivery["attempt_count"],
+                        delivery["correlation_id"],
+                    ),
+                )
             cursor.execute(
                 """
                 WITH selected AS (
                     SELECT id FROM synergia.email_deliveries
-                    WHERE (state = 'queued' OR (
+                    WHERE ((state = 'queued' AND available_at <= now()) OR (
                              state = 'retry' AND available_at <= now()
                            ) OR (
                              state = 'processing'
                              AND claimed_at < now() - interval '5 minutes'
-                           ))
+                           )) AND attempt_count < %s
                     ORDER BY available_at, created_at, id
                     LIMIT %s FOR UPDATE SKIP LOCKED
                 )
                 UPDATE synergia.email_deliveries d
-                   SET state = 'processing', claimed_at = now(), updated_at = now()
+                   SET state = 'processing', claimed_at = now(),
+                       attempt_count = attempt_count + 1, updated_at = now()
                 FROM selected WHERE d.id = selected.id
                 RETURNING d.*
                 """,
-                (limit,),
+                (max_attempts, limit),
             )
             deliveries = cursor.fetchall()
             for delivery in deliveries:
+                cursor.execute(
+                    """INSERT INTO synergia.email_delivery_attempts (
+                         delivery_id, attempt_number, outcome, correlation_id
+                       ) VALUES (%s, %s, 'started', %s)""",
+                    (
+                        delivery["id"],
+                        delivery["attempt_count"],
+                        delivery["correlation_id"],
+                    ),
+                )
                 cursor.execute(
                     """
                     SELECT n.notification_type, n.parameters,
@@ -281,8 +362,7 @@ class EmailDeliveryRepository:
             cursor.execute(
                 """
                 UPDATE synergia.email_deliveries
-                   SET state = %s, attempt_count = attempt_count + 1,
-                       failure_code = %s, provider_reference = %s,
+                   SET state = %s, failure_code = %s, provider_reference = %s,
                        available_at = COALESCE(%s, available_at),
                        sent_at = CASE WHEN %s = 'sent' THEN now() ELSE sent_at END,
                        claimed_at = NULL, updated_at = now()
@@ -348,7 +428,10 @@ class EmailDeliveryService:
         if self.provider is None:
             raise RuntimeError("enabled email delivery requires a provider")
         deliveries = self.repository.claim(
-            limit=self.config.batch_size, provider=self.provider.name
+            limit=self.config.batch_size,
+            provider=self.provider.name,
+            max_attempts=self.config.max_attempts,
+            consolidation_seconds=self.config.consolidation_seconds,
         )
         sent = failed = 0
         for delivery in deliveries:
@@ -368,7 +451,7 @@ class EmailDeliveryService:
                 self.repository.complete(delivery["id"], reference)
                 sent += 1
             except TemporaryEmailError:
-                attempt = delivery["attempt_count"] + 1
+                attempt = delivery["attempt_count"]
                 can_retry = attempt < self.config.max_attempts
                 delay = self.config.retry_seconds * (2 ** (attempt - 1))
                 self.repository.fail(
@@ -395,7 +478,7 @@ class EmailDeliveryService:
                     extra={"delivery_id": str(delivery["id"])},
                 )
             except Exception:
-                attempt = delivery["attempt_count"] + 1
+                attempt = delivery["attempt_count"]
                 can_retry = attempt < self.config.max_attempts
                 delay = self.config.retry_seconds * (2 ** (attempt - 1))
                 self.repository.fail(
