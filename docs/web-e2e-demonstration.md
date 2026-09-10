@@ -25,8 +25,16 @@ descartável do teste. O script não imprime senha, hash ou token.
 4. consultar `SYN-WO-000001`;
 5. abrir a fila e o detalhe de uma pendência gerada pelas regras;
 6. repetir controles negativos de sessão, papel, organização, rejeição e rede;
-7. validar inglês, viewport móvel, teclado e acessibilidade automatizada.
+7. gerar, visualizar e exportar um relatório persistido;
+8. desativar e restaurar preferências de notificação;
+9. enviar, atribuir, devolver, reenviar e aprovar uma decisão humana com
+   justificativa e consentimento;
+10. processar o canal externo pelo capturador local idempotente;
+11. validar inglês, viewport móvel, teclado e acessibilidade automatizada.
 
 O relatório navegável fica em `web/reports/e2e-html/index.html`. Vídeos,
 capturas e traces ficam em `web/reports/e2e-results/` e são publicados pela CI
-como o artefato `fluxo-web-e2e`.
+como o artefato `fluxo-web-e2e`. O mesmo artefato inclui o CSV gerado pelo
+backend, a captura JSONL do provedor local e os resultados Axe. Esses arquivos
+são temporários, contêm apenas identidades `.invalid` e não devem ser
+substituídos por credenciais ou mensagens corporativas.
