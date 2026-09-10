@@ -286,7 +286,10 @@ class ApprovalRepository:
                            JOIN synergia.roles r
                              ON r.id = ura.role_id AND r.is_active
                            WHERE ura.user_id = u.id
-                             AND ura.organization_id = %s
+                             AND (
+                                 ura.organization_id IS NULL
+                                 OR ura.organization_id = %s
+                             )
                              AND ura.revoked_at IS NULL
                              AND (ura.expires_at IS NULL OR ura.expires_at > now())
                              AND r.normalized_key = %s
@@ -302,7 +305,10 @@ class ApprovalRepository:
                              ON r.id = gra.role_id AND r.is_active
                            WHERE ugm.user_id = u.id
                              AND ugm.revoked_at IS NULL
-                             AND gra.organization_id = %s
+                             AND (
+                                 gra.organization_id IS NULL
+                                 OR gra.organization_id = %s
+                             )
                              AND r.normalized_key = %s
                        )
                    ) AS eligible

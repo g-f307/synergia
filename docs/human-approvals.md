@@ -39,6 +39,10 @@ Versões publicadas são imutáveis no banco: qualquer alteração de regra deve
 ser publicada com outro número de versão. Nesta entrega, a única política
 homologada exige aprovador distinto; autoaprovação configurável permanece fora
 do escopo até que uma política sem segregação seja aprovada pelo negócio.
+Somente a ativação pode mudar em uma versão, sem alterar seus campos
+homologados; cada ativação ou desativação é registrada em histórico imutável.
+O grupo revisor segue o escopo do RBAC e aceita o papel exigido tanto no escopo
+da organização quanto no escopo global, por associação direta ou por grupo.
 
 ## Contratos
 

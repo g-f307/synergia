@@ -89,14 +89,69 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RAISE EXCEPTION 'published_approval_policy_is_immutable' USING ERRCODE = '55000';
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'published_approval_policy_is_immutable'
+            USING ERRCODE = '55000';
+    END IF;
+    IF OLD.is_active = NEW.is_active OR ROW(
+           OLD.policy_key, OLD.version, OLD.review_group,
+           OLD.require_distinct_approver,
+           OLD.require_approval_justification,
+           OLD.require_rejection_justification,
+           OLD.require_return_justification, OLD.created_at
+       ) IS DISTINCT FROM ROW(
+           NEW.policy_key, NEW.version, NEW.review_group,
+           NEW.require_distinct_approver,
+           NEW.require_approval_justification,
+           NEW.require_rejection_justification,
+           NEW.require_return_justification, NEW.created_at
+       )
+    THEN
+        RAISE EXCEPTION 'published_approval_policy_is_immutable'
+            USING ERRCODE = '55000';
+    END IF;
+    RETURN NEW;
 END;
 $$;
 
 CREATE TRIGGER approval_policies_published_immutable
 BEFORE UPDATE OR DELETE ON synergia.approval_policies
-FOR EACH ROW WHEN (OLD.is_active)
+FOR EACH ROW
 EXECUTE FUNCTION synergia.prevent_published_approval_policy_mutation();
+
+CREATE TABLE synergia.approval_policy_activation_events (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    policy_key text NOT NULL,
+    policy_version integer NOT NULL,
+    was_active boolean NOT NULL,
+    is_active boolean NOT NULL,
+    changed_by text NOT NULL DEFAULT current_user,
+    changed_at timestamptz NOT NULL DEFAULT now(),
+    FOREIGN KEY (policy_key, policy_version)
+        REFERENCES synergia.approval_policies(policy_key, version),
+    CHECK (was_active <> is_active)
+);
+
+CREATE FUNCTION synergia.audit_approval_policy_activation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO synergia.approval_policy_activation_events (
+        policy_key, policy_version, was_active, is_active
+    ) VALUES (NEW.policy_key, NEW.version, OLD.is_active, NEW.is_active);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER approval_policies_audit_activation
+AFTER UPDATE OF is_active ON synergia.approval_policies
+FOR EACH ROW
+EXECUTE FUNCTION synergia.audit_approval_policy_activation();
+
+CREATE TRIGGER approval_policy_activation_events_immutable
+BEFORE UPDATE OR DELETE ON synergia.approval_policy_activation_events
+FOR EACH ROW EXECUTE FUNCTION synergia.prevent_notification_audit_mutation();
 
 CREATE TABLE synergia.approval_requests (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

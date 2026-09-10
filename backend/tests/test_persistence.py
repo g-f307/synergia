@@ -117,6 +117,7 @@ def test_creates_all_operational_entities() -> None:
     expected_tables = {
         "audit_events",
         "approval_events",
+        "approval_policy_activation_events",
         "approval_policies",
         "approval_requests",
         "approval_stages",
