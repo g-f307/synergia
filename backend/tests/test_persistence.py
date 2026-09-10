@@ -116,6 +116,11 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
 def test_creates_all_operational_entities() -> None:
     expected_tables = {
         "audit_events",
+        "approval_events",
+        "approval_policy_activation_events",
+        "approval_policies",
+        "approval_requests",
+        "approval_stages",
         "classifications",
         "consolidated_field_provenance",
         "executions",

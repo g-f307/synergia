@@ -3,9 +3,9 @@
 Relatório determinístico da suíte da issue #43. `permitido` e `negado`
 representam os casos positivos e negativos exigidos para cada papel.
 
-- operações privadas cobertas: 78
+- operações privadas cobertas: 85
 - papéis iniciais: 5
-- combinações papel x operação: 390
+- combinações papel x operação: 425
 - rotas públicas explicitamente verificadas: 3
 
 | Operação | Permissão | Escopo | Permitido | Negado |
@@ -49,6 +49,13 @@ representam os casos positivos e negativos exigidos para cada papel.
 | `GET /notifications/unread-count` | `notification.read` | `org` | gestor, analista, operador, consulta | admin |
 | `PATCH /notifications/{notification_id}/read` | `notification.read` | `org` | gestor, analista, operador, consulta | admin |
 | `POST /notifications/read-all` | `notification.read` | `org` | gestor, analista, operador, consulta | admin |
+| `GET /pending-items/{pending_id}/approval` | `approval.read` | `org` | gestor, analista, operador | admin, consulta |
+| `POST /pending-items/{pending_id}/approval` | `approval.submit` | `org` | gestor, analista, operador | admin, consulta |
+| `POST /approvals/{request_id}/assign` | `approval.assign` | `org` | gestor | admin, analista, operador, consulta |
+| `POST /approvals/{request_id}/resubmit` | `approval.submit` | `org` | gestor, analista, operador | admin, consulta |
+| `POST /approvals/{request_id}/approve` | `approval.decide` | `org` | gestor | admin, analista, operador, consulta |
+| `POST /approvals/{request_id}/reject` | `approval.decide` | `org` | gestor | admin, analista, operador, consulta |
+| `POST /approvals/{request_id}/return` | `approval.decide` | `org` | gestor | admin, analista, operador, consulta |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | `org` | gestor, analista, operador | admin, consulta |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | `org` | gestor, analista, operador, consulta | admin |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | `org` | gestor, analista, operador, consulta | admin |
@@ -91,7 +98,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 
 ## Evidências automatizadas
 
-- `test_security_matrix_persistence.py`: 390 requisições HTTP reais
+- `test_security_matrix_persistence.py`: 425 requisições HTTP reais
   com JWT, papéis e permissões carregados do PostgreSQL;
 - `test_security_regression.py`: completude OpenAPI, mass assignment,
   respostas uniformes e ausência de segredos;

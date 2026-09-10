@@ -90,7 +90,12 @@ class NotificationRepository:
         notification_scopes = actor.scopes_for("notification.read")
         clauses: list[str] = []
         parameters: list[Any] = []
-        for permission in ("execution.read", "pending.read", "report.read"):
+        for permission in (
+            "execution.read",
+            "pending.read",
+            "report.read",
+            "approval.read",
+        ):
             source_scopes = actor.scopes_for(permission)
             if not source_scopes:
                 continue
@@ -132,6 +137,9 @@ class NotificationRepository:
             return f"/pending-items?execution={resource_id}"
         if row["resource_type"] == "report":
             return f"/reports/{resource_id}"
+        if row["resource_type"] == "approval":
+            pending_id = row["parameters"].get("pending_id")
+            return f"/pending-items/{quote(str(pending_id), safe='')}" if pending_id else None
         return None
 
     @staticmethod
@@ -139,7 +147,7 @@ class NotificationRepository:
         allowed = {
             key: str(value)
             for key, value in parameters.items()
-            if key in {"execution_id", "count", "version"}
+            if key in {"execution_id", "count", "version", "pending_id", "request_id"}
             and isinstance(value, str | int)
         }
         try:
@@ -186,6 +194,11 @@ class NotificationRepository:
                 WHEN 'report' THEN EXISTS (
                   SELECT 1 FROM synergia.reports r
                   WHERE r.id::text = n.resource_id AND r.organization_id = n.organization_id
+                )
+                WHEN 'approval' THEN EXISTS (
+                  SELECT 1 FROM synergia.approval_requests ar
+                  WHERE ar.id::text = n.resource_id
+                    AND ar.organization_id = n.organization_id
                 )
                 ELSE false
               END AS resource_available

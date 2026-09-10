@@ -228,7 +228,14 @@
       "permission": "pending.read",
       "scope": "org",
       "endpoints": [
-        {"method": "GET", "path": "/pending-items/{pending_id}", "permission": "pending.read"}
+        {"method": "GET", "path": "/pending-items/{pending_id}", "permission": "pending.read"},
+        {"method": "GET", "path": "/pending-items/{pending_id}/approval", "permission": "approval.read"},
+        {"method": "POST", "path": "/pending-items/{pending_id}/approval", "permission": "approval.submit"},
+        {"method": "POST", "path": "/approvals/{request_id}/assign", "permission": "approval.assign"},
+        {"method": "POST", "path": "/approvals/{request_id}/resubmit", "permission": "approval.submit"},
+        {"method": "POST", "path": "/approvals/{request_id}/approve", "permission": "approval.decide"},
+        {"method": "POST", "path": "/approvals/{request_id}/reject", "permission": "approval.decide"},
+        {"method": "POST", "path": "/approvals/{request_id}/return", "permission": "approval.decide"}
       ],
       "url_state": ["from"],
       "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],

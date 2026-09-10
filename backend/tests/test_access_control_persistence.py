@@ -158,17 +158,22 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
             catalog = client.get("/admin/access/permissions", headers=headers)
             assert catalog.status_code == 200
             catalog_items = catalog.json()
-            assert len(catalog_items) == 18
+            assert len(catalog_items) == 22
             assert {item["catalog_version"] for item in catalog_items} == {
                 "1.0.0",
                 "1.1.0",
                 "1.2.0",
+                "1.3.0",
             }
             assert {
                 "report.generate",
                 "report.read",
                 "report.cancel",
                 "notification.read",
+                "approval.read",
+                "approval.submit",
+                "approval.assign",
+                "approval.decide",
             } <= {item["permission_key"] for item in catalog_items}
             assert all(item["is_reserved"] for item in catalog_items)
 
@@ -581,6 +586,9 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
     email_rollback_sql = (
         ROOT / "database/rollbacks/0022_create_email_deliveries.down.sql"
     ).read_text(encoding="utf-8")
+    approval_rollback_sql = (
+        ROOT / "database/rollbacks/0023_create_human_approvals.down.sql"
+    ).read_text(encoding="utf-8")
 
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         try:
@@ -617,6 +625,7 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
             )
             assert cursor.fetchone()[0] == 3
 
+            cursor.execute(approval_rollback_sql, prepare=False)
             cursor.execute(email_rollback_sql, prepare=False)
             cursor.execute(notification_rollback_sql, prepare=False)
             cursor.execute(rollback_sql, prepare=False)

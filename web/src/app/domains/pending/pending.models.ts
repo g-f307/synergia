@@ -42,3 +42,36 @@ export interface PendingFilters {
   pageSize: number;
   sort: PendingSort;
 }
+
+export type ApprovalState = 'draft' | 'submitted' | 'in_review' | 'approved' | 'rejected' | 'returned';
+
+export interface ApprovalEvent {
+  id: number;
+  event_type: string;
+  from_state: string | null;
+  to_state: string;
+  actor_user_id: string;
+  assignee_user_id: string | null;
+  justification: string | null;
+  consent: boolean;
+  request_version: number;
+  occurred_at: string;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  pending_item_id: number;
+  organization_id: string;
+  requester_user_id: string;
+  assignee_user_id: string | null;
+  review_group: string;
+  policy_key: string;
+  policy_version: number;
+  state: ApprovalState;
+  version: number;
+  created_at: string;
+  submitted_at: string | null;
+  decided_at: string | null;
+  updated_at: string;
+  history: ApprovalEvent[];
+}

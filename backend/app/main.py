@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.access_control import router as access_control_router
+from app.approvals import router as approvals_router
 from app.auth.config import configured_allowed_origins
 from app.auth.routes import router as auth_router
 from app.errors import install_error_handlers
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     application.include_router(profile_router)
     application.include_router(reports_router)
     application.include_router(notifications_router)
+    application.include_router(approvals_router)
 
     @application.get("/health", tags=["system"])
     def health() -> dict[str, str]:

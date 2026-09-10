@@ -46,6 +46,10 @@ Não há herança implícita nem papel `superuser`.
 | `report.read` | catálogo, histórico e snapshot | — | ✓ | ✓ | — | ✓ |
 | `report.cancel` | geração de relatório em andamento | — | ✓ | — | — | — |
 | `notification.read` | notificações internas próprias | — | ✓ | ✓ | ✓ | ✓ |
+| `approval.read` | solicitação e histórico de decisão | — | ✓ | ✓ | ✓ | — |
+| `approval.submit` | submissão para decisão humana | — | ✓ | ✓ | ✓ | — |
+| `approval.assign` | atribuição e reatribuição | — | ✓ | — | — | — |
+| `approval.decide` | aprovação, rejeição e devolução | — | ✓ | — | — | — |
 | `access.admin` | usuário, vínculo, papel e escopo futuros | ✓ | — | — | — | — |
 | `session.revoke.any` | sessão de outro usuário futura | ✓ | — | — | — | — |
 | `session.revoke.own` | própria sessão futura | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -114,6 +118,13 @@ técnica também dependerá da política de rede da TI.
 | `GET /notifications/unread-count` | `notification.read` | total próprio não lido | `org` | gestor, analista, operador, consulta |
 | `PATCH /notifications/{notification_id}/read` | `notification.read` | leitura de notificação própria | `org` | gestor, analista, operador, consulta |
 | `POST /notifications/read-all` | `notification.read` | leitura em lote das notificações próprias | `org` | gestor, analista, operador, consulta |
+| `GET /pending-items/{pending_id}/approval` | `approval.read` | solicitação e histórico de decisão | `org` | gestor, analista, operador |
+| `POST /pending-items/{pending_id}/approval` | `approval.submit` | submissão para análise | `org` | gestor, analista, operador |
+| `POST /approvals/{request_id}/assign` | `approval.assign` | atribuição controlada | `org` | gestor |
+| `POST /approvals/{request_id}/resubmit` | `approval.submit` | reenvio após correção | `org` | gestor, analista, operador |
+| `POST /approvals/{request_id}/approve` | `approval.decide` | aprovação humana | `org` | gestor |
+| `POST /approvals/{request_id}/reject` | `approval.decide` | rejeição humana | `org` | gestor |
+| `POST /approvals/{request_id}/return` | `approval.decide` | devolução para correção | `org` | gestor |
 | `GET /executions/{execution_id}/divergences` | `artifact.read` | divergências | `org` | gestor, analista, operador |
 | `GET /executions/{execution_id}/classifications` | `execution.read` | classificações | `org` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}/pending-items` | `execution.read` | pendências da execução | `org` | gestor, analista, operador, consulta |
