@@ -169,7 +169,11 @@ export class ReportCatalogComponent {
   private validPriority(value: string): boolean { return ['critical', 'high', 'normal', 'low'].includes(value); }
   private positive(value: string | null, fallback: number, allowed?: number[]): number { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 && (!allowed || allowed.includes(parsed)) ? parsed : fallback; }
   private toState(failure: ApiFailure | null): UiState | null { if (!failure || failure.kind === 'unauthorized') return null; if (failure.kind === 'forbidden') return 'forbidden'; if (failure.kind === 'unavailable') return 'unavailable'; return 'error'; }
-  private localNow(): string { const now = new Date(); return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
+  private localNow(): string {
+    const now = new Date();
+    const localNextMinute = now.getTime() - now.getTimezoneOffset() * 60000 + 60000;
+    return new Date(localNextMinute).toISOString().slice(0, 16);
+  }
   private filename(header: string | null, item: ReportVersion, format: ReportExportFormat): string { const match = header?.match(/filename="([^"]+)"/i); return match?.[1] ?? `${item.report_type}-${item.report_id}-v${item.version}.${format}`; }
   private save(blob: Blob | null, filename: string): void { if (!blob) return; const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url); }
 }

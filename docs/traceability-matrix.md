@@ -64,6 +64,12 @@ deliberadamente deixada para issue posterior.
 
 ## Manutenção
 
+### Fechamento integrado da Etapa 4
+
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Validar a Etapa 4 ponta a ponta | F/NF | relatório e exportação reais; preferências; captura local idempotente; decisão segregada; escopo; pt/en; desktop/móvel; acessibilidade | [#82](https://github.com/g-f307/synergia/issues/82) | `web/e2e/`; `scripts/bootstrap_web_e2e.py`; `docs/stage-4-validation-report.md` | Playwright, Axe, PostgreSQL 16, testes HTTP/persistência e artefato `fluxo-web-e2e` | Atendido |
+
 Toda PR que alterar uma capacidade desta matriz deve atualizar a linha
 correspondente. Nova capacidade deve adicionar linha com issue e teste; mudança
 de regra deve apontar a versão do catálogo aplicável. Componentes futuros de

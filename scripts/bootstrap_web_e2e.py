@@ -9,6 +9,7 @@ from argon2 import PasswordHasher
 
 OPERATOR_ID = UUID("63000000-0000-4000-8000-000000000001")
 READER_ID = UUID("63000000-0000-4000-8000-000000000002")
+MANAGER_ID = UUID("63000000-0000-4000-8000-000000000003")
 ORGANIZATION_A = UUID("63000000-0000-4000-8000-000000000011")
 ORGANIZATION_B = UUID("63000000-0000-4000-8000-000000000012")
 
@@ -23,6 +24,7 @@ def bootstrap() -> None:
     users = (
         (OPERATOR_ID, "E2E Operator", "pt-BR", "operator.e2e@example.invalid"),
         (READER_ID, "E2E Reader", "en-US", "reader.e2e@example.invalid"),
+        (MANAGER_ID, "E2E Manager", "en-US", "manager.e2e@example.invalid"),
     )
     with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
         cursor.executemany(
@@ -87,6 +89,17 @@ def bootstrap() -> None:
                 WHERE organization_id IS NOT NULL AND revoked_at IS NULL DO NOTHING
             """,
             (READER_ID, ORGANIZATION_B),
+        )
+        cursor.execute(
+            """
+            INSERT INTO synergia.user_role_assignments
+                (user_id, role_id, organization_id)
+            SELECT %s, id, %s FROM synergia.roles
+            WHERE normalized_key = 'gestor'
+            ON CONFLICT (user_id, role_id, organization_id)
+                WHERE organization_id IS NOT NULL AND revoked_at IS NULL DO NOTHING
+            """,
+            (MANAGER_ID, ORGANIZATION_A),
         )
     print("E2E users and organizations are ready (no credentials emitted).")
 

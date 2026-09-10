@@ -65,3 +65,11 @@ Credenciais, tokens e respostas reais não são versionados. Um vídeo não faz
 parte do repositório para evitar a publicação
 acidental de identidade ou dados de sessão; a regressão verificável é mantida
 pelos testes e pelas capturas versionadas acima.
+
+## Paridade da Etapa 4
+
+| Tela | Desktop | Móvel | Evidência funcional |
+| --- | --- | --- | --- |
+| `/reports` e `/reports/:id` | catálogo, geração, snapshot, histórico e exportação | filtros e metadados empilhados | relatório e CSV persistidos no fluxo Playwright |
+| `/notifications` | caixa interna, filtros e leitura auditável | lista em coluna única | preferências e leituras recarregadas do servidor |
+| `/pending-items/:id` | pendência e decisão humana no mesmo contexto | formulários e histórico empilhados | atribuição, devolução, reenvio e aprovação reais |
