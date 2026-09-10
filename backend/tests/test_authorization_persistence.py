@@ -40,6 +40,10 @@ ROLE_PERMISSIONS = {
         "report.read",
         "report.cancel",
         "notification.read",
+        "approval.read",
+        "approval.submit",
+        "approval.assign",
+        "approval.decide",
     },
     "analista": {
         "dashboard.read",
@@ -54,6 +58,8 @@ ROLE_PERMISSIONS = {
         "session.revoke.own",
         "report.read",
         "notification.read",
+        "approval.read",
+        "approval.submit",
     },
     "operador": {
         "dashboard.read",
@@ -65,6 +71,8 @@ ROLE_PERMISSIONS = {
         "artifact.read",
         "session.revoke.own",
         "notification.read",
+        "approval.read",
+        "approval.submit",
     },
     "consulta": {
         "dashboard.read",
