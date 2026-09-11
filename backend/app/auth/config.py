@@ -39,6 +39,10 @@ def configured_allowed_origins() -> tuple[str, ...]:
     )
     if not origins:
         raise ValueError("AUTH_ALLOWED_ORIGINS deve possuir ao menos uma origem")
+    if "*" in origins:
+        raise ValueError("AUTH_ALLOWED_ORIGINS nao permite curingas")
+    if any(not origin.startswith(("http://", "https://")) for origin in origins):
+        raise ValueError("AUTH_ALLOWED_ORIGINS exige origens HTTP absolutas")
     return origins
 
 
