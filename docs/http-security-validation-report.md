@@ -10,3 +10,7 @@
 
 As verificações executáveis estão em `backend/tests/test_http_security.py` e
 `scripts/validate_http_security.py` e fazem parte da CI.
+
+As correções da revisão também validam o build Angular publicado com CSP
+configurável por ambiente, bloqueio real de framing no navegador e respostas
+`500` geradas externamente ao middleware com a baseline completa.

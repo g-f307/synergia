@@ -7,7 +7,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException
+
+from app.http_security import HttpSecurityConfig, apply_security_headers
 
 logger = logging.getLogger("synergia.api")
 
@@ -97,13 +100,19 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unexpected_error_handler(
-        _request: Request, exc: Exception
+        request: Request, exc: Exception
     ) -> JSONResponse:
         logger.error("unhandled_api_error type=%s", type(exc).__name__)
-        return JSONResponse(
+        response = JSONResponse(
             status_code=500,
             content=_body(
                 "internal_error",
                 "Ocorreu uma falha interna ao processar a requisição",
             ),
         )
+        apply_security_headers(
+            MutableHeaders(raw=response.raw_headers),
+            request.url.path,
+            HttpSecurityConfig.from_env(),
+        )
+        return response

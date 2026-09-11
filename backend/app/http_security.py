@@ -42,21 +42,24 @@ class HttpSecurityMiddleware:
         async def send_secure(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
-                headers["Content-Security-Policy"] = API_CSP
-                headers["X-Content-Type-Options"] = "nosniff"
-                headers["X-Frame-Options"] = "DENY"
-                headers["Referrer-Policy"] = "no-referrer"
-                headers["Permissions-Policy"] = (
-                    "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
-                )
-                headers["Cross-Origin-Resource-Policy"] = "same-site"
-                headers["Cache-Control"] = (
-                    "no-cache" if path == "/health" else "no-store"
-                )
-                if self.config.production:
-                    headers["Strict-Transport-Security"] = (
-                        "max-age=31536000; includeSubDomains"
-                    )
+                apply_security_headers(headers, path, self.config)
             await send(message)
 
         await self.app(scope, receive, send_secure)
+
+
+def apply_security_headers(
+    headers: MutableHeaders, path: str, config: HttpSecurityConfig
+) -> None:
+    """Apply the same baseline to middleware and outer 500 responses."""
+    headers["Content-Security-Policy"] = API_CSP
+    headers["X-Content-Type-Options"] = "nosniff"
+    headers["X-Frame-Options"] = "DENY"
+    headers["Referrer-Policy"] = "no-referrer"
+    headers["Permissions-Policy"] = (
+        "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+    )
+    headers["Cross-Origin-Resource-Policy"] = "same-site"
+    headers["Cache-Control"] = "no-cache" if path == "/health" else "no-store"
+    if config.production:
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

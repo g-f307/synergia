@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.config import configured_allowed_origins
 from app.http_security import API_CSP, HttpSecurityConfig, HttpSecurityMiddleware
-from app.main import app
+from app.main import app, create_app
 
 EXPECTED_HEADERS = {
     "content-security-policy": API_CSP,
@@ -32,6 +32,22 @@ def test_headers_cover_success_and_error_without_shared_cache() -> None:
     assert success.headers["cache-control"] == "no-cache"
     assert error.headers["cache-control"] == "no-store"
     assert "server" not in error.json().get("error", {}).get("details", {})
+
+
+def test_unhandled_server_error_also_receives_complete_baseline() -> None:
+    application = create_app()
+
+    @application.get("/boom")
+    def boom() -> None:
+        raise RuntimeError("internal database password must never be serialized")
+
+    response = TestClient(application, raise_server_exceptions=False).get("/boom")
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "internal_error"
+    _assert_baseline(response)
+    assert response.headers["cache-control"] == "no-store"
+    assert "password" not in response.text
 
 
 def test_allowed_origin_and_valid_preflight_are_explicit() -> None:
