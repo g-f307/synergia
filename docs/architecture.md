@@ -1,6 +1,6 @@
 # Arquitetura vigente
 
-Este documento registra a arquitetura implementada ao término da Etapa 0. Ele
+Este documento registra a arquitetura implementada ao término da Etapa 4. Ele
 separa explicitamente o que existe na `main` do que permanece planejado.
 
 ## Visão geral
@@ -34,6 +34,10 @@ uma execução.
 | Serviços de domínio | estados, normalização, consolidação e regras determinísticas | `backend/app/execution.py`, `normalization.py`, `consolidation.py` e `business_rules.py` |
 | PostgreSQL 16 | execuções, fontes, resultados, pendências e auditoria | `database/migrations/` |
 | Armazenamento controlado | quarentena isolada, original aceito com nome aleatório, relatório e resultado normalizado | `IMPORT_STORAGE_DIR`; `data/imports/` apenas em desenvolvimento |
+| Identidade e autorização | JWT, refresh rotativo, sessões revogáveis, RBAC e escopo organizacional | `backend/app/auth/`, `authorization.py` e `docs/access-control-matrix.md` |
+| Relatórios | snapshots persistentes, versões imutáveis e exportação segura | `backend/app/reports.py` e `docs/reports.md` |
+| Notificações | caixa interna, preferências e entrega externa desacoplada | `backend/app/notifications.py`, `email_delivery.py` |
+| Aprovação humana | política versionada, atribuição, justificativa, consentimento e histórico | `backend/app/approvals.py` e `docs/human-approvals.md` |
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |
 | Dados sintéticos | cenários reproduzíveis sem dados reais | `data/synthetic/` |
 
@@ -65,7 +69,12 @@ está em [autenticação](authentication.md), e as ações privadas estão na
 [matriz de acesso](access-control-matrix.md). A fundação administrativa desses
 controles está implementada conforme
 [administração de acesso](access-control-administration.md); a aplicação das
-permissões em todas as rotas operacionais continua incremental.
+permissões cobre as rotas privadas inventariadas e é verificada na CI.
+
+As superfícies, fronteiras e riscos vigentes estão no
+[modelo de ameaças](threat-model.md). O registro canônico relaciona cada risco
+a controle, evidência, responsável e issue de tratamento; a CI confere suas
+operações contra OpenAPI e a matriz de acesso.
 
 O modelo PostgreSQL que sustenta essa estratégia está descrito em
 [identity-data-model.md](identity-data-model.md). Ele contém usuários, vínculos,
@@ -139,9 +148,10 @@ referência é desatualizada: o protótipo congelado é estático, e a implement
 oficial é Angular. Um retorno a React seria uma mudança arquitetural e não uma
 correção documental.
 
-## Limites da Etapa 0
+## Limites após a Etapa 4
 
-Não fazem parte da arquitetura entregue a aplicação geral de autorização,
-notificações, integrações RPA, filas distribuídas ou decisões autônomas. O motor atual
-classifica evidências, mas não libera materiais nem decide em nome das áreas
-responsáveis.
+Não fazem parte da arquitetura entregue integrações corporativas definitivas,
+conectores RPA, filas distribuídas ou decisões autônomas. A entrega de e-mail
+externa permanece desabilitada e usa apenas captura local em desenvolvimento e
+CI. A aprovação registra uma decisão humana autorizada; o motor automático
+continua limitado a classificar evidências e não decide em nome das áreas.
