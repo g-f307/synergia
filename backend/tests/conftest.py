@@ -51,6 +51,12 @@ ALL_PERMISSIONS["access.admin"] = frozenset({None})
 ALL_PERMISSIONS["session.revoke.own"] = frozenset({None})
 
 
+@pytest.fixture(autouse=True)
+def isolate_rate_limiter(request, monkeypatch):
+    if request.node.get_closest_marker("real_rate_limit") is None:
+        monkeypatch.setenv("RATE_LIMIT_ENABLED", "false")
+
+
 class PermissiveAuthorizationRepository:
     def audit_denial(self, *args, **kwargs) -> None:
         return None

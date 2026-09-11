@@ -1,4 +1,4 @@
-export type ApiErrorKind = 'unauthorized' | 'forbidden' | 'not-found' | 'conflict' | 'validation' | 'unavailable' | 'internal';
+export type ApiErrorKind = 'unauthorized' | 'forbidden' | 'not-found' | 'conflict' | 'validation' | 'rate-limited' | 'unavailable' | 'internal';
 
 export interface ApiFieldError { field: string; message: string; }
 export interface ApiFailure {

@@ -1245,7 +1245,7 @@ def search_operational(
     actor: Annotated[ActorContext, Depends(require_permission("business.read"))],
     entity_type: Literal["workorder", "lot", "serial"] = Query(alias="type"),
     query: str = Query(min_length=1, max_length=200),
-    page: int = Query(default=1, ge=1),
+    page: int = Query(default=1, ge=1, le=1000),
     page_size: int = Query(default=25, ge=1, le=100),
     sort: Literal["updated_desc", "identifier_asc"] = Query(default="updated_desc"),
     repository: QueryRepository = Depends(get_query_repository),

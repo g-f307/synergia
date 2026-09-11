@@ -156,10 +156,10 @@
     },
     {
       "id": "R-06", "journey": "J-02", "category": "denial-of-service", "threat": "Large or repeated uploads exhaust CPU, memory or storage.",
-      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Per-source size limits", "Rejected content quarantine policy", "No automatic frontend retry"],
-      "evidence": ["backend/tests/test_upload_security.py", "web/src/app/domains/imports/import-create.component.spec.ts"],
-      "owner": "security", "treatment_issue": 91, "decision": "Release candidate requires server-side rate and concurrency limits."
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Per-source size limits", "Shared upload rate limit", "Rejected content quarantine policy", "No automatic frontend retry"],
+      "evidence": ["backend/tests/test_upload_security.py", "backend/tests/test_rate_limiting_persistence.py", "web/src/app/domains/imports/import-create.component.spec.ts"],
+      "owner": "security", "treatment_issue": 91
     },
     {
       "id": "R-07", "journey": "J-03", "category": "elevation-of-privilege", "threat": "An identifier or filter accesses a resource outside the effective organization scope.",
@@ -177,10 +177,10 @@
     },
     {
       "id": "R-09", "journey": "J-03", "category": "denial-of-service", "threat": "Unbounded search, pagination or reprocessing degrades the service or duplicates work.",
-      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Bounded page sizes", "Reprocessing state conflict", "Execution idempotency fingerprint"],
-      "evidence": ["backend/tests/test_queries.py", "backend/tests/test_execution_lifecycle.py"],
-      "owner": "security", "treatment_issue": 91, "decision": "Rate, complexity and concurrency limits are required before the release candidate."
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Bounded page sizes and depth", "Shared search and reprocessing rate limits", "Reprocessing state conflict", "Execution idempotency fingerprint"],
+      "evidence": ["backend/tests/test_queries.py", "backend/tests/test_execution_lifecycle.py", "backend/tests/test_rate_limiting_persistence.py"],
+      "owner": "security", "treatment_issue": 91
     },
     {
       "id": "R-10", "journey": "J-04", "category": "information-disclosure", "threat": "Report detail or export leaks another organization's snapshot or internal metadata.",
@@ -199,8 +199,8 @@
     {
       "id": "R-12", "journey": "J-04", "category": "denial-of-service", "threat": "Repeated report generation or export exhausts database and application resources.",
       "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Generation limited to gestor", "Execution state validation", "Cancellation contract"],
-      "evidence": ["backend/tests/test_reports.py", "docs/reports.md"],
+      "controls": ["Generation limited to gestor", "Shared generation and export rate limits", "Execution state validation", "Cancellation contract"],
+      "evidence": ["backend/tests/test_reports.py", "backend/tests/test_rate_limiting_persistence.py", "docs/reports.md"],
       "owner": "performance", "treatment_issue": 95, "decision": "Load, concurrency and generation limits must be measured before release."
     },
     {

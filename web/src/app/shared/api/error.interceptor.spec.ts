@@ -56,4 +56,15 @@ describe('apiErrorInterceptor', () => {
     expect(failure?.details).toEqual({ execution_id: 'new', duplicate_of_execution_id: 'original' });
     expect(failure?.message).not.toContain('Arquivo');
   });
+
+  it('preserves safe retry guidance for rate limiting', () => {
+    let failure: ApiFailure | undefined;
+    http.post('/reports', {}).subscribe({ error: (error: ApiFailure) => { failure = error; } });
+    controller.expectOne('/reports').flush(
+      { error: { code: 'rate_limit_exceeded', details: { retry_after_seconds: 23, token: 'secret' } } },
+      { status: 429, statusText: 'Too Many Requests' }
+    );
+    expect(failure?.kind).toBe('rate-limited');
+    expect(failure?.details).toEqual({ retry_after_seconds: 23 });
+  });
 });

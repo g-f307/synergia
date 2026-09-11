@@ -12,6 +12,7 @@ from app.imports import router as imports_router
 from app.notifications import router as notifications_router
 from app.profile import router as profile_router
 from app.queries import router as queries_router
+from app.rate_limiting import RateLimitMiddleware
 from app.reports import router as reports_router
 from app.request_context import CorrelationIdMiddleware
 from app.users import router as users_router
@@ -27,6 +28,7 @@ def create_app() -> FastAPI:
             "e perfil do SYNERGIA."
         ),
     )
+    application.add_middleware(RateLimitMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(configured_allowed_origins()),
