@@ -7,6 +7,7 @@ from app.auth.config import configured_allowed_origins
 from app.auth.routes import router as auth_router
 from app.errors import install_error_handlers
 from app.execution_monitoring import router as monitoring_router
+from app.http_security import HttpSecurityConfig, HttpSecurityMiddleware
 from app.imports import router as imports_router
 from app.notifications import router as notifications_router
 from app.profile import router as profile_router
@@ -30,11 +31,15 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=list(configured_allowed_origins()),
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
         expose_headers=["Content-Disposition", "X-Correlation-ID"],
+        max_age=600,
     )
     application.add_middleware(CorrelationIdMiddleware)
+    application.add_middleware(
+        HttpSecurityMiddleware, config=HttpSecurityConfig.from_env()
+    )
     install_error_handlers(application)
     application.include_router(auth_router)
     application.include_router(imports_router)

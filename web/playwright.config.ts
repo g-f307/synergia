@@ -4,6 +4,8 @@ const databaseUrl = process.env.DATABASE_URL ??
   'postgresql://synergia:synergia-local-only@127.0.0.1:5432/synergia_e2e';
 const browserChannel = process.env.E2E_BROWSER_CHANNEL;
 const recordVideo = process.env.E2E_RECORD_VIDEO !== 'false';
+const webPort = process.env.E2E_WEB_PORT ?? '4200';
+const webOrigin = `http://127.0.0.1:${webPort}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,7 +15,7 @@ export default defineConfig({
   reporter: [['line'], ['html', { outputFolder: 'reports/e2e-html', open: 'never' }]],
   outputDir: 'reports/e2e-results',
   use: {
-    baseURL: 'http://127.0.0.1:4200',
+    baseURL: webOrigin,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: recordVideo ? 'on' : 'off',
@@ -35,15 +37,19 @@ export default defineConfig({
         AUTH_JWT_ISSUER: 'synergia-e2e',
         AUTH_JWT_AUDIENCE: 'synergia-web-e2e',
         AUTH_REFRESH_COOKIE_SECURE: 'false',
-        AUTH_ALLOWED_ORIGINS: 'http://127.0.0.1:4200',
+        AUTH_ALLOWED_ORIGINS: webOrigin,
         IMPORT_STORAGE_DIR: '../.test-tmp/e2e-imports',
       },
     },
     {
-      command: 'npm run start -- --host 127.0.0.1 --port 4200',
-      url: 'http://127.0.0.1:4200',
+      command: `npm run build && python ../scripts/serve_secure_web.py --directory dist/synergia-web/browser --host 127.0.0.1 --port ${webPort}`,
+      url: webOrigin,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      env: {
+        ...process.env,
+        SYNERGIA_API_ORIGIN: 'http://127.0.0.1:8000',
+      },
     },
   ],
   projects: [{
