@@ -24,6 +24,10 @@ def main() -> None:
     if "${SYNERGIA_API_ORIGIN}" not in runtime_template:
         raise SystemExit("The frontend API runtime configuration is not injectable")
 
+    dockerfile = (ROOT / "web/Dockerfile").read_text(encoding="utf-8")
+    if "COPY --chmod=755 docker-entrypoint.d/40-synergia-config.sh" not in dockerfile:
+        raise SystemExit("The runtime configuration entrypoint must be executable")
+
     for environment, origin in {
         "homologation": "https://api.homolog.synergia.example",
         "production": "https://api.synergia.example",

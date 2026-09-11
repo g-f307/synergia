@@ -14,3 +14,7 @@ As verificações executáveis estão em `backend/tests/test_http_security.py` e
 As correções da revisão também validam o build Angular publicado com CSP
 configurável por ambiente, bloqueio real de framing no navegador e respostas
 `500` geradas externamente ao middleware com a baseline completa.
+
+A CI também constrói a imagem Nginx, inicia o container com uma origem de API
+não local e confirma que `runtime-config.js` e o header CSP contêm exatamente a
+mesma origem. O `Dockerfile` aplica modo `755` ao entrypoint de configuração.
