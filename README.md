@@ -28,6 +28,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [recebimento seguro, quarentena e retenção](docs/upload-security.md);
 - [ADR da estratégia de identidade e sessão](docs/adr/0001-identity-strategy.md);
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
+- [modelo de ameaças e baseline de riscos](docs/threat-model.md);
+- [checklist de revisão de segurança](docs/security-review-checklist.md);
 - [mapa de jornadas, rotas e estados da aplicação web](docs/web-journey-map.md);
 - [paridade funcional com o protótipo](docs/web-prototype-parity.md);
 - [relatório final e demonstração reproduzível da Etapa 3](docs/stage-3-validation-report.md);

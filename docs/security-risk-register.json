@@ -1,0 +1,312 @@
+{
+  "version": "1.1.0",
+  "method": {
+    "likelihood": ["unlikely", "possible", "likely"],
+    "impact": ["low", "medium", "high", "critical"],
+    "severity": ["low", "medium", "high", "critical"],
+    "dispositions": ["mitigated", "accepted", "blocked", "transferred"]
+  },
+  "trust_boundaries": [
+    {"id": "TB-01", "from": "user", "to": "angular", "protocol": "browser interaction"},
+    {"id": "TB-02", "from": "angular", "to": "fastapi", "protocol": "HTTPS/JSON or multipart"},
+    {"id": "TB-03", "from": "fastapi", "to": "postgresql", "protocol": "parameterized PostgreSQL connection"},
+    {"id": "TB-04", "from": "fastapi", "to": "controlled-storage", "protocol": "relative keys and private filesystem"},
+    {"id": "TB-05", "from": "email-worker", "to": "email-provider", "protocol": "disabled by default; local capture in CI"},
+    {"id": "TB-06", "from": "ci-runner", "to": "test-environment", "protocol": "ephemeral credentials and synthetic data"}
+  ],
+  "applicability_decisions": [
+    {
+      "threat_class": "ssrf",
+      "status": "not-applicable",
+      "rationale": "The current FastAPI application does not fetch user-controlled URLs and has no outbound connector contract.",
+      "target_stage": 6,
+      "reopen_condition": "Reassess before adding RPA connectors, webhooks, remote imports or any server-side URL retrieval."
+    }
+  ],
+  "journeys": [
+    {
+      "id": "J-01",
+      "name": "authentication-and-session",
+      "actors": ["anonymous user", "authenticated user"],
+      "assets": ["credentials", "access token", "refresh token hash", "session", "identity"],
+      "boundaries": ["TB-01", "TB-02", "TB-03"],
+      "threats": ["spoofing", "credential stuffing", "token replay", "session fixation", "user enumeration", "CSRF"],
+      "operations": [
+        {"method": "POST", "path": "/auth/login", "permission": "public", "scope": "public"},
+        {"method": "POST", "path": "/auth/refresh", "permission": "public", "scope": "public"},
+        {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own"},
+        {"method": "GET", "path": "/me", "permission": "profile.own", "scope": "own"}
+      ]
+    },
+    {
+      "id": "J-02",
+      "name": "upload-and-ingestion",
+      "actors": ["gestor", "operador"],
+      "assets": ["source file", "quarantine", "accepted artifact", "execution", "provenance"],
+      "boundaries": ["TB-01", "TB-02", "TB-03", "TB-04"],
+      "threats": ["malicious file", "content spoofing", "path traversal", "resource exhaustion", "stored payload"],
+      "operations": [
+        {"method": "POST", "path": "/imports", "permission": "import.create", "scope": "org"},
+        {"method": "GET", "path": "/imports/{execution_id}", "permission": "import.read", "scope": "org"},
+        {"method": "GET", "path": "/imports/{execution_id}/validation-report", "permission": "artifact.read", "scope": "org"}
+      ]
+    },
+    {
+      "id": "J-03",
+      "name": "queries-and-reprocessing",
+      "actors": ["gestor", "analista", "operador", "consulta"],
+      "assets": ["Workorder", "lot", "serial", "pending item", "execution history"],
+      "boundaries": ["TB-01", "TB-02", "TB-03"],
+      "threats": ["IDOR/BOLA", "SQL injection", "enumeration", "scope bypass", "resource abuse", "duplicate processing"],
+      "operations": [
+        {"method": "GET", "path": "/search", "permission": "business.read", "scope": "org"},
+        {"method": "GET", "path": "/pending-items", "permission": "pending.read", "scope": "org"},
+        {"method": "POST", "path": "/executions/{execution_id}/reprocess", "permission": "execution.reprocess", "scope": "org"}
+      ]
+    },
+    {
+      "id": "J-04",
+      "name": "report-and-export",
+      "actors": ["gestor", "analista", "consulta"],
+      "assets": ["report snapshot", "report version", "filters", "export", "audit event"],
+      "boundaries": ["TB-01", "TB-02", "TB-03"],
+      "threats": ["IDOR/BOLA", "formula injection", "XSS", "sensitive data disclosure", "history tampering", "resource abuse"],
+      "operations": [
+        {"method": "POST", "path": "/reports", "permission": "report.generate", "scope": "org"},
+        {"method": "GET", "path": "/reports/{report_id}/versions/{version}", "permission": "report.read", "scope": "org"},
+        {"method": "GET", "path": "/reports/{report_id}/versions/{version}/export", "permission": "report.export", "scope": "org"}
+      ]
+    },
+    {
+      "id": "J-05",
+      "name": "notification-and-email-delivery",
+      "actors": ["authenticated recipient", "email worker", "email provider"],
+      "assets": ["notification", "preference", "recipient eligibility", "delivery state", "template"],
+      "boundaries": ["TB-01", "TB-02", "TB-03", "TB-05"],
+      "threats": ["cross-user disclosure", "wrong recipient", "duplicate delivery", "template injection", "provider secret disclosure"],
+      "operations": [
+        {"method": "GET", "path": "/notifications", "permission": "notification.read", "scope": "org"},
+        {"method": "PATCH", "path": "/notifications/{notification_id}/read", "permission": "notification.read", "scope": "org"},
+        {"method": "POST", "path": "/notifications/read-all", "permission": "notification.read", "scope": "org"}
+      ]
+    },
+    {
+      "id": "J-06",
+      "name": "human-approval",
+      "actors": ["requester", "gestor reviewer", "auditor"],
+      "assets": ["approval request", "policy version", "assignment", "justification", "consent", "decision history"],
+      "boundaries": ["TB-01", "TB-02", "TB-03"],
+      "threats": ["privilege escalation", "segregation bypass", "policy tampering", "concurrent decision", "history tampering", "repudiation"],
+      "operations": [
+        {"method": "POST", "path": "/pending-items/{pending_id}/approval", "permission": "approval.submit", "scope": "org"},
+        {"method": "POST", "path": "/approvals/{request_id}/assign", "permission": "approval.assign", "scope": "org"},
+        {"method": "POST", "path": "/approvals/{request_id}/approve", "permission": "approval.decide", "scope": "org"},
+        {"method": "POST", "path": "/approvals/{request_id}/return", "permission": "approval.decide", "scope": "org"}
+      ]
+    },
+    {
+      "id": "J-07",
+      "name": "identity-administration",
+      "actors": ["admin", "target user"],
+      "assets": ["user lifecycle", "group", "role", "permission", "organization assignment", "audit event"],
+      "boundaries": ["TB-01", "TB-02", "TB-03"],
+      "threats": ["vertical privilege escalation", "mass assignment", "last-admin removal", "cross-organization grant", "audit tampering"],
+      "operations": [
+        {"method": "POST", "path": "/admin/users", "permission": "access.admin", "scope": "global"},
+        {"method": "PATCH", "path": "/admin/users/{user_id}", "permission": "access.admin", "scope": "global"},
+        {"method": "PUT", "path": "/admin/access/users/{left_id}/roles/{right_id}", "permission": "access.admin", "scope": "global/org"}
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-01", "journey": "J-01", "category": "spoofing", "threat": "Credential stuffing or user enumeration compromises an identity.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Generic login errors", "Argon2id password hashes", "Persistent login throttling", "Session audit"],
+      "evidence": ["backend/tests/test_auth.py", "backend/tests/test_auth_persistence.py", "backend/tests/test_security_regression.py"],
+      "owner": "security", "treatment_issue": 91
+    },
+    {
+      "id": "R-02", "journey": "J-01", "category": "spoofing", "threat": "Access or refresh token replay extends unauthorized access.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Short-lived JWT", "Opaque rotated refresh token", "Hashed refresh token", "Family revocation on replay", "Access token held only in memory"],
+      "evidence": ["backend/tests/test_auth_persistence.py", "backend/tests/test_security_regression.py", "web/src/app/core/session.service.spec.ts"],
+      "owner": "identity", "treatment_issue": 92
+    },
+    {
+      "id": "R-03", "journey": "J-01", "category": "spoofing", "threat": "Production lacks an approved corporate identity provider while local login remains restricted to non-production environments.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Local login blocked by production configuration", "Identity provider gate documented in ADR 0001"],
+      "evidence": ["docs/adr/0001-identity-strategy.md", "backend/tests/test_auth.py"],
+      "owner": "platform", "treatment_issue": 96, "decision": "Production deployment remains blocked until the corporate identity gate is approved."
+    },
+    {
+      "id": "R-04", "journey": "J-02", "category": "tampering", "threat": "A disguised, active or compressed malicious upload reaches processing or public storage.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Extension, MIME, signature and decoded-format validation", "Archive and formula inspection", "Private quarantine", "Random physical name", "Size and dimension limits"],
+      "evidence": ["backend/tests/test_upload_security.py", "backend/tests/test_upload_security_persistence.py", "docs/upload-security.md"],
+      "owner": "backend", "treatment_issue": 92
+    },
+    {
+      "id": "R-05", "journey": "J-02", "category": "tampering", "threat": "Filename or storage key manipulation escapes the controlled directory.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Client filename is not used as a physical path", "Relative storage keys", "Path traversal rejection", "Storage location omitted from API"],
+      "evidence": ["backend/tests/test_upload_security.py", "backend/tests/test_imports.py"],
+      "owner": "backend", "treatment_issue": 92
+    },
+    {
+      "id": "R-06", "journey": "J-02", "category": "denial-of-service", "threat": "Large or repeated uploads exhaust CPU, memory or storage.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Per-source size limits", "Rejected content quarantine policy", "No automatic frontend retry"],
+      "evidence": ["backend/tests/test_upload_security.py", "web/src/app/domains/imports/import-create.component.spec.ts"],
+      "owner": "security", "treatment_issue": 91, "decision": "Release candidate requires server-side rate and concurrency limits."
+    },
+    {
+      "id": "R-07", "journey": "J-03", "category": "elevation-of-privilege", "threat": "An identifier or filter accesses a resource outside the effective organization scope.",
+      "likelihood": "likely", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Server-side RBAC", "Organization scope before pagination", "404 for absent and out-of-scope resources", "Filters only narrow scope"],
+      "evidence": ["backend/tests/test_authorization_persistence.py", "backend/tests/test_security_matrix_persistence.py", "web/e2e/operational-flow.spec.ts"],
+      "owner": "authorization", "treatment_issue": 92
+    },
+    {
+      "id": "R-08", "journey": "J-03", "category": "tampering", "threat": "Injection through search, filters or identifiers changes a database query.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Parameterized SQL", "Typed request validation", "Allowlisted sorting and filters"],
+      "evidence": ["backend/tests/test_queries.py", "backend/tests/test_security_regression.py"],
+      "owner": "backend", "treatment_issue": 92
+    },
+    {
+      "id": "R-09", "journey": "J-03", "category": "denial-of-service", "threat": "Unbounded search, pagination or reprocessing degrades the service or duplicates work.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Bounded page sizes", "Reprocessing state conflict", "Execution idempotency fingerprint"],
+      "evidence": ["backend/tests/test_queries.py", "backend/tests/test_execution_lifecycle.py"],
+      "owner": "security", "treatment_issue": 91, "decision": "Rate, complexity and concurrency limits are required before the release candidate."
+    },
+    {
+      "id": "R-10", "journey": "J-04", "category": "information-disclosure", "threat": "Report detail or export leaks another organization's snapshot or internal metadata.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Distinct read, generate and export permissions", "Organization-scoped repository queries", "Safe 404", "Export audit without snapshot content"],
+      "evidence": ["backend/tests/test_reports.py", "backend/tests/test_report_persistence.py", "web/e2e/operational-flow.spec.ts"],
+      "owner": "reports", "treatment_issue": 92
+    },
+    {
+      "id": "R-11", "journey": "J-04", "category": "tampering", "threat": "Exported text executes as a spreadsheet formula or report history is overwritten.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Formula-prefix neutralization", "Versioned immutable snapshots", "Append-only report events", "Deterministic columns"],
+      "evidence": ["backend/tests/test_reports.py", "backend/tests/test_report_persistence.py", "database/migrations/0019_create_reports.sql"],
+      "owner": "reports", "treatment_issue": 92
+    },
+    {
+      "id": "R-12", "journey": "J-04", "category": "denial-of-service", "threat": "Repeated report generation or export exhausts database and application resources.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Generation limited to gestor", "Execution state validation", "Cancellation contract"],
+      "evidence": ["backend/tests/test_reports.py", "docs/reports.md"],
+      "owner": "performance", "treatment_issue": 95, "decision": "Load, concurrency and generation limits must be measured before release."
+    },
+    {
+      "id": "R-13", "journey": "J-05", "category": "information-disclosure", "threat": "A notification is exposed to the wrong user or organization.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Recipient-bound queries", "Organization revalidation", "Active-user validation", "No notification body in delivery audit"],
+      "evidence": ["backend/tests/test_notifications.py", "backend/tests/test_notifications_persistence.py"],
+      "owner": "notifications", "treatment_issue": 92
+    },
+    {
+      "id": "R-14", "journey": "J-05", "category": "tampering", "threat": "Repeated workers duplicate delivery or stale work finalizes another worker's attempt.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Delivery ID idempotency key", "Lease and attempt ownership", "Bounded retry", "Append-only attempts"],
+      "evidence": ["backend/tests/test_email_delivery.py", "backend/tests/test_email_delivery_persistence.py", "web/e2e/operational-flow.spec.ts"],
+      "owner": "notifications", "treatment_issue": 95
+    },
+    {
+      "id": "R-15", "journey": "J-05", "category": "information-disclosure", "threat": "Corporate provider credentials or message content leak through configuration, persistence or logs.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "transferred",
+      "controls": ["Delivery disabled by default", "Only local capture provider accepted", "No credentials in database or repository", "Safe provider error codes"],
+      "evidence": ["docs/email-notifications.md", "backend/tests/test_email_delivery.py"],
+      "owner": "platform", "treatment_issue": 96, "target_stage": 8, "reopen_condition": "Before enabling a corporate provider, approve secret custody, recipient policy and operational monitoring."
+    },
+    {
+      "id": "R-16", "journey": "J-06", "category": "elevation-of-privilege", "threat": "A requester self-approves or an ineligible reviewer decides outside policy or organization.",
+      "likelihood": "likely", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Distinct submit, assign and decide permissions", "Reviewer role and organization validation", "Assigned reviewer enforcement", "Segregation policy"],
+      "evidence": ["backend/tests/test_approvals.py", "backend/tests/test_approvals_persistence.py", "web/e2e/operational-flow.spec.ts"],
+      "owner": "approvals", "treatment_issue": 92
+    },
+    {
+      "id": "R-17", "journey": "J-06", "category": "tampering", "threat": "Concurrent decisions, mutable policy or overwritten history changes the approved outcome.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Optimistic request version", "Current open step selection", "Published policy immutability", "Append-only events and historical steps"],
+      "evidence": ["backend/tests/test_approvals_persistence.py", "database/migrations/0023_create_human_approvals.sql", "docs/human-approvals.md"],
+      "owner": "approvals", "treatment_issue": 92
+    },
+    {
+      "id": "R-18", "journey": "J-06", "category": "repudiation", "threat": "A decision lacks attributable justification, consent, session or policy version.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Mandatory justification by policy", "Explicit approval consent", "Actor and session audit", "Immutable policy version"],
+      "evidence": ["backend/tests/test_approvals.py", "backend/tests/test_approvals_persistence.py"],
+      "owner": "approvals", "treatment_issue": 92
+    },
+    {
+      "id": "R-19", "journey": "J-07", "category": "elevation-of-privilege", "threat": "Mass assignment or an unauthorized association grants administrative or cross-organization access.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Strict request models", "access.admin permission", "Server-side scope checks", "Protected last admin", "Effective permission recalculation"],
+      "evidence": ["backend/tests/test_access_control_persistence.py", "backend/tests/test_user_persistence.py", "backend/tests/test_security_regression.py"],
+      "owner": "identity", "treatment_issue": 92
+    },
+    {
+      "id": "R-20", "journey": "J-07", "category": "repudiation", "threat": "Administrative or operational audit data is altered, deleted or unavailable during investigation.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Append-only database events", "Restricted audit.read permission", "Correlation identifiers"],
+      "evidence": ["backend/tests/test_identity_persistence.py", "backend/tests/test_approvals_persistence.py"],
+      "owner": "operations", "treatment_issue": 94, "decision": "Retention, backup and restore evidence is required before release."
+    },
+    {
+      "id": "R-21", "journey": "J-03", "category": "information-disclosure", "threat": "Logs, metrics, errors or CI artifacts expose tokens, hashes, paths or operational content.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "blocked",
+      "controls": ["Safe error envelope", "Correlation ID", "E2E leak assertions", "No absolute storage path in API"],
+      "evidence": ["backend/tests/test_security_regression.py", "web/e2e/operational-flow.spec.ts", "docs/stage-4-validation-report.md"],
+      "owner": "observability", "treatment_issue": 93, "decision": "Structured telemetry and redaction tests are required before release."
+    },
+    {
+      "id": "R-22", "journey": "J-03", "category": "denial-of-service", "threat": "The system cannot detect dependency degradation or recover data after database or storage failure.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Basic health endpoint", "Transactional persistence", "Versioned migrations"],
+      "evidence": ["backend/tests/test_health.py", "scripts/validate_project_assets.py"],
+      "owner": "operations", "treatment_issue": 93, "decision": "Readiness, metrics, alerts, backup and restore must be demonstrated by issues 93 and 94."
+    },
+    {
+      "id": "R-23", "journey": "J-02", "category": "supply-chain", "threat": "A vulnerable dependency, leaked secret or compromised build artifact enters the release.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Pinned dependency lockfiles", "Four CI jobs", "Synthetic test environment"],
+      "evidence": ["web/package-lock.json", "backend/requirements-dev.txt", ".github/workflows/ci.yml"],
+      "owner": "security", "treatment_issue": 92, "decision": "DAST, dependency scanning, secret detection and SBOM are required before release."
+    },
+    {
+      "id": "R-24", "journey": "J-06", "category": "governance", "threat": "The initial reviewer group or decision policy is mistaken for final corporate authority levels.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "transferred",
+      "controls": ["Conservative versioned policy", "Documentation states that corporate authority levels are not represented", "New rules require a new version"],
+      "evidence": ["docs/human-approvals.md", "backend/tests/test_approvals_persistence.py"],
+      "owner": "product", "treatment_issue": 96, "target_stage": 8, "reopen_condition": "Before production approval workflows, business owners must approve reviewer groups, authority levels and consent rules."
+    },
+    {
+      "id": "R-25", "journey": "J-01", "category": "information-disclosure", "threat": "Permissive CORS, cache or browser policy exposes authenticated responses or allows untrusted content execution.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Configured origin allowlist", "Angular interpolation escapes text by default", "Access token held only in memory"],
+      "evidence": ["backend/tests/test_auth.py", "web/src/app/core/session.service.spec.ts", "backend/app/main.py"],
+      "owner": "security", "treatment_issue": 90, "decision": "CORS, CSP, security headers and sensitive-response cache policy must be verified before release."
+    },
+    {
+      "id": "R-26", "journey": "J-04", "category": "cross-site-scripting", "threat_class": "xss", "threat": "Stored or reflected operational content executes script in an authenticated browser context.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Angular interpolation escapes text by default", "No dynamic innerHTML or trust-bypass API", "Export formula neutralization", "Content Security Policy gate"],
+      "evidence": ["web/src/app/domains/queries/workorder-detail.component.spec.ts", "backend/tests/test_reports.py", "docs/security-review-checklist.md"],
+      "owner": "security", "treatment_issue": 90, "decision": "CSP and executable-content regression must be validated before the release candidate."
+    },
+    {
+      "id": "R-27", "journey": "J-01", "category": "cross-site-request-forgery", "threat_class": "csrf", "threat": "A hostile origin induces refresh, logout or another cookie-backed session action without user intent.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Refresh cookie uses HttpOnly and SameSite Strict", "Credentialed CORS uses an explicit origin allowlist", "Business mutations require an in-memory Bearer token"],
+      "evidence": ["backend/tests/test_auth.py", "docs/authentication.md", "backend/app/main.py"],
+      "owner": "security", "treatment_issue": 90
+    }
+  ]
+}
