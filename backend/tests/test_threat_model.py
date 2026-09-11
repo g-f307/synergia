@@ -26,9 +26,9 @@ def _changed_register(tmp_path: Path, change) -> Path:
 def test_threat_model_matches_openapi_access_matrix_and_evidence() -> None:
     document = validate_threat_model.validate()
 
-    assert document["version"] == "1.0.0"
+    assert document["version"] == "1.1.0"
     assert len(document["journeys"]) == 7
-    assert len(document["risks"]) >= 25
+    assert len(document["risks"]) >= 27
 
 
 def test_threat_model_rejects_operation_with_wrong_scope(
@@ -43,6 +43,49 @@ def test_threat_model_rejects_operation_with_wrong_scope(
     monkeypatch.setattr(validate_threat_model, "REGISTER", target)
 
     with pytest.raises(ValueError, match="Contrato divergente"):
+        validate_threat_model.validate()
+
+
+def test_threat_model_rejects_missing_required_operation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = _changed_register(
+        tmp_path,
+        lambda document: document["journeys"][0]["operations"].pop(),
+    )
+    monkeypatch.setattr(validate_threat_model, "REGISTER", target)
+
+    with pytest.raises(ValueError, match="sem operações obrigatórias"):
+        validate_threat_model.validate()
+
+
+def test_threat_model_rejects_missing_required_threat_class(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def remove_xss(document: dict) -> None:
+        document["risks"] = [
+            risk for risk in document["risks"] if risk.get("threat_class") != "xss"
+        ]
+
+    target = _changed_register(tmp_path, remove_xss)
+    monkeypatch.setattr(validate_threat_model, "REGISTER", target)
+
+    with pytest.raises(ValueError, match="Classes de ameaça obrigatórias ausentes"):
+        validate_threat_model.validate()
+
+
+def test_threat_model_rejects_non_applicability_without_reopen_condition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = _changed_register(
+        tmp_path,
+        lambda document: document["applicability_decisions"][0].pop(
+            "reopen_condition"
+        ),
+    )
+    monkeypatch.setattr(validate_threat_model, "REGISTER", target)
+
+    with pytest.raises(ValueError, match="sem justificativa ou retomada"):
         validate_threat_model.validate()
 
 

@@ -103,17 +103,25 @@ forem homologados. `TB-06` não utiliza dados nem credenciais corporativas.
 
 | Jornada | Atores | Ativos principais | Fronteiras | Ameaças dominantes |
 | --- | --- | --- | --- | --- |
-| J-01 autenticação e sessão | anônimo, autenticado | credenciais, tokens, sessão | TB-01, TB-02, TB-03 | spoofing, replay, enumeração e abuso |
+| J-01 autenticação e sessão | anônimo, autenticado | credenciais, tokens, sessão | TB-01, TB-02, TB-03 | spoofing, replay, CSRF, enumeração e abuso |
 | J-02 upload e ingestão | gestor, operador | arquivo, quarentena, execução | TB-01 a TB-04 | arquivo malicioso, traversal e exaustão |
 | J-03 consulta e reprocessamento | papéis operacionais | entidades e histórico | TB-01 a TB-03 | IDOR/BOLA, injeção, enumeração e duplicidade |
-| J-04 relatório e exportação | gestor, analista, consulta | snapshot, versão, CSV/JSON | TB-01 a TB-03 | vazamento, fórmula, sobrescrita e abuso |
+| J-04 relatório e exportação | gestor, analista, consulta | snapshot, versão, CSV/JSON | TB-01 a TB-03 | vazamento, fórmula, XSS, sobrescrita e abuso |
 | J-05 notificação e e-mail | destinatário, worker | preferência, mensagem, entrega | TB-01, TB-02, TB-03, TB-05 | destinatário incorreto, duplicidade e segredo |
 | J-06 aprovação humana | solicitante, gestor, auditor | política, justificativa, decisão | TB-01 a TB-03 | elevação, quebra de segregação e repúdio |
 | J-07 administração de identidade | admin, usuário alvo | ciclo de vida, papel e escopo | TB-01 a TB-03 | mass assignment e elevação vertical |
 
-Os métodos, caminhos, permissões e escopos dessas jornadas são conferidos
-automaticamente contra OpenAPI e `access-control-matrix.md`. O frontend não é
-considerado fonte de autorização.
+Os métodos, caminhos, permissões e escopos mínimos dessas jornadas são
+conferidos automaticamente contra OpenAPI e `access-control-matrix.md`. O gate
+também impede a remoção silenciosa de uma operação mínima ou classe de ameaça
+obrigatória. O frontend não é considerado fonte de autorização.
+
+### Aplicabilidade de SSRF
+
+SSRF foi analisado e é **não aplicável à superfície atual**: o FastAPI não busca
+URLs fornecidas pelo usuário e não existe contrato de webhook, importação remota
+ou conector de saída. A decisão deve ser reaberta na Etapa 6, antes da inclusão
+de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 
 ## Registro de riscos
 
@@ -121,7 +129,7 @@ considerado fonte de autorização.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R-01 | J-01 | stuffing e enumeração de identidade | alto | médio | mitigado | security | #91 |
 | R-02 | J-01 | replay de token ou refresh | crítico | médio | mitigado | identity | #92 |
-| R-03 | J-01 | login local habilitado em produção | crítico | alto | bloqueado | platform | #96 |
+| R-03 | J-01 | identidade corporativa não homologada; login local restrito a ambientes não produtivos | crítico | alto | bloqueado | platform | #96 |
 | R-04 | J-02 | conteúdo ativo ou arquivo disfarçado | alto | médio | mitigado | backend | #92 |
 | R-05 | J-02 | fuga do armazenamento controlado | alto | baixo | mitigado | backend | #92 |
 | R-06 | J-02 | exaustão por uploads | alto | alto | bloqueado | security | #91 |
@@ -144,6 +152,8 @@ considerado fonte de autorização.
 | R-23 | J-02 | dependência, segredo ou build comprometido | crítico | alto | bloqueado | security | #92 |
 | R-24 | J-06 | política inicial confundida com alçada final | alto | médio | transferido | product | #96 / Etapa 8 |
 | R-25 | J-01 | CORS, cache ou política do navegador permissiva | crítico | alto | bloqueado | security | #90 |
+| R-26 | J-04 | conteúdo operacional executado como XSS | crítico | alto | bloqueado | security | #90 |
+| R-27 | J-01 | ação de sessão induzida por CSRF | alto | médio | mitigado | security | #90 |
 
 Detalhes de ameaça, controles e evidências são mantidos no registro JSON. Um
 controle só reduz a severidade residual quando sua evidência existe no

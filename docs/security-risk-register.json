@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "method": {
     "likelihood": ["unlikely", "possible", "likely"],
     "impact": ["low", "medium", "high", "critical"],
@@ -14,6 +14,15 @@
     {"id": "TB-05", "from": "email-worker", "to": "email-provider", "protocol": "disabled by default; local capture in CI"},
     {"id": "TB-06", "from": "ci-runner", "to": "test-environment", "protocol": "ephemeral credentials and synthetic data"}
   ],
+  "applicability_decisions": [
+    {
+      "threat_class": "ssrf",
+      "status": "not-applicable",
+      "rationale": "The current FastAPI application does not fetch user-controlled URLs and has no outbound connector contract.",
+      "target_stage": 6,
+      "reopen_condition": "Reassess before adding RPA connectors, webhooks, remote imports or any server-side URL retrieval."
+    }
+  ],
   "journeys": [
     {
       "id": "J-01",
@@ -21,7 +30,7 @@
       "actors": ["anonymous user", "authenticated user"],
       "assets": ["credentials", "access token", "refresh token hash", "session", "identity"],
       "boundaries": ["TB-01", "TB-02", "TB-03"],
-      "threats": ["spoofing", "credential stuffing", "token replay", "session fixation", "user enumeration"],
+      "threats": ["spoofing", "credential stuffing", "token replay", "session fixation", "user enumeration", "CSRF"],
       "operations": [
         {"method": "POST", "path": "/auth/login", "permission": "public", "scope": "public"},
         {"method": "POST", "path": "/auth/refresh", "permission": "public", "scope": "public"},
@@ -61,7 +70,7 @@
       "actors": ["gestor", "analista", "consulta"],
       "assets": ["report snapshot", "report version", "filters", "export", "audit event"],
       "boundaries": ["TB-01", "TB-02", "TB-03"],
-      "threats": ["IDOR/BOLA", "formula injection", "sensitive data disclosure", "history tampering", "resource abuse"],
+      "threats": ["IDOR/BOLA", "formula injection", "XSS", "sensitive data disclosure", "history tampering", "resource abuse"],
       "operations": [
         {"method": "POST", "path": "/reports", "permission": "report.generate", "scope": "org"},
         {"method": "GET", "path": "/reports/{report_id}/versions/{version}", "permission": "report.read", "scope": "org"},
@@ -125,7 +134,7 @@
       "owner": "identity", "treatment_issue": 92
     },
     {
-      "id": "R-03", "journey": "J-01", "category": "spoofing", "threat": "Development login is enabled in production without corporate identity controls.",
+      "id": "R-03", "journey": "J-01", "category": "spoofing", "threat": "Production lacks an approved corporate identity provider while local login remains restricted to non-production environments.",
       "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
       "controls": ["Local login blocked by production configuration", "Identity provider gate documented in ADR 0001"],
       "evidence": ["docs/adr/0001-identity-strategy.md", "backend/tests/test_auth.py"],
@@ -284,6 +293,20 @@
       "controls": ["Configured origin allowlist", "Angular interpolation escapes text by default", "Access token held only in memory"],
       "evidence": ["backend/tests/test_auth.py", "web/src/app/core/session.service.spec.ts", "backend/app/main.py"],
       "owner": "security", "treatment_issue": 90, "decision": "CORS, CSP, security headers and sensitive-response cache policy must be verified before release."
+    },
+    {
+      "id": "R-26", "journey": "J-04", "category": "cross-site-scripting", "threat_class": "xss", "threat": "Stored or reflected operational content executes script in an authenticated browser context.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Angular interpolation escapes text by default", "No dynamic innerHTML or trust-bypass API", "Export formula neutralization", "Content Security Policy gate"],
+      "evidence": ["web/src/app/domains/queries/workorder-detail.component.spec.ts", "backend/tests/test_reports.py", "docs/security-review-checklist.md"],
+      "owner": "security", "treatment_issue": 90, "decision": "CSP and executable-content regression must be validated before the release candidate."
+    },
+    {
+      "id": "R-27", "journey": "J-01", "category": "cross-site-request-forgery", "threat_class": "csrf", "threat": "A hostile origin induces refresh, logout or another cookie-backed session action without user intent.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Refresh cookie uses HttpOnly and SameSite Strict", "Credentialed CORS uses an explicit origin allowlist", "Business mutations require an in-memory Bearer token"],
+      "evidence": ["backend/tests/test_auth.py", "docs/authentication.md", "backend/app/main.py"],
+      "owner": "security", "treatment_issue": 90
     }
   ]
 }

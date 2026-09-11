@@ -33,6 +33,46 @@ REQUIRED_JOURNEYS = {
     "identity-administration",
 }
 REQUIRED_TREATMENT_ISSUES = set(range(90, 97))
+REQUIRED_THREAT_CLASSES = {"csrf", "ssrf", "xss"}
+REQUIRED_OPERATIONS = {
+    "authentication-and-session": {
+        ("POST", "/auth/login"),
+        ("POST", "/auth/refresh"),
+        ("POST", "/auth/logout"),
+        ("GET", "/me"),
+    },
+    "upload-and-ingestion": {
+        ("POST", "/imports"),
+        ("GET", "/imports/{execution_id}"),
+        ("GET", "/imports/{execution_id}/validation-report"),
+    },
+    "queries-and-reprocessing": {
+        ("GET", "/search"),
+        ("GET", "/pending-items"),
+        ("POST", "/executions/{execution_id}/reprocess"),
+    },
+    "report-and-export": {
+        ("POST", "/reports"),
+        ("GET", "/reports/{report_id}/versions/{version}"),
+        ("GET", "/reports/{report_id}/versions/{version}/export"),
+    },
+    "notification-and-email-delivery": {
+        ("GET", "/notifications"),
+        ("PATCH", "/notifications/{notification_id}/read"),
+        ("POST", "/notifications/read-all"),
+    },
+    "human-approval": {
+        ("POST", "/pending-items/{pending_id}/approval"),
+        ("POST", "/approvals/{request_id}/assign"),
+        ("POST", "/approvals/{request_id}/approve"),
+        ("POST", "/approvals/{request_id}/return"),
+    },
+    "identity-administration": {
+        ("POST", "/admin/users"),
+        ("PATCH", "/admin/users/{user_id}"),
+        ("PUT", "/admin/access/users/{left_id}/roles/{right_id}"),
+    },
+}
 LIKELIHOODS = {"unlikely", "possible", "likely"}
 SEVERITIES = {"low", "medium", "high", "critical"}
 DISPOSITIONS = {"mitigated", "accepted", "blocked", "transferred"}
@@ -94,7 +134,17 @@ def validate() -> dict:
         used_boundaries = set(_non_empty_list(journey, "boundaries", subject))
         if unknown := used_boundaries - set(boundary_ids):
             raise ValueError(f"{subject} usa fronteira inexistente: {sorted(unknown)}")
-        for operation in _non_empty_list(journey, "operations", subject):
+        operations = _non_empty_list(journey, "operations", subject)
+        operation_keys = {
+            (operation.get("method"), operation.get("path"))
+            for operation in operations
+        }
+        required = REQUIRED_OPERATIONS[journey["name"]]
+        if missing := required - operation_keys:
+            raise ValueError(
+                f"{subject} sem operações obrigatórias: {sorted(missing)}"
+            )
+        for operation in operations:
             key = (operation.get("method"), operation.get("path"))
             if key not in openapi:
                 raise ValueError(f"Operação OpenAPI inexistente em {subject}: {key}")
@@ -113,6 +163,9 @@ def validate() -> dict:
     if None in risk_ids or len(risk_ids) != len(set(risk_ids)):
         raise ValueError("Riscos ausentes ou duplicados")
     covered_issues = set()
+    covered_threat_classes = {
+        str(risk.get("threat_class", "")).lower() for risk in risks
+    }
     for risk in risks:
         subject = f"Risco {risk['id']}"
         if risk.get("journey") not in journey_ids:
@@ -155,6 +208,24 @@ def validate() -> dict:
             raise ValueError(f"{subject} transferido sem etapa ou retomada")
         if risk["id"] not in model_text:
             raise ValueError(f"{subject} ausente no documento narrativo")
+
+    applicability = document.get("applicability_decisions", [])
+    if not isinstance(applicability, list):
+        raise ValueError("Decisões de aplicabilidade inválidas")
+    for decision in applicability:
+        threat_class = str(decision.get("threat_class", "")).lower()
+        if decision.get("status") != "not-applicable":
+            raise ValueError(f"Decisão de aplicabilidade inválida: {threat_class}")
+        if not decision.get("rationale") or not decision.get("reopen_condition"):
+            raise ValueError(
+                f"Ameaça não aplicável sem justificativa ou retomada: {threat_class}"
+            )
+        if not decision.get("target_stage"):
+            raise ValueError(f"Ameaça não aplicável sem etapa: {threat_class}")
+        covered_threat_classes.add(threat_class)
+
+    if missing := REQUIRED_THREAT_CLASSES - covered_threat_classes:
+        raise ValueError(f"Classes de ameaça obrigatórias ausentes: {sorted(missing)}")
 
     if missing := REQUIRED_TREATMENT_ISSUES - covered_issues:
         raise ValueError(f"Issues da Etapa 5 sem risco relacionado: {sorted(missing)}")
