@@ -13,6 +13,7 @@ from typing import Final
 from urllib.parse import parse_qs
 from uuid import UUID
 
+import jwt
 import psycopg
 from psycopg.rows import dict_row
 from starlette.concurrency import run_in_threadpool
@@ -21,6 +22,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.auth.config import AuthConfig
 from app.auth.security import TokenCodec
+from app.authorization import AuthorizationRepository
+from app.errors import ApiError
 
 logger = logging.getLogger("synergia.rate_limit")
 
@@ -42,6 +45,14 @@ DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
     "report_generate": (20, 300, True),
     "report_export": (60, 60, True),
     "decision": (30, 60, True),
+}
+
+ORGANIZATION_PERMISSIONS: Final[dict[str, str]] = {
+    "upload": "import.create",
+    "search": "business.read",
+    "reprocess": "execution.reprocess",
+    "report_generate": "report.generate",
+    "report_export": "report.export",
 }
 
 
@@ -263,6 +274,47 @@ def _identity_dimensions(headers: Headers, operation: str) -> list[tuple[str, st
     return [("user", str(claims.user_id)), ("session", str(claims.session_id))]
 
 
+def _authorized_organization(
+    headers: Headers,
+    operation: str,
+    path: str,
+    raw_organization: str | None,
+    database_url: str,
+) -> str | None:
+    permission = ORGANIZATION_PERMISSIONS.get(operation)
+    if operation == "decision":
+        action = path.rstrip("/").rsplit("/", 1)[-1]
+        permission = {
+            "approval": "approval.submit",
+            "approve": "approval.decide",
+            "reject": "approval.decide",
+            "return": "approval.decide",
+            "assign": "approval.assign",
+            "resubmit": "approval.submit",
+        }.get(action)
+    authorization = headers.get("authorization", "")
+    if not permission or not raw_organization or not authorization.lower().startswith(
+        "bearer "
+    ):
+        return None
+    try:
+        organization_id = UUID(raw_organization)
+        claims = TokenCodec(AuthConfig.from_env()).decode_access(
+            authorization.split(" ", 1)[1]
+        )
+    except (ValueError, TypeError, jwt.PyJWTError, ApiError):
+        return None
+    permissions = AuthorizationRepository(database_url).resolve(
+        claims, datetime.now(UTC)
+    )
+    if permissions is None:
+        return None
+    scopes = permissions.get(permission, frozenset())
+    if None not in scopes and organization_id not in scopes:
+        return None
+    return str(organization_id)
+
+
 async def _login_body(
     receive: Receive,
 ) -> tuple[str | None, Receive] | tuple[None, None]:
@@ -321,23 +373,29 @@ class RateLimitMiddleware:
                 return
             await self.app(scope, receive, send)
             return
-        headers = Headers(scope=scope)
-        dimensions = [("origin", client_origin(scope, headers))]
-        dimensions.extend(_identity_dimensions(headers, operation))
-        if operation == "login":
-            identifier, replay = await _login_body(receive)
-            if replay is None:
-                await self._error(send, 413, "request_too_large", 1)
-                return
-            receive = replay
-            if identifier:
-                dimensions.append(("identifier", identifier))
-        query = parse_qs(scope.get("query_string", b"").decode(errors="ignore"))
-        organization = query.get("organization_id", [None])[0]
-        if organization:
-            dimensions.append(("organization", organization))
         limiter = PostgresRateLimiter(database_url, secret)
         try:
+            headers = Headers(scope=scope)
+            dimensions = [("origin", client_origin(scope, headers))]
+            dimensions.extend(_identity_dimensions(headers, operation))
+            if operation == "login":
+                identifier, replay = await _login_body(receive)
+                if replay is None:
+                    await self._error(send, 413, "request_too_large", 1)
+                    return
+                receive = replay
+                if identifier:
+                    dimensions.append(("identifier", identifier))
+            query = parse_qs(scope.get("query_string", b"").decode(errors="ignore"))
+            organization = _authorized_organization(
+                headers,
+                operation,
+                scope["path"],
+                query.get("organization_id", [None])[0],
+                database_url,
+            )
+            if organization:
+                dimensions.append(("organization", organization))
             if operation == "refresh":
                 credential = next(
                     (value for key, value in dimensions if key == "credential"),
@@ -359,7 +417,7 @@ class RateLimitMiddleware:
                         scope["method"],
                     )
                 )
-        except (psycopg.Error, OSError) as exc:
+        except (psycopg.Error, OSError, ValueError) as exc:
             logger.error(
                 "rate_limit_store_error operation=%s type=%s",
                 operation,

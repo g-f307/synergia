@@ -2,8 +2,10 @@
 
 A API aplica cotas compartilhadas no PostgreSQL antes das operações críticas. Cada
 requisição consome uma cota por origem e, quando autenticada, cotas adicionais por
-usuário e sessão. O parâmetro `organization_id`, quando faz parte da URL, também
-consome uma cota própria. Trocar rota ou organização não restaura as cotas de
+usuário e sessão. O parâmetro `organization_id`, quando faz parte da URL, somente
+consome uma cota própria depois que a sessão e a permissão persistida confirmam o
+acesso do ator à organização. Identificadores arbitrários ou fora do escopo nunca
+consomem a cota de terceiros. Trocar rota ou organização não restaura as cotas de
 identidade.
 
 No refresh, o token opaco é resolvido para a sessão persistida antes da cobrança.
@@ -34,6 +36,8 @@ Por padrão, somente o endereço do peer TCP é considerado. `X-Forwarded-For` s
 aceito quando o peer pertence a uma rede listada explicitamente em
 `RATE_LIMIT_TRUSTED_PROXY_CIDRS`. A cadeia é percorrida da direita para a esquerda
 e somente hops confiáveis são descartados, impedindo spoofing do primeiro valor.
+Um CIDR inválido fecha o processamento protegido com a resposta estável
+`503 rate_limit_unavailable`.
 As chaves são protegidas com HMAC-SHA-256. IPs,
 tokens, parâmetros de negócio e payloads nunca são persistidos nos buckets ou nos
 eventos.
