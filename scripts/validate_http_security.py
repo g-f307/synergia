@@ -27,6 +27,8 @@ def main() -> None:
     dockerfile = (ROOT / "web/Dockerfile").read_text(encoding="utf-8")
     if "COPY --chmod=755 docker-entrypoint.d/40-synergia-config.sh" not in dockerfile:
         raise SystemExit("The runtime configuration entrypoint must be executable")
+    if "USER nginx" not in dockerfile:
+        raise SystemExit("The published frontend must run as a non-root user")
 
     for environment, origin in {
         "homologation": "https://api.homolog.synergia.example",

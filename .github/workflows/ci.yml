@@ -61,6 +61,7 @@ jobs:
           done
           runtime_config="$(curl --fail --silent http://127.0.0.1:18080/runtime-config.js)"
           headers="$(curl --fail --silent --dump-header - --output /dev/null http://127.0.0.1:18080/login | tr -d '\r')"
+          test "$(docker inspect --format '{{.Config.User}}' "$container")" = nginx
           grep -F "apiUrl: '$api_origin'" <<<"$runtime_config"
           grep -Fi "content-security-policy:" <<<"$headers" | grep -F "connect-src 'self' $api_origin"
       - name: Publicar cobertura Angular
@@ -379,11 +380,16 @@ jobs:
           TRIVY_IMAGE_POLICY: ${{ steps.trivy_image_policy.outcome }}
         shell: bash
         run: |
-          for outcome in "$POLICY" "$PYTHON_AUDIT" "$NODE_AUDIT" "$DAST" \
-            "$TRIVY_FS" "$TRIVY_FS_POLICY" \
-            "$TRIVY_IMAGE" "$TRIVY_IMAGE_POLICY"; do
-            test "$outcome" = success || exit 1
+          failed=0
+          for check in POLICY PYTHON_AUDIT NODE_AUDIT DAST TRIVY_FS \
+            TRIVY_FS_POLICY TRIVY_IMAGE TRIVY_IMAGE_POLICY; do
+            outcome="${!check}"
+            if [ "$outcome" != success ]; then
+              echo "::error title=Security gate failed::$check finished with $outcome"
+              failed=1
+            fi
           done
+          exit "$failed"
       - name: Publicar evidências sanitizadas de segurança
         if: always()
         uses: actions/upload-artifact@v4
