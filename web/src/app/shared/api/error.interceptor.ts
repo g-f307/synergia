@@ -5,7 +5,7 @@ import { catchError, throwError } from 'rxjs';
 import { I18nService } from '../i18n/i18n.service';
 import { ApiErrorKind, ApiFailure } from './api-error';
 
-const kinds: Record<number, ApiErrorKind> = { 401: 'unauthorized', 403: 'forbidden', 404: 'not-found', 409: 'conflict', 422: 'validation' };
+const kinds: Record<number, ApiErrorKind> = { 401: 'unauthorized', 403: 'forbidden', 404: 'not-found', 409: 'conflict', 422: 'validation', 429: 'rate-limited' };
 
 export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const i18n = inject(I18nService);
@@ -14,8 +14,8 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
     const status = error.status;
     const rawDetails = typeof body.error?.details === 'object' && body.error.details ? body.error.details : {};
     const details = Object.fromEntries(
-      ['execution_id', 'duplicate_of_execution_id']
-        .filter((key) => typeof rawDetails[key] === 'string')
+      ['execution_id', 'duplicate_of_execution_id', 'retry_after_seconds']
+        .filter((key) => typeof rawDetails[key] === 'string' || typeof rawDetails[key] === 'number')
         .map((key) => [key, rawDetails[key]])
     );
     const failure: ApiFailure = {

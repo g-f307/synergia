@@ -72,4 +72,18 @@ describe('authInterceptor', () => {
     expect(receivedStatus).toBe(403);
     controller.expectNone('http://localhost:8000/auth/refresh');
   });
+
+  it('never refreshes or replays a non-idempotent request', () => {
+    let receivedStatus = 0;
+    http.post('/protected', { decision: 'approve' }).subscribe({
+      error: (error) => { receivedStatus = error.status; }
+    });
+    controller.expectOne('/protected').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(receivedStatus).toBe(401);
+    expect(session.clear).toHaveBeenCalledWith('expired');
+    controller.expectNone('/protected');
+  });
 });

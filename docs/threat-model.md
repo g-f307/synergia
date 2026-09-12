@@ -132,10 +132,10 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-03 | J-01 | identidade corporativa não homologada; login local restrito a ambientes não produtivos | crítico | alto | bloqueado | platform | #96 |
 | R-04 | J-02 | conteúdo ativo ou arquivo disfarçado | alto | médio | mitigado | backend | #92 |
 | R-05 | J-02 | fuga do armazenamento controlado | alto | baixo | mitigado | backend | #92 |
-| R-06 | J-02 | exaustão por uploads | alto | alto | bloqueado | security | #91 |
+| R-06 | J-02 | exaustão por uploads | alto | médio | mitigado | security | #91 |
 | R-07 | J-03 | acesso fora da organização | crítico | médio | mitigado | authorization | #92 |
 | R-08 | J-03 | injeção em busca ou filtro | crítico | baixo | mitigado | backend | #92 |
-| R-09 | J-03 | consulta ou reprocessamento abusivo | alto | alto | bloqueado | security | #91 |
+| R-09 | J-03 | consulta ou reprocessamento abusivo | alto | médio | mitigado | security | #91 |
 | R-10 | J-04 | vazamento de snapshot ou exportação | crítico | médio | mitigado | reports | #92 |
 | R-11 | J-04 | fórmula executável ou histórico alterado | alto | baixo | mitigado | reports | #92 |
 | R-12 | J-04 | geração ou exportação excessiva | alto | alto | bloqueado | performance | #95 |

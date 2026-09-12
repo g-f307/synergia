@@ -23,6 +23,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
         void router.navigateByUrl('/login');
         return throwError(() => error);
       }
+      const canReplay = ['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+      if (!canReplay) {
+        session.clear('expired');
+        void router.navigateByUrl('/login');
+        return throwError(() => error);
+      }
       return session.refresh().pipe(
         switchMap((refreshed) => {
           const newToken = session.accessToken();

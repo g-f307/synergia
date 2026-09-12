@@ -7,11 +7,13 @@ from uuid import UUID, uuid4
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from starlette.datastructures import Headers
 
 from app.auth.config import AuthConfig
 from app.auth.security import AccessClaims, TokenCodec
 from app.authorization import AuthorizationRepository
 from app.main import app
+from app.rate_limiting import _authorized_organization
 
 pytestmark = [
     pytest.mark.integration,
@@ -178,6 +180,41 @@ def _bootstrap(database_url: str, role: str = "consulta") -> dict[str, UUID | st
 
 def _token(config: AuthConfig, ids: dict[str, UUID | str]) -> str:
     return TokenCodec(config).issue_access(ids["user"], ids["session"])[0]
+
+
+def test_rate_limit_organization_dimension_uses_persisted_scope(monkeypatch) -> None:
+    database_url = os.environ["DATABASE_URL"]
+    config = _configure(monkeypatch)
+    ids = _bootstrap(database_url, "operador")
+    headers = Headers({"Authorization": f"Bearer {_token(config, ids)}"})
+
+    assert _authorized_organization(
+        headers,
+        "search",
+        "/search",
+        str(ids["organization_a"]),
+        database_url,
+    ) == str(ids["organization_a"])
+    assert (
+        _authorized_organization(
+            headers,
+            "search",
+            "/search",
+            str(ids["organization_b"]),
+            database_url,
+        )
+        is None
+    )
+    assert (
+        _authorized_organization(
+            headers,
+            "search",
+            "/search",
+            str(uuid4()),
+            database_url,
+        )
+        is None
+    )
 
 
 def _seed_duplicate_lots(database_url: str, ids: dict[str, UUID | str]) -> None:

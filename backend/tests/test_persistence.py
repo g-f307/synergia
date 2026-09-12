@@ -144,6 +144,8 @@ def test_creates_all_operational_entities() -> None:
         "pending_items",
         "permissions",
         "permission_catalog_versions",
+        "rate_limit_buckets",
+        "rate_limit_events",
         "pipeline_issues",
         "pipeline_summaries",
         "role_permissions",

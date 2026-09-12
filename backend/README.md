@@ -151,6 +151,11 @@ o diretório padrão é `data/imports/`, ignorado pelo Git.
 A especificação OpenAPI interativa está em `http://localhost:8000/docs` e o
 documento JSON em `http://localhost:8000/openapi.json`.
 
+As operações críticas usam cotas compartilhadas por origem, identidade, sessão
+e, quando disponível, organização. Limites, resposta `429`, proxies confiáveis,
+privacidade e ajuste operacional estão em
+[`../docs/rate-limiting.md`](../docs/rate-limiting.md).
+
 ## Consultas e reprocessamento
 
 A API disponibiliza contratos para consultar execuções, Workorders, lotes,
