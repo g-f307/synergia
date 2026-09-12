@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "blocking_severity": "high",
+  "exceptions": [],
+  "requirements": {
+    "authorized_dast_targets": ["localhost", "127.0.0.1", "::1"],
+    "artifact_retention_days": 14,
+    "synthetic_data_only": true,
+    "retest_required_after_fix": true
+  }
+}

@@ -12,6 +12,7 @@ from starlette.datastructures import Headers, UploadFile
 from app.upload_security import policy_for, purge_quarantined, receive_and_inspect
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+pytestmark = pytest.mark.security
 
 
 def _xlsx_bytes(formula: str | None = None) -> bytes:
@@ -124,6 +125,21 @@ def _inspect(tmp_path, filename: str, content: bytes, media_type: str):
         ),
         ("bomb.xlsx", _zip_bomb_xlsx(), XLSX_MIME, "archive_compression_ratio"),
     ],
+    ids=(
+        "executable-signature",
+        "html-content",
+        "javascript-content",
+        "json-disguised-as-csv",
+        "mime-mismatch",
+        "truncated-archive",
+        "unsupported-binary",
+        "macro-extension",
+        "embedded-macro",
+        "embedded-object",
+        "external-link",
+        "dangerous-formula",
+        "compression-bomb",
+    ),
 )
 def test_rejects_disguised_active_and_abusive_files(
     tmp_path, filename, content, media_type, reason

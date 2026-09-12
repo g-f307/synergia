@@ -10,7 +10,7 @@ import pytest
 from app.imports import PostgresImportRepository
 from app.upload_security import InspectionDecision, InspectionResult
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.security]
 EXECUTION_ID = "upload-security-persistence"
 
 

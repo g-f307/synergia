@@ -104,14 +104,16 @@ o padrão é `data/imports/`, ignorado pelo Git.
 
 ### Integração contínua
 
-O workflow possui quatro jobs:
+O workflow possui cinco jobs:
 
 1. Angular: lint, testes com cobertura e build;
 2. FastAPI: lint, testes sem integração e compilação;
 3. banco e dados: PostgreSQL 16 vazio, migrations, massas sintéticas, testes de
    persistência e validação do Compose;
 4. protótipo: checkout somente leitura de `prototype-pages` e smoke check dos
-   arquivos publicados.
+   arquivos publicados;
+5. segurança de release: regressão ofensiva, DAST controlado, segredos,
+   dependências, imagem publicada e SBOM CycloneDX.
 
 ## Protótipo publicado
 
