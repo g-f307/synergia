@@ -261,7 +261,7 @@ jobs:
         run: |
           mkdir -p reports/private
           python scripts/security_release.py validate
-          pytest -q -m "security and not integration" backend/tests \
+          pytest -q -p no:cacheprovider -m "security and not integration" backend/tests \
             --junitxml=reports/security/offensive-tests.xml
       - name: Auditar dependências Python
         id: python_audit

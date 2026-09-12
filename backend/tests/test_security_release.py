@@ -25,6 +25,7 @@ pytestmark = pytest.mark.security
         ("aws-access-key", "AK" + "IAABCDEFGHIJKLMNOP"),
         ("jwt", "eyJabcdefghijk" + ".abcdefghijk.abcdefghijk"),
     ],
+    ids=("private-key", "github-token", "aws-access-key", "jwt"),
 )
 def test_secret_detectors_have_positive_fixtures(kind: str, value: str) -> None:
     assert security_release.SECRET_PATTERNS[kind].search(value)
