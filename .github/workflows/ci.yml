@@ -234,12 +234,6 @@ jobs:
       PGDATABASE: synergia_security
       PGUSER: synergia
       PGPASSWORD: synergia-ci-only
-      RATE_LIMIT_ENABLED: "false"
-      SYNERGIA_ENV: test
-      SYNERGIA_LOCAL_AUTH_ENABLED: "true"
-      AUTH_JWT_ISSUER: synergia-security-ci
-      AUTH_JWT_AUDIENCE: synergia-security-dast
-      AUTH_REFRESH_COOKIE_SECURE: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -291,6 +285,13 @@ jobs:
           python scripts/security_release.py audit --ecosystem node \
             --input reports/private/node-audit-raw.json
       - name: Preparar API descartável para DAST
+        env:
+          RATE_LIMIT_ENABLED: "false"
+          SYNERGIA_ENV: test
+          SYNERGIA_LOCAL_AUTH_ENABLED: "true"
+          AUTH_JWT_ISSUER: synergia-security-ci
+          AUTH_JWT_AUDIENCE: synergia-security-dast
+          AUTH_REFRESH_COOKIE_SECURE: "false"
         shell: bash
         run: |
           set -euo pipefail
