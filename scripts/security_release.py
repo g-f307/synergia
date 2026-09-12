@@ -17,6 +17,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
@@ -64,6 +65,17 @@ IGNORED_PARTS = {
     "__pycache__",
     ".pytest_cache",
     ".ruff_cache",
+}
+SAFE_JUNIT_CASE_NAME = re.compile(r"^[A-Za-z0-9_.:/\-[\]]{1,200}$")
+SAFE_JUNIT_NUMBER = re.compile(r"^\d+(?:\.\d+)?$")
+JUNIT_COUNT_ATTRIBUTES = {"tests", "errors", "failures", "skipped", "time"}
+FORBIDDEN_ARTIFACT_PATTERNS = {
+    "active-html": re.compile(r"(?:<|&lt;)\s*(?:script|iframe|object)\b", re.I),
+    "javascript": re.compile(r"\b(?:javascript:|function\s+\w+\s*\()", re.I),
+    "authorization": re.compile(r"\b(?:authorization|set-cookie)\s*[:=]", re.I),
+    "binary-repr": re.compile(
+        r"\bb(?:'|&(?:apos|quot);)(?:PK\\x03\\x04|MZ\\x90)", re.I
+    ),
 }
 
 
@@ -426,6 +438,101 @@ def normalize_audit(source: Path, ecosystem: str) -> dict:
     return document
 
 
+def validate_junit_artifact(source: Path) -> None:
+    raw = source.read_text(encoding="utf-8")
+    for kind, pattern in SECRET_PATTERNS.items():
+        if pattern.search(raw):
+            raise ValueError(f"JUnit artifact contains {kind} material")
+    for kind, pattern in FORBIDDEN_ARTIFACT_PATTERNS.items():
+        if pattern.search(raw):
+            raise ValueError(f"JUnit artifact contains {kind} payload material")
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as error:
+        raise ValueError("invalid JUnit artifact") from error
+    cases = root.findall(".//testcase")
+    if not cases:
+        raise ValueError("JUnit artifact contains no test cases")
+    allowed_tags = {
+        "testsuites",
+        "testsuite",
+        "testcase",
+        "failure",
+        "error",
+        "skipped",
+    }
+    for element in root.iter():
+        if element.tag not in allowed_tags:
+            raise ValueError("JUnit artifact contains an unexpected element")
+        if element.tag in {"testsuites", "testsuite"}:
+            allowed_attributes = JUNIT_COUNT_ATTRIBUTES | {"name"}
+        elif element.tag == "testcase":
+            allowed_attributes = {"classname", "name", "time"}
+        elif element.tag in {"failure", "error"}:
+            allowed_attributes = {"type"}
+        else:
+            allowed_attributes = set()
+        if set(element.attrib) - allowed_attributes:
+            raise ValueError("JUnit artifact contains an unexpected attribute")
+        if element.text and element.text.strip():
+            raise ValueError("JUnit artifact contains unexpected text")
+    for case in cases:
+        name = case.get("name", "")
+        if not SAFE_JUNIT_CASE_NAME.fullmatch(name):
+            raise ValueError("JUnit artifact contains an unsafe test case name")
+
+
+def sanitize_junit_artifact(source: Path) -> None:
+    try:
+        tree = ET.parse(source)
+    except ET.ParseError as error:
+        raise ValueError("invalid JUnit artifact") from error
+    source_root = tree.getroot()
+
+    def safe_name(value: str | None, fallback: str) -> str:
+        return value if value and SAFE_JUNIT_CASE_NAME.fullmatch(value) else fallback
+
+    def copy_counts(source_element: ET.Element, target: ET.Element) -> None:
+        for attribute in JUNIT_COUNT_ATTRIBUTES:
+            value = source_element.get(attribute)
+            if value and SAFE_JUNIT_NUMBER.fullmatch(value):
+                target.set(attribute, value)
+
+    def sanitized_case(source_case: ET.Element) -> ET.Element:
+        target = ET.Element("testcase")
+        target.set("name", safe_name(source_case.get("name"), "sanitized-test-case"))
+        target.set("classname", safe_name(source_case.get("classname"), "security"))
+        duration = source_case.get("time")
+        if duration and SAFE_JUNIT_NUMBER.fullmatch(duration):
+            target.set("time", duration)
+        for outcome in source_case:
+            if outcome.tag in {"failure", "error"}:
+                ET.SubElement(target, outcome.tag, {"type": "sanitized"})
+            elif outcome.tag == "skipped":
+                ET.SubElement(target, "skipped")
+        return target
+
+    def sanitized_suite(source_suite: ET.Element) -> ET.Element:
+        target = ET.Element("testsuite")
+        target.set("name", safe_name(source_suite.get("name"), "pytest"))
+        copy_counts(source_suite, target)
+        for source_case in source_suite.findall("testcase"):
+            target.append(sanitized_case(source_case))
+        return target
+
+    if source_root.tag == "testsuite":
+        root = sanitized_suite(source_root)
+    elif source_root.tag == "testsuites":
+        root = ET.Element("testsuites")
+        root.set("name", safe_name(source_root.get("name"), "pytest"))
+        copy_counts(source_root, root)
+        for source_suite in source_root.findall("testsuite"):
+            root.append(sanitized_suite(source_suite))
+    else:
+        raise ValueError("invalid JUnit root element")
+    ET.ElementTree(root).write(source, encoding="utf-8", xml_declaration=True)
+
+
 def validate() -> None:
     policy = load_policy()
     required = {"owner", "rationale", "mitigation", "expires_at"}
@@ -455,6 +562,10 @@ def main() -> int:
         required=True,
     )
     audit.add_argument("--input", type=Path, required=True)
+    junit = subparsers.add_parser("validate-junit")
+    junit.add_argument("--input", type=Path, required=True)
+    sanitize_junit = subparsers.add_parser("sanitize-junit")
+    sanitize_junit.add_argument("--input", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "validate":
@@ -465,6 +576,10 @@ def main() -> int:
             generate_sbom()
         elif args.command == "dast":
             run_dast(args.target)
+        elif args.command == "validate-junit":
+            validate_junit_artifact(args.input)
+        elif args.command == "sanitize-junit":
+            sanitize_junit_artifact(args.input)
         else:
             normalize_audit(args.input, args.ecosystem)
     except (OSError, ValueError, json.JSONDecodeError) as error:

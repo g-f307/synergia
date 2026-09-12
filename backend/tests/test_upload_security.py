@@ -125,6 +125,21 @@ def _inspect(tmp_path, filename: str, content: bytes, media_type: str):
         ),
         ("bomb.xlsx", _zip_bomb_xlsx(), XLSX_MIME, "archive_compression_ratio"),
     ],
+    ids=(
+        "executable-signature",
+        "html-content",
+        "javascript-content",
+        "json-disguised-as-csv",
+        "mime-mismatch",
+        "truncated-archive",
+        "unsupported-binary",
+        "macro-extension",
+        "embedded-macro",
+        "embedded-object",
+        "external-link",
+        "dangerous-formula",
+        "compression-bomb",
+    ),
 )
 def test_rejects_disguised_active_and_abusive_files(
     tmp_path, filename, content, media_type, reason

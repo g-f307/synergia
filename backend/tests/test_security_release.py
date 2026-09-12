@@ -59,6 +59,98 @@ def test_release_policy_blocks_synthetic_high_finding(
         )
 
 
+def test_trivy_unfixed_high_vulnerability_blocks_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    raw = tmp_path / "trivy-unfixed.json"
+    raw.write_text(
+        json.dumps(
+            {
+                "Results": [
+                    {
+                        "Target": "synthetic-container",
+                        "Vulnerabilities": [
+                            {
+                                "VulnerabilityID": "CVE-SYNTHETIC-UNFIXED",
+                                "Severity": "HIGH",
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    policy = {
+        "schema_version": 1,
+        "blocking_severity": "high",
+        "exceptions": [],
+    }
+    target = tmp_path / "policy.json"
+    target.write_text(json.dumps(policy), encoding="utf-8")
+    monkeypatch.setattr(security_release, "POLICY", target)
+    monkeypatch.setattr(security_release, "EVIDENCE", tmp_path / "published")
+
+    with pytest.raises(ValueError, match="CVE-SYNTHETIC-UNFIXED"):
+        security_release.normalize_audit(raw, "trivy-image")
+
+
+def test_junit_artifact_rejects_payloads_and_accepts_safe_ids(tmp_path: Path) -> None:
+    safe = tmp_path / "safe.xml"
+    safe.write_text(
+        '<testsuite><testcase classname="security" name="upload[html-content]"/>'
+        "</testsuite>",
+        encoding="utf-8",
+    )
+    security_release.validate_junit_artifact(safe)
+
+    unsafe = tmp_path / "unsafe.xml"
+    unsafe.write_text(
+        '<testsuite><testcase classname="security" '
+        'name="upload[&amp;lt;script&amp;gt;]"/></testsuite>',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unsafe test case name"):
+        security_release.validate_junit_artifact(unsafe)
+
+
+def test_junit_sanitization_removes_failure_payload_and_properties(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "failure.xml"
+    artifact.write_text(
+        '<testsuite hostname="secret-host"><properties>'
+        '<property name="token" value="sensitive"/></properties>'
+        '<testcase classname="security" name="upload[unsafe value]">'
+        '<failure message="assert password == super-secret-password-123" '
+        'type="AssertionError">&lt;script&gt;alert(1)&lt;/script&gt; '
+        'PK\\x03\\x04</failure><system-out>cookie=session-secret</system-out>'
+        '<system-err>Authorization: Bearer secret-token</system-err>'
+        "</testcase></testsuite>",
+        encoding="utf-8",
+    )
+
+    security_release.sanitize_junit_artifact(artifact)
+    security_release.validate_junit_artifact(artifact)
+    published = artifact.read_text(encoding="utf-8")
+
+    assert "sensitive" not in published
+    assert "super-secret-password-123" not in published
+    assert "secret-token" not in published
+    assert "session-secret" not in published
+    assert "secret-host" not in published
+    assert "script" not in published
+    assert "PK" not in published
+    assert "sanitized-test-case" in published
+    assert 'type="sanitized"' in published
+
+
+def test_ci_preserves_unfixed_trivy_findings() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "ignore-unfixed" not in workflow
+
+
 def test_expired_exception_does_not_bypass_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
