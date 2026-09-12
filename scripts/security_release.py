@@ -90,6 +90,11 @@ def enforce_findings(document: dict, *, now: datetime | None = None) -> None:
     exceptions = {item["id"]: item for item in policy.get("exceptions", [])}
     blocked: list[str] = []
     for finding in document.get("findings", []):
+        if not finding.get("owner") or finding.get("retest") not in {
+            "pending",
+            "passed",
+        }:
+            raise ValueError("security finding lacks owner or retest evidence")
         severity = str(finding.get("severity", "unknown")).lower()
         if SEVERITY.get(severity, 0) < threshold or finding.get("status") == "fixed":
             continue
@@ -143,6 +148,8 @@ def scan_secrets(root: Path = ROOT) -> dict:
                             "id": f"secret:{kind}:{digest}",
                             "severity": "critical",
                             "status": "open",
+                            "owner": "security",
+                            "retest": "pending",
                             "location": (
                                 f"{path.relative_to(root).as_posix()}:{line_number}"
                             ),
@@ -330,7 +337,13 @@ def run_dast(target: str) -> dict:
             }
         )
     findings = [
-        {"id": f"dast:{item['id']}", "severity": "high", "status": "open"}
+        {
+            "id": f"dast:{item['id']}",
+            "severity": "high",
+            "status": "open",
+            "owner": "security",
+            "retest": "pending",
+        }
         for item in checks
         if not item["passed"]
     ]
@@ -350,6 +363,8 @@ def normalize_audit(source: Path, ecosystem: str) -> dict:
     raw = json.loads(source.read_text(encoding="utf-8"))
     findings = []
     if ecosystem == "python":
+        if not isinstance(raw.get("dependencies"), list):
+            raise ValueError("invalid or incomplete pip-audit report")
         for dependency in raw.get("dependencies", []):
             for vulnerability in dependency.get("vulns", []):
                 findings.append(
@@ -357,20 +372,52 @@ def normalize_audit(source: Path, ecosystem: str) -> dict:
                         "id": vulnerability["id"],
                         "severity": "high",
                         "status": "open",
+                        "owner": "security",
+                        "retest": "pending",
                         "component": dependency["name"],
                         "version": dependency["version"],
                     }
                 )
     elif ecosystem == "node":
+        if raw.get("error") or not isinstance(raw.get("vulnerabilities"), dict):
+            raise ValueError("invalid or incomplete npm audit report")
         for name, vulnerability in raw.get("vulnerabilities", {}).items():
             findings.append(
                 {
                     "id": f"npm:{name}",
                     "severity": vulnerability.get("severity", "unknown"),
                     "status": "open",
+                    "owner": "security",
+                    "retest": "pending",
                     "component": name,
                 }
             )
+    elif ecosystem.startswith("trivy-"):
+        if not isinstance(raw.get("Results"), list):
+            raise ValueError("invalid or incomplete Trivy report")
+        for result in raw["Results"]:
+            target = str(result.get("Target", "unknown"))
+            for finding_type, items in (
+                ("vulnerability", result.get("Vulnerabilities", [])),
+                ("misconfiguration", result.get("Misconfigurations", [])),
+                ("secret", result.get("Secrets", [])),
+            ):
+                for item in items or []:
+                    identifier = item.get("VulnerabilityID") or item.get("ID")
+                    if not identifier:
+                        rule = item.get("RuleID", "unknown")
+                        identifier = f"secret:{rule}"
+                    findings.append(
+                        {
+                            "id": str(identifier),
+                            "severity": str(item.get("Severity", "high")).lower(),
+                            "status": "open",
+                            "owner": "security",
+                            "retest": "pending",
+                            "target": target,
+                            "kind": finding_type,
+                        }
+                    )
     else:
         raise ValueError(f"unsupported ecosystem: {ecosystem}")
     document = {"schema_version": 1, "scanner": ecosystem, "findings": findings}
@@ -402,7 +449,11 @@ def main() -> int:
     dast = subparsers.add_parser("dast")
     dast.add_argument("--target", required=True)
     audit = subparsers.add_parser("audit")
-    audit.add_argument("--ecosystem", choices=("python", "node"), required=True)
+    audit.add_argument(
+        "--ecosystem",
+        choices=("python", "node", "trivy-filesystem", "trivy-image"),
+        required=True,
+    )
     audit.add_argument("--input", type=Path, required=True)
     args = parser.parse_args()
     try:

@@ -2,6 +2,7 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,8 @@ from app.authorization import (
 from app.errors import ApiError
 from app.main import app
 from app.reports import CreateReportRequest, get_report_repository
+
+pytestmark = pytest.mark.security
 
 NOW = datetime(2026, 9, 8, 12, tzinfo=UTC)
 ORG_ID = UUID("44444444-4444-4444-8444-444444444444")
@@ -383,7 +386,7 @@ def test_export_csv_neutralizes_formula_strings_and_preserves_numbers() -> None:
     )
     repository.items[0]["data"]["workorders"] = [
         {
-            "workorder_number": "  =HYPERLINK(\"https://invalid\")",
+            "workorder_number": '  =HYPERLINK("https://invalid")',
             "produced_quantity": -7,
             "organization_code": "ORG-001",
         }
@@ -452,9 +455,7 @@ def test_export_hides_and_audits_report_outside_organization_scope() -> None:
             denials.append((args, kwargs))
 
     previous_actor = app.dependency_overrides.get(get_actor_context)
-    previous_authorization = app.dependency_overrides.get(
-        get_authorization_repository
-    )
+    previous_authorization = app.dependency_overrides.get(get_authorization_repository)
 
     def actor_context(request: Request) -> ActorContext:
         base = _actor()

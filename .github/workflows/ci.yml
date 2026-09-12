@@ -228,10 +228,14 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_security
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: synergia_security
+      PGUSER: synergia
+      PGPASSWORD: synergia-ci-only
       RATE_LIMIT_ENABLED: "false"
       SYNERGIA_ENV: test
       SYNERGIA_LOCAL_AUTH_ENABLED: "true"
-      AUTH_JWT_SIGNING_KEY: synthetic-security-signing-key-at-least-32-bytes
       AUTH_JWT_ISSUER: synergia-security-ci
       AUTH_JWT_AUDIENCE: synergia-security-dast
       AUTH_REFRESH_COOKIE_SECURE: "false"
@@ -254,10 +258,13 @@ jobs:
           python --version
           pip-audit --version
           npm --version
+          psql --version
+          psql --tuples-only --no-align --command "SELECT version();"
       - name: Validar política, detectores de segredo e SBOM
         id: policy
         continue-on-error: true
         run: |
+          mkdir -p reports/private
           python scripts/security_release.py validate
           pytest -q -m "security and not integration" backend/tests \
             --junitxml=reports/security/offensive-tests.xml
@@ -268,28 +275,25 @@ jobs:
         run: |
           set +e
           pip-audit -r backend/requirements-dev.txt --format=json \
-            --output=reports/security/python-audit-raw.json
-          audit_status=$?
+            --output=reports/private/python-audit-raw.json
           set -e
           python scripts/security_release.py audit --ecosystem python \
-            --input reports/security/python-audit-raw.json
-          exit "$audit_status"
+            --input reports/private/python-audit-raw.json
       - name: Auditar dependências Node
         id: node_audit
         continue-on-error: true
         shell: bash
         run: |
           set +e
-          npm audit --prefix web --omit=dev --json > reports/security/node-audit-raw.json
-          audit_status=$?
+          npm audit --prefix web --omit=dev --json > reports/private/node-audit-raw.json
           set -e
           python scripts/security_release.py audit --ecosystem node \
-            --input reports/security/node-audit-raw.json
-          exit "$audit_status"
+            --input reports/private/node-audit-raw.json
       - name: Preparar API descartável para DAST
         shell: bash
         run: |
           set -euo pipefail
+          export AUTH_JWT_SIGNING_KEY="synthetic-${GITHUB_RUN_ID}-${GITHUB_SHA}"
           python scripts/validate_project_assets.py
           python scripts/bootstrap_web_e2e.py
           cd backend
@@ -322,11 +326,19 @@ jobs:
           scan-type: fs
           scan-ref: .
           format: json
-          output: reports/security/trivy-filesystem.json
+          output: reports/private/trivy-filesystem.json
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
+      - name: Aplicar política ao relatório Trivy de filesystem
+        id: trivy_fs_policy
+        if: always()
+        continue-on-error: true
+        run: >-
+          python scripts/security_release.py audit
+          --ecosystem trivy-filesystem
+          --input reports/private/trivy-filesystem.json
       - name: Auditar imagem publicada com Trivy
         id: trivy_image
         continue-on-error: true
@@ -334,10 +346,18 @@ jobs:
         with:
           image-ref: synergia-web-security:${{ github.sha }}
           format: json
-          output: reports/security/trivy-image.json
+          output: reports/private/trivy-image.json
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
+      - name: Aplicar política ao relatório Trivy da imagem
+        id: trivy_image_policy
+        if: always()
+        continue-on-error: true
+        run: >-
+          python scripts/security_release.py audit
+          --ecosystem trivy-image
+          --input reports/private/trivy-image.json
       - name: Gerar SBOM da imagem publicada
         if: always()
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
@@ -354,10 +374,14 @@ jobs:
           NODE_AUDIT: ${{ steps.node_audit.outcome }}
           DAST: ${{ steps.dast.outcome }}
           TRIVY_FS: ${{ steps.trivy_fs.outcome }}
+          TRIVY_FS_POLICY: ${{ steps.trivy_fs_policy.outcome }}
           TRIVY_IMAGE: ${{ steps.trivy_image.outcome }}
+          TRIVY_IMAGE_POLICY: ${{ steps.trivy_image_policy.outcome }}
         shell: bash
         run: |
-          for outcome in "$POLICY" "$PYTHON_AUDIT" "$NODE_AUDIT" "$DAST" "$TRIVY_FS" "$TRIVY_IMAGE"; do
+          for outcome in "$POLICY" "$PYTHON_AUDIT" "$NODE_AUDIT" "$DAST" \
+            "$TRIVY_FS" "$TRIVY_FS_POLICY" \
+            "$TRIVY_IMAGE" "$TRIVY_IMAGE_POLICY"; do
             test "$outcome" = success || exit 1
           done
       - name: Publicar evidências sanitizadas de segurança
