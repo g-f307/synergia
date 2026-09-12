@@ -7,6 +7,7 @@ __pycache__/
 .test-tmp/
 .test-tmp-*/
 backend/reports/
+reports/security/
 backend/.pytest-tmp/
 artifacts/synthetic/
 .data/

@@ -275,10 +275,10 @@
     },
     {
       "id": "R-23", "journey": "J-02", "category": "supply-chain", "threat": "A vulnerable dependency, leaked secret or compromised build artifact enters the release.",
-      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Pinned dependency lockfiles", "Four CI jobs", "Synthetic test environment"],
-      "evidence": ["web/package-lock.json", "backend/requirements-dev.txt", ".github/workflows/ci.yml"],
-      "owner": "security", "treatment_issue": 92, "decision": "DAST, dependency scanning, secret detection and SBOM are required before release."
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Pinned dependency lockfiles", "Controlled DAST", "Secret and dependency gates", "CycloneDX SBOM", "Container image scanning"],
+      "evidence": ["scripts/security_release.py", "backend/tests/test_security_release.py", "docs/offensive-security.md", ".github/workflows/ci.yml"],
+      "owner": "security", "treatment_issue": 92, "decision": "Confirmed high and critical findings block the release unless a complete, time-bounded exception is registered."
     },
     {
       "id": "R-24", "journey": "J-06", "category": "governance", "threat": "The initial reviewer group or decision policy is mistaken for final corporate authority levels.",

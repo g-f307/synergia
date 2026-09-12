@@ -12,6 +12,7 @@ from starlette.datastructures import Headers, UploadFile
 from app.upload_security import policy_for, purge_quarantined, receive_and_inspect
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+pytestmark = pytest.mark.security
 
 
 def _xlsx_bytes(formula: str | None = None) -> bytes:

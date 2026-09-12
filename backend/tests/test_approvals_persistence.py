@@ -10,7 +10,7 @@ from app.approvals import ApprovalRepository
 from app.authorization import ActorContext
 from app.errors import ApiError
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.security]
 
 
 def _actor(user_id, session_id, org_id, *permissions):

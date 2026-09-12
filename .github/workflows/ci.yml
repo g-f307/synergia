@@ -208,3 +208,165 @@ jobs:
           ref: prototype-pages
       - name: Confirmar arquivos do protótipo
         run: test -f index.html && test -f styles.css && test -f script.js
+
+  security-release:
+    name: Segurança ofensiva e cadeia de dependências
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: synergia_security
+          POSTGRES_USER: synergia
+          POSTGRES_PASSWORD: synergia-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U synergia -d synergia_security"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_security
+      RATE_LIMIT_ENABLED: "false"
+      SYNERGIA_ENV: test
+      SYNERGIA_LOCAL_AUTH_ENABLED: "true"
+      AUTH_JWT_SIGNING_KEY: synthetic-security-signing-key-at-least-32-bytes
+      AUTH_JWT_ISSUER: synergia-security-ci
+      AUTH_JWT_AUDIENCE: synergia-security-dast
+      AUTH_REFRESH_COOKIE_SECURE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar ferramentas com versões registradas
+        run: |
+          pip install -r backend/requirements-dev.txt pip-audit==2.10.0
+          npm ci --prefix web
+          python --version
+          pip-audit --version
+          npm --version
+      - name: Validar política, detectores de segredo e SBOM
+        id: policy
+        continue-on-error: true
+        run: |
+          python scripts/security_release.py validate
+          pytest -q -m "security and not integration" backend/tests \
+            --junitxml=reports/security/offensive-tests.xml
+      - name: Auditar dependências Python
+        id: python_audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          pip-audit -r backend/requirements-dev.txt --format=json \
+            --output=reports/security/python-audit-raw.json
+          audit_status=$?
+          set -e
+          python scripts/security_release.py audit --ecosystem python \
+            --input reports/security/python-audit-raw.json
+          exit "$audit_status"
+      - name: Auditar dependências Node
+        id: node_audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm audit --prefix web --omit=dev --json > reports/security/node-audit-raw.json
+          audit_status=$?
+          set -e
+          python scripts/security_release.py audit --ecosystem node \
+            --input reports/security/node-audit-raw.json
+          exit "$audit_status"
+      - name: Preparar API descartável para DAST
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/validate_project_assets.py
+          python scripts/bootstrap_web_e2e.py
+          cd backend
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 18000 \
+            > ../reports/security/dast-api.log 2>&1 &
+          echo $! > ../reports/security/dast-api.pid
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:18000/health >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Executar DAST controlado
+        id: dast
+        continue-on-error: true
+        env:
+          DAST_EMAIL: operator.e2e@example.invalid
+          DAST_PASSWORD: synthetic-e2e-password-63
+        run: python scripts/security_release.py dast --target http://127.0.0.1:18000
+      - name: Encerrar API descartável
+        if: always()
+        shell: bash
+        run: test ! -f reports/security/dast-api.pid || kill "$(cat reports/security/dast-api.pid)" || true
+      - name: Construir imagem do frontend
+        run: docker build -t synergia-web-security:${GITHUB_SHA} web
+      - name: Auditar filesystem, configuração e segredos com Trivy
+        id: trivy_fs
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: json
+          output: reports/security/trivy-filesystem.json
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Auditar imagem publicada com Trivy
+        id: trivy_image
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: synergia-web-security:${{ github.sha }}
+          format: json
+          output: reports/security/trivy-image.json
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Gerar SBOM da imagem publicada
+        if: always()
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: synergia-web-security:${{ github.sha }}
+          format: cyclonedx
+          output: reports/security/web-image-sbom.cdx.json
+          scan-type: image
+      - name: Aplicar decisão final do portão
+        if: always()
+        env:
+          POLICY: ${{ steps.policy.outcome }}
+          PYTHON_AUDIT: ${{ steps.python_audit.outcome }}
+          NODE_AUDIT: ${{ steps.node_audit.outcome }}
+          DAST: ${{ steps.dast.outcome }}
+          TRIVY_FS: ${{ steps.trivy_fs.outcome }}
+          TRIVY_IMAGE: ${{ steps.trivy_image.outcome }}
+        shell: bash
+        run: |
+          for outcome in "$POLICY" "$PYTHON_AUDIT" "$NODE_AUDIT" "$DAST" "$TRIVY_FS" "$TRIVY_IMAGE"; do
+            test "$outcome" = success || exit 1
+          done
+      - name: Publicar evidências sanitizadas de segurança
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seguranca-ofensiva-e-supply-chain
+          path: |
+            reports/security/*.json
+            reports/security/*.xml
+          if-no-files-found: error
+          retention-days: 14
