@@ -10,6 +10,8 @@ from app.execution_monitoring import router as monitoring_router
 from app.http_security import HttpSecurityConfig, HttpSecurityMiddleware
 from app.imports import router as imports_router
 from app.notifications import router as notifications_router
+from app.observability import configure_logging
+from app.observability.routes import router as observability_router
 from app.profile import router as profile_router
 from app.queries import router as queries_router
 from app.rate_limiting import RateLimitMiddleware
@@ -19,6 +21,7 @@ from app.users import router as users_router
 
 
 def create_app() -> FastAPI:
+    configure_logging()
     application = FastAPI(
         title="SYNERGIA API",
         version="0.7.0",
@@ -53,10 +56,7 @@ def create_app() -> FastAPI:
     application.include_router(reports_router)
     application.include_router(notifications_router)
     application.include_router(approvals_router)
-
-    @application.get("/health", tags=["system"])
-    def health() -> dict[str, str]:
-        return {"status": "ok", "service": "synergia-api"}
+    application.include_router(observability_router)
 
     return application
 

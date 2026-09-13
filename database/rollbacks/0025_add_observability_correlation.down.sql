@@ -1,0 +1,11 @@
+DROP INDEX IF EXISTS synergia.idx_approval_events_time;
+DROP INDEX IF EXISTS synergia.idx_email_delivery_attempts_time;
+DROP INDEX IF EXISTS synergia.idx_notification_events_time;
+DROP INDEX IF EXISTS synergia.idx_report_events_time;
+DROP INDEX IF EXISTS synergia.idx_execution_transitions_time;
+DROP INDEX IF EXISTS synergia.idx_audit_events_correlation;
+DROP INDEX IF EXISTS synergia.idx_executions_correlation;
+DROP TRIGGER IF EXISTS audit_events_populate_correlation ON synergia.audit_events;
+DROP FUNCTION IF EXISTS synergia.populate_audit_event_correlation();
+ALTER TABLE synergia.audit_events DROP COLUMN IF EXISTS correlation_id;
+ALTER TABLE synergia.executions DROP COLUMN IF EXISTS correlation_id;
