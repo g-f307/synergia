@@ -178,13 +178,13 @@ npm start
 Valide a saúde:
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/health/live
 ```
 
 Resultado esperado:
 
 ```json
-{"status":"ok","service":"synergia-api"}
+{"status":"alive","service":"synergia-api","checked_at":"<timestamp UTC>"}
 ```
 
 ## 6. Importação sintética e consulta

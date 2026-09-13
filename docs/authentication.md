@@ -56,8 +56,9 @@ quarta.
 | `POST /auth/logout` | Bearer access token | revoga a sessão atual |
 | `POST /auth/logout-all` | Bearer access token | revoga as sessões do próprio usuário |
 
-Login e refresh são as únicas operações públicas além de `GET /health`; ambas
-validam sua própria credencial. Logout exige um access token válido. Revogar
+Login e refresh são as únicas operações públicas além das sondas `/health`,
+`/health/live` e `/health/ready`; ambas validam sua própria credencial. A rota
+`/metrics` usa credencial técnica separada. Logout exige um access token válido. Revogar
 sessões de terceiros dependerá de `session.revoke.any` na camada de autorização.
 
 O JWT exige `iss`, `aud`, `sub`, `sid`, `jti`, `iat`, `nbf`, `exp` e
