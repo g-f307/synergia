@@ -11,9 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "docs" / "access-control-matrix.md"
 PUBLIC = {
     ("GET", "/health"),
+    ("GET", "/health/live"),
+    ("GET", "/health/ready"),
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
+TECHNICAL = {("GET", "/metrics")}
 ROW = re.compile(r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` \|")
 
 
@@ -50,15 +53,16 @@ def main() -> int:
     documented = documented_operations()
     duplicates = sorted({item for item in documented if documented.count(item) > 1})
     operations, secured = openapi_operations()
-    private = operations - PUBLIC
+    private = operations - PUBLIC - TECHNICAL
     documented_set = set(documented)
     missing = sorted(private - documented_set)
     stale = sorted(documented_set - private)
 
     unsecured = sorted(private - secured)
     public_secured = sorted(PUBLIC & secured)
+    technical_unsecured = sorted(TECHNICAL - secured)
 
-    if duplicates or missing or stale or unsecured or public_secured:
+    if duplicates or missing or stale or unsecured or public_secured or technical_unsecured:
         if duplicates:
             print(f"Rotas duplicadas: {duplicates}")
         if missing:
@@ -69,6 +73,8 @@ def main() -> int:
             print(f"Rotas privadas sem esquema Bearer: {unsecured}")
         if public_secured:
             print(f"Rotas públicas marcadas como privadas: {public_secured}")
+        if technical_unsecured:
+            print(f"Rotas técnicas sem credencial: {technical_unsecured}")
         return 1
 
     print(

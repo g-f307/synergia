@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -499,17 +500,25 @@ def test_requires_actor_and_returns_not_found(api) -> None:
 def test_logs_trace_identifiers_without_file_contents(api, caplog) -> None:
     client, _, _ = api
     confidential_value = b"workorder\nCONFIDENTIAL-WO-VALUE\n"
+    telemetry_logger = logging.getLogger("synergia.telemetry")
+    telemetry_logger.addHandler(caplog.handler)
 
-    with caplog.at_level("INFO", logger="synergia.imports"):
-        response = client.post(
-            "/imports",
-            data={"source": "OWM", "technical_origin": "synthetic-fixture"},
-            files={"file": ("controlled.csv", confidential_value, "text/csv")},
-        )
+    try:
+        with caplog.at_level("INFO", logger="synergia.telemetry"):
+            response = client.post(
+                "/imports",
+                data={"source": "OWM", "technical_origin": "synthetic-fixture"},
+                files={"file": ("controlled.csv", confidential_value, "text/csv")},
+            )
+    finally:
+        telemetry_logger.removeHandler(caplog.handler)
 
     assert response.status_code == 201
-    assert response.json()["execution_id"] in caplog.text
-    assert "CONFIDENTIAL-WO-VALUE" not in caplog.text
+    fields = [getattr(record, "synergia_fields", {}) for record in caplog.records]
+    assert any(
+        item.get("execution_id") == response.json()["execution_id"] for item in fields
+    )
+    assert "CONFIDENTIAL-WO-VALUE" not in str(fields)
 
 
 def test_validation_report_endpoint_and_blocked_execution(api) -> None:
