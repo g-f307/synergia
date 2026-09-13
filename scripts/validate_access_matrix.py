@@ -62,7 +62,14 @@ def main() -> int:
     public_secured = sorted(PUBLIC & secured)
     technical_unsecured = sorted(TECHNICAL - secured)
 
-    if duplicates or missing or stale or unsecured or public_secured or technical_unsecured:
+    if (
+        duplicates
+        or missing
+        or stale
+        or unsecured
+        or public_secured
+        or technical_unsecured
+    ):
         if duplicates:
             print(f"Rotas duplicadas: {duplicates}")
         if missing:
