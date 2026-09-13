@@ -254,10 +254,10 @@
     },
     {
       "id": "R-20", "journey": "J-07", "category": "repudiation", "threat": "Administrative or operational audit data is altered, deleted or unavailable during investigation.",
-      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Append-only database events", "Restricted audit.read permission", "Correlation identifiers"],
-      "evidence": ["backend/tests/test_identity_persistence.py", "backend/tests/test_approvals_persistence.py"],
-      "owner": "operations", "treatment_issue": 94, "decision": "Retention, backup and restore evidence is required before release."
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Append-only database events", "Restricted audit.read permission", "Correlation identifiers", "Protected retention allowlist", "Consistent database and file backup", "Empty-target restore with integrity verification"],
+      "evidence": ["backend/tests/test_identity_persistence.py", "backend/tests/test_approvals_persistence.py", "backend/tests/test_data_operations_persistence.py", "docs/data-recovery-validation-report.md"],
+      "owner": "operations", "treatment_issue": 94, "decision": "Automated recovery evidence exists; independent runbook execution remains an acceptance gate."
     },
     {
       "id": "R-21", "journey": "J-03", "category": "information-disclosure", "threat": "Logs, metrics, errors or CI artifacts expose tokens, hashes, paths or operational content.",
@@ -268,10 +268,10 @@
     },
     {
       "id": "R-22", "journey": "J-03", "category": "denial-of-service", "threat": "The system cannot detect dependency degradation or recover data after database or storage failure.",
-      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Independent liveness", "Fail-closed database and storage readiness", "Dependency and queue metrics", "Versioned alerts with firing and recovery tests", "Transactional persistence", "Versioned migrations"],
-      "evidence": ["backend/tests/test_health.py", "backend/tests/test_observability_persistence.py", "observability/prometheus/alerts.test.yml", "docs/observability.md"],
-      "owner": "operations", "treatment_issue": 94, "decision": "Detection is implemented; backup, restore and recovery evidence remain required by issue 94."
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Independent liveness", "Fail-closed database and storage readiness", "Dependency and queue metrics", "Versioned alerts with firing and recovery tests", "Transactional persistence", "Versioned migrations", "Recovery health and metrics", "Executable incident runbooks"],
+      "evidence": ["backend/tests/test_health.py", "backend/tests/test_observability_persistence.py", "backend/tests/test_data_operations_persistence.py", "observability/prometheus/alerts.test.yml", "docs/observability.md", "docs/runbooks/backup-restore.md"],
+      "owner": "operations", "treatment_issue": 94, "decision": "Detection and controlled recovery are implemented; RPO and RTO remain proposals until operational acceptance."
     },
     {
       "id": "R-23", "journey": "J-02", "category": "supply-chain", "threat": "A vulnerable dependency, leaked secret or compromised build artifact enters the release.",

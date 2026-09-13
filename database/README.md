@@ -54,6 +54,8 @@ python scripts/validate_project_assets.py
   execução, organização, responsável, filtros, horário de referência e estado;
 - `report_artifacts` guarda o snapshot JSON reproduzível e seu hash, enquanto
   `report_events` registra início, sucesso, falha, consultas e exportações relevantes;
+- `data_operation_events` mantém a trilha append-only de backup, restauração,
+  verificação e retenção, sem credenciais, caminhos ou conteúdo;
 - quantidades continuam `NULL` quando ausentes na origem; quando informadas, são
   não negativas e a liberação parcial exige quantidade liberada maior que zero
   e menor que a recebida.

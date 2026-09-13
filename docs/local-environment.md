@@ -61,6 +61,8 @@ versione `.env` real. O FastAPI não carrega `.env` automaticamente: exporte
 Variáveis opcionais:
 
 - `IMPORT_STORAGE_DIR`: diretório controlado; o padrão é `data/imports/`;
+- `PROFILE_AVATAR_STORAGE_ROOT`: diretório privado dos avatares;
+- `DATA_OPERATIONS_ACTOR`: identidade técnica registrada nas operações;
 - `VALID_ORGANIZATION_CODES`: códigos oficiais separados por vírgula.
 
 ## 2. PostgreSQL vazio e migrations

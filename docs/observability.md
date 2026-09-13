@@ -1,9 +1,9 @@
 # Observabilidade operacional
 
 A issue #93 entrega uma base local e reproduzível: logs JSON, sondas HTTP,
-métricas Prometheus, alertas preliminares e painel Grafana. A plataforma
-corporativa definitiva, retenção, backup, restore e SLOs permanecem nas issues
-#94 a #96.
+métricas Prometheus, alertas preliminares e painel Grafana. A #94 acrescenta o
+estado de recuperação, runbooks e retenção operacional. A plataforma
+corporativa definitiva e SLOs permanecem para validação posterior.
 
 ## Contratos e segurança
 
@@ -39,7 +39,9 @@ proibidos. Rotas de métricas usam templates, nunca URL ou query concreta.
 - `synergia_queue_depth` e `synergia_queue_oldest_age_seconds`;
 - `synergia_operation_duration_seconds` e `synergia_import_rows_total`;
 - `synergia_rate_limit_denials_total` e
-  `synergia_observability_collection_success`.
+  `synergia_observability_collection_success`;
+- `synergia_data_operation_last_success_timestamp_seconds` e
+  `synergia_data_operation_failures_total`.
 
 Labels são limitadas a método, template de rota, classe HTTP, componente,
 jornada, estado/outcome, fila, operação e dimensão predefinidos. IDs, e-mail,
@@ -63,7 +65,8 @@ Na raiz, execute:
 docker compose -f observability/compose.yml up -d
 ```
 
-O Prometheus fica em `127.0.0.1:19090` e o Grafana em `127.0.0.1:13000`. O painel
+O Prometheus fica em `127.0.0.1:19090` e o Grafana em `127.0.0.1:13000`. Seu
+volume possui retenção explícita de 15 dias e não integra o backup de dados. O painel
 provisionado cobre disponibilidade, volume, latência, erros, rejeições,
 processamento, relatórios, notificações/e-mail, aprovações, filas,
 reprocessamento e bloqueios de limite.
@@ -73,7 +76,16 @@ total da API pelo `up` do scrape, dependência crítica, coleta indisponível,
 worker degradado, taxa HTTP 5xx, falhas das jornadas, rejeição elevada, filas
 paradas, backlog de aprovação e bloqueios abusivos.
 Limiares são iniciais, versionados e validados por `promtool`; não constituem
-SLO. Os `runbook` apontam explicitamente para a recuperação operacional da #94.
+SLO. As regras também detectam backup ausente/atrasado e falhas persistidas de
+backup, verificação e retenção. Falhas de restauração anteriores à existência
+do banco alvo são emitidas pelo CLI somente como código e correlation ID seguros
+e exigem abertura do incidente pelo operador. Todos os `runbook` apontam para procedimentos versionados em
+[`runbooks/`](runbooks/backup-restore.md).
+
+O `/health` inclui `data_recovery` como componente não crítico. Ausência,
+atraso ou falha posterior ao último backup degrada a saúde completa, mas não
+retira da rotação uma API cujo banco e storage continuam disponíveis. A
+readiness permanece restrita às dependências necessárias para atender tráfego.
 
 ## Validação
 
