@@ -68,9 +68,10 @@ provisionado cobre disponibilidade, volume, latência, erros, rejeições,
 processamento, relatórios, notificações/e-mail, aprovações, filas,
 reprocessamento e bloqueios de limite.
 
-As regras em `observability/prometheus/alerts.yml` detectam dependência crítica,
-coleta indisponível, worker degradado, taxa HTTP 5xx, falhas das jornadas,
-rejeição elevada, filas paradas, backlog de aprovação e bloqueios abusivos.
+As regras em `observability/prometheus/alerts.yml` detectam indisponibilidade
+total da API pelo `up` do scrape, dependência crítica, coleta indisponível,
+worker degradado, taxa HTTP 5xx, falhas das jornadas, rejeição elevada, filas
+paradas, backlog de aprovação e bloqueios abusivos.
 Limiares são iniciais, versionados e validados por `promtool`; não constituem
 SLO. Os `runbook` apontam explicitamente para a recuperação operacional da #94.
 

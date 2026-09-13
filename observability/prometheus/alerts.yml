@@ -1,6 +1,15 @@
 groups:
   - name: synergia-availability
     rules:
+      - alert: SynergiaApiUnavailable
+        expr: up{job="synergia-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: SYNERGIA API cannot be scraped by Prometheus
+          runbook: issue-94-api-recovery
+
       - alert: SynergiaCriticalDependencyUnavailable
         expr: synergia_dependency_up{component=~"configuration|postgresql|storage"} == 0
         for: 1m
@@ -55,9 +64,9 @@ groups:
 
       - alert: SynergiaImportRejectionRateHigh
         expr: |
-          increase(synergia_operational_events_total{
+          sum(increase(synergia_operational_events_total{
             journey="inspection",outcome="rejected"
-          }[10m])
+          }[10m]))
           / clamp_min(sum(increase(synergia_operational_events_total{
             journey="inspection"
           }[10m])), 1) > 0.20
