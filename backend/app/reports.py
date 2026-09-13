@@ -27,6 +27,7 @@ from app.authorization import (
     require_permission,
 )
 from app.errors import ApiError, ErrorResponse
+from app.observability.telemetry import bind_execution_id
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 ERROR_RESPONSES = {
@@ -919,6 +920,7 @@ def create_report(
     authorization: AuthorizationRepo,
     repository: ReportRepository = Depends(get_report_repository),
 ) -> ReportDataResponse:
+    bind_execution_id(payload.execution_id)
     _authorize_organization(payload, actor, authorization, request)
     return ReportDataResponse.model_validate(repository.generate(payload, actor))
 
@@ -938,6 +940,7 @@ def create_report_version(
     authorization: AuthorizationRepo,
     repository: ReportRepository = Depends(get_report_repository),
 ) -> ReportDataResponse:
+    bind_execution_id(payload.execution_id)
     _authorize_organization(payload, actor, authorization, request)
     return ReportDataResponse.model_validate(
         repository.generate(payload, actor, report_id)

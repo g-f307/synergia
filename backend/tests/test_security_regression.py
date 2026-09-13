@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from security_matrix import (  # noqa: E402
     PUBLIC,
+    TECHNICAL,
     load_cases,
     openapi_operations,
     render_report,
@@ -36,7 +37,7 @@ def test_every_private_openapi_operation_is_in_the_executable_matrix() -> None:
     documented = {(case.method, case.path) for case in CASES}
 
     assert validate(CASES) == []
-    assert operations - PUBLIC == documented
+    assert operations - PUBLIC - TECHNICAL == documented
     assert documented <= secured
 
 

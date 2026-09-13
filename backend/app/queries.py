@@ -25,6 +25,7 @@ from app.authorization import (
 from app.business_rules import RULE_CATALOG
 from app.errors import ApiError, ErrorResponse
 from app.execution import PIPELINE_VERSION, reprocessing_fingerprint
+from app.observability.telemetry import bind_execution_id
 
 router = APIRouter(tags=["queries"])
 ERROR_RESPONSES = {
@@ -181,6 +182,7 @@ class HistoryEventResponse(BaseModel):
     entity_type: str
     entity_id: str
     event_type: str
+    correlation_id: UUID | None = None
     payload: dict[str, Any]
     occurred_at: datetime
 
@@ -870,7 +872,7 @@ class PostgresQueryRepository:
             rows = connection.execute(
                 f"""
                 SELECT a.id, a.execution_id, a.entity_type, a.entity_id, a.event_type,
-                       a.payload, a.occurred_at
+                       a.correlation_id, a.payload, a.occurred_at
                 FROM synergia.audit_events a JOIN synergia.executions e ON e.id = a.execution_id {where}
                 ORDER BY {order}
                 LIMIT %s OFFSET %s
@@ -1050,9 +1052,11 @@ class PostgresQueryRepository:
                      actor_type, actor_identifier, pipeline_version,
                      rule_catalog_version, state_changed_by_type,
                      state_changed_by, state_change_reason, organization_id,
-                     initiated_by_user_id, initiated_by_session_id)
+                     initiated_by_user_id, initiated_by_session_id,
+                     correlation_id)
                 VALUES (%s, 'reprocessing', %s, %s, %s, 'user', %s,
-                        %s, %s, 'user', %s, 'reprocessing_requested', %s, %s, %s)
+                        %s, %s, 'user', %s, 'reprocessing_requested', %s, %s, %s,
+                        %s)
                 """,
                 (
                     new_execution_id,
@@ -1066,6 +1070,7 @@ class PostgresQueryRepository:
                     original["organization_id"],
                     actor.user_id if actor else None,
                     actor.session_id if actor else None,
+                    actor.correlation_id if actor else None,
                 ),
             )
             connection.execute(
@@ -1500,6 +1505,7 @@ def request_reprocessing(
     ],
     repository: QueryRepository = Depends(get_query_repository),
 ) -> ReprocessResponse:
+    bind_execution_id(execution_id)
     try:
         result = repository.request_reprocessing(
             execution_id,

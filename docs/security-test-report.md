@@ -6,7 +6,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 - operações privadas cobertas: 85
 - papéis iniciais: 5
 - combinações papel x operação: 425
-- rotas públicas explicitamente verificadas: 3
+- rotas públicas explicitamente verificadas: 5
 
 | Operação | Permissão | Escopo | Permitido | Negado |
 | --- | --- | --- | --- | --- |

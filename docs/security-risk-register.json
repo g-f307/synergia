@@ -261,17 +261,17 @@
     },
     {
       "id": "R-21", "journey": "J-03", "category": "information-disclosure", "threat": "Logs, metrics, errors or CI artifacts expose tokens, hashes, paths or operational content.",
-      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "blocked",
-      "controls": ["Safe error envelope", "Correlation ID", "E2E leak assertions", "No absolute storage path in API"],
-      "evidence": ["backend/tests/test_security_regression.py", "web/e2e/operational-flow.spec.ts", "docs/stage-4-validation-report.md"],
-      "owner": "observability", "treatment_issue": 93, "decision": "Structured telemetry and redaction tests are required before release."
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Safe error envelope", "Allowlisted structured logs", "Bounded metric labels", "Correlation ID", "No raw access URL or absolute storage path"],
+      "evidence": ["backend/tests/test_observability.py", "backend/tests/test_security_regression.py", "docs/observability.md"],
+      "owner": "observability", "treatment_issue": 93
     },
     {
       "id": "R-22", "journey": "J-03", "category": "denial-of-service", "threat": "The system cannot detect dependency degradation or recover data after database or storage failure.",
       "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Basic health endpoint", "Transactional persistence", "Versioned migrations"],
-      "evidence": ["backend/tests/test_health.py", "scripts/validate_project_assets.py"],
-      "owner": "operations", "treatment_issue": 93, "decision": "Readiness, metrics, alerts, backup and restore must be demonstrated by issues 93 and 94."
+      "controls": ["Independent liveness", "Fail-closed database and storage readiness", "Dependency and queue metrics", "Versioned alerts with firing and recovery tests", "Transactional persistence", "Versioned migrations"],
+      "evidence": ["backend/tests/test_health.py", "backend/tests/test_observability_persistence.py", "observability/prometheus/alerts.test.yml", "docs/observability.md"],
+      "owner": "operations", "treatment_issue": 94, "decision": "Detection is implemented; backup, restore and recovery evidence remain required by issue 94."
     },
     {
       "id": "R-23", "journey": "J-02", "category": "supply-chain", "threat": "A vulnerable dependency, leaked secret or compromised build artifact enters the release.",

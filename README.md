@@ -31,6 +31,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [modelo de ameaças e baseline de riscos](docs/threat-model.md);
 - [checklist de revisão de segurança](docs/security-review-checklist.md);
 - [baseline de segurança HTTP e navegador](docs/http-security-baseline.md);
+- [observabilidade, sondas, métricas, alertas e painel técnico](docs/observability.md);
 - [relatório de validação HTTP, cache e conteúdo](docs/http-security-validation-report.md);
 - [mapa de jornadas, rotas e estados da aplicação web](docs/web-journey-map.md);
 - [paridade funcional com o protótipo](docs/web-prototype-parity.md);
@@ -75,8 +76,8 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
-A API ficará disponível em `http://localhost:8000`; o endpoint de saúde é
-`GET /health`. Uploads rastreáveis são feitos em `POST /imports` e consultados
+A API ficará disponível em `http://localhost:8000`; as sondas são
+`GET /health/live`, `GET /health/ready` e `GET /health`. Uploads rastreáveis são feitos em `POST /imports` e consultados
 em `GET /imports/{execution_id}`; exemplos e configuração estão em
 [`backend/README.md`](backend/README.md).
 

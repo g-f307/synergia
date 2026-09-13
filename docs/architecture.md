@@ -1,6 +1,6 @@
 # Arquitetura vigente
 
-Este documento registra a arquitetura implementada ao término da Etapa 4. Ele
+Este documento registra a arquitetura implementada durante a Etapa 5. Ele
 separa explicitamente o que existe na `main` do que permanece planejado.
 
 ## Visão geral
@@ -11,6 +11,8 @@ flowchart LR
     A -->|HTTP / OpenAPI| F[FastAPI]
     F --> P[(PostgreSQL 16)]
     F --> S[Armazenamento controlado]
+    F --> O[Logs JSON, health e métricas]
+    O --> M[Prometheus e Grafana]
     I[CSV, JSON e XLSX] --> Q[Quarentena e inspeção]
     Q --> F
     C[GitHub Actions] --> A
@@ -38,6 +40,7 @@ uma execução.
 | Relatórios | snapshots persistentes, versões imutáveis e exportação segura | `backend/app/reports.py` e `docs/reports.md` |
 | Notificações | caixa interna, preferências e entrega externa desacoplada | `backend/app/notifications.py`, `email_delivery.py` |
 | Aprovação humana | política versionada, atribuição, justificativa, consentimento e histórico | `backend/app/approvals.py` e `docs/human-approvals.md` |
+| Observabilidade | logs estruturados, sondas, métricas, alertas e painel técnico | `backend/app/observability/`, `observability/` e `docs/observability.md` |
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |
 | Dados sintéticos | cenários reproduzíveis sem dados reais | `data/synthetic/` |
 
@@ -150,7 +153,7 @@ referência é desatualizada: o protótipo congelado é estático, e a implement
 oficial é Angular. Um retorno a React seria uma mudança arquitetural e não uma
 correção documental.
 
-## Limites após a Etapa 4
+## Limites da base atual
 
 Não fazem parte da arquitetura entregue integrações corporativas definitivas,
 conectores RPA, filas distribuídas ou decisões autônomas. A entrega de e-mail

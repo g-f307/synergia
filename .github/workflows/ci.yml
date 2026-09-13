@@ -158,6 +158,15 @@ jobs:
         run: pg_isready
       - name: Validar migrations e dados sintéticos
         run: python scripts/validate_project_assets.py
+      - name: Validar configuração, alertas e recuperação da observabilidade
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/observability/prometheus:/etc/prometheus" \
+            -v "$PWD/observability/secrets.example/metrics-token:/run/secrets/synergia_metrics_token:ro" \
+            prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/observability/prometheus:/etc/prometheus" \
+            prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
       - name: Executar testes de persistência
         env:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci

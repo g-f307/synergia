@@ -1,7 +1,8 @@
 # Autorização das APIs
 
-Todas as operações OpenAPI, exceto `GET /health`, `POST /auth/login` e
-`POST /auth/refresh`, exigem access token Bearer. O backend valida assinatura,
+Todas as operações OpenAPI, exceto as três sondas públicas, login, refresh e a
+rota técnica `/metrics`, exigem access token Bearer. `/metrics` usa credencial
+exclusiva de scraping. O backend valida assinatura,
 emissor, audiência, algoritmo e datas do JWT e confirma no PostgreSQL que o
 usuário e a sessão continuam ativos.
 

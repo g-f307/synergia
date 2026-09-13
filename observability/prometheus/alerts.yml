@@ -1,0 +1,145 @@
+groups:
+  - name: synergia-availability
+    rules:
+      - alert: SynergiaApiUnavailable
+        expr: up{job="synergia-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: SYNERGIA API cannot be scraped by Prometheus
+          runbook: issue-94-api-recovery
+
+      - alert: SynergiaCriticalDependencyUnavailable
+        expr: synergia_dependency_up{component=~"configuration|postgresql|storage"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Required SYNERGIA dependency is unavailable
+          runbook: issue-94-dependency-recovery
+
+      - alert: SynergiaEmailWorkerDegraded
+        expr: synergia_dependency_degraded{component="email_worker"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Email delivery queue is degraded
+          runbook: issue-94-email-worker-recovery
+
+      - alert: SynergiaMetricsCollectionFailed
+        expr: synergia_observability_collection_success{collector="postgresql"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Persistent operational metrics cannot be collected
+          runbook: issue-94-database-recovery
+
+  - name: synergia-critical-journeys
+    rules:
+      - alert: SynergiaHttpErrorRateHigh
+        expr: |
+          sum(rate(synergia_http_requests_total{status_class="5xx"}[5m]))
+          / clamp_min(sum(rate(synergia_http_requests_total[5m])), 0.01) > 0.05
+          and sum(rate(synergia_http_requests_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: API 5xx error ratio is above the preliminary threshold
+          runbook: issue-94-api-degradation
+
+      - alert: SynergiaExecutionFailuresDetected
+        expr: |
+          increase(synergia_operational_events_total{
+            journey="execution",outcome=~"failed|validation_failed"
+          }[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Execution or validation failures were detected
+          runbook: issue-94-processing-recovery
+
+      - alert: SynergiaImportRejectionRateHigh
+        expr: |
+          sum(increase(synergia_operational_events_total{
+            journey="inspection",outcome="rejected"
+          }[10m]))
+          / clamp_min(sum(increase(synergia_operational_events_total{
+            journey="inspection"
+          }[10m])), 1) > 0.20
+          and sum(increase(synergia_operational_events_total{
+            journey="inspection"
+          }[10m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Import rejection ratio is above the preliminary threshold
+          runbook: issue-94-import-rejection
+
+      - alert: SynergiaReportFailuresDetected
+        expr: |
+          increase(synergia_operational_events_total{
+            journey="report",outcome="generation_failed"
+          }[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Report generation failures were detected
+          runbook: issue-94-report-recovery
+
+      - alert: SynergiaNotificationFailuresDetected
+        expr: |
+          increase(synergia_operational_events_total{
+            journey="notification",outcome="delivery_failed"
+          }[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Internal notification delivery failures were detected
+          runbook: issue-94-notification-recovery
+
+      - alert: SynergiaEmailFailuresDetected
+        expr: |
+          increase(synergia_operational_events_total{
+            journey="email",outcome="failed"
+          }[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Email delivery exhausted its retry policy
+          runbook: issue-94-email-worker-recovery
+
+      - alert: SynergiaQueueStalled
+        expr: |
+          synergia_queue_oldest_age_seconds{queue=~"execution|report|email"} > 300
+          and on(queue) sum by(queue) (synergia_queue_depth) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: An operational queue is not progressing
+          runbook: issue-94-queue-recovery
+
+      - alert: SynergiaApprovalBacklogOld
+        expr: |
+          synergia_queue_oldest_age_seconds{queue="approval"} > 86400
+          and on(queue) sum by(queue) (synergia_queue_depth) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Human approval backlog contains old requests
+          runbook: issue-94-approval-backlog
+
+      - alert: SynergiaRateLimitDenialsHigh
+        expr: sum(increase(synergia_rate_limit_denials_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Rate-limit denials are above the preliminary threshold
+          runbook: issue-94-abuse-response
