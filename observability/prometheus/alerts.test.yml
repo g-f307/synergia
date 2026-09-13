@@ -1,0 +1,61 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'synergia_dependency_up{component="postgresql"}'
+        values: '0x3 1x3'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaCriticalDependencyUnavailable
+        exp_alerts:
+          - exp_labels:
+              component: postgresql
+              severity: critical
+            exp_annotations:
+              summary: Required SYNERGIA dependency is unavailable
+              runbook: issue-94-dependency-recovery
+      - eval_time: 5m
+        alertname: SynergiaCriticalDependencyUnavailable
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_observability_collection_success{collector="postgresql"}'
+        values: '0x4 1x2'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: SynergiaMetricsCollectionFailed
+        exp_alerts:
+          - exp_labels:
+              collector: postgresql
+              severity: critical
+            exp_annotations:
+              summary: Persistent operational metrics cannot be collected
+              runbook: issue-94-database-recovery
+      - eval_time: 5m
+        alertname: SynergiaMetricsCollectionFailed
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_queue_oldest_age_seconds{queue="execution"}'
+        values: '600x7 0x2'
+      - series: 'synergia_queue_depth{queue="execution",state="pending"}'
+        values: '2x7 0x2'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaQueueStalled
+        exp_alerts:
+          - exp_labels:
+              queue: execution
+              severity: warning
+            exp_annotations:
+              summary: An operational queue is not progressing
+              runbook: issue-94-queue-recovery
+      - eval_time: 8m
+        alertname: SynergiaQueueStalled
+        exp_alerts: []
