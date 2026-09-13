@@ -24,6 +24,7 @@ class ObservabilityConfig:
     probe_timeout_seconds: int = 2
     worker_stale_seconds: int = 300
     queue_degraded_seconds: int = 300
+    backup_stale_seconds: int = 90_000
 
     @classmethod
     def from_env(cls) -> ObservabilityConfig:
@@ -46,6 +47,7 @@ class ObservabilityConfig:
             queue_degraded_seconds=_positive_integer(
                 "OBSERVABILITY_QUEUE_DEGRADED_SECONDS", 300
             ),
+            backup_stale_seconds=90_000,
         )
 
     def validate_scrape_token(self) -> None:

@@ -18,7 +18,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: SYNERGIA API cannot be scraped by Prometheus
-              runbook: issue-94-api-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
       - eval_time: 4m
         alertname: SynergiaApiUnavailable
         exp_alerts: []
@@ -36,7 +36,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: Required SYNERGIA dependency is unavailable
-              runbook: issue-94-dependency-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
       - eval_time: 5m
         alertname: SynergiaCriticalDependencyUnavailable
         exp_alerts: []
@@ -54,7 +54,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Email delivery queue is degraded
-              runbook: issue-94-email-worker-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
       - eval_time: 8m
         alertname: SynergiaEmailWorkerDegraded
         exp_alerts: []
@@ -72,7 +72,43 @@ tests:
               severity: critical
             exp_annotations:
               summary: Persistent operational metrics cannot be collected
-              runbook: issue-94-database-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/database-unavailable.md
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_data_operation_last_success_timestamp_seconds{operation="backup"}'
+        values: '0x7 420x3'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaBackupMissingOrStale
+        exp_alerts:
+          - exp_labels:
+              operation: backup
+              severity: critical
+            exp_annotations:
+              summary: No successful backup exists inside the proposed RPO tolerance
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/backup-restore.md
+      - eval_time: 8m
+        alertname: SynergiaBackupMissingOrStale
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_data_operation_failures_total{operation="retention"}'
+        values: '0 1x20'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaDataOperationFailuresDetected
+        exp_alerts:
+          - exp_labels:
+              operation: retention
+              severity: critical
+            exp_annotations:
+              summary: A persisted backup, verification or retention operation failed
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/backup-restore.md
+      - eval_time: 18m
+        alertname: SynergiaDataOperationFailuresDetected
+        exp_alerts: []
       - eval_time: 5m
         alertname: SynergiaMetricsCollectionFailed
         exp_alerts: []
@@ -91,7 +127,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: API 5xx error ratio is above the preliminary threshold
-              runbook: issue-94-api-degradation
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
       - eval_time: 14m
         alertname: SynergiaHttpErrorRateHigh
         exp_alerts: []
@@ -116,7 +152,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Execution or validation failures were detected
-              runbook: issue-94-processing-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
       - eval_time: 12m
         alertname: SynergiaExecutionFailuresDetected
         exp_alerts: []
@@ -129,7 +165,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Report generation failures were detected
-              runbook: issue-94-report-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
       - eval_time: 12m
         alertname: SynergiaReportFailuresDetected
         exp_alerts: []
@@ -142,7 +178,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Internal notification delivery failures were detected
-              runbook: issue-94-notification-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
       - eval_time: 12m
         alertname: SynergiaNotificationFailuresDetected
         exp_alerts: []
@@ -155,7 +191,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Email delivery exhausted its retry policy
-              runbook: issue-94-email-worker-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
       - eval_time: 12m
         alertname: SynergiaEmailFailuresDetected
         exp_alerts: []
@@ -174,7 +210,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Import rejection ratio is above the preliminary threshold
-              runbook: issue-94-import-rejection
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/invalid-file.md
       - eval_time: 12m
         alertname: SynergiaImportRejectionRateHigh
         exp_alerts: []
@@ -194,7 +230,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: An operational queue is not progressing
-              runbook: issue-94-queue-recovery
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
       - eval_time: 8m
         alertname: SynergiaQueueStalled
         exp_alerts: []
@@ -214,7 +250,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Human approval backlog contains old requests
-              runbook: issue-94-approval-backlog
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/approval-backlog.md
       - eval_time: 19m
         alertname: SynergiaApprovalBacklogOld
         exp_alerts: []
@@ -231,7 +267,7 @@ tests:
               severity: warning
             exp_annotations:
               summary: Rate-limit denials are above the preliminary threshold
-              runbook: issue-94-abuse-response
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/abuse-response.md
       - eval_time: 14m
         alertname: SynergiaRateLimitDenialsHigh
         exp_alerts: []

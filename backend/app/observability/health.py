@@ -141,9 +141,59 @@ def probe_email_worker(config: ObservabilityConfig) -> ComponentStatus:
     return _result("email_worker", "healthy", False, started_at)
 
 
+def probe_data_recovery(config: ObservabilityConfig) -> ComponentStatus:
+    started_at = perf_counter()
+    if not config.database_url:
+        return _result(
+            "data_recovery", "degraded", False, started_at, "state_unavailable"
+        )
+    try:
+        with psycopg.connect(
+            config.database_url,
+            connect_timeout=config.probe_timeout_seconds,
+            row_factory=dict_row,
+        ) as connection:
+            state = connection.execute(
+                """
+                SELECT
+                    EXTRACT(EPOCH FROM now() - (max(occurred_at) FILTER (
+                        WHERE operation = 'backup' AND outcome = 'succeeded'
+                    ))) AS backup_age_seconds,
+                    max(occurred_at) FILTER (
+                        WHERE operation = 'backup' AND outcome = 'failed'
+                    ) AS last_failure,
+                    max(occurred_at) FILTER (
+                        WHERE operation = 'backup' AND outcome = 'succeeded'
+                    ) AS last_success
+                FROM synergia.data_operation_events
+                """
+            ).fetchone()
+    except (psycopg.Error, OSError):
+        return _result(
+            "data_recovery", "degraded", False, started_at, "state_unavailable"
+        )
+    if state is None or state["last_success"] is None:
+        return _result(
+            "data_recovery", "degraded", False, started_at, "backup_missing"
+        )
+    if state["last_failure"] and state["last_failure"] > state["last_success"]:
+        return _result(
+            "data_recovery", "degraded", False, started_at, "operation_failed"
+        )
+    if float(state["backup_age_seconds"]) > config.backup_stale_seconds:
+        return _result(
+            "data_recovery", "degraded", False, started_at, "backup_stale"
+        )
+    return _result("data_recovery", "healthy", False, started_at)
+
+
 def critical_health(config: ObservabilityConfig) -> list[ComponentStatus]:
     return [probe_postgresql(config), probe_storage(config)]
 
 
 def complete_health(config: ObservabilityConfig) -> list[ComponentStatus]:
-    return [*critical_health(config), probe_email_worker(config)]
+    return [
+        *critical_health(config),
+        probe_email_worker(config),
+        probe_data_recovery(config),
+    ]

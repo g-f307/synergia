@@ -8,7 +8,7 @@ groups:
           severity: critical
         annotations:
           summary: SYNERGIA API cannot be scraped by Prometheus
-          runbook: issue-94-api-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
 
       - alert: SynergiaCriticalDependencyUnavailable
         expr: synergia_dependency_up{component=~"configuration|postgresql|storage"} == 0
@@ -17,7 +17,7 @@ groups:
           severity: critical
         annotations:
           summary: Required SYNERGIA dependency is unavailable
-          runbook: issue-94-dependency-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
 
       - alert: SynergiaEmailWorkerDegraded
         expr: synergia_dependency_degraded{component="email_worker"} == 1
@@ -26,7 +26,7 @@ groups:
           severity: warning
         annotations:
           summary: Email delivery queue is degraded
-          runbook: issue-94-email-worker-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
 
       - alert: SynergiaMetricsCollectionFailed
         expr: synergia_observability_collection_success{collector="postgresql"} == 0
@@ -35,7 +35,31 @@ groups:
           severity: critical
         annotations:
           summary: Persistent operational metrics cannot be collected
-          runbook: issue-94-database-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/database-unavailable.md
+
+      - alert: SynergiaBackupMissingOrStale
+        expr: |
+          synergia_data_operation_last_success_timestamp_seconds{operation="backup"} == 0
+          or time() - synergia_data_operation_last_success_timestamp_seconds{
+            operation="backup"
+          } > 90000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: No successful backup exists inside the proposed RPO tolerance
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/backup-restore.md
+
+      - alert: SynergiaDataOperationFailuresDetected
+        expr: |
+          increase(synergia_data_operation_failures_total{
+            operation=~"backup|verification|retention"
+          }[15m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: A persisted backup, verification or retention operation failed
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/backup-restore.md
 
   - name: synergia-critical-journeys
     rules:
@@ -49,7 +73,7 @@ groups:
           severity: critical
         annotations:
           summary: API 5xx error ratio is above the preliminary threshold
-          runbook: issue-94-api-degradation
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/api-unavailable.md
 
       - alert: SynergiaExecutionFailuresDetected
         expr: |
@@ -60,7 +84,7 @@ groups:
           severity: warning
         annotations:
           summary: Execution or validation failures were detected
-          runbook: issue-94-processing-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
 
       - alert: SynergiaImportRejectionRateHigh
         expr: |
@@ -78,7 +102,7 @@ groups:
           severity: warning
         annotations:
           summary: Import rejection ratio is above the preliminary threshold
-          runbook: issue-94-import-rejection
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/invalid-file.md
 
       - alert: SynergiaReportFailuresDetected
         expr: |
@@ -89,7 +113,7 @@ groups:
           severity: warning
         annotations:
           summary: Report generation failures were detected
-          runbook: issue-94-report-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
 
       - alert: SynergiaNotificationFailuresDetected
         expr: |
@@ -100,7 +124,7 @@ groups:
           severity: warning
         annotations:
           summary: Internal notification delivery failures were detected
-          runbook: issue-94-notification-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
 
       - alert: SynergiaEmailFailuresDetected
         expr: |
@@ -111,7 +135,7 @@ groups:
           severity: warning
         annotations:
           summary: Email delivery exhausted its retry policy
-          runbook: issue-94-email-worker-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/report-notification-recovery.md
 
       - alert: SynergiaQueueStalled
         expr: |
@@ -122,7 +146,7 @@ groups:
           severity: warning
         annotations:
           summary: An operational queue is not progressing
-          runbook: issue-94-queue-recovery
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
 
       - alert: SynergiaApprovalBacklogOld
         expr: |
@@ -133,7 +157,7 @@ groups:
           severity: warning
         annotations:
           summary: Human approval backlog contains old requests
-          runbook: issue-94-approval-backlog
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/approval-backlog.md
 
       - alert: SynergiaRateLimitDenialsHigh
         expr: sum(increase(synergia_rate_limit_denials_total[5m])) > 50
@@ -142,4 +166,4 @@ groups:
           severity: warning
         annotations:
           summary: Rate-limit denials are above the preliminary threshold
-          runbook: issue-94-abuse-response
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/abuse-response.md
