@@ -54,6 +54,12 @@ remove os bytes expirados e mantém `file_inspections.discarded_at`, hash,
 decisão e motivo. O conjunto `security_transient` remove tentativas de login,
 eventos de rate limiting e buckets expirados anteriores ao prazo informado.
 
+Para não perder conteúdo sem metadado correspondente, o expurgo move primeiro
+cada arquivo para uma área temporária privada no mesmo filesystem. A alteração
+de `discarded_at` e o evento inicial são confirmados sob lock no PostgreSQL antes
+da exclusão definitiva. Falha de banco restaura o arquivo ao caminho original e
+reverte a transação; somente depois da remoção é registrado o evento de sucesso.
+
 Auditoria, aprovações, relatórios, notificações, uploads aceitos e avatares são
 explicitamente bloqueados pela allowlist. Uma tentativa aplicada é registrada
 como `refused`, sem executar exclusão.

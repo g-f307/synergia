@@ -535,18 +535,41 @@ def test_backup_restore_integrity_retention_and_recovery(
         verify_restoration(source, damaged_bundle)
     assert damaged.value.reason_code == "storage_archive_corrupted"
 
-    original_unlink = Path.unlink
+    original_mark_discarded = data_operations._mark_quarantine_discarded
 
-    def fail_quarantine_unlink(path, *args, **kwargs):
-        if path == identifiers["rejected_path"]:
-            raise OSError("private quarantine path")
-        return original_unlink(path, *args, **kwargs)
+    def fail_after_quarantine_staging(connection, inspection_ids):
+        assert identifiers["rejected_path"].exists() is False
+        assert list(
+            source.import_storage_root.glob("quarantine/.retention-staging/**/*.upload")
+        )
+        original_mark_discarded(connection, inspection_ids)
+        assert connection.execute(
+            """
+            SELECT discarded_at IS NOT NULL AS discarded
+            FROM synergia.file_inspections
+            WHERE id = %s
+            """,
+            (inspection_ids[0],),
+        ).fetchone()["discarded"]
+        raise psycopg.OperationalError("synthetic database failure")
 
-    monkeypatch.setattr(Path, "unlink", fail_quarantine_unlink)
+    monkeypatch.setattr(
+        data_operations,
+        "_mark_quarantine_discarded",
+        fail_after_quarantine_staging,
+    )
     with pytest.raises(DataOperationError) as retention_failure:
         purge_dataset(source, "quarantine", apply=True)
     assert retention_failure.value.reason_code == "retention_failed"
-    monkeypatch.setattr(Path, "unlink", original_unlink)
+    monkeypatch.setattr(
+        data_operations,
+        "_mark_quarantine_discarded",
+        original_mark_discarded,
+    )
+    assert identifiers["rejected_path"].read_bytes() == b"untrusted"
+    assert not list(
+        source.import_storage_root.glob("quarantine/.retention-staging/**/*.upload")
+    )
     with psycopg.connect(source.database_url) as connection:
         assert (
             connection.execute(
@@ -559,6 +582,26 @@ def test_backup_restore_integrity_retention_and_recovery(
             ).fetchone()[0]
             == 1
         )
+        assert (
+            connection.execute(
+                """
+                SELECT discarded_at FROM synergia.file_inspections
+                WHERE internal_name = %s
+                """,
+                (identifiers["rejected_path"].stem + ".csv",),
+            ).fetchone()[0]
+            is None
+        )
+        assert (
+            connection.execute(
+                """
+                SELECT count(*) FROM synergia.data_operation_events
+                WHERE operation = 'retention' AND outcome = 'started'
+                  AND dataset = 'quarantine'
+                """
+            ).fetchone()[0]
+            == 0
+        )
 
     identifiers["rejected_path"].unlink()
     identifiers["rejected_path"].symlink_to(upload_path)
@@ -568,6 +611,26 @@ def test_backup_restore_integrity_retention_and_recovery(
     assert applied["record_count"] >= 1
     assert identifiers["rejected_path"].exists() is False
     assert upload_path.read_bytes() == upload_content
+    assert not list(
+        source.import_storage_root.glob("quarantine/.retention-staging/**/*.upload")
+    )
+    with psycopg.connect(source.database_url) as connection:
+        retention_state = connection.execute(
+            """
+            SELECT discarded_at FROM synergia.file_inspections
+            WHERE internal_name = %s
+            """,
+            (identifiers["rejected_path"].stem + ".csv",),
+        ).fetchone()[0]
+        retention_events = connection.execute(
+            """
+            SELECT outcome FROM synergia.data_operation_events
+            WHERE correlation_id = %s ORDER BY id
+            """,
+            (applied["correlation_id"],),
+        ).fetchall()
+    assert retention_state is not None
+    assert retention_events == [("started",), ("succeeded",)]
     transient = purge_dataset(
         source, "security_transient", apply=True, transient_retention_days=90
     )

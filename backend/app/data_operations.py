@@ -853,6 +853,109 @@ def verify_restoration(
         raise
 
 
+def _restore_staged_quarantine(
+    moved: list[tuple[Path, Path]], staging_root: Path | None
+) -> None:
+    try:
+        for staged, original in reversed(moved):
+            if original.exists() or original.is_symlink():
+                raise DataOperationError(
+                    "retention_compensation_failed",
+                    "Quarantine path changed during compensation",
+                )
+            original.parent.mkdir(parents=True, exist_ok=True)
+            staged.rename(original)
+    finally:
+        if staging_root is not None:
+            try:
+                staging_root.rmdir()
+                staging_root.parent.rmdir()
+            except OSError:
+                pass
+
+
+def _stage_quarantine_files(
+    config: DataOperationConfig,
+    rows: list[dict[str, Any]],
+    correlation_id: UUID,
+) -> tuple[list[tuple[Path, Path]], Path | None]:
+    moved: list[tuple[Path, Path]] = []
+    staging_root: Path | None = None
+    try:
+        for row in rows:
+            stem = str(row["internal_name"]).split(".", 1)[0]
+            if not SAFE_STEM.fullmatch(stem):
+                raise DataOperationError(
+                    "storage_key_invalid", "Quarantine key is invalid"
+                )
+            original = _safe_target(
+                config.import_storage_root,
+                f"quarantine/{row['execution_id']}/{stem}.upload",
+            )
+            if not (original.is_file() or original.is_symlink()):
+                if original.exists():
+                    raise DataOperationError(
+                        "storage_key_invalid", "Quarantine entry is invalid"
+                    )
+                continue
+            if staging_root is None:
+                staging_root = _safe_target(
+                    config.import_storage_root,
+                    f"quarantine/.retention-staging/{correlation_id}",
+                )
+                staging_root.mkdir(mode=0o700, parents=True, exist_ok=False)
+                staging_root.parent.chmod(0o700)
+            staged = staging_root / f"{row['id']}.upload"
+            original.rename(staged)
+            moved.append((staged, original))
+    except Exception:
+        _restore_staged_quarantine(moved, staging_root)
+        raise
+    return moved, staging_root
+
+
+def _mark_quarantine_discarded(
+    connection: psycopg.Connection[Any], inspection_ids: list[int]
+) -> None:
+    if not inspection_ids:
+        return
+    updated = connection.execute(
+        """
+        UPDATE synergia.file_inspections SET discarded_at = now()
+        WHERE id = ANY(%s) AND decision = 'rejected'
+          AND discarded_at IS NULL AND retained_until <= now()
+        RETURNING id
+        """,
+        (inspection_ids,),
+    ).fetchall()
+    if len(updated) != len(inspection_ids):
+        raise DataOperationError(
+            "retention_state_changed", "Quarantine state changed concurrently"
+        )
+
+
+def _discard_staged_quarantine(
+    moved: list[tuple[Path, Path]], staging_root: Path | None
+) -> None:
+    for staged, original in moved:
+        if staged.is_symlink() or staged.is_file():
+            staged.unlink()
+        elif staged.exists():
+            raise DataOperationError(
+                "storage_key_invalid", "Staged quarantine entry is invalid"
+            )
+        try:
+            original.parent.rmdir()
+        except OSError:
+            pass
+    if staging_root is not None:
+        try:
+            staging_root.rmdir()
+            staging_root.parent.rmdir()
+        except OSError:
+            pass
+
+
 def _purge_dataset(
     config: DataOperationConfig,
     dataset: str,
@@ -877,87 +980,110 @@ def _purge_dataset(
 
     correlation_id = uuid4()
     started_at = perf_counter()
-    with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
-        if dataset == "quarantine":
-            rows = connection.execute(
-                """
-                SELECT execution_id, internal_name
-                FROM synergia.file_inspections
-                WHERE decision = 'rejected' AND discarded_at IS NULL
-                  AND retained_until <= now() ORDER BY id
-                """
-            ).fetchall()
-            if apply:
-                for row in rows:
-                    stem = str(row["internal_name"]).split(".", 1)[0]
-                    if not SAFE_STEM.fullmatch(stem):
-                        continue
-                    path = _safe_target(
-                        config.import_storage_root,
-                        f"quarantine/{row['execution_id']}/{stem}.upload",
-                    )
-                    if path.is_symlink() or path.is_file():
-                        path.unlink(missing_ok=True)
-                    try:
-                        path.parent.rmdir()
-                    except OSError:
-                        pass
-                connection.execute(
+    moved: list[tuple[Path, Path]] = []
+    staging_root: Path | None = None
+    try:
+        with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
+            if dataset == "quarantine":
+                rows = connection.execute(
                     """
-                    UPDATE synergia.file_inspections SET discarded_at = now()
+                    SELECT id, execution_id, internal_name
+                    FROM synergia.file_inspections
                     WHERE decision = 'rejected' AND discarded_at IS NULL
                       AND retained_until <= now()
+                    ORDER BY id FOR UPDATE
                     """
-                )
-            count = len(rows)
-        else:
-            cutoff = datetime.now(UTC) - timedelta(days=transient_retention_days)
-            queries = (
-                (
-                    "identity_login_attempts",
-                    """SELECT count(*) AS total
-                       FROM synergia.identity_login_attempts
-                       WHERE attempted_at < %s""",
-                    """DELETE FROM synergia.identity_login_attempts
-                       WHERE attempted_at < %s""",
-                ),
-                (
-                    "rate_limit_events",
-                    """SELECT count(*) AS total FROM synergia.rate_limit_events
-                       WHERE occurred_at < %s""",
-                    """DELETE FROM synergia.rate_limit_events
-                       WHERE occurred_at < %s""",
-                ),
-                (
-                    "rate_limit_buckets",
-                    """SELECT count(*) AS total FROM synergia.rate_limit_buckets
-                       WHERE window_expires_at < %s""",
-                    """DELETE FROM synergia.rate_limit_buckets
-                       WHERE window_expires_at < %s""",
-                ),
-            )
-            count = 0
-            for _, select_query, delete_query in queries:
-                count += connection.execute(select_query, (cutoff,)).fetchone()["total"]
+                ).fetchall()
+                count = len(rows)
                 if apply:
-                    connection.execute(delete_query, (cutoff,))
-        if not apply:
-            connection.rollback()
-            return {
-                "operation": "retention",
-                "outcome": "dry_run",
-                "dataset": dataset,
-                "record_count": count,
-            }
+                    moved, staging_root = _stage_quarantine_files(
+                        config, rows, correlation_id
+                    )
+                    _mark_quarantine_discarded(connection, [row["id"] for row in rows])
+                    connection.execute(
+                        """
+                        INSERT INTO synergia.data_operation_events (
+                            operation, outcome, dataset, actor_identifier,
+                            correlation_id, record_count
+                        ) VALUES ('retention', 'started', 'quarantine', %s, %s, %s)
+                        """,
+                        (config.actor_identifier, correlation_id, count),
+                    )
+            else:
+                cutoff = datetime.now(UTC) - timedelta(days=transient_retention_days)
+                queries = (
+                    (
+                        "identity_login_attempts",
+                        """SELECT count(*) AS total
+                           FROM synergia.identity_login_attempts
+                           WHERE attempted_at < %s""",
+                        """DELETE FROM synergia.identity_login_attempts
+                           WHERE attempted_at < %s""",
+                    ),
+                    (
+                        "rate_limit_events",
+                        """SELECT count(*) AS total FROM synergia.rate_limit_events
+                           WHERE occurred_at < %s""",
+                        """DELETE FROM synergia.rate_limit_events
+                           WHERE occurred_at < %s""",
+                    ),
+                    (
+                        "rate_limit_buckets",
+                        """SELECT count(*) AS total FROM synergia.rate_limit_buckets
+                           WHERE window_expires_at < %s""",
+                        """DELETE FROM synergia.rate_limit_buckets
+                           WHERE window_expires_at < %s""",
+                    ),
+                )
+                count = 0
+                for _, select_query, delete_query in queries:
+                    count += connection.execute(select_query, (cutoff,)).fetchone()[
+                        "total"
+                    ]
+                    if apply:
+                        connection.execute(delete_query, (cutoff,))
+            if not apply:
+                connection.rollback()
+                return {
+                    "operation": "retention",
+                    "outcome": "dry_run",
+                    "dataset": dataset,
+                    "record_count": count,
+                }
+            duration = round((perf_counter() - started_at) * 1000)
+            if dataset != "quarantine":
+                connection.execute(
+                    """
+                    INSERT INTO synergia.data_operation_events (
+                        operation, outcome, dataset, actor_identifier, correlation_id,
+                        record_count, duration_ms
+                    ) VALUES ('retention', 'succeeded', %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        dataset,
+                        config.actor_identifier,
+                        correlation_id,
+                        count,
+                        duration,
+                    ),
+                )
+    except Exception:
+        if moved:
+            _restore_staged_quarantine(moved, staging_root)
+        raise
+
+    if dataset == "quarantine":
+        _discard_staged_quarantine(moved, staging_root)
         duration = round((perf_counter() - started_at) * 1000)
-        connection.execute(
-            """
-            INSERT INTO synergia.data_operation_events (
-                operation, outcome, dataset, actor_identifier, correlation_id,
-                record_count, duration_ms
-            ) VALUES ('retention', 'succeeded', %s, %s, %s, %s, %s)
-            """,
-            (dataset, config.actor_identifier, correlation_id, count, duration),
+        record_operation_event(
+            config.database_url,
+            operation="retention",
+            outcome="succeeded",
+            dataset="quarantine",
+            actor_identifier=config.actor_identifier,
+            correlation_id=correlation_id,
+            record_count=count,
+            duration_ms=duration,
         )
     return {
         "operation": "retention",

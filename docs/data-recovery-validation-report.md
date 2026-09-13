@@ -21,6 +21,7 @@ privado permanecem apenas no diretório temporário do runner.
 - recusa diante de dump, arquivo ou manifesto alterado;
 - restauração recusada sobre banco ou storage não vazio;
 - expurgo da quarentena e do estado transitório de segurança;
+- compensação do arquivo quando o banco falha depois da movimentação temporária;
 - bloqueio e auditoria da tentativa de expurgo de dados protegidos;
 - falha de armazenamento seguida de correção e novo backup íntegro;
 - health, métricas e alertas de ausência, atraso e falha de recuperação.

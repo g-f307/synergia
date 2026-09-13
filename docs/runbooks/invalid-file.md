@@ -18,6 +18,8 @@ conteúdo ativo. Engenharia só participa quando uma fixture válida é rejeitad
 3. Para conteúdo ativo ou corrupção, manter isolamento até `retained_until`.
 4. Executar o expurgo de quarentena primeiro em `dry-run` e depois com
    `--apply`, apenas quando o prazo tiver expirado.
+5. Se a operação falhar, confirmar que o arquivo retornou à quarentena e que
+   `discarded_at` permaneceu vazio antes de tentar novamente.
 
 ## Rollback
 
