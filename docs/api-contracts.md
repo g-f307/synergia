@@ -22,6 +22,10 @@ escopo organizacional a todas as operações existentes será incremental.
 
 | Método e rota | Resultado | Sucesso |
 | --- | --- | --- |
+| `GET /health/live` | confirma que o processo responde, sem consultar dependências | `200` |
+| `GET /health/ready` | confirma PostgreSQL, schema e armazenamento; falha fechada | `200`/`503` |
+| `GET /health` | apresenta estado sanitizado de dependências críticas e opcionais | `200`/`503` |
+| `GET /metrics` | métricas Prometheus com credencial técnica dedicada | `200` |
 | `POST /auth/login` | cria sessão e emite access/refresh | `200` |
 | `GET /me` | consulta identidade e preferências próprias | `200` |
 | `PATCH /me` | atualiza perfil e preferências próprias | `200` |

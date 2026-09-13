@@ -60,6 +60,8 @@ def apply_security_headers(
         "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
     )
     headers["Cross-Origin-Resource-Policy"] = "same-site"
-    headers["Cache-Control"] = "no-cache" if path == "/health" else "no-store"
+    headers["Cache-Control"] = (
+        "no-cache" if path == "/health" or path.startswith("/health/") else "no-store"
+    )
     if config.production:
         headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

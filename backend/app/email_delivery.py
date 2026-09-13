@@ -12,7 +12,7 @@ from uuid import UUID
 import psycopg
 from psycopg.rows import dict_row
 
-logger = logging.getLogger(__name__)
+from app.observability.telemetry import safe_log
 
 SAFE_PARAMETERS = frozenset({"execution_id", "count", "version"})
 
@@ -469,9 +469,11 @@ class EmailDeliveryService:
                 if completed:
                     sent += 1
                 else:
-                    logger.info(
-                        "stale email completion ignored",
-                        extra={"delivery_id": str(delivery["id"])},
+                    safe_log(
+                        logging.INFO,
+                        "email_delivery.stale_completion",
+                        attempt=delivery["attempt_count"],
+                        outcome="ignored",
                     )
             except TemporaryEmailError:
                 attempt = delivery["attempt_count"]
@@ -486,12 +488,13 @@ class EmailDeliveryService:
                 )
                 if finalized:
                     failed += 1
-                    logger.warning(
-                        "email delivery temporarily failed",
-                        extra={
-                            "delivery_id": str(delivery["id"]),
-                            "attempt": attempt,
-                        },
+                    safe_log(
+                        logging.WARNING,
+                        "email_delivery.failed",
+                        correlation_id=delivery["correlation_id"],
+                        attempt=attempt,
+                        outcome="retry" if can_retry else "failed",
+                        error_code="provider_temporarily_unavailable",
                     )
             except PermanentEmailError:
                 finalized = self.repository.fail(
@@ -503,9 +506,13 @@ class EmailDeliveryService:
                 )
                 if finalized:
                     failed += 1
-                    logger.warning(
-                        "email delivery rejected",
-                        extra={"delivery_id": str(delivery["id"])},
+                    safe_log(
+                        logging.WARNING,
+                        "email_delivery.failed",
+                        correlation_id=delivery["correlation_id"],
+                        attempt=delivery["attempt_count"],
+                        outcome="failed",
+                        error_code="provider_rejected",
                     )
             except Exception:
                 attempt = delivery["attempt_count"]
@@ -520,12 +527,13 @@ class EmailDeliveryService:
                 )
                 if finalized:
                     failed += 1
-                    logger.warning(
-                        "email provider unavailable",
-                        extra={
-                            "delivery_id": str(delivery["id"]),
-                            "attempt": attempt,
-                        },
+                    safe_log(
+                        logging.WARNING,
+                        "email_delivery.failed",
+                        correlation_id=delivery["correlation_id"],
+                        attempt=attempt,
+                        outcome="retry" if can_retry else "failed",
+                        error_code="provider_unavailable",
                     )
         return {
             "status": "enabled",

@@ -1,0 +1,237 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'up{job="synergia-api",instance="api:8000"}'
+        values: '0x3 1x2'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaApiUnavailable
+        exp_alerts:
+          - exp_labels:
+              instance: api:8000
+              job: synergia-api
+              severity: critical
+            exp_annotations:
+              summary: SYNERGIA API cannot be scraped by Prometheus
+              runbook: issue-94-api-recovery
+      - eval_time: 4m
+        alertname: SynergiaApiUnavailable
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_dependency_up{component="postgresql"}'
+        values: '0x3 1x3'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaCriticalDependencyUnavailable
+        exp_alerts:
+          - exp_labels:
+              component: postgresql
+              severity: critical
+            exp_annotations:
+              summary: Required SYNERGIA dependency is unavailable
+              runbook: issue-94-dependency-recovery
+      - eval_time: 5m
+        alertname: SynergiaCriticalDependencyUnavailable
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_dependency_degraded{component="email_worker"}'
+        values: '1x7 0x2'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaEmailWorkerDegraded
+        exp_alerts:
+          - exp_labels:
+              component: email_worker
+              severity: warning
+            exp_annotations:
+              summary: Email delivery queue is degraded
+              runbook: issue-94-email-worker-recovery
+      - eval_time: 8m
+        alertname: SynergiaEmailWorkerDegraded
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_observability_collection_success{collector="postgresql"}'
+        values: '0x4 1x2'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: SynergiaMetricsCollectionFailed
+        exp_alerts:
+          - exp_labels:
+              collector: postgresql
+              severity: critical
+            exp_annotations:
+              summary: Persistent operational metrics cannot be collected
+              runbook: issue-94-database-recovery
+      - eval_time: 5m
+        alertname: SynergiaMetricsCollectionFailed
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_http_requests_total{status_class="5xx"}'
+        values: '0+10x8 80x8'
+      - series: 'synergia_http_requests_total{status_class="2xx"}'
+        values: '0+90x8 720x8'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaHttpErrorRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: API 5xx error ratio is above the preliminary threshold
+              runbook: issue-94-api-degradation
+      - eval_time: 14m
+        alertname: SynergiaHttpErrorRateHigh
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_operational_events_total{journey="execution",outcome="failed"}'
+        values: '0 1x12'
+      - series: 'synergia_operational_events_total{journey="report",outcome="generation_failed"}'
+        values: '0 1x12'
+      - series: 'synergia_operational_events_total{journey="notification",outcome="delivery_failed"}'
+        values: '0 1x12'
+      - series: 'synergia_operational_events_total{journey="email",outcome="failed"}'
+        values: '0 1x12'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaExecutionFailuresDetected
+        exp_alerts:
+          - exp_labels:
+              journey: execution
+              outcome: failed
+              severity: warning
+            exp_annotations:
+              summary: Execution or validation failures were detected
+              runbook: issue-94-processing-recovery
+      - eval_time: 12m
+        alertname: SynergiaExecutionFailuresDetected
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: SynergiaReportFailuresDetected
+        exp_alerts:
+          - exp_labels:
+              journey: report
+              outcome: generation_failed
+              severity: warning
+            exp_annotations:
+              summary: Report generation failures were detected
+              runbook: issue-94-report-recovery
+      - eval_time: 12m
+        alertname: SynergiaReportFailuresDetected
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: SynergiaNotificationFailuresDetected
+        exp_alerts:
+          - exp_labels:
+              journey: notification
+              outcome: delivery_failed
+              severity: warning
+            exp_annotations:
+              summary: Internal notification delivery failures were detected
+              runbook: issue-94-notification-recovery
+      - eval_time: 12m
+        alertname: SynergiaNotificationFailuresDetected
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: SynergiaEmailFailuresDetected
+        exp_alerts:
+          - exp_labels:
+              journey: email
+              outcome: failed
+              severity: warning
+            exp_annotations:
+              summary: Email delivery exhausted its retry policy
+              runbook: issue-94-email-worker-recovery
+      - eval_time: 12m
+        alertname: SynergiaEmailFailuresDetected
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_operational_events_total{journey="inspection",outcome="rejected"}'
+        values: '0 2x12'
+      - series: 'synergia_operational_events_total{journey="inspection",outcome="accepted"}'
+        values: '0 6x12'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaImportRejectionRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Import rejection ratio is above the preliminary threshold
+              runbook: issue-94-import-rejection
+      - eval_time: 12m
+        alertname: SynergiaImportRejectionRateHigh
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_queue_oldest_age_seconds{queue="execution"}'
+        values: '600x7 0x2'
+      - series: 'synergia_queue_depth{queue="execution",state="pending"}'
+        values: '2x7 0x2'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaQueueStalled
+        exp_alerts:
+          - exp_labels:
+              queue: execution
+              severity: warning
+            exp_annotations:
+              summary: An operational queue is not progressing
+              runbook: issue-94-queue-recovery
+      - eval_time: 8m
+        alertname: SynergiaQueueStalled
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_queue_oldest_age_seconds{queue="approval"}'
+        values: '90000x18 0x2'
+      - series: 'synergia_queue_depth{queue="approval",state="in_review"}'
+        values: '3x18 0x2'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: SynergiaApprovalBacklogOld
+        exp_alerts:
+          - exp_labels:
+              queue: approval
+              severity: warning
+            exp_annotations:
+              summary: Human approval backlog contains old requests
+              runbook: issue-94-approval-backlog
+      - eval_time: 19m
+        alertname: SynergiaApprovalBacklogOld
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'synergia_rate_limit_denials_total{operation="upload",dimension="user"}'
+        values: '0+60x8 480x8'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: SynergiaRateLimitDenialsHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Rate-limit denials are above the preliminary threshold
+              runbook: issue-94-abuse-response
+      - eval_time: 14m
+        alertname: SynergiaRateLimitDenialsHigh
+        exp_alerts: []

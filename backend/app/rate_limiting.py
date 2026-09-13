@@ -24,8 +24,7 @@ from app.auth.config import AuthConfig
 from app.auth.security import TokenCodec
 from app.authorization import AuthorizationRepository
 from app.errors import ApiError
-
-logger = logging.getLogger("synergia.rate_limit")
+from app.observability.telemetry import safe_log
 
 
 @dataclass(frozen=True)
@@ -364,7 +363,12 @@ class RateLimitMiddleware:
         try:
             policy = policies_from_env()[operation]
         except ValueError:
-            logger.error("rate_limit_configuration_invalid operation=%s", operation)
+            safe_log(
+                logging.ERROR,
+                "rate_limit.configuration.invalid",
+                operation=operation,
+                error_code="rate_limit_configuration_invalid",
+            )
             await self._error(send, 503, "rate_limit_unavailable", 1)
             return
         if not database_url or not secret or len(secret.encode()) < 32:
@@ -418,10 +422,12 @@ class RateLimitMiddleware:
                     )
                 )
         except (psycopg.Error, OSError, ValueError) as exc:
-            logger.error(
-                "rate_limit_store_error operation=%s type=%s",
-                operation,
-                type(exc).__name__,
+            safe_log(
+                logging.ERROR,
+                "rate_limit.store.failed",
+                operation=operation,
+                error_code="rate_limit_unavailable",
+                exception_type=type(exc).__name__,
             )
             if policy.fail_closed:
                 await self._error(send, 503, "rate_limit_unavailable", 1)

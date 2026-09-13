@@ -13,6 +13,10 @@ A estratégia de identidade, sessão e troca de provedor está em
 o recurso e o escopo em cada requisição. Ocultar um menu não concede nem
 revoga acesso.
 
+`GET /health`, `/health/live` e `/health/ready` são sondas públicas sem dados
+de negócio. `GET /metrics` é uma superfície técnica fora do RBAC de usuários e
+exige a credencial exclusiva `OBSERVABILITY_METRICS_TOKEN`.
+
 ## Convenções
 
 - `✓`: papel recebe a permissão por padrão;
@@ -72,10 +76,11 @@ entrar no inventário antes do merge.
 
 ## Inventário das rotas privadas atuais
 
-Todas as operações OpenAPI atuais, exceto `GET /health`, `/docs`, `/redoc` e
-`/openapi.json`, serão privadas. As três últimas são rotas técnicas do FastAPI
-e não aparecem em `paths` do OpenAPI. Em produção, a publicação da documentação
-técnica também dependerá da política de rede da TI.
+Todas as operações OpenAPI atuais, exceto as três sondas públicas, login,
+refresh e `GET /metrics`, são privadas por RBAC. Métricas usam credencial
+técnica própria. `/docs`, `/redoc` e `/openapi.json` são rotas técnicas do
+FastAPI e não aparecem em `paths` do OpenAPI. Em produção, sua publicação
+também dependerá da política de rede da TI.
 
 | Método e rota | Ação | Recurso | Escopo | Papéis autorizados |
 | --- | --- | --- | --- | --- |
@@ -170,8 +175,8 @@ O detalhamento de indicadores exige adicionalmente `execution.read` para
 execuções, `business.read` para Workorders e `pending.read` para pendências. O
 escopo efetivo é a interseção entre `dashboard.read` e a permissão específica.
 
-`GET /health`, `POST /auth/login` e `POST /auth/refresh` permanecem públicos e
-não retornam dados operacionais sem validar sua própria credencial. Upload é
+As três sondas, `POST /auth/login` e `POST /auth/refresh` permanecem públicas;
+`GET /metrics` valida sua credencial técnica própria. Upload é
 restrito a `import.create`; reprocessamento a `execution.reprocess`; downloads e
 futuras exportações às ações `artifact.export` e `report.export`;
 administração a `access.admin`.

@@ -40,6 +40,11 @@ from app.execution import (
     import_fingerprint,
     validate_transition,
 )
+from app.observability.telemetry import (
+    bind_execution_id,
+    current_correlation_id,
+    safe_log,
+)
 from app.persistence import PostgresProcessingRepository
 from app.pipeline import read_source, run_pipeline_batch
 from app.upload_security import (
@@ -50,7 +55,6 @@ from app.upload_security import (
     release_to_accepted,
 )
 
-logger = logging.getLogger("synergia.imports")
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 
@@ -246,9 +250,10 @@ class PostgresImportRepository:
                      pipeline_version, rule_catalog_version,
                      state_changed_by_type, state_changed_by,
                      state_change_reason, organization_id,
-                     initiated_by_user_id, initiated_by_session_id)
+                     initiated_by_user_id, initiated_by_session_id,
+                     correlation_id)
                 VALUES (%s, 'pending', %s, %s, %s, %s, %s, %s, %s,
-                        'execution_created', %s, %s, %s)
+                        'execution_created', %s, %s, %s, %s)
                 """,
                 (
                     execution_id,
@@ -262,6 +267,7 @@ class PostgresImportRepository:
                     organization_id,
                     user_id,
                     session_id,
+                    current_correlation_id(),
                 ),
             )
 
@@ -695,11 +701,13 @@ class PostgresImportRepository:
                 else "pipeline_completed"
             ),
         )
-        logger.info(
-            "processing_persisted execution_id=%s confirmed=%d failed=%d",
-            execution_id,
-            len(persistence["confirmed_workorders"]),
-            len(persistence["failed_workorders"]),
+        safe_log(
+            logging.INFO,
+            "pipeline.persistence.completed",
+            execution_id=execution_id,
+            confirmed_count=len(persistence["confirmed_workorders"]),
+            failed_count=len(persistence["failed_workorders"]),
+            outcome="partial" if persistence["failed_workorders"] else "success",
         )
 
     def abort_claim(self, execution_id: str, reason: str) -> None:
@@ -852,7 +860,13 @@ def _error(
     current = repository.get(execution_id)
     if current is not None and current["status"] != "failed":
         repository.finish(execution_id, "failed", code)
-    logger.warning("import_failed execution_id=%s reason=%s", execution_id, code)
+    safe_log(
+        logging.WARNING,
+        "import.failed",
+        execution_id=execution_id,
+        error_code=code,
+        outcome="rejected" if http_status < 500 else "failure",
+    )
     raise HTTPException(
         status_code=http_status,
         detail={"code": code, "message": message, "execution_id": execution_id},
@@ -931,6 +945,7 @@ async def upload_import(
     repository: ImportRepository = Depends(get_repository),
 ) -> ImportStatus:
     execution_id = str(uuid4())
+    bind_execution_id(execution_id)
     if not source or len(source) != len(file):
         raise HTTPException(
             status_code=422,
@@ -982,10 +997,13 @@ async def upload_import(
         actor.user_id,
         actor.session_id,
     )
-    logger.info(
-        "import_started execution_id=%s sources=%s",
-        execution_id,
-        ",".join(item.value for item in source),
+    safe_log(
+        logging.INFO,
+        "import.started",
+        execution_id=execution_id,
+        source=",".join(item.value for item in source),
+        file_count=len(file),
+        outcome="started",
     )
 
     destinations: list[Path] = []
@@ -1038,7 +1056,14 @@ async def upload_import(
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 repository.abort_claim(execution_id, "storage_error")
-                logger.exception("import_storage_failed execution_id=%s", execution_id)
+                safe_log(
+                    logging.ERROR,
+                    "import.storage.failed",
+                    execution_id=execution_id,
+                    error_code="storage_error",
+                    exception_type=type(exc).__name__,
+                    outcome="failure",
+                )
                 raise HTTPException(
                     status_code=500,
                     detail={
@@ -1072,10 +1097,12 @@ async def upload_import(
                     repository.finish(
                         execution_id, "duplicate", "duplicate_file", duplicate_of
                     )
-                logger.info(
-                    "import_duplicate execution_id=%s duplicate_of=%s",
-                    execution_id,
-                    duplicate_of,
+                safe_log(
+                    logging.INFO,
+                    "import.duplicate",
+                    execution_id=execution_id,
+                    outcome="duplicate",
+                    error_code="duplicate_file",
                 )
                 raise HTTPException(
                     status_code=409,
@@ -1108,10 +1135,12 @@ async def upload_import(
             repository.finish(
                 execution_id, "duplicate", "duplicate_processing_request", duplicate_of
             )
-            logger.info(
-                "import_duplicate execution_id=%s duplicate_of=%s",
-                execution_id,
-                duplicate_of,
+            safe_log(
+                logging.INFO,
+                "import.duplicate",
+                execution_id=execution_id,
+                outcome="duplicate",
+                error_code="duplicate_processing_request",
             )
             raise HTTPException(
                 status_code=409,
@@ -1137,7 +1166,14 @@ async def upload_import(
         except Exception as exc:
             _remove_pipeline_artifacts(destinations[0].parent)
             repository.finish(execution_id, "failed", "pipeline_error")
-            logger.exception("import_pipeline_failed execution_id=%s", execution_id)
+            safe_log(
+                logging.ERROR,
+                "pipeline.failed",
+                execution_id=execution_id,
+                error_code="pipeline_error",
+                exception_type=type(exc).__name__,
+                outcome="failure",
+            )
             raise HTTPException(
                 status_code=500,
                 detail={
@@ -1146,8 +1182,12 @@ async def upload_import(
                     "execution_id": execution_id,
                 },
             ) from exc
-        logger.info(
-            "import_processed execution_id=%s file_count=%d", execution_id, len(file)
+        safe_log(
+            logging.INFO,
+            "import.completed",
+            execution_id=execution_id,
+            file_count=len(file),
+            outcome="success",
         )
     except HTTPException:
         raise
@@ -1161,7 +1201,14 @@ async def upload_import(
         for destination in destinations:
             destination.unlink(missing_ok=True)
         repository.abort_claim(execution_id, "preparation_error")
-        logger.exception("import_preparation_failed execution_id=%s", execution_id)
+        safe_log(
+            logging.ERROR,
+            "import.preparation.failed",
+            execution_id=execution_id,
+            error_code="preparation_error",
+            exception_type=type(exc).__name__,
+            outcome="failure",
+        )
         raise HTTPException(
             status_code=500,
             detail={

@@ -147,8 +147,8 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-18 | J-06 | decisão sem autoria ou consentimento | alto | baixo | mitigado | approvals | #92 |
 | R-19 | J-07 | concessão administrativa indevida | crítico | médio | mitigado | identity | #92 |
 | R-20 | J-07 | auditoria indisponível ou irrecuperável | crítico | alto | bloqueado | operations | #94 |
-| R-21 | J-03 | segredo em log, erro, métrica ou artefato | alto | médio | bloqueado | observability | #93 |
-| R-22 | J-03 | degradação não detectada ou sem recuperação | crítico | alto | bloqueado | operations | #93 e #94 |
+| R-21 | J-03 | segredo em log, erro, métrica ou artefato | alto | baixo | mitigado | observability | #93 |
+| R-22 | J-03 | degradação não detectada ou sem recuperação | crítico | alto | bloqueado | operations | #94 |
 | R-23 | J-02 | dependência, segredo ou build comprometido | crítico | médio | mitigado | security | #92 |
 | R-24 | J-06 | política inicial confundida com alçada final | alto | médio | transferido | product | #96 / Etapa 8 |
 | R-25 | J-01 | CORS, cache ou política do navegador permissiva | crítico | alto | bloqueado | security | #90 |

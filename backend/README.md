@@ -21,6 +21,13 @@ uvicorn app.main:app --reload
 
 Execute os testes com `pytest`.
 
+## Observabilidade
+
+As sondas públicas são `/health/live`, `/health/ready` e `/health`. Métricas em
+`/metrics` exigem um Bearer técnico configurado em
+`OBSERVABILITY_METRICS_TOKEN`; catálogo, alertas e painel estão documentados em
+[`../docs/observability.md`](../docs/observability.md).
+
 ## Importação rastreável
 
 Configure a conexão e, opcionalmente, o diretório controlado de evidências:

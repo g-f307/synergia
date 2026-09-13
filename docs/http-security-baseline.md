@@ -5,8 +5,8 @@ CSP restritiva, bloqueio de framing e MIME sniffing, `no-referrer`, uma
 `Permissions-Policy` mínima e `Cross-Origin-Resource-Policy: same-site`. HSTS é
 emitido somente em produção, onde a terminação TLS é obrigatória.
 
-Todas as respostas da API usam `Cache-Control: no-store`; `/health` usa
-`no-cache`. Isso inclui autenticação, perfil, decisões, relatórios e downloads.
+Todas as respostas da API usam `Cache-Control: no-store`; as rotas `/health*`
+usam `no-cache`. Isso inclui autenticação, perfil, decisões, relatórios e downloads.
 
 ## Configuração por ambiente
 

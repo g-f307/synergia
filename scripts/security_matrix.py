@@ -14,9 +14,12 @@ MATRIX = ROOT / "docs" / "access-control-matrix.md"
 DEFAULT_REPORT = ROOT / "docs" / "security-test-report.md"
 PUBLIC = {
     ("GET", "/health"),
+    ("GET", "/health/live"),
+    ("GET", "/health/ready"),
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
+TECHNICAL = {("GET", "/metrics")}
 ROLES = ("admin", "gestor", "analista", "operador", "consulta")
 ROW = re.compile(r"^`(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)`$")
 
@@ -85,7 +88,7 @@ def validate(cases: list[MatrixCase]) -> list[str]:
     errors: list[str] = []
     operations, secured = openapi_operations()
     documented = {(case.method, case.path) for case in cases}
-    private = operations - PUBLIC
+    private = operations - PUBLIC - TECHNICAL
     if len(documented) != len(cases):
         errors.append("a matriz possui operações duplicadas")
     if missing := sorted(private - documented):
@@ -94,6 +97,8 @@ def validate(cases: list[MatrixCase]) -> list[str]:
         errors.append(f"operações documentadas inexistentes: {stale}")
     if unsecured := sorted(private - secured):
         errors.append(f"operações privadas sem Bearer: {unsecured}")
+    if technical_unsecured := sorted(TECHNICAL - secured):
+        errors.append(f"operações técnicas sem credencial: {technical_unsecured}")
     for case in cases:
         unknown = case.allowed_roles - set(ROLES)
         if unknown:
@@ -113,7 +118,7 @@ def render_report(cases: list[MatrixCase]) -> str:
         f"- operações privadas cobertas: {len(cases)}",
         f"- papéis iniciais: {len(ROLES)}",
         f"- combinações papel x operação: {len(cases) * len(ROLES)}",
-        "- rotas públicas explicitamente verificadas: 3",
+        f"- rotas públicas explicitamente verificadas: {len(PUBLIC)}",
         "",
         "| Operação | Permissão | Escopo | Permitido | Negado |",
         "| --- | --- | --- | --- | --- |",
