@@ -28,6 +28,15 @@ As sondas públicas são `/health/live`, `/health/ready` e `/health`. Métricas 
 `OBSERVABILITY_METRICS_TOKEN`; catálogo, alertas e painel estão documentados em
 [`../docs/observability.md`](../docs/observability.md).
 
+## Retenção e recuperação
+
+Backup, restauração, verificação e expurgo controlado são executados a partir
+da raiz com `python scripts/data_operations.py`. A ferramenta usa os clientes
+PostgreSQL do host ou o serviço `postgres` do Compose, nunca sobrescreve um
+destino existente e exige que bundles fiquem fora do repositório. Consulte
+[`../docs/data-recovery.md`](../docs/data-recovery.md) e os
+[`runbooks operacionais`](../docs/runbooks/backup-restore.md).
+
 ## Importação rastreável
 
 Configure a conexão e, opcionalmente, o diretório controlado de evidências:

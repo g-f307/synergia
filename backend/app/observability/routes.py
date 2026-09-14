@@ -19,7 +19,9 @@ metrics_bearer = HTTPBearer(auto_error=False, scheme_name="ObservabilityScrapeTo
 
 
 class ComponentHealthResponse(BaseModel):
-    component: Literal["configuration", "postgresql", "storage", "email_worker"]
+    component: Literal[
+        "configuration", "postgresql", "storage", "email_worker", "data_recovery"
+    ]
     status: Literal["healthy", "degraded", "unavailable", "disabled"]
     critical: bool
     duration_ms: float
@@ -30,6 +32,9 @@ class ComponentHealthResponse(BaseModel):
         "schema_unavailable",
         "state_unavailable",
         "queue_stalled",
+        "backup_missing",
+        "backup_stale",
+        "operation_failed",
     ] | None = None
 
 

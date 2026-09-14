@@ -153,7 +153,13 @@ def observe_http_request(
 
 
 def record_dependency(component: str, status: str) -> None:
-    if component not in {"configuration", "postgresql", "storage", "email_worker"}:
+    if component not in {
+        "configuration",
+        "postgresql",
+        "storage",
+        "email_worker",
+        "data_recovery",
+    }:
         return
     DEPENDENCY_UP.labels(component).set(1 if status in {"healthy", "disabled"} else 0)
     DEPENDENCY_DEGRADED.labels(component).set(1 if status == "degraded" else 0)
@@ -306,6 +312,25 @@ class PostgresOperationalCollector:
                     FROM synergia.rate_limit_events GROUP BY operation, dimension
                     """
                 ).fetchall()
+                data_operations = connection.execute(
+                    """
+                    WITH operations(operation) AS (
+                        VALUES ('backup'), ('restore'),
+                               ('verification'), ('retention')
+                    )
+                    SELECT operations.operation,
+                           COALESCE(EXTRACT(EPOCH FROM (max(occurred_at) FILTER (
+                               WHERE outcome = 'succeeded'
+                           ))), 0) AS last_success,
+                           count(event.id) FILTER (
+                               WHERE outcome IN ('failed', 'refused')
+                           ) AS failures
+                    FROM operations
+                    LEFT JOIN synergia.data_operation_events event
+                      ON event.operation = operations.operation
+                    GROUP BY operations.operation
+                    """
+                ).fetchall()
         except (psycopg.Error, OSError, ValueError) as exc:
             collection.add_metric(["postgresql"], 0)
             safe_log(
@@ -398,6 +423,24 @@ class PostgresOperationalCollector:
                 row["total"],
             )
         yield denial_metric
+
+        recovery_success = GaugeMetricFamily(
+            "synergia_data_operation_last_success_timestamp_seconds",
+            "Unix timestamp of the latest successful data operation.",
+            labels=["operation"],
+        )
+        recovery_failures = CounterMetricFamily(
+            "synergia_data_operation_failures",
+            "Persisted failed or refused data operations.",
+            labels=["operation"],
+        )
+        for row in data_operations:
+            recovery_success.add_metric(
+                [row["operation"]], float(row["last_success"])
+            )
+            recovery_failures.add_metric([row["operation"]], row["failures"])
+        yield recovery_success
+        yield recovery_failures
 
 
 REGISTRY.register(PostgresOperationalCollector())

@@ -125,6 +125,26 @@
       "targets": [{"expr": "rate(process_cpu_seconds_total[5m])", "refId": "A"}],
       "title": "API CPU",
       "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 25},
+      "id": 13,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "time() - synergia_data_operation_last_success_timestamp_seconds > 0", "legendFormat": "{{operation}}", "refId": "A"}],
+      "title": "Data operation age",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 25},
+      "id": 14,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "increase(synergia_data_operation_failures_total[24h])", "legendFormat": "{{operation}}", "refId": "A"}],
+      "title": "Data operation failures (24h)",
+      "type": "timeseries"
     }
   ],
   "refresh": "15s",

@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "status": "proposed_for_homologation",
+  "rpo_hours": 24,
+  "rto_hours": 4,
+  "backup_alert_tolerance_seconds": 90000,
+  "groups": [
+    {
+      "id": "identity_profiles",
+      "purpose": "identidade, perfil e contato operacional",
+      "sensitivity": "confidential",
+      "stores": ["postgresql", "avatar_storage"],
+      "retention": "durante o vínculo e até decisão formal posterior à desativação",
+      "disposition": "anonymize_only_after_approved_request",
+      "automated": false,
+      "backup": true,
+      "owner": "security"
+    },
+    {
+      "id": "authorization_configuration",
+      "purpose": "papéis, grupos, permissões e organizações",
+      "sensitivity": "restricted",
+      "stores": ["postgresql"],
+      "retention": "vigência e histórico enquanto houver evidência relacionada",
+      "disposition": "no_automatic_purge",
+      "automated": false,
+      "backup": true,
+      "owner": "security"
+    },
+    {
+      "id": "sessions_and_tokens",
+      "purpose": "autenticação, renovação e revogação",
+      "sensitivity": "restricted",
+      "stores": ["postgresql"],
+      "retention": "90 dias após expiração ou revogação, proposta",
+      "disposition": "no_automatic_purge_until_approved",
+      "automated": false,
+      "backup": true,
+      "owner": "security"
+    },
+    {
+      "id": "security_transient",
+      "purpose": "janelas de login, rate limiting e resposta a abuso",
+      "sensitivity": "restricted",
+      "stores": ["postgresql"],
+      "retention": "90 dias, configurável entre 1 e 3650 dias",
+      "disposition": "purge",
+      "automated": true,
+      "backup": true,
+      "owner": "security"
+    },
+    {
+      "id": "operational_records",
+      "purpose": "execuções, consolidação, proveniência e decisões de qualidade",
+      "sensitivity": "confidential",
+      "stores": ["postgresql"],
+      "retention": "5 anos, proposta sujeita ao responsável de negócio",
+      "disposition": "no_automatic_purge_until_approved",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "accepted_uploads",
+      "purpose": "evidência original e reprocessamento",
+      "sensitivity": "confidential",
+      "stores": ["import_storage"],
+      "retention": "365 dias, proposta sujeita ao responsável de negócio",
+      "disposition": "no_automatic_purge_until_approved",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "quarantine",
+      "purpose": "análise temporária de conteúdo rejeitado",
+      "sensitivity": "restricted_untrusted",
+      "stores": ["import_storage", "postgresql_metadata"],
+      "retention": "24 horas por padrão, configurável por política de upload",
+      "disposition": "purge_content_keep_metadata",
+      "automated": true,
+      "backup": false,
+      "owner": "security"
+    },
+    {
+      "id": "avatars",
+      "purpose": "representação visual opcional do perfil",
+      "sensitivity": "confidential",
+      "stores": ["avatar_storage", "postgresql_metadata"],
+      "retention": "até substituição, remoção ou anonimização aprovada",
+      "disposition": "delete_on_user_action",
+      "automated": true,
+      "backup": true,
+      "owner": "identity_operations"
+    },
+    {
+      "id": "reports",
+      "purpose": "snapshots reproduzíveis, versões e exportações",
+      "sensitivity": "confidential",
+      "stores": ["postgresql"],
+      "retention": "5 anos, proposta sujeita ao responsável de negócio",
+      "disposition": "no_automatic_purge",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "notifications",
+      "purpose": "caixa interna, preferências e histórico de entrega",
+      "sensitivity": "confidential",
+      "stores": ["postgresql"],
+      "retention": "180 dias para a caixa; eventos enquanto a evidência de origem existir",
+      "disposition": "no_automatic_purge_until_approved",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "email_delivery",
+      "purpose": "fila, tentativas e idempotência de entrega",
+      "sensitivity": "confidential",
+      "stores": ["postgresql"],
+      "retention": "180 dias, proposta",
+      "disposition": "no_automatic_purge_until_approved",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "email_local_capture",
+      "purpose": "evidência temporária exclusiva de desenvolvimento e CI",
+      "sensitivity": "confidential",
+      "stores": ["local_filesystem"],
+      "retention": "até 7 dias ou término da execução local",
+      "disposition": "purge",
+      "automated": false,
+      "backup": false,
+      "owner": "engineering"
+    },
+    {
+      "id": "human_approvals",
+      "purpose": "solicitações, justificativas, consentimento e decisões",
+      "sensitivity": "restricted",
+      "stores": ["postgresql"],
+      "retention": "5 anos, proposta sujeita ao responsável de negócio",
+      "disposition": "no_automatic_purge",
+      "automated": false,
+      "backup": true,
+      "owner": "business_operations"
+    },
+    {
+      "id": "audit_trails",
+      "purpose": "responsabilização de identidade, acesso e operação",
+      "sensitivity": "restricted",
+      "stores": ["postgresql"],
+      "retention": "mínimo proposto de 5 anos; sem redução automática",
+      "disposition": "immutable_no_automatic_purge",
+      "automated": false,
+      "backup": true,
+      "owner": "security"
+    },
+    {
+      "id": "technical_logs",
+      "purpose": "diagnóstico técnico correlacionado",
+      "sensitivity": "internal",
+      "stores": ["runtime_log_platform"],
+      "retention": "30 dias, proposta",
+      "disposition": "rotate",
+      "automated": false,
+      "backup": false,
+      "owner": "platform_operations"
+    },
+    {
+      "id": "metrics",
+      "purpose": "telemetria agregada sem identificadores",
+      "sensitivity": "internal",
+      "stores": ["prometheus"],
+      "retention": "15 dias",
+      "disposition": "rotate",
+      "automated": true,
+      "backup": false,
+      "owner": "platform_operations"
+    },
+    {
+      "id": "backup_bundles",
+      "purpose": "recuperação controlada do banco e artefatos",
+      "sensitivity": "restricted",
+      "stores": ["protected_backup_storage"],
+      "retention": "30 diários e 12 mensais, proposta",
+      "disposition": "secure_delete_by_platform",
+      "automated": false,
+      "backup": false,
+      "owner": "platform_operations"
+    },
+    {
+      "id": "ci_evidence",
+      "purpose": "comprovação sintética de qualidade e recuperação",
+      "sensitivity": "internal",
+      "stores": ["github_actions"],
+      "retention": "14 dias",
+      "disposition": "expire",
+      "automated": true,
+      "backup": false,
+      "owner": "engineering"
+    }
+  ]
+}

@@ -123,6 +123,7 @@ def test_creates_all_operational_entities() -> None:
         "approval_stages",
         "classifications",
         "consolidated_field_provenance",
+        "data_operation_events",
         "executions",
         "email_deliveries",
         "email_delivery_attempts",

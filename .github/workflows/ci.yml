@@ -157,7 +157,16 @@ jobs:
       - name: Confirmar disponibilidade do PostgreSQL
         run: pg_isready
       - name: Validar migrations e dados sintéticos
-        run: python scripts/validate_project_assets.py
+        run: |
+          python scripts/validate_project_assets.py
+          python scripts/validate_data_governance.py
+      - name: Validar backup, restauração e retenção
+        env:
+          DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci
+          IMPORT_STORAGE_DIR: /tmp/synergia-ci-imports
+          PROFILE_AVATAR_STORAGE_ROOT: /tmp/synergia-ci-avatars
+          DATA_OPERATIONS_ACTOR: ci-recovery
+        run: pytest -q -m integration backend/tests/test_data_operations_persistence.py
       - name: Validar configuração, alertas e recuperação da observabilidade
         run: |
           docker run --rm --entrypoint promtool \
