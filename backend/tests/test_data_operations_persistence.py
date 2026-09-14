@@ -10,6 +10,7 @@ from uuid import uuid4
 import psycopg
 import pytest
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg.rows import dict_row
 
 from app import data_operations
 from app.data_operations import (
@@ -354,6 +355,234 @@ def _seed_recovery_data(config: DataOperationConfig) -> dict[str, object]:
         "upload_content": upload_content,
         "rejected_path": rejected_path,
     }
+
+
+def _add_expired_quarantine_files(
+    config: DataOperationConfig, execution_id: str, count: int
+) -> tuple[list[int], list[Path]]:
+    inspection_ids: list[int] = []
+    paths: list[Path] = []
+    with psycopg.connect(config.database_url) as connection:
+        for index in range(count):
+            internal_name = f"{uuid4().hex}{uuid4().hex[:16]}.csv"
+            inspection_id = connection.execute(
+                """
+                INSERT INTO synergia.file_inspections (
+                    execution_id, source, original_file_name, internal_name,
+                    extension, declared_media_type, detected_media_type,
+                    size_bytes, content_hash, decision, reason_code,
+                    analyzed_at, retained_until
+                ) VALUES (%s, 'N-FP', 'rejected.csv', %s, 'csv', 'text/csv',
+                          'text/html', 9, %s, 'rejected',
+                          'disguised_active_content', now() - interval '2 days',
+                          now() - interval '1 day')
+                RETURNING id
+                """,
+                (execution_id, internal_name, f"{index + 1:064x}"),
+            ).fetchone()[0]
+            path = (
+                config.import_storage_root
+                / "quarantine"
+                / execution_id
+                / f"{internal_name.split('.', 1)[0]}.upload"
+            )
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"blocked-{index}".encode())
+            inspection_ids.append(inspection_id)
+            paths.append(path)
+    return inspection_ids, paths
+
+
+def test_backup_resumes_final_event_after_published_bundle(
+    tmp_path, monkeypatch, isolated_database
+) -> None:
+    config = DataOperationConfig(
+        isolated_database,
+        tmp_path / "backup-imports",
+        tmp_path / "backup-avatars",
+        "integration-recovery",
+    )
+    _seed_recovery_data(config)
+    destination = tmp_path / "published-bundle"
+    original_record = data_operations._record_published_backup_success
+    attempts = 0
+
+    def fail_first_final_event(connection, operation, correlation_id):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise psycopg.OperationalError("synthetic final event failure")
+        original_record(connection, operation, correlation_id)
+
+    monkeypatch.setattr(
+        data_operations,
+        "_record_published_backup_success",
+        fail_first_final_event,
+    )
+    with pytest.raises(psycopg.OperationalError):
+        create_backup(config, destination)
+    assert destination.is_dir()
+    manifest = data_operations.load_manifest(destination)
+    correlation_id = manifest["operation"]["correlation_id"]
+    with psycopg.connect(config.database_url) as connection:
+        assert connection.execute(
+            """
+            SELECT outcome FROM synergia.data_operation_events
+            WHERE operation = 'backup' AND correlation_id = %s ORDER BY id
+            """,
+            (correlation_id,),
+        ).fetchall() == [("started",), ("failed",)]
+
+    resumed = create_backup(config, destination)
+    assert resumed["outcome"] == "succeeded"
+    assert resumed["correlation_id"] == correlation_id
+    repeated = create_backup(config, destination)
+    assert repeated == resumed
+    with psycopg.connect(config.database_url) as connection:
+        assert connection.execute(
+            """
+            SELECT outcome FROM synergia.data_operation_events
+            WHERE operation = 'backup' AND correlation_id = %s ORDER BY id
+            """,
+            (correlation_id,),
+        ).fetchall() == [("started",), ("failed",), ("succeeded",)]
+
+
+def test_quarantine_resumes_after_interruption_before_commit(
+    tmp_path, monkeypatch, isolated_database
+) -> None:
+    config = DataOperationConfig(
+        isolated_database,
+        tmp_path / "interrupted-imports",
+        tmp_path / "interrupted-avatars",
+        "integration-recovery",
+    )
+    identifiers = _seed_recovery_data(config)
+    rejected_path = identifiers["rejected_path"]
+    assert isinstance(rejected_path, Path)
+    interrupted_correlation = uuid4()
+    with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
+        rows = connection.execute(
+            """
+            SELECT id, execution_id, internal_name
+            FROM synergia.file_inspections
+            WHERE decision = 'rejected' AND discarded_at IS NULL
+            ORDER BY id FOR UPDATE
+            """
+        ).fetchall()
+        _, staging_root = data_operations._stage_quarantine_files(
+            config, rows, interrupted_correlation
+        )
+        connection.rollback()
+    assert not rejected_path.exists()
+    assert staging_root.is_dir()
+    with psycopg.connect(config.database_url) as connection:
+        assert connection.execute(
+            """
+            SELECT discarded_at FROM synergia.file_inspections
+            WHERE decision = 'rejected'
+            """
+        ).fetchone()[0] is None
+
+    original_stage = data_operations._stage_quarantine_files
+    restoration_observed = False
+
+    def observe_recovery(next_config, rows, correlation_id):
+        nonlocal restoration_observed
+        restoration_observed = rejected_path.read_bytes() == b"untrusted"
+        assert not staging_root.exists()
+        return original_stage(next_config, rows, correlation_id)
+
+    monkeypatch.setattr(
+        data_operations, "_stage_quarantine_files", observe_recovery
+    )
+    result = purge_dataset(config, "quarantine", apply=True)
+    assert result["outcome"] == "succeeded"
+    assert restoration_observed
+    assert not rejected_path.exists()
+    with psycopg.connect(config.database_url) as connection:
+        assert connection.execute(
+            """
+            SELECT count(*) FROM synergia.data_operation_events
+            WHERE correlation_id = %s
+            """,
+            (interrupted_correlation,),
+        ).fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("failure_position", [1, 2])
+def test_quarantine_resumes_after_unlink_failure(
+    tmp_path, monkeypatch, isolated_database, failure_position
+) -> None:
+    config = DataOperationConfig(
+        isolated_database,
+        tmp_path / f"unlink-{failure_position}-imports",
+        tmp_path / f"unlink-{failure_position}-avatars",
+        "integration-recovery",
+    )
+    identifiers = _seed_recovery_data(config)
+    execution_id = identifiers["execution_id"]
+    rejected_path = identifiers["rejected_path"]
+    assert isinstance(execution_id, str) and isinstance(rejected_path, Path)
+    added_ids, added_paths = _add_expired_quarantine_files(
+        config, execution_id, 2
+    )
+    all_paths = [rejected_path, *added_paths]
+    original_unlink = data_operations._unlink_staged_quarantine_entry
+    attempts = 0
+
+    def fail_during_unlink(staged):
+        nonlocal attempts
+        attempts += 1
+        if attempts == failure_position:
+            raise OSError("synthetic unlink failure")
+        original_unlink(staged)
+
+    monkeypatch.setattr(
+        data_operations, "_unlink_staged_quarantine_entry", fail_during_unlink
+    )
+    with pytest.raises(DataOperationError) as failure:
+        purge_dataset(config, "quarantine", apply=True)
+    assert failure.value.reason_code == "retention_incomplete"
+    staging_roots = list(
+        config.import_storage_root.glob("quarantine/.retention-staging/*")
+    )
+    assert len(staging_roots) == 1
+    assert len(list(staging_roots[0].glob("*.upload"))) == 4 - failure_position
+    interrupted_correlation = staging_roots[0].name
+    with psycopg.connect(config.database_url) as connection:
+        discarded = connection.execute(
+            """
+            SELECT count(*) FROM synergia.file_inspections
+            WHERE decision = 'rejected' AND discarded_at IS NOT NULL
+            """
+        ).fetchone()[0]
+    assert discarded == len(added_ids) + 1
+
+    monkeypatch.setattr(
+        data_operations, "_unlink_staged_quarantine_entry", original_unlink
+    )
+    resumed = purge_dataset(config, "quarantine", apply=True)
+    assert resumed["outcome"] == "succeeded"
+    assert resumed["record_count"] == 0
+    assert all(not path.exists() for path in all_paths)
+    assert not list(
+        config.import_storage_root.glob("quarantine/.retention-staging/*")
+    )
+    with psycopg.connect(config.database_url) as connection:
+        assert connection.execute(
+            """
+            SELECT count(*) FROM synergia.file_inspections
+            WHERE decision = 'rejected' AND discarded_at IS NOT NULL
+            """
+        ).fetchone()[0] == len(all_paths)
+        assert connection.execute(
+            """
+            SELECT outcome FROM synergia.data_operation_events
+            WHERE correlation_id = %s ORDER BY id
+            """,
+            (interrupted_correlation,),
+        ).fetchall() == [("started",), ("failed",), ("succeeded",)]
 
 
 def test_backup_restore_integrity_retention_and_recovery(

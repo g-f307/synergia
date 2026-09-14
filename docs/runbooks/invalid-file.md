@@ -19,7 +19,9 @@ conteúdo ativo. Engenharia só participa quando uma fixture válida é rejeitad
 4. Executar o expurgo de quarentena primeiro em `dry-run` e depois com
    `--apply`, apenas quando o prazo tiver expirado.
 5. Se a operação falhar, confirmar que o arquivo retornou à quarentena e que
-   `discarded_at` permaneceu vazio antes de tentar novamente.
+   `discarded_at` permaneceu vazio antes de tentar novamente. Se houver um lote
+   privado em `.retention-staging`, não movê-lo manualmente: uma nova execução
+   com `--apply` reconcilia o manifesto com o banco antes de selecionar itens.
 
 ## Rollback
 

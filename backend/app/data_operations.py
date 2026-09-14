@@ -463,7 +463,7 @@ def create_backup(config: DataOperationConfig, destination: Path) -> dict[str, A
             "Backup destination must be outside application storage",
         )
     if destination.exists():
-        raise DataOperationError("destination_not_empty", "Backup destination exists")
+        return _finalize_published_backup(config, destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(
         tempfile.mkdtemp(prefix=".synergia-backup-", dir=destination.parent)
@@ -493,10 +493,18 @@ def create_backup(config: DataOperationConfig, destination: Path) -> dict[str, A
             _write_storage_archive(archive_path, config, files)
             for entry in files:
                 _verify_source_file(_source_path(config, entry), entry)
+        duration = round((perf_counter() - started_at) * 1000)
         manifest = {
             "format_version": FORMAT_VERSION,
             "bundle_id": str(uuid4()),
             "created_at": datetime.now(UTC).isoformat(),
+            "operation": {
+                "correlation_id": str(correlation_id),
+                "actor_identifier": config.actor_identifier,
+                "record_count": sum(counts.values()),
+                "artifact_count": len(files),
+                "duration_ms": duration,
+            },
             "database": {
                 "dump_sha256": _sha256(dump_path),
                 "table_counts": counts,
@@ -515,26 +523,7 @@ def create_backup(config: DataOperationConfig, destination: Path) -> dict[str, A
         for path in temporary.iterdir():
             path.chmod(0o600)
         temporary.replace(destination)
-        duration = round((perf_counter() - started_at) * 1000)
-        record_operation_event(
-            config.database_url,
-            operation="backup",
-            outcome="succeeded",
-            dataset="combined",
-            actor_identifier=config.actor_identifier,
-            correlation_id=correlation_id,
-            record_count=sum(counts.values()),
-            artifact_count=len(files),
-            duration_ms=duration,
-        )
-        return {
-            "operation": "backup",
-            "outcome": "succeeded",
-            "record_count": sum(counts.values()),
-            "artifact_count": len(files),
-            "duration_ms": duration,
-            "correlation_id": str(correlation_id),
-        }
+        return _finalize_published_backup(config, destination)
     except (DataOperationError, OSError, psycopg.Error) as exc:
         reason = getattr(exc, "reason_code", "backup_failed")
         _record_failure(config, "backup", correlation_id, reason, started_at)
@@ -557,11 +546,37 @@ def load_manifest(bundle: Path) -> dict[str, Any]:
     if manifest.get("format_version") != FORMAT_VERSION:
         raise DataOperationError("manifest_version_unsupported", "Unsupported manifest")
 
+    operation = manifest.get("operation")
     database = manifest.get("database")
     storage = manifest.get("storage")
     migrations = manifest.get("migrations")
     if not isinstance(database, dict) or not isinstance(storage, dict):
         raise DataOperationError("manifest_invalid", "Backup manifest is invalid")
+    if operation is not None:
+        if not isinstance(operation, dict):
+            raise DataOperationError("manifest_invalid", "Backup manifest is invalid")
+        try:
+            operation_correlation_id = UUID(
+                str(operation.get("correlation_id", ""))
+            )
+        except (TypeError, ValueError) as exc:
+            raise DataOperationError(
+                "manifest_invalid", "Backup manifest is invalid"
+            ) from exc
+        operation_numbers = (
+            operation.get("record_count"),
+            operation.get("artifact_count"),
+            operation.get("duration_ms"),
+        )
+        if (
+            str(operation_correlation_id) != operation.get("correlation_id")
+            or not SAFE_ACTOR.fullmatch(str(operation.get("actor_identifier", "")))
+            or any(
+                not isinstance(value, int) or isinstance(value, bool) or value < 0
+                for value in operation_numbers
+            )
+        ):
+            raise DataOperationError("manifest_invalid", "Backup manifest is invalid")
     if not re.fullmatch(r"[0-9a-f]{64}", str(database.get("dump_sha256", ""))):
         raise DataOperationError("manifest_invalid", "Backup manifest is invalid")
     table_counts = database.get("table_counts")
@@ -610,6 +625,76 @@ def load_manifest(bundle: Path) -> dict[str, Any]:
         ):
             raise DataOperationError("manifest_invalid", "Backup manifest is invalid")
     return manifest
+
+
+def _record_published_backup_success(
+    connection: psycopg.Connection[Any],
+    operation: dict[str, Any],
+    correlation_id: UUID,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO synergia.data_operation_events (
+            operation, outcome, dataset, actor_identifier, correlation_id,
+            record_count, artifact_count, duration_ms
+        ) VALUES ('backup', 'succeeded', 'combined', %s, %s, %s, %s, %s)
+        """,
+        (
+            operation["actor_identifier"],
+            correlation_id,
+            operation["record_count"],
+            operation["artifact_count"],
+            operation["duration_ms"],
+        ),
+    )
+
+
+def _finalize_published_backup(
+    config: DataOperationConfig, destination: Path
+) -> dict[str, Any]:
+    manifest = load_manifest(destination)
+    _verify_bundle(destination, manifest)
+    operation = manifest.get("operation")
+    if not isinstance(operation, dict):
+        raise DataOperationError(
+            "destination_not_empty", "Backup destination already exists"
+        )
+    correlation_id = UUID(operation["correlation_id"])
+    with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
+        connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+            (f"synergia:backup:{correlation_id}",),
+        )
+        events = connection.execute(
+            """
+            SELECT outcome, actor_identifier
+            FROM synergia.data_operation_events
+            WHERE operation = 'backup' AND dataset = 'combined'
+              AND correlation_id = %s
+            """,
+            (correlation_id,),
+        ).fetchall()
+        started = next(
+            (event for event in events if event["outcome"] == "started"), None
+        )
+        if started is None:
+            raise DataOperationError(
+                "destination_not_empty", "Backup destination already exists"
+            )
+        if started["actor_identifier"] != operation["actor_identifier"]:
+            raise DataOperationError(
+                "manifest_invalid", "Published backup operation is inconsistent"
+            )
+        if not any(event["outcome"] == "succeeded" for event in events):
+            _record_published_backup_success(connection, operation, correlation_id)
+    return {
+        "operation": "backup",
+        "outcome": "succeeded",
+        "record_count": operation["record_count"],
+        "artifact_count": operation["artifact_count"],
+        "duration_ms": operation["duration_ms"],
+        "correlation_id": str(correlation_id),
+    }
 
 
 def _verify_bundle(bundle: Path, manifest: dict[str, Any]) -> None:
@@ -853,11 +938,52 @@ def verify_restoration(
         raise
 
 
-def _restore_staged_quarantine(
-    moved: list[tuple[Path, Path]], staging_root: Path | None
-) -> None:
+def _quarantine_stage_parent(config: DataOperationConfig) -> Path:
+    return _safe_target(
+        config.import_storage_root, "quarantine/.retention-staging"
+    )
+
+
+def _quarantine_entry_paths(
+    config: DataOperationConfig, staging_root: Path, entry: dict[str, Any]
+) -> tuple[Path, Path]:
+    stem = str(entry["internal_name"]).split(".", 1)[0]
+    if not SAFE_STEM.fullmatch(stem):
+        raise DataOperationError("storage_key_invalid", "Quarantine key is invalid")
+    original = _safe_target(
+        config.import_storage_root,
+        f"quarantine/{entry['execution_id']}/{stem}.upload",
+    )
+    return staging_root / f"{entry['inspection_id']}.upload", original
+
+
+def _cleanup_quarantine_stage(staging_root: Path) -> None:
+    manifest_path = staging_root / "manifest.json"
+    unexpected = [path for path in staging_root.iterdir() if path != manifest_path]
+    if unexpected:
+        raise DataOperationError(
+            "retention_staging_invalid", "Quarantine staging contains unknown entries"
+        )
+    manifest_path.unlink()
+    staging_root.rmdir()
     try:
-        for staged, original in reversed(moved):
+        staging_root.parent.rmdir()
+    except OSError:
+        pass
+
+
+def _restore_staged_quarantine(
+    config: DataOperationConfig, manifest: dict[str, Any], staging_root: Path
+) -> None:
+    for entry in reversed(manifest["entries"]):
+        staged, original = _quarantine_entry_paths(config, staging_root, entry)
+        if not entry["had_content"]:
+            if staged.exists() or staged.is_symlink():
+                raise DataOperationError(
+                    "retention_staging_invalid", "Unexpected staged quarantine file"
+                )
+            continue
+        if staged.is_file() or staged.is_symlink():
             if original.exists() or original.is_symlink():
                 raise DataOperationError(
                     "retention_compensation_failed",
@@ -865,53 +991,132 @@ def _restore_staged_quarantine(
                 )
             original.parent.mkdir(parents=True, exist_ok=True)
             staged.rename(original)
-    finally:
-        if staging_root is not None:
-            try:
-                staging_root.rmdir()
-                staging_root.parent.rmdir()
-            except OSError:
-                pass
+        elif staged.exists() or not (original.is_file() or original.is_symlink()):
+            raise DataOperationError(
+                "retention_compensation_failed",
+                "Staged quarantine content cannot be recovered",
+            )
+    _cleanup_quarantine_stage(staging_root)
+
+
+def _write_quarantine_manifest(
+    staging_root: Path, correlation_id: UUID, rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    entries = [
+        {
+            "inspection_id": row["id"],
+            "execution_id": row["execution_id"],
+            "internal_name": row["internal_name"],
+            "had_content": row["had_content"],
+        }
+        for row in rows
+    ]
+    manifest = {
+        "format_version": 1,
+        "correlation_id": str(correlation_id),
+        "entries": entries,
+    }
+    temporary = staging_root / ".manifest.tmp"
+    with temporary.open("x", encoding="utf-8") as stream:
+        json.dump(manifest, stream, sort_keys=True)
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.chmod(0o600)
+    temporary.replace(staging_root / "manifest.json")
+    return manifest
 
 
 def _stage_quarantine_files(
     config: DataOperationConfig,
     rows: list[dict[str, Any]],
     correlation_id: UUID,
-) -> tuple[list[tuple[Path, Path]], Path | None]:
-    moved: list[tuple[Path, Path]] = []
-    staging_root: Path | None = None
-    try:
-        for row in rows:
-            stem = str(row["internal_name"]).split(".", 1)[0]
-            if not SAFE_STEM.fullmatch(stem):
-                raise DataOperationError(
-                    "storage_key_invalid", "Quarantine key is invalid"
-                )
-            original = _safe_target(
-                config.import_storage_root,
-                f"quarantine/{row['execution_id']}/{stem}.upload",
+) -> tuple[dict[str, Any], Path]:
+    staging_root = _safe_target(
+        config.import_storage_root,
+        f"quarantine/.retention-staging/{correlation_id}",
+    )
+    staged_rows: list[dict[str, Any]] = []
+    for row in rows:
+        entry = {
+            "inspection_id": row["id"],
+            "execution_id": row["execution_id"],
+            "internal_name": row["internal_name"],
+        }
+        _, original = _quarantine_entry_paths(config, staging_root, entry)
+        if original.exists() and not (original.is_file() or original.is_symlink()):
+            raise DataOperationError(
+                "storage_key_invalid", "Quarantine entry is invalid"
             )
-            if not (original.is_file() or original.is_symlink()):
-                if original.exists():
-                    raise DataOperationError(
-                        "storage_key_invalid", "Quarantine entry is invalid"
-                    )
+        staged_rows.append(
+            {**row, "had_content": original.is_file() or original.is_symlink()}
+        )
+    staging_root.mkdir(mode=0o700, parents=True, exist_ok=False)
+    staging_root.parent.chmod(0o700)
+    manifest = _write_quarantine_manifest(staging_root, correlation_id, staged_rows)
+    try:
+        for entry in manifest["entries"]:
+            if not entry["had_content"]:
                 continue
-            if staging_root is None:
-                staging_root = _safe_target(
-                    config.import_storage_root,
-                    f"quarantine/.retention-staging/{correlation_id}",
-                )
-                staging_root.mkdir(mode=0o700, parents=True, exist_ok=False)
-                staging_root.parent.chmod(0o700)
-            staged = staging_root / f"{row['id']}.upload"
+            staged, original = _quarantine_entry_paths(
+                config, staging_root, entry
+            )
             original.rename(staged)
-            moved.append((staged, original))
     except Exception:
-        _restore_staged_quarantine(moved, staging_root)
+        _restore_staged_quarantine(config, manifest, staging_root)
         raise
-    return moved, staging_root
+    return manifest, staging_root
+
+
+def _load_quarantine_manifest(staging_root: Path) -> dict[str, Any]:
+    manifest_path = staging_root / "manifest.json"
+    try:
+        if (
+            not manifest_path.is_file()
+            or manifest_path.is_symlink()
+            or manifest_path.stat().st_size > 1024 * 1024
+        ):
+            raise OSError
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        correlation_id = UUID(str(manifest.get("correlation_id", "")))
+    except (
+        OSError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+        AttributeError,
+    ) as exc:
+        raise DataOperationError(
+            "retention_staging_invalid", "Quarantine staging manifest is invalid"
+        ) from exc
+    entries = manifest.get("entries")
+    if (
+        manifest.get("format_version") != 1
+        or str(correlation_id) != staging_root.name
+        or not isinstance(entries, list)
+    ):
+        raise DataOperationError(
+            "retention_staging_invalid", "Quarantine staging manifest is invalid"
+        )
+    inspection_ids: set[int] = set()
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or set(entry)
+            != {"inspection_id", "execution_id", "internal_name", "had_content"}
+            or not isinstance(entry["inspection_id"], int)
+            or isinstance(entry["inspection_id"], bool)
+            or entry["inspection_id"] <= 0
+            or entry["inspection_id"] in inspection_ids
+            or not isinstance(entry["execution_id"], str)
+            or not isinstance(entry["internal_name"], str)
+            or not isinstance(entry["had_content"], bool)
+        ):
+            raise DataOperationError(
+                "retention_staging_invalid", "Quarantine staging manifest is invalid"
+            )
+        inspection_ids.add(entry["inspection_id"])
+    return manifest
 
 
 def _mark_quarantine_discarded(
@@ -934,26 +1139,222 @@ def _mark_quarantine_discarded(
         )
 
 
+def _unlink_staged_quarantine_entry(staged: Path) -> None:
+    if staged.is_symlink() or staged.is_file():
+        staged.unlink()
+    elif staged.exists():
+        raise DataOperationError(
+            "retention_staging_invalid", "Staged quarantine entry is invalid"
+        )
+
+
 def _discard_staged_quarantine(
-    moved: list[tuple[Path, Path]], staging_root: Path | None
+    config: DataOperationConfig, manifest: dict[str, Any], staging_root: Path
 ) -> None:
-    for staged, original in moved:
-        if staged.is_symlink() or staged.is_file():
-            staged.unlink()
-        elif staged.exists():
+    for entry in manifest["entries"]:
+        staged, original = _quarantine_entry_paths(config, staging_root, entry)
+        if original.exists() or original.is_symlink():
             raise DataOperationError(
-                "storage_key_invalid", "Staged quarantine entry is invalid"
+                "retention_state_changed",
+                "Discarded quarantine content returned to its original path",
             )
+        _unlink_staged_quarantine_entry(staged)
         try:
             original.parent.rmdir()
         except OSError:
             pass
-    if staging_root is not None:
-        try:
+
+
+def _reconcile_quarantine_stage(
+    connection: psycopg.Connection[Any],
+    config: DataOperationConfig,
+    staging_root: Path,
+) -> dict[str, Any] | None:
+    manifest = _load_quarantine_manifest(staging_root)
+    correlation_id = UUID(manifest["correlation_id"])
+    entries = manifest["entries"]
+    inspection_ids = [entry["inspection_id"] for entry in entries]
+    rows = connection.execute(
+        """
+        SELECT id, execution_id, internal_name, discarded_at
+        FROM synergia.file_inspections WHERE id = ANY(%s)
+        """,
+        (inspection_ids,),
+    ).fetchall()
+    by_id = {row["id"]: row for row in rows}
+    if len(rows) != len(entries) or any(
+        entry["inspection_id"] not in by_id
+        or by_id[entry["inspection_id"]]["execution_id"] != entry["execution_id"]
+        or by_id[entry["inspection_id"]]["internal_name"]
+        != entry["internal_name"]
+        for entry in entries
+    ):
+        raise DataOperationError(
+            "retention_staging_invalid", "Quarantine staging does not match metadata"
+        )
+    events = connection.execute(
+        """
+        SELECT outcome, actor_identifier, record_count, duration_ms
+        FROM synergia.data_operation_events
+        WHERE operation = 'retention' AND dataset = 'quarantine'
+          AND correlation_id = %s ORDER BY id
+        """,
+        (correlation_id,),
+    ).fetchall()
+    started = next((event for event in events if event["outcome"] == "started"), None)
+    succeeded = any(event["outcome"] == "succeeded" for event in events)
+    success_is_current = bool(events) and events[-1]["outcome"] == "succeeded"
+    discarded = [by_id[item]["discarded_at"] is not None for item in inspection_ids]
+    if started is None:
+        if any(discarded) or succeeded:
+            raise DataOperationError(
+                "retention_state_changed", "Quarantine staging state is inconsistent"
+            )
+        _restore_staged_quarantine(config, manifest, staging_root)
+        return None
+    if not all(discarded):
+        raise DataOperationError(
+            "retention_state_changed", "Quarantine staging state is inconsistent"
+        )
+    try:
+        _discard_staged_quarantine(config, manifest, staging_root)
+        if not success_is_current:
+            connection.execute(
+                """
+                INSERT INTO synergia.data_operation_events (
+                    operation, outcome, dataset, actor_identifier, correlation_id,
+                    record_count, duration_ms
+                ) VALUES ('retention', 'succeeded', 'quarantine', %s, %s, %s, %s)
+                """,
+                (
+                    started["actor_identifier"],
+                    correlation_id,
+                    started["record_count"],
+                    started["duration_ms"],
+                ),
+            )
+            connection.commit()
+        _cleanup_quarantine_stage(staging_root)
+    except (DataOperationError, OSError) as exc:
+        connection.rollback()
+        connection.execute(
+            """
+            INSERT INTO synergia.data_operation_events (
+                operation, outcome, dataset, actor_identifier, correlation_id,
+                reason_code, record_count
+            ) VALUES ('retention', 'failed', 'quarantine', %s, %s,
+                      'retention_incomplete', %s)
+            """,
+            (started["actor_identifier"], correlation_id, started["record_count"]),
+        )
+        connection.commit()
+        raise DataOperationError(
+            "retention_incomplete", "Quarantine discard requires reconciliation"
+        ) from exc
+    return {
+        "operation": "retention",
+        "outcome": "succeeded",
+        "dataset": "quarantine",
+        "record_count": started["record_count"],
+        "duration_ms": started["duration_ms"],
+        "correlation_id": str(correlation_id),
+    }
+
+
+def _reconcile_quarantine_staging(
+    connection: psycopg.Connection[Any], config: DataOperationConfig
+) -> None:
+    parent = _quarantine_stage_parent(config)
+    if not parent.exists():
+        return
+    if not parent.is_dir() or parent.is_symlink():
+        raise DataOperationError(
+            "retention_staging_invalid", "Quarantine staging root is invalid"
+        )
+    for staging_root in sorted(parent.iterdir()):
+        if not staging_root.is_dir() or staging_root.is_symlink():
+            raise DataOperationError(
+                "retention_staging_invalid", "Quarantine staging entry is invalid"
+            )
+        manifest_path = staging_root / "manifest.json"
+        if not manifest_path.exists():
+            contents = list(staging_root.iterdir())
+            if contents and not all(
+                path.name == ".manifest.tmp"
+                and path.is_file()
+                and not path.is_symlink()
+                for path in contents
+            ):
+                raise DataOperationError(
+                    "retention_staging_invalid",
+                    "Quarantine staging entry has no recovery manifest",
+                )
+            for path in contents:
+                path.unlink()
             staging_root.rmdir()
-            staging_root.parent.rmdir()
-        except OSError:
-            pass
+            continue
+        _reconcile_quarantine_stage(connection, config, staging_root)
+    try:
+        parent.rmdir()
+    except OSError:
+        pass
+
+
+def _purge_quarantine(
+    config: DataOperationConfig, *, apply: bool, started_at: float
+) -> dict[str, Any]:
+    correlation_id = uuid4()
+    with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
+        if apply:
+            connection.execute(
+                "SELECT pg_advisory_lock(hashtextextended(%s, 0))",
+                ("synergia:retention:quarantine",),
+            )
+            _reconcile_quarantine_staging(connection, config)
+        rows = connection.execute(
+            """
+            SELECT id, execution_id, internal_name
+            FROM synergia.file_inspections
+            WHERE decision = 'rejected' AND discarded_at IS NULL
+              AND retained_until <= now()
+            ORDER BY id FOR UPDATE
+            """
+        ).fetchall()
+        count = len(rows)
+        if not apply:
+            connection.rollback()
+            return {
+                "operation": "retention",
+                "outcome": "dry_run",
+                "dataset": "quarantine",
+                "record_count": count,
+            }
+        manifest, staging_root = _stage_quarantine_files(
+            config, rows, correlation_id
+        )
+        try:
+            _mark_quarantine_discarded(connection, [row["id"] for row in rows])
+            duration = round((perf_counter() - started_at) * 1000)
+            connection.execute(
+                """
+                INSERT INTO synergia.data_operation_events (
+                    operation, outcome, dataset, actor_identifier,
+                    correlation_id, record_count, duration_ms
+                ) VALUES ('retention', 'started', 'quarantine', %s, %s, %s, %s)
+                """,
+                (config.actor_identifier, correlation_id, count, duration),
+            )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            _restore_staged_quarantine(config, manifest, staging_root)
+            raise
+        result = _reconcile_quarantine_stage(connection, config, staging_root)
+        if result is None:
+            raise DataOperationError(
+                "retention_state_changed", "Committed retention was not recovered"
+            )
+        return result
 
 
 def _purge_dataset(
@@ -980,110 +1381,62 @@ def _purge_dataset(
 
     correlation_id = uuid4()
     started_at = perf_counter()
-    moved: list[tuple[Path, Path]] = []
-    staging_root: Path | None = None
-    try:
-        with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
-            if dataset == "quarantine":
-                rows = connection.execute(
-                    """
-                    SELECT id, execution_id, internal_name
-                    FROM synergia.file_inspections
-                    WHERE decision = 'rejected' AND discarded_at IS NULL
-                      AND retained_until <= now()
-                    ORDER BY id FOR UPDATE
-                    """
-                ).fetchall()
-                count = len(rows)
-                if apply:
-                    moved, staging_root = _stage_quarantine_files(
-                        config, rows, correlation_id
-                    )
-                    _mark_quarantine_discarded(connection, [row["id"] for row in rows])
-                    connection.execute(
-                        """
-                        INSERT INTO synergia.data_operation_events (
-                            operation, outcome, dataset, actor_identifier,
-                            correlation_id, record_count
-                        ) VALUES ('retention', 'started', 'quarantine', %s, %s, %s)
-                        """,
-                        (config.actor_identifier, correlation_id, count),
-                    )
-            else:
-                cutoff = datetime.now(UTC) - timedelta(days=transient_retention_days)
-                queries = (
-                    (
-                        "identity_login_attempts",
-                        """SELECT count(*) AS total
-                           FROM synergia.identity_login_attempts
-                           WHERE attempted_at < %s""",
-                        """DELETE FROM synergia.identity_login_attempts
-                           WHERE attempted_at < %s""",
-                    ),
-                    (
-                        "rate_limit_events",
-                        """SELECT count(*) AS total FROM synergia.rate_limit_events
-                           WHERE occurred_at < %s""",
-                        """DELETE FROM synergia.rate_limit_events
-                           WHERE occurred_at < %s""",
-                    ),
-                    (
-                        "rate_limit_buckets",
-                        """SELECT count(*) AS total FROM synergia.rate_limit_buckets
-                           WHERE window_expires_at < %s""",
-                        """DELETE FROM synergia.rate_limit_buckets
-                           WHERE window_expires_at < %s""",
-                    ),
-                )
-                count = 0
-                for _, select_query, delete_query in queries:
-                    count += connection.execute(select_query, (cutoff,)).fetchone()[
-                        "total"
-                    ]
-                    if apply:
-                        connection.execute(delete_query, (cutoff,))
-            if not apply:
-                connection.rollback()
-                return {
-                    "operation": "retention",
-                    "outcome": "dry_run",
-                    "dataset": dataset,
-                    "record_count": count,
-                }
-            duration = round((perf_counter() - started_at) * 1000)
-            if dataset != "quarantine":
-                connection.execute(
-                    """
-                    INSERT INTO synergia.data_operation_events (
-                        operation, outcome, dataset, actor_identifier, correlation_id,
-                        record_count, duration_ms
-                    ) VALUES ('retention', 'succeeded', %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        dataset,
-                        config.actor_identifier,
-                        correlation_id,
-                        count,
-                        duration,
-                    ),
-                )
-    except Exception:
-        if moved:
-            _restore_staged_quarantine(moved, staging_root)
-        raise
-
     if dataset == "quarantine":
-        _discard_staged_quarantine(moved, staging_root)
+        return _purge_quarantine(config, apply=apply, started_at=started_at)
+
+    cutoff = datetime.now(UTC) - timedelta(days=transient_retention_days)
+    queries = (
+        (
+            "identity_login_attempts",
+            """SELECT count(*) AS total FROM synergia.identity_login_attempts
+               WHERE attempted_at < %s""",
+            """DELETE FROM synergia.identity_login_attempts
+               WHERE attempted_at < %s""",
+        ),
+        (
+            "rate_limit_events",
+            """SELECT count(*) AS total FROM synergia.rate_limit_events
+               WHERE occurred_at < %s""",
+            """DELETE FROM synergia.rate_limit_events
+               WHERE occurred_at < %s""",
+        ),
+        (
+            "rate_limit_buckets",
+            """SELECT count(*) AS total FROM synergia.rate_limit_buckets
+               WHERE window_expires_at < %s""",
+            """DELETE FROM synergia.rate_limit_buckets
+               WHERE window_expires_at < %s""",
+        ),
+    )
+    with psycopg.connect(config.database_url, row_factory=dict_row) as connection:
+        count = 0
+        for _, select_query, delete_query in queries:
+            count += connection.execute(select_query, (cutoff,)).fetchone()["total"]
+            if apply:
+                connection.execute(delete_query, (cutoff,))
+        if not apply:
+            connection.rollback()
+            return {
+                "operation": "retention",
+                "outcome": "dry_run",
+                "dataset": dataset,
+                "record_count": count,
+            }
         duration = round((perf_counter() - started_at) * 1000)
-        record_operation_event(
-            config.database_url,
-            operation="retention",
-            outcome="succeeded",
-            dataset="quarantine",
-            actor_identifier=config.actor_identifier,
-            correlation_id=correlation_id,
-            record_count=count,
-            duration_ms=duration,
+        connection.execute(
+            """
+            INSERT INTO synergia.data_operation_events (
+                operation, outcome, dataset, actor_identifier, correlation_id,
+                record_count, duration_ms
+            ) VALUES ('retention', 'succeeded', %s, %s, %s, %s, %s)
+            """,
+            (
+                dataset,
+                config.actor_identifier,
+                correlation_id,
+                count,
+                duration,
+            ),
         )
     return {
         "operation": "retention",
@@ -1111,7 +1464,11 @@ def purge_dataset(
             transient_retention_days=transient_retention_days,
         )
     except DataOperationError as exc:
-        if exc.reason_code not in {"dataset_protected", "retention_invalid"}:
+        if exc.reason_code not in {
+            "dataset_protected",
+            "retention_incomplete",
+            "retention_invalid",
+        }:
             _record_failure(
                 config,
                 "retention",

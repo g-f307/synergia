@@ -57,8 +57,11 @@ eventos de rate limiting e buckets expirados anteriores ao prazo informado.
 Para não perder conteúdo sem metadado correspondente, o expurgo move primeiro
 cada arquivo para uma área temporária privada no mesmo filesystem. A alteração
 de `discarded_at` e o evento inicial são confirmados sob lock no PostgreSQL antes
-da exclusão definitiva. Falha de banco restaura o arquivo ao caminho original e
-reverte a transação; somente depois da remoção é registrado o evento de sucesso.
+da exclusão definitiva. Um manifesto privado correlaciona o lote aos metadados e
+permanece até a confirmação do evento de sucesso. Toda nova aplicação serializa
+o expurgo e reconcilia primeiro os lotes interrompidos: restaura os arquivos se
+o commit não ocorreu ou retoma a exclusão se `discarded_at` já foi confirmado.
+Falhas parciais de `unlink()` preservam esse estado para uma nova tentativa.
 
 Auditoria, aprovações, relatórios, notificações, uploads aceitos e avatares são
 explicitamente bloqueados pela allowlist. Uma tentativa aplicada é registrada

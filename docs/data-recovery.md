@@ -49,6 +49,12 @@ O bundle privado contém:
   atuais;
 - `manifest.json`, com versão, contagens, migrations e hashes completos.
 
+O manifesto também mantém correlation ID, identidade técnica e contagens
+necessárias para finalizar a auditoria. Se o bundle for publicado, mas o evento
+de sucesso falhar, repetir o comando com o mesmo destino valida integralmente o
+bundle e conclui o mesmo evento de forma idempotente. Um destino sem evento
+inicial correspondente continua protegido contra sobrescrita.
+
 Somente contagens, duração, resultado e correlation ID aparecem na saída e em
 `data_operation_events`. Caminhos, nomes originais, conteúdo e hashes não são
 registrados na telemetria.
