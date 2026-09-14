@@ -55,6 +55,13 @@ de sucesso falhar, repetir o comando com o mesmo destino valida integralmente o
 bundle e conclui o mesmo evento de forma idempotente. Um destino sem evento
 inicial correspondente continua protegido contra sobrescrita.
 
+Durante a criação, os arquivos ficam em um diretório privado identificado por
+um marcador de propriedade sem conteúdo do backup. Se o processo for encerrado
+antes da publicação atômica, a próxima execução para o mesmo destino remove
+somente temporários identificados e vencidos há pelo menos 24 horas. Diretórios
+ativos, symlinks, marcadores inválidos e temporários de outro destino nunca são
+removidos automaticamente.
+
 Somente contagens, duração, resultado e correlation ID aparecem na saída e em
 `data_operation_events`. Caminhos, nomes originais, conteúdo e hashes não são
 registrados na telemetria.

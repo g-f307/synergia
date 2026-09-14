@@ -23,6 +23,9 @@ from psycopg.rows import dict_row
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS_ROOT = ROOT / "database" / "migrations"
 FORMAT_VERSION = "1.0"
+BACKUP_TEMP_FORMAT_VERSION = "1.0"
+BACKUP_TEMP_MAX_AGE = timedelta(hours=24)
+BACKUP_TEMP_MARKER = ".synergia-backup-owner.json"
 SAFE_ACTOR = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$")
 SAFE_STEM = re.compile(r"^[0-9a-f]{48}$")
 ALLOWED_PURGE_DATASETS = frozenset({"quarantine", "security_transient"})
@@ -449,6 +452,77 @@ def _safe_tar_info(info: tarfile.TarInfo) -> tarfile.TarInfo:
     return info
 
 
+def _backup_destination_key(destination: Path) -> str:
+    return hashlib.sha256(str(destination).encode("utf-8")).hexdigest()
+
+
+def _backup_temporary_prefix(destination: Path) -> str:
+    return f".synergia-backup-{_backup_destination_key(destination)[:16]}-"
+
+
+def _write_backup_temporary_marker(
+    temporary: Path, destination: Path, correlation_id: UUID
+) -> None:
+    marker = {
+        "format_version": BACKUP_TEMP_FORMAT_VERSION,
+        "destination_key": _backup_destination_key(destination),
+        "correlation_id": str(correlation_id),
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+    marker_path = temporary / BACKUP_TEMP_MARKER
+    marker_path.write_text(
+        json.dumps(marker, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    marker_path.chmod(0o600)
+
+
+def _owned_stale_backup_temporary(
+    candidate: Path,
+    destination: Path,
+    *,
+    now: datetime,
+) -> bool:
+    if candidate.is_symlink() or not candidate.is_dir():
+        return False
+    marker_path = candidate / BACKUP_TEMP_MARKER
+    try:
+        if marker_path.is_symlink() or not marker_path.is_file():
+            return False
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        created_at = datetime.fromisoformat(marker["created_at"])
+        correlation_id = UUID(marker["correlation_id"])
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    if created_at.tzinfo is None:
+        return False
+    return (
+        marker.get("format_version") == BACKUP_TEMP_FORMAT_VERSION
+        and marker.get("destination_key") == _backup_destination_key(destination)
+        and str(correlation_id) == marker["correlation_id"]
+        and candidate.name
+        == f"{_backup_temporary_prefix(destination)}{correlation_id}"
+        and now - created_at.astimezone(UTC) >= BACKUP_TEMP_MAX_AGE
+    )
+
+
+def _cleanup_stale_backup_temporaries(
+    destination: Path, *, now: datetime | None = None
+) -> int:
+    current_time = now or datetime.now(UTC)
+    prefix = _backup_temporary_prefix(destination)
+    removed = 0
+    for candidate in destination.parent.glob(f"{prefix}*"):
+        if _owned_stale_backup_temporary(
+            candidate,
+            destination,
+            now=current_time,
+        ):
+            shutil.rmtree(candidate)
+            removed += 1
+    return removed
+
+
 def create_backup(config: DataOperationConfig, destination: Path) -> dict[str, Any]:
     destination = destination.resolve()
     if destination.is_relative_to(ROOT.resolve()):
@@ -462,14 +536,16 @@ def create_backup(config: DataOperationConfig, destination: Path) -> dict[str, A
             "destination_unsafe",
             "Backup destination must be outside application storage",
         )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _cleanup_stale_backup_temporaries(destination)
     if destination.exists():
         return _finalize_published_backup(config, destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(
-        tempfile.mkdtemp(prefix=".synergia-backup-", dir=destination.parent)
-    )
-    temporary.chmod(0o700)
     correlation_id = uuid4()
+    temporary = destination.parent / (
+        f"{_backup_temporary_prefix(destination)}{correlation_id}"
+    )
+    temporary.mkdir(mode=0o700)
+    _write_backup_temporary_marker(temporary, destination, correlation_id)
     started_at = perf_counter()
     try:
         record_operation_event(
@@ -687,6 +763,7 @@ def _finalize_published_backup(
             )
         if not any(event["outcome"] == "succeeded" for event in events):
             _record_published_backup_success(connection, operation, correlation_id)
+    (destination / BACKUP_TEMP_MARKER).unlink(missing_ok=True)
     return {
         "operation": "backup",
         "outcome": "succeeded",

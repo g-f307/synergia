@@ -436,6 +436,7 @@ def test_backup_resumes_final_event_after_published_bundle(
     resumed = create_backup(config, destination)
     assert resumed["outcome"] == "succeeded"
     assert resumed["correlation_id"] == correlation_id
+    assert not (destination / data_operations.BACKUP_TEMP_MARKER).exists()
     repeated = create_backup(config, destination)
     assert repeated == resumed
     with psycopg.connect(config.database_url) as connection:

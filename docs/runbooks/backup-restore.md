@@ -20,6 +20,8 @@ restore ou hash bloqueia a liberação.
    Se o bundle já tiver sido publicado, mas a operação tiver retornado falha ao
    registrar o sucesso, repetir exatamente o mesmo destino; a ferramenta valida
    e finaliza a operação existente sem sobrescrever ou duplicar o backup.
+   A repetição também elimina temporários vencidos pertencentes ao mesmo destino;
+   nunca remova manualmente entradas `.synergia-backup-*` sem conferir o marcador.
 2. Guardar somente o resumo sanitizado no chamado; mover o bundle ao cofre.
 3. Provisionar PostgreSQL 16 e diretórios vazios em ambiente isolado.
 4. Executar `restore` e depois `verify` usando o mesmo bundle.
@@ -40,6 +42,6 @@ São obrigatórios migrations idênticas, constraints validadas, contagens
 esperadas, hashes de relatórios/arquivos e presença de usuários, execuções,
 notificações, aprovações e auditoria. Uma pessoa diferente do autor executa o
 roteiro e preenche [`data-recovery-cross-test.md`](../evidence/data-recovery-cross-test.md).
-Em projeto solo sem segundo executor disponível, o mantenedor pode dispensar
-explicitamente apenas a independência humana; o registro deve identificar o
-executor real, a exceção e os resultados reproduzíveis, sem simular outra autoria.
+Se não houver segundo executor disponível, a validação automatizada pode ser
+registrada como preparação, mas o critério permanece pendente até a execução
+independente ou uma alteração explícita do critério de aceite na issue.

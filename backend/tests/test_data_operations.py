@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
 from app.data_operations import (
+    BACKUP_TEMP_MARKER,
     ROOT,
     DataOperationConfig,
     DataOperationError,
+    _backup_destination_key,
+    _backup_temporary_prefix,
+    _cleanup_stale_backup_temporaries,
     _database_command,
     _postgres_tool_command,
     _safe_target,
@@ -103,6 +109,87 @@ def test_storage_paths_and_repository_backup_destination_are_rejected(tmp_path) 
     with pytest.raises(DataOperationError) as destination:
         create_backup(config, ROOT / "artifacts" / "backups" / "unsafe")
     assert destination.value.reason_code == "destination_unsafe"
+
+
+def test_interrupted_backup_temporary_is_cleaned_before_next_attempt(tmp_path) -> None:
+    destination = (tmp_path / "published-bundle").resolve()
+    correlation_id = uuid4()
+    temporary = tmp_path / (
+        f"{_backup_temporary_prefix(destination)}{correlation_id}"
+    )
+    temporary.mkdir()
+    created_at = datetime.now(UTC) - timedelta(hours=25)
+    (temporary / BACKUP_TEMP_MARKER).write_text(
+        json.dumps(
+            {
+                "format_version": "1.0",
+                "destination_key": _backup_destination_key(destination),
+                "correlation_id": str(correlation_id),
+                "created_at": created_at.isoformat(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    (temporary / "database.dump").write_bytes(b"restricted")
+
+    assert _cleanup_stale_backup_temporaries(destination) == 1
+    assert not temporary.exists()
+
+
+def test_backup_temporary_cleanup_preserves_active_foreign_and_unsafe_entries(
+    tmp_path,
+) -> None:
+    destination = (tmp_path / "published-bundle").resolve()
+    now = datetime.now(UTC)
+
+    def temporary(*, age_hours: int, destination_key: str) -> Path:
+        correlation_id = uuid4()
+        path = tmp_path / (
+            f"{_backup_temporary_prefix(destination)}{correlation_id}"
+        )
+        path.mkdir()
+        (path / BACKUP_TEMP_MARKER).write_text(
+            json.dumps(
+                {
+                    "format_version": "1.0",
+                    "destination_key": destination_key,
+                    "correlation_id": str(correlation_id),
+                    "created_at": (now - timedelta(hours=age_hours)).isoformat(),
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    destination_key = _backup_destination_key(destination)
+    active = temporary(age_hours=1, destination_key=destination_key)
+    foreign = temporary(age_hours=25, destination_key="0" * 64)
+    mismatched = temporary(age_hours=25, destination_key=destination_key)
+    mismatched_marker = mismatched / BACKUP_TEMP_MARKER
+    marker = json.loads(mismatched_marker.read_text(encoding="utf-8"))
+    marker["correlation_id"] = str(uuid4())
+    mismatched_marker.write_text(json.dumps(marker), encoding="utf-8")
+    malformed = tmp_path / (
+        f"{_backup_temporary_prefix(destination)}{uuid4()}"
+    )
+    malformed.mkdir()
+    (malformed / BACKUP_TEMP_MARKER).write_text("not-json", encoding="utf-8")
+    external = tmp_path / "external"
+    external.mkdir()
+    symbolic = tmp_path / f"{_backup_temporary_prefix(destination)}{uuid4()}"
+    try:
+        symbolic.symlink_to(external, target_is_directory=True)
+    except OSError:
+        symbolic = None
+
+    assert _cleanup_stale_backup_temporaries(destination, now=now) == 0
+    assert active.is_dir()
+    assert foreign.is_dir()
+    assert mismatched.is_dir()
+    assert malformed.is_dir()
+    if symbolic is not None:
+        assert symbolic.is_symlink()
+    assert external.is_dir()
 
 
 def test_storage_path_rejects_symbolic_parent_without_following_it(tmp_path) -> None:

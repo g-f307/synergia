@@ -51,7 +51,7 @@ hashes completos, DSN ou credenciais. A contratação de armazenamento, a
 política jurídica definitiva e disaster recovery geográfico permanecem fora do
 escopo.
 
-O [`registro de teste cruzado`](evidence/data-recovery-cross-test.md) foi
-preenchido após nova execução integral. Como não existe outro colaborador no
-projeto, o mantenedor dispensou explicitamente a independência humana; o
-registro identifica essa limitação sem atribuir a execução a uma segunda pessoa.
+O [`registro de teste cruzado`](evidence/data-recovery-cross-test.md) contém o
+resultado automatizado e o roteiro pronto para repetição. A execução por pessoa
+diferente do autor permanece pendente e não é apresentada como satisfeita pela
+automação.
