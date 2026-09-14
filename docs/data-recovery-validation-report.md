@@ -24,6 +24,9 @@ privado permanecem apenas no diretório temporário do runner.
 - compensação do arquivo quando o banco falha depois da movimentação temporária;
 - bloqueio e auditoria da tentativa de expurgo de dados protegidos;
 - falha de armazenamento seguida de correção e novo backup íntegro;
+- retomada idempotente quando o bundle é publicado antes do evento de sucesso;
+- interrupção do expurgo antes do commit e falha no primeiro ou em um `unlink`
+  intermediário, com reconciliação em nova execução;
 - health, métricas e alertas de ausência, atraso e falha de recuperação.
 
 ## Evidência reproduzível
@@ -48,5 +51,7 @@ hashes completos, DSN ou credenciais. A contratação de armazenamento, a
 política jurídica definitiva e disaster recovery geográfico permanecem fora do
 escopo.
 
-O teste cruzado exigido pela issue continua explicitamente pendente no
-[`registro de execução independente`](evidence/data-recovery-cross-test.md).
+O [`registro de teste cruzado`](evidence/data-recovery-cross-test.md) foi
+preenchido após nova execução integral. Como não existe outro colaborador no
+projeto, o mantenedor dispensou explicitamente a independência humana; o
+registro identifica essa limitação sem atribuir a execução a uma segunda pessoa.
