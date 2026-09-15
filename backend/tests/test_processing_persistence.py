@@ -8,6 +8,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
+from app.imports import PostgresImportRepository
 from app.persistence import PostgresProcessingRepository
 from app.processing import process_normalized_records
 from app.queries import PostgresQueryRepository
@@ -56,13 +57,15 @@ def cleanup_created_executions():
     _CREATED_EXECUTION_IDS.clear()
 
 
-def _seed_execution(execution_id: str, sources: list[str]) -> list[int]:
+def _seed_execution(
+    execution_id: str, sources: list[str], *, status: str = "completed"
+) -> list[int]:
     _CREATED_EXECUTION_IDS.add(execution_id)
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         connection.execute(
             "INSERT INTO synergia.executions (id, status, source) "
-            "VALUES (%s, 'completed', %s)",
-            (execution_id, sources[0]),
+            "VALUES (%s, %s, %s)",
+            (execution_id, status, sources[0]),
         )
         ids = []
         for index, source in enumerate(sources, 1):
@@ -271,6 +274,159 @@ def test_rolls_back_failed_workorder_and_confirms_independent_unit() -> None:
         ).fetchone()[0]
     assert workorders == [("WO-GOOD-PERSIST",)]
     assert failures == 1
+
+
+def test_f03_interruption_after_workorder_writes_rolls_back_entire_unit(
+    monkeypatch,
+) -> None:
+    execution_id = "exec-persistence-f03-interrupted"
+    source_file_id = _seed_execution(execution_id, ["N-FP"])[0]
+    processing = process_normalized_records(
+        [
+            _record(
+                execution_id,
+                "N-FP",
+                source_file_id,
+                2,
+                {
+                    "workorder_number": "WO-F03-INTERRUPTED",
+                    "organization_code": "ORG-F03",
+                    "lot_number": "LOT-F03",
+                    "serial_number": "SER-F03",
+                    "planned_quantity": 1,
+                },
+            )
+        ],
+        execution_id=execution_id,
+        classified_at="2026-08-30T12:00:00+00:00",
+    )
+    repository = PostgresProcessingRepository(os.environ["DATABASE_URL"])
+    original = repository._persist_workorder
+
+    def interrupt_after_writes(*args, **kwargs):
+        original(*args, **kwargs)
+        raise RuntimeError("synthetic F03 interruption before unit commit")
+
+    monkeypatch.setattr(repository, "_persist_workorder", interrupt_after_writes)
+    persisted = repository.persist(execution_id, processing)
+
+    assert persisted["confirmed_workorders"] == []
+    assert len(persisted["failed_workorders"]) == 1
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        for table in (
+            "organizations",
+            "workorders",
+            "lots",
+            "serials",
+            "consolidated_field_provenance",
+            "classifications",
+        ):
+            count = connection.execute(
+                sql.SQL(
+                    "SELECT count(*) FROM synergia.{} WHERE execution_id = %s"
+                ).format(sql.Identifier(table)),
+                (execution_id,),
+            ).fetchone()[0]
+            assert count == 0, table
+        audit = connection.execute(
+            "SELECT count(*) FROM synergia.audit_events "
+            "WHERE execution_id = %s AND event_type = 'processing_persistence_failed'",
+            (execution_id,),
+        ).fetchone()[0]
+        assert audit == 1
+
+
+def test_f04_committed_unit_is_hidden_until_execution_finishes() -> None:
+    """Keep committed units private during the inter-transaction crash window."""
+    execution_id = "exec-persistence-f04-crash-window"
+    source_file_id = _seed_execution(
+        execution_id, ["N-FP"], status="applying_rules"
+    )[0]
+    query_repository = PostgresQueryRepository(os.environ["DATABASE_URL"])
+    baseline_workorders = query_repository.indicators()["workorders"]["total"]
+    processing = process_normalized_records(
+        [
+            _record(
+                execution_id,
+                "N-FP",
+                source_file_id,
+                2,
+                {
+                    "workorder_number": "WO-F04-CRASH-WINDOW",
+                    "organization_code": "ORG-F04",
+                    "lot_number": "LOT-F04-CRASH-WINDOW",
+                    "serial_number": "SER-F04-CRASH-WINDOW",
+                    "planned_quantity": 1,
+                },
+            )
+        ],
+        execution_id=execution_id,
+        classified_at="2026-08-30T12:00:00+00:00",
+    )
+    persisted = PostgresProcessingRepository(os.environ["DATABASE_URL"]).persist(
+        execution_id, processing
+    )
+    assert persisted["confirmed_workorders"] == ["WO-F04-CRASH-WINDOW"]
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        state = connection.execute(
+            "SELECT status FROM synergia.executions WHERE id = %s", (execution_id,)
+        ).fetchone()[0]
+        workorder_id = connection.execute(
+            "SELECT id FROM synergia.workorders WHERE execution_id = %s",
+            (execution_id,),
+        ).fetchone()[0]
+        pending_id = connection.execute(
+            "INSERT INTO synergia.pending_items "
+            "(workorder_id, execution_id, source_file_id, category, reason) "
+            "VALUES (%s, %s, %s, 'synthetic_fault', 'F04 test') RETURNING id",
+            (workorder_id, execution_id, source_file_id),
+        ).fetchone()[0]
+    observed = query_repository.get_workorder(
+        "WO-F04-CRASH-WINDOW", execution_id=execution_id
+    )
+
+    assert state == "applying_rules"
+    assert observed is None
+    assert query_repository.get_lot(
+        "LOT-F04-CRASH-WINDOW", execution_id=execution_id
+    ) is None
+    assert query_repository.get_serial(
+        "SER-F04-CRASH-WINDOW", execution_id=execution_id
+    ) is None
+    results, total = query_repository.search_operational(
+        entity_type="workorder",
+        query="WO-F04-CRASH-WINDOW",
+        page=1,
+        page_size=25,
+        sort="newest",
+    )
+    assert results == []
+    assert total == 0
+    pending_rows, pending_total = query_repository.list_pending(
+        status_filter=None,
+        category=None,
+        workorder_number=None,
+        execution_id=execution_id,
+        page=1,
+        page_size=25,
+        sort="newest",
+    )
+    assert pending_rows == []
+    assert pending_total == 0
+    assert query_repository.get_pending(pending_id) is None
+    assert query_repository.indicators()["workorders"]["total"] == baseline_workorders
+    assert query_repository.get_execution(execution_id)["counts"]["workorders"] == 1
+
+    PostgresImportRepository(os.environ["DATABASE_URL"]).transition_execution(
+        execution_id, "completed", "f04_test_publication"
+    )
+    assert query_repository.get_workorder(
+        "WO-F04-CRASH-WINDOW", execution_id=execution_id
+    ) is not None
+    assert query_repository.get_pending(pending_id) is not None
+    assert query_repository.indicators()["workorders"]["total"] == (
+        baseline_workorders + 1
+    )
 
 
 def test_database_rejects_cross_execution_workorder_relationship() -> None:

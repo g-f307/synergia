@@ -16,8 +16,8 @@ from typing import Any
 
 from openpyxl import Workbook, load_workbook
 
-GENERATOR_VERSION = "1.0.0"
-SCHEMA_VERSION = "1.0"
+GENERATOR_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.1"
 SYNTHETIC_NOTICE = "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
 FIXED_ZIP_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
 
@@ -34,6 +34,9 @@ PROFILES = {
     "medium": Profile(workorders=1_000, serials=12_000),
     "reference": Profile(workorders=6_800, serials=88_000),
 }
+
+MIN_COMPREHENSIVE_WORKORDERS = 4
+MIN_COMPREHENSIVE_SERIALS = 7
 
 SOURCES = ("N-FP", "OWM", "GMES/OQC", "TMS")
 SOURCE_SLUGS = {
@@ -119,7 +122,104 @@ def _logical_digest(records: dict[str, list[dict[str, Any]]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _workorders(profile: Profile, rng: random.Random) -> list[dict[str, Any]]:
+def _resolve_profile(
+    profile_name: str | None,
+    workorders: int | None,
+    serials: int | None,
+    scenario: str,
+) -> tuple[str, Profile]:
+    custom_dimensions = workorders is not None or serials is not None
+    if custom_dimensions:
+        if workorders is None or serials is None:
+            raise ValueError("Informe --workorders e --serials juntos")
+        if profile_name is not None:
+            raise ValueError("Use um perfil ou dimensões customizadas, não ambos")
+        if workorders < 1:
+            raise ValueError("Workorders deve ser maior que zero")
+        if serials < workorders:
+            raise ValueError("Seriais deve ser maior ou igual a Workorders")
+        profile = Profile(workorders=workorders, serials=serials)
+        resolved_name = "custom"
+    else:
+        resolved_name = profile_name or "small"
+        if resolved_name not in PROFILES:
+            raise ValueError(f"Perfil desconhecido: {resolved_name}")
+        profile = PROFILES[resolved_name]
+    if scenario == "comprehensive" and (
+        profile.workorders < MIN_COMPREHENSIVE_WORKORDERS
+        or profile.serials < MIN_COMPREHENSIVE_SERIALS
+    ):
+        raise ValueError(
+            "O cenário comprehensive exige ao menos "
+            f"{MIN_COMPREHENSIVE_WORKORDERS} Workorders e "
+            f"{MIN_COMPREHENSIVE_SERIALS} seriais"
+        )
+    return resolved_name, profile
+
+
+def _organization_codes(count: int, start: int) -> list[str]:
+    if count < 1 or count > 8:
+        raise ValueError("A quantidade de organizações deve estar entre 1 e 8")
+    if start < 1 or start + count - 1 > 999:
+        raise ValueError("A faixa de organizações deve estar entre 001 e 999")
+    return [f"SYN-ORG-{index:03d}" for index in range(start, start + count)]
+
+
+def _sample_positions(values: list[str]) -> dict[str, str]:
+    ordered = sorted(values)
+    return {
+        "first": ordered[0],
+        "median": ordered[(len(ordered) - 1) // 2],
+        "last": ordered[-1],
+    }
+
+
+def _query_samples(
+    plan_records: list[dict[str, Any]], serial_records: list[dict[str, Any]]
+) -> dict[str, Any]:
+    organizations: dict[str, dict[str, list[str]]] = {}
+    for row in plan_records:
+        sample = organizations.setdefault(
+            row["organization_code"],
+            {"workorders": [], "lots": [], "serials": []},
+        )
+        sample["workorders"].append(row["workorder_number"])
+        sample["lots"].append(row["lot_number"])
+    for row in serial_records:
+        organizations[row["organization_code"]]["serials"].append(row["serial_number"])
+    return {
+        "organizations": {
+            organization: {
+                entity: _sample_positions(values)
+                for entity, values in sorted(entities.items())
+            }
+            for organization, entities in sorted(organizations.items())
+        },
+        "missing": {
+            "workorder": "SYN-WO-NOT-FOUND",
+            "lot": "SYN-LOT-NOT-FOUND",
+            "serial": "SYN-SER-NOT-FOUND",
+        },
+    }
+
+
+def _entities_by_organization(workorders: list[dict[str, Any]]) -> dict[str, Any]:
+    counts: dict[str, Counter[str]] = {}
+    for workorder in workorders:
+        organization = workorder["organization_code"]
+        current = counts.setdefault(organization, Counter())
+        current["workorders"] += 1
+        current["lots"] += 1
+        current["serials"] += workorder["serial_count"]
+    return {
+        organization: dict(sorted(values.items()))
+        for organization, values in sorted(counts.items())
+    }
+
+
+def _workorders(
+    profile: Profile, rng: random.Random, organization_codes: list[str]
+) -> list[dict[str, Any]]:
     base_date = date(2026, 1, 1)
     serial_counts = [profile.serials // profile.workorders] * profile.workorders
     for index in range(profile.serials % profile.workorders):
@@ -134,7 +234,9 @@ def _workorders(profile: Profile, rng: random.Random) -> list[dict[str, Any]]:
                 "demand_id": f"SYN-DEM-{index:06d}",
                 "lot_number": f"SYN-LOT-{index:06d}",
                 "model": f"SYN-MODEL-{1 + (index - 1) % 20:02d}",
-                "organization_code": f"SYN-ORG-{1 + (index - 1) % 8:03d}",
+                "organization_code": organization_codes[
+                    (index - 1) % len(organization_codes)
+                ],
                 "container_number": f"SYN-CONT-{1 + (index - 1) // 5:06d}",
                 "planned_quantity": planned,
                 "produced_quantity": serial_count,
@@ -147,15 +249,23 @@ def _workorders(profile: Profile, rng: random.Random) -> list[dict[str, Any]]:
 
 
 def build_dataset(
-    *, profile_name: str, seed: int, scenario: str
+    *,
+    profile_name: str | None = None,
+    seed: int,
+    scenario: str,
+    workorders: int | None = None,
+    serials: int | None = None,
+    organization_count: int = 8,
+    organization_start: int = 1,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
-    if profile_name not in PROFILES:
-        raise ValueError(f"Perfil desconhecido: {profile_name}")
     if scenario not in {"valid", "comprehensive"}:
         raise ValueError(f"Cenário desconhecido: {scenario}")
-    profile = PROFILES[profile_name]
+    resolved_profile_name, profile = _resolve_profile(
+        profile_name, workorders, serials, scenario
+    )
+    organizations = _organization_codes(organization_count, organization_start)
     rng = random.Random(seed)
-    workorders = _workorders(profile, rng)
+    workorders = _workorders(profile, rng, organizations)
     n_fp: list[dict[str, Any]] = []
     owm: list[dict[str, Any]] = []
     gmes: list[dict[str, Any]] = []
@@ -236,6 +346,8 @@ def build_dataset(
             }
         )
 
+    query_samples = _query_samples(n_fp, owm)
+    entities_by_organization = _entities_by_organization(workorders)
     scenario_counts: Counter[str] = Counter(
         {"fully_valid": sum(map(len, (n_fp, owm, gmes, tms)))}
     )
@@ -341,18 +453,31 @@ def build_dataset(
 
     records = {"N-FP": n_fp, "OWM": owm, "GMES/OQC": gmes, "TMS": tms}
     metadata = {
+        "profile_name": resolved_profile_name,
         "profile": asdict(profile),
         "entities": {
             "workorders": profile.workorders,
             "lots": profile.workorders,
             "serials": profile.serials,
-            "organizations": min(profile.workorders, 8),
+            "organizations": min(profile.workorders, organization_count),
         },
         "scenario_counts": dict(sorted(scenario_counts.items())),
         "expected_validation_codes": dict(sorted(expected_validation_codes.items())),
         "expected_processing_codes": dict(sorted(expected_processing_codes.items())),
         "expected_rule_ids": sorted(expected_rule_ids),
-        "known_organizations": [f"SYN-ORG-{index:03d}" for index in range(1, 9)],
+        "known_organizations": organizations,
+        "query_samples": query_samples,
+        "entities_by_organization": entities_by_organization,
+        "absent_values": {
+            f"{source}.{field}": sum(
+                row.get(field) in {None, ""} for row in records[source]
+            )
+            for source, field in (
+                ("N-FP", "planned_quantity"),
+                ("OWM", "planned_quantity"),
+                ("TMS", "quantity"),
+            )
+        },
     }
     return records, metadata
 
@@ -481,16 +606,26 @@ def _read_count(path: Path) -> int:
 def generate_bundle(
     *,
     output: Path,
-    profile_name: str,
+    profile_name: str | None = None,
     seed: int,
     scenario: str,
     formats: str = "canonical",
+    workorders: int | None = None,
+    serials: int | None = None,
+    organization_count: int = 8,
+    organization_start: int = 1,
 ) -> dict[str, Any]:
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Diretório de saída não está vazio: {output}")
     output.mkdir(parents=True, exist_ok=True)
     records, metadata = build_dataset(
-        profile_name=profile_name, seed=seed, scenario=scenario
+        profile_name=profile_name,
+        seed=seed,
+        scenario=scenario,
+        workorders=workorders,
+        serials=serials,
+        organization_count=organization_count,
+        organization_start=organization_start,
     )
     files: list[dict[str, Any]] = []
     for source in SOURCES:
@@ -513,7 +648,7 @@ def generate_bundle(
         "generator_version": GENERATOR_VERSION,
         "synthetic_notice": SYNTHETIC_NOTICE,
         "seed": seed,
-        "profile": profile_name,
+        "profile": metadata["profile_name"],
         "scenario": scenario,
         "logical_digest": _logical_digest(records),
         "configuration": metadata["profile"],
@@ -526,6 +661,8 @@ def generate_bundle(
             "processing_issue_codes": metadata["expected_processing_codes"],
             "classification_rule_ids": metadata["expected_rule_ids"],
             "known_organizations": metadata["known_organizations"],
+            "query_samples": metadata["query_samples"],
+            "absent_values": metadata["absent_values"],
             "valid_pipeline": (
                 {
                     "rows_read": sum(len(records[source]) for source in SOURCES),
@@ -537,6 +674,7 @@ def generate_bundle(
                     "consolidated_workorders": metadata["entities"]["workorders"],
                     "consolidated_lots": metadata["entities"]["lots"],
                     "consolidated_serials": metadata["entities"]["serials"],
+                    "entities_by_organization": metadata["entities_by_organization"],
                 }
                 if scenario == "valid"
                 else None
@@ -573,10 +711,33 @@ def validate_manifest(path: Path) -> dict[str, Any]:
         raise ValueError(f"Manifesto sem campos obrigatórios: {sorted(missing)}")
     if manifest["synthetic_notice"] != SYNTHETIC_NOTICE:
         raise ValueError("Manifesto sem identificação sintética oficial")
-    for item in manifest["files"]:
-        file_path = path.parent / item["file"]
+    files = manifest["files"]
+    if not isinstance(files, list) or not files:
+        raise ValueError("Manifesto deve listar ao menos um arquivo")
+    listed_names = [item.get("file") for item in files]
+    if len(listed_names) != len(set(listed_names)):
+        raise ValueError("Manifesto contém arquivos duplicados")
+    for item in files:
+        relative_path = Path(item["file"])
+        if (
+            relative_path.name != item["file"]
+            or relative_path.suffix.removeprefix(".") not in ALL_FORMATS
+        ):
+            raise ValueError(f"Caminho de arquivo inválido: {item['file']}")
+    actual_names = {
+        item.name
+        for item in path.parent.iterdir()
+        if item.is_file() and item.name != path.name
+    }
+    if actual_names != set(listed_names):
+        raise ValueError("Arquivos do diretório divergem do manifesto")
+    for item in files:
+        relative_path = Path(item["file"])
+        file_path = path.parent / relative_path
         if not file_path.is_file():
             raise ValueError(f"Arquivo do manifesto ausente: {item['file']}")
+        if file_path.stat().st_size != item["size_bytes"]:
+            raise ValueError(f"Tamanho divergente: {item['file']}")
         digest = _file_sha256(file_path)
         if digest != item["sha256"]:
             raise ValueError(f"SHA-256 divergente: {item['file']}")
@@ -589,7 +750,33 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Gera massas sintéticas determinísticas do SYNERGIA"
     )
-    parser.add_argument("--profile", choices=PROFILES, default="small")
+    parser.add_argument(
+        "--profile",
+        choices=PROFILES,
+        help="Perfil nomeado; o padrão é small quando dimensões não são informadas",
+    )
+    parser.add_argument(
+        "--workorders",
+        type=int,
+        help="Quantidade customizada; exige --serials e não aceita --profile",
+    )
+    parser.add_argument(
+        "--serials",
+        type=int,
+        help="Quantidade customizada; exige --workorders e não aceita --profile",
+    )
+    parser.add_argument(
+        "--organization-count",
+        type=int,
+        default=8,
+        help="Quantidade de organizações sintéticas, entre 1 e 8",
+    )
+    parser.add_argument(
+        "--organization-start",
+        type=int,
+        default=1,
+        help="Índice inicial dos códigos SYN-ORG, entre 001 e 999",
+    )
     parser.add_argument(
         "--scenario", choices=("valid", "comprehensive"), default="valid"
     )
@@ -612,6 +799,10 @@ def main() -> None:
         seed=args.seed,
         scenario=args.scenario,
         formats=args.formats,
+        workorders=args.workorders,
+        serials=args.serials,
+        organization_count=args.organization_count,
+        organization_start=args.organization_start,
     )
     print(
         f"Gerado perfil={manifest['profile']} cenário={manifest['scenario']} "

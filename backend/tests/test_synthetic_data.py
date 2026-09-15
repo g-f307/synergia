@@ -183,9 +183,7 @@ def test_homologation_manifest_rejects_incomplete_and_unlisted_files(tmp_path):
         ),
     ],
 )
-def test_homologation_manifest_rejects_invalid_file_contract(
-    tmp_path, change, message
-):
+def test_homologation_manifest_rejects_invalid_file_contract(tmp_path, change, message):
     directory = tmp_path / "fixture"
     manifest = generate_homologation(directory)
     change(manifest)
@@ -255,6 +253,128 @@ def test_manifest_totals_and_all_formats_are_verifiable(tmp_path) -> None:
             manifest["sources"][source]["records"]
         }
     assert validate_manifest(tmp_path / "all-formats" / "manifest.json") == manifest
+
+
+def test_custom_dimensions_generate_performance_step_and_query_oracles(
+    tmp_path,
+) -> None:
+    manifest = generate_bundle(
+        output=tmp_path / "step-10",
+        workorders=680,
+        serials=8_800,
+        seed=20260830,
+        scenario="valid",
+    )
+
+    assert manifest["schema_version"] == "1.1"
+    assert manifest["profile"] == "custom"
+    assert manifest["configuration"] == {"workorders": 680, "serials": 8_800}
+    assert manifest["entities"]["workorders"] == 680
+    assert manifest["entities"]["serials"] == 8_800
+    assert manifest["expectations"]["absent_values"] == {
+        "N-FP.planned_quantity": 0,
+        "OWM.planned_quantity": 8_800,
+        "TMS.quantity": 0,
+    }
+    organizations = manifest["expectations"]["query_samples"]["organizations"]
+    assert set(organizations) == {f"SYN-ORG-{index:03d}" for index in range(1, 9)}
+    for samples in organizations.values():
+        assert set(samples) == {"lots", "serials", "workorders"}
+        assert all(
+            set(values) == {"first", "median", "last"} for values in samples.values()
+        )
+    assert validate_manifest(tmp_path / "step-10" / "manifest.json") == manifest
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({"workorders": 10}, "--workorders e --serials"),
+        ({"serials": 10}, "--workorders e --serials"),
+        ({"workorders": 0, "serials": 10}, "maior que zero"),
+        ({"workorders": 10, "serials": 9}, "maior ou igual"),
+        (
+            {"profile_name": "small", "workorders": 10, "serials": 10},
+            "não ambos",
+        ),
+    ],
+)
+def test_custom_dimensions_reject_invalid_configuration(arguments, message) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_dataset(seed=1, scenario="valid", **arguments)
+
+
+def test_bundle_can_be_scoped_to_one_http_import_organization(tmp_path) -> None:
+    manifest = generate_bundle(
+        output=tmp_path / "organization-2",
+        profile_name="small",
+        seed=1,
+        scenario="valid",
+        organization_count=1,
+        organization_start=2,
+    )
+
+    assert manifest["entities"]["organizations"] == 1
+    assert manifest["expectations"]["known_organizations"] == ["SYN-ORG-002"]
+    assert set(manifest["expectations"]["query_samples"]["organizations"]) == {
+        "SYN-ORG-002"
+    }
+    expected = manifest["expectations"]["valid_pipeline"]["entities_by_organization"][
+        "SYN-ORG-002"
+    ]
+    assert expected == {"lots": 50, "serials": 500, "workorders": 50}
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        ({"organization_count": 0}, "entre 1 e 8"),
+        ({"organization_count": 9}, "entre 1 e 8"),
+        ({"organization_start": 0}, "entre 001 e 999"),
+        (
+            {"organization_count": 2, "organization_start": 999},
+            "entre 001 e 999",
+        ),
+    ],
+)
+def test_organization_range_rejects_invalid_configuration(arguments, message) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_dataset(profile_name="minimal", seed=1, scenario="valid", **arguments)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda manifest: manifest.update(files=[]), "ao menos um arquivo"),
+        (
+            lambda manifest: manifest["files"].append(manifest["files"][0]),
+            "duplicados",
+        ),
+        (
+            lambda manifest: manifest["files"][0].update(file="../outside.csv"),
+            "Caminho de arquivo inválido",
+        ),
+        (
+            lambda manifest: manifest["files"][0].update(size_bytes=-1),
+            "Tamanho divergente",
+        ),
+    ],
+)
+def test_synthetic_manifest_rejects_invalid_file_contract(
+    tmp_path, change, message
+) -> None:
+    directory = tmp_path / "bundle"
+    manifest = generate_bundle(
+        output=directory,
+        profile_name="minimal",
+        seed=1,
+        scenario="valid",
+    )
+    change(manifest)
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        validate_manifest(directory / "manifest.json")
 
 
 @pytest.mark.parametrize("profile_name", PROFILES)
@@ -359,6 +479,14 @@ def test_reference_profile_generates_6800_workorders_and_88000_serials(
     assert manifest["sources"]["N-FP"]["records"] == 6_800
     assert manifest["sources"]["OWM"]["records"] == 88_000
     assert manifest["sources"]["GMES/OQC"]["records"] == 88_000
+    assert manifest["expectations"]["absent_values"]["OWM.planned_quantity"] == 88_000
+    expected_by_organization = manifest["expectations"]["valid_pipeline"][
+        "entities_by_organization"
+    ]
+    assert (
+        sum(item["workorders"] for item in expected_by_organization.values()) == 6_800
+    )
+    assert sum(item["serials"] for item in expected_by_organization.values()) == 88_000
     assert validate_manifest(tmp_path / "reference" / "manifest.json") == manifest
 
 

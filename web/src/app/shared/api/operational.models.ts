@@ -9,7 +9,7 @@ export interface Indicators {
   executions: Record<string, number>;
   workorders: { total?: number; partially_released?: number };
   pending_items: Record<string, number>;
-  quantities: { planned?: number; produced?: number; received?: number; released?: number };
+  quantities: { planned?: number | null; produced?: number | null; received?: number | null; released?: number | null };
 }
 export interface OperationalEntity { identifier: string; execution_id: string; status: string | null; quantities: Record<string, number | null>; }
 export interface PendingItem { id: string; workorder_number: string; category: string; priority: number; status: string; reason: string | null; }

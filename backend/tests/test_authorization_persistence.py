@@ -12,6 +12,7 @@ from starlette.datastructures import Headers
 from app.auth.config import AuthConfig
 from app.auth.security import AccessClaims, TokenCodec
 from app.authorization import AuthorizationRepository
+from app.imports import PostgresImportRepository
 from app.main import app
 from app.rate_limiting import _authorized_organization
 
@@ -272,6 +273,16 @@ def _seed_duplicate_lots(database_url: str, ids: dict[str, UUID | str]) -> None:
                     source_file_id,
                 ),
             )
+    repository = PostgresImportRepository(database_url)
+    for execution_id in (ids["execution_a"], ids["execution_b"]):
+        for target in (
+            "validating",
+            "normalizing",
+            "consolidating",
+            "applying_rules",
+            "completed",
+        ):
+            repository.transition_execution(execution_id, target, "test_fixture")
 
 
 @pytest.mark.parametrize(("role", "expected"), ROLE_PERMISSIONS.items())

@@ -30,6 +30,8 @@ python scripts/validate_project_assets.py
 - `oqc_decisions` registra o estado da decisão sem automatizá-la;
 - `classifications` preserva regra, versão, prioridade, justificativa e evidência;
 - `rule_evaluations` registra também as regras que não foram acionadas;
+- migration `0027` indexa `(workorder_id, execution_id, id)` para o consolidado
+  filtrar e ordenar as avaliações de uma Workorder sem varrer a tabela inteira;
 - `consolidated_field_provenance` liga cada campo consolidado às linhas de origem;
 - `audit_events` registra eventos e contexto adicional em `jsonb`;
 - `execution_state_transitions` preserva estado anterior, novo estado,
@@ -60,10 +62,12 @@ python scripts/validate_project_assets.py
   não negativas e a liberação parcial exige quantidade liberada maior que zero
   e menor que a recebida.
 
-Cada Workorder consolidada é uma unidade transacional independente. Uma falha
-reverte lote, serial, classificação, pendência e proveniência daquela unidade,
-registra `processing_persistence_failed` e não impede a confirmação das demais
-Workorders da execução. Chaves estrangeiras compostas com `execution_id`
+No upload, cada Workorder consolidada é isolada por savepoint dentro da
+transação que confirma pipeline e estado terminal. Uma falha reverte lote,
+serial, classificação, pendência e proveniência daquela unidade, registra
+`processing_persistence_failed` e não impede as demais Workorders da execução.
+Uma queda antes do commit reverte a execução inteira; após o commit, ela já é
+terminal. Chaves estrangeiras compostas com `execution_id`
 impedem relacionamentos entre execuções diferentes.
 
 O arquivo fica em quarentena até a aprovação. O original aceito é preservado em

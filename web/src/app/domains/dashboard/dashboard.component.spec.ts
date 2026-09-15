@@ -64,6 +64,18 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Ausente');
   });
 
+  it('renders explicit null quantity as absent without treating zero as absent', () => {
+    const partial = completeIndicators();
+    partial.quantities.planned = null;
+    partial.quantities.produced = 0;
+    response.next(partial);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Resultado parcial');
+    expect(fixture.nativeElement.textContent).toContain('Ausente');
+    expect(fixture.nativeElement.textContent).toContain('Produzida');
+  });
+
   it('renders forbidden without operational numbers', () => {
     response.error(failure('forbidden', 403));
     fixture.detectChanges();

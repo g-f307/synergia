@@ -310,7 +310,20 @@ def test_reports_persist_snapshots_versions_scope_and_failures() -> None:
             "report.generation_started",
             "report.generation_failed",
         ]
+        artifact_count = connection.execute(
+            "SELECT count(*) AS artifact_count FROM synergia.report_artifacts "
+            "WHERE report_version_id IN "
+            "(SELECT id FROM synergia.report_versions WHERE report_id = %s)",
+            (failed_report_id,),
+        ).fetchone()["artifact_count"]
+        assert artifact_count == 0
 
+    with pytest.raises(ApiError) as not_exportable:
+        failing.export_version(failed_report_id, 1, actor, "json")
+    assert not_exportable.value.status_code == 409
+    assert not_exportable.value.code == "report_not_exportable"
+
+    with psycopg.connect(database_url, row_factory=psycopg.rows.dict_row) as connection:
         success_events = connection.execute(
             """
             SELECT array_agg(event_type ORDER BY occurred_at, id) AS events

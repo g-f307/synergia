@@ -45,8 +45,22 @@ python scripts/generate_synthetic_data.py `
 
 O diretório de saída precisa estar vazio. O `manifest.json` registra versão do
 gerador e do schema, seed, perfil, cenário, fontes, formatos, entidades,
-contagens, SHA-256 de cada arquivo e resultados esperados. A própria geração
-reabre os arquivos e valida o manifesto antes de concluir.
+contagens, SHA-256 de cada arquivo, valores ausentes, resultados esperados e
+amostras determinísticas de Workorders, lotes e seriais por organização. A
+própria geração reabre os arquivos e valida o manifesto antes de concluir.
+
+Degraus sem perfil nomeado usam dimensões explícitas. Os dois argumentos são
+obrigatórios em conjunto, a quantidade de seriais não pode ser menor que a de
+Workorders e `--profile` não pode ser combinado com eles:
+
+```bash
+python scripts/generate_synthetic_data.py \
+  --workorders 680 \
+  --serials 8800 \
+  --scenario valid \
+  --seed 20260830 \
+  --output artifacts/synthetic/v01-valid
+```
 
 ## Perfis
 
@@ -56,6 +70,41 @@ reabre os arquivos e valida o manifesto antes de concluir.
 | `small` | 50 | 500 | desenvolvimento local e demonstração |
 | `medium` | 1.000 | 12.000 | homologação funcional |
 | `reference` | 6.800 | 88.000 | massa próxima ao volume de referência |
+
+Os degraus de desempenho definidos no plano são gerados com os pares abaixo:
+
+| Cenário | Workorders | Seriais |
+| --- | ---: | ---: |
+| `V01` (10%) | 680 | 8.800 |
+| `V02` (25%) | 1.700 | 22.000 |
+| `V03` (50%) | 3.400 | 44.000 |
+| `V04` (75%) | 5.100 | 66.000 |
+| `V05` (referência) | 6.800 | 88.000 |
+| `V06` (125%) | 8.500 | 110.000 |
+| `V07` (150%) | 10.200 | 132.000 |
+| `V08` (200%) | 13.600 | 176.000 |
+
+Use o perfil `reference` em `V05`; nos demais, informe as duas dimensões. As
+massas acima de referência são exclusivas do ambiente isolado de ruptura.
+
+Como `POST /imports` vincula toda a requisição a uma organização IAM, bundles
+destinados ao fluxo HTTP devem conter somente o código correspondente. Use
+`--organization-count 1` e selecione o primeiro código com
+`--organization-start`. Para testes de isolamento, gere um bundle distinto por
+organização:
+
+```bash
+python scripts/generate_synthetic_data.py \
+  --profile reference \
+  --organization-count 1 \
+  --organization-start 1 \
+  --output artifacts/synthetic/v05-org001-valid
+```
+
+O JSON de referência possui aproximadamente 40 MiB. No ambiente de desempenho,
+configure `UPLOAD_MAX_BYTES_OWM` com valor suficiente antes de iniciar a API e
+registre o limite efetivo; o padrão geral de 25 MiB rejeita esse arquivo por
+contrato.
 
 Somente as fixtures `minimal-valid` e `minimal-comprehensive` são versionadas.
 Os demais perfis devem ser gerados em `artifacts/synthetic/`, diretório ignorado
