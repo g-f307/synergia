@@ -65,6 +65,55 @@ class PostgresProcessingRepository:
             "failed_workorders": failures,
         }
 
+    def persist_in_transaction(
+        self, connection, execution_id: str, processing: Mapping[str, Any]
+    ) -> dict:
+        """Persist independent units with savepoints, but commit them together."""
+        if processing.get("execution_id") != execution_id:
+            raise ProcessingPersistenceError(
+                "O processamento deve pertencer à execução persistida"
+            )
+        consolidation = processing.get("consolidation", {})
+        classifications = processing.get("classifications", {})
+        confirmed: list[str] = []
+        failures: list[dict[str, str]] = []
+        for workorder in sorted(
+            consolidation.get("workorders", []),
+            key=lambda item: str(item["workorder_number"]),
+        ):
+            number = str(workorder["workorder_number"])
+            events = [
+                item
+                for item in classifications.get("current_classifications", [])
+                if item.get("workorder_number") == number
+            ]
+            evaluations = [
+                item
+                for item in classifications.get("rule_evaluations", [])
+                if item.get("workorder_number") == number
+            ]
+            try:
+                with connection.transaction():
+                    self._persist_workorder(
+                        connection, execution_id, workorder, events, evaluations
+                    )
+                confirmed.append(number)
+            except Exception as exc:
+                failure = {"workorder_number": number, "reason": str(exc)}
+                failures.append(failure)
+                connection.execute(
+                    """
+                    INSERT INTO synergia.audit_events
+                        (execution_id, entity_type, entity_id, event_type, payload)
+                    VALUES (%s, 'workorder', %s, 'processing_persistence_failed', %s)
+                    """,
+                    (execution_id, number, Jsonb({"reason": failure["reason"]})),
+                )
+        return {
+            "confirmed_workorders": confirmed,
+            "failed_workorders": failures,
+        }
+
     def _record_failure(self, execution_id: str, failure: dict[str, str]) -> None:
         with self._connect() as connection:
             connection.execute(

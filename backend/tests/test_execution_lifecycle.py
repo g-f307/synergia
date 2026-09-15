@@ -334,6 +334,7 @@ def test_reprocessing_failure_rolls_back_new_execution(monkeypatch) -> None:
     _seed_completed(original_id)
     repository = PostgresQueryRepository(os.environ["DATABASE_URL"])
     new_execution_id = f"{EXECUTION_PREFIX}rollback-new"
+    original_audit = repository._record_reprocessing_event
 
     def fail_audit(*_args, **_kwargs):
         raise RuntimeError("synthetic audit failure")
@@ -352,3 +353,27 @@ def test_reprocessing_failure_rolls_back_new_execution(monkeypatch) -> None:
     assert repository.get_execution(new_execution_id) is None
     assert repository.get_execution(original_id)["status"] == "completed"
     assert repository.get_consolidated(f"WO-{original_id}") is not None
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        reservation_count = connection.execute(
+            "SELECT count(*) FROM synergia.execution_idempotency "
+            "WHERE source_execution_id = %s AND request_type = 'reprocess'",
+            (original_id,),
+        ).fetchone()[0]
+        event_count = connection.execute(
+            "SELECT count(*) FROM synergia.audit_events WHERE execution_id = %s",
+            (new_execution_id,),
+        ).fetchone()[0]
+    assert reservation_count == 0
+    assert event_count == 0
+
+    monkeypatch.setattr(repository, "_record_reprocessing_event", original_audit)
+    recovered = repository.request_reprocessing(
+        original_id,
+        new_execution_id,
+        "integration-test",
+        "rollback-request",
+        "1.0.0",
+        "1.0.0",
+    )
+    assert recovered["execution_id"] == new_execution_id
+    assert recovered["idempotent_replay"] is False

@@ -155,9 +155,11 @@ def run_pipeline_batch(
     classified_at: str,
     known_organizations: Collection[str] | None = None,
     prepare_commit: Callable[[dict[str, Any]], None] | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Process every source file from one execution without rereading originals."""
-    repository.transition_execution(execution_id, "validating", "pipeline_started")
+    if not resume:
+        repository.transition_execution(execution_id, "validating", "pipeline_started")
     imported_records: list[dict[str, Any]] = []
     normalized_records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
@@ -233,18 +235,23 @@ def run_pipeline_batch(
             classified_at=classified_at,
         )
     else:
-        repository.transition_execution(
-            execution_id, "normalizing", "validation_completed"
-        )
-        repository.transition_execution(
-            execution_id, "consolidating", "normalization_completed"
-        )
+        if not resume:
+            repository.transition_execution(
+                execution_id, "normalizing", "validation_completed"
+            )
+            repository.transition_execution(
+                execution_id, "consolidating", "normalization_completed"
+            )
         processing = process_normalized_records(
             normalized_records,
             execution_id=execution_id,
             classified_at=classified_at,
-            on_consolidated=lambda: repository.transition_execution(
-                execution_id, "applying_rules", "consolidation_completed"
+            on_consolidated=(
+                None
+                if resume
+                else lambda: repository.transition_execution(
+                    execution_id, "applying_rules", "consolidation_completed"
+                )
             ),
         )
     error_count = sum(issue["severity"] == "error" for issue in issues)

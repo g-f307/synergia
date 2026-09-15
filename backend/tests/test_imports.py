@@ -462,6 +462,69 @@ def test_artifact_failure_does_not_commit_pipeline(api, monkeypatch) -> None:
     assert not list((storage / "accepted" / "n_fp" / execution_id).glob("*.json"))
 
 
+def test_f01_failure_after_reservation_marks_execution_failed(api, monkeypatch) -> None:
+    client, repository, storage = api
+
+    def interrupt_after_reservation(*_args, **_kwargs):
+        raise RuntimeError("synthetic F01 interruption")
+
+    monkeypatch.setattr("app.imports.purge_quarantined", interrupt_after_reservation)
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("f01.csv", b"workorder\nWO-F01\n", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "preparation_error"
+    execution_id = response.json()["error"]["details"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert repository.files[execution_id] == []
+    assert not list(storage.glob("accepted/**/*.*"))
+
+
+def test_f02_failure_during_validation_does_not_publish_pipeline(
+    api, monkeypatch
+) -> None:
+    client, repository, storage = api
+
+    def interrupt_validation(*_args, **_kwargs):
+        raise RuntimeError("synthetic F02 interruption")
+
+    monkeypatch.setattr("app.pipeline.validate_tables", interrupt_validation)
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("f02.csv", b"workorder\nWO-F02\n", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "pipeline_error"
+    execution_id = response.json()["error"]["details"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert execution_id not in repository.normalized_records
+    assert not list((storage / "accepted" / "n_fp" / execution_id).glob("*.json"))
+
+
+def test_f04_failure_before_commit_does_not_publish_pipeline(api, monkeypatch) -> None:
+    client, repository, _ = api
+
+    def interrupt_before_commit(*_args, **_kwargs):
+        raise RuntimeError("synthetic F04 pre-commit interruption")
+
+    monkeypatch.setattr(repository, "commit_pipeline", interrupt_before_commit)
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("f04.csv", b"workorder\nWO-F04\n", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    execution_id = response.json()["error"]["details"]["execution_id"]
+    assert repository.get(execution_id)["status"] == "failed"
+    assert execution_id not in repository.normalized_records
+
+
 def test_original_file_is_interpreted_only_once(api, monkeypatch) -> None:
     client, _, _ = api
     original_read = pipeline.read_tables

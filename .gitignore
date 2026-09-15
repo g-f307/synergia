@@ -19,3 +19,4 @@ docs/GUIA_GITFLOW_AGENTES.md
 web/reports/e2e-*/
 data/email-capture/
 observability/secrets/
+artifacts/
