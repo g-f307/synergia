@@ -10,11 +10,12 @@ import shutil
 import sys
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 
@@ -121,7 +122,9 @@ def _json_digest(response: httpx.Response | None) -> str | None:
     try:
         payload = response.json()
         if isinstance(payload, dict):
-            payload = {key: value for key, value in payload.items() if key != "generated_at"}
+            payload = {
+                key: value for key, value in payload.items() if key != "generated_at"
+                }
         canonical = json.dumps(
             payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
         )
@@ -290,10 +293,14 @@ def check_report_export(
         checks,
         f"{check_name}.json_data_unchanged",
         hashlib.sha256(
-            json.dumps(report_data, sort_keys=True, ensure_ascii=False).encode()
+            json.dumps(
+                report_data, sort_keys=True, ensure_ascii=False
+                ).encode()
         ).hexdigest(),
         hashlib.sha256(
-            json.dumps(exported_json.get("data"), sort_keys=True, ensure_ascii=False).encode()
+            json.dumps(
+                exported_json.get("data"), sort_keys=True, ensure_ascii=False
+                ).encode()
         ).hexdigest(),
     )
     _check(
@@ -303,7 +310,9 @@ def check_report_export(
         {key: exported_json.get(key) for key in metadata},
     )
     try:
-        csv_rows = list(csv.DictReader(io.StringIO(csv_response.text))) if csv_response else []
+        csv_rows = list(
+            csv.DictReader(io.StringIO(csv_response.text))
+            ) if csv_response else []
     except (UnicodeDecodeError, csv.Error):
         csv_rows = []
     expected_count = (
@@ -522,7 +531,10 @@ def parse_args() -> argparse.Namespace:
         parser.error(
             "C08 exige token, id e código da organização usada para isolamento"
         )
-    if "C08" in args.scenario and args.isolation_organization_id == args.organization_id:
+    if (
+        "C08" in args.scenario
+        and args.isolation_organization_id == args.organization_id
+    ):
         parser.error("C08 exige duas organizações distintas")
     required_c02_bundles = len(args.levels) * args.cycles
     required_c01_bundles = sum(args.levels) * args.cycles
@@ -721,7 +733,9 @@ def main() -> int:
                         recorder.scenario_id = scenario_id
                         responses: list[Any] = []
                         report_exports: list[
-                            tuple[httpx.Response | None, dict[str, httpx.Response | None]]
+                            tuple[
+                                httpx.Response | None, dict[str, httpx.Response | None]
+                                ]
                         ] = []
                         response_lock = threading.Lock()
                         before_snapshot = (
@@ -1041,7 +1055,7 @@ def main() -> int:
                                     "scenario_id": scenario_id,
                                     "level": level,
                                     "cycle": cycle + 1,
-                                    "reason": "erro inesperado ou oráculo funcional falhou",
+                                    "reason": "erro inesperado ou oráculo falhou",
                                 }
                             )
                             halt_scenario = True

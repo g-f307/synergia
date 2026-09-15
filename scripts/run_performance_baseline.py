@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import csv
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 import json
 import math
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
 import threading
 import time
-from contextlib import ExitStack
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -733,6 +733,9 @@ def _write_report(
     summary: dict[str, Any],
     checks: list[dict[str, Any]],
 ) -> None:
+
+    passed_checks = sum(item["passed"] for item in checks)
+    total_checks = len(checks)
     lines = [
         "# Relatório de baseline de desempenho",
         "",
@@ -742,7 +745,7 @@ def _write_report(
         f"- Commit: `{environment['commit']}`",
         f"- Massa: `{environment['mass']['logical_digest']}`",
         f"- Erros inesperados: `{summary['unexpected_errors']}`",
-        f"- Validações funcionais: `{sum(item['passed'] for item in checks)}/{len(checks)}`",
+        f"- Validações funcionais: `{passed_checks}/{total_checks}`",
         "",
         "## Resultados",
         "",
