@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS synergia.idx_rule_evaluations_workorder_execution_id;
