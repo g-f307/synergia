@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from generate_synthetic_data import validate_manifest
 from run_performance_baseline import (
     RESOURCE_FIELDS,

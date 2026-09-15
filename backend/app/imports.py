@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Generator
-from datetime import UTC, datetime
-from enum import StrEnum
 import json
 import logging
 import os
+from collections.abc import Generator
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Protocol
 from uuid import UUID, uuid4
 
+import psycopg
 from fastapi import (
     APIRouter,
     Depends,
@@ -21,7 +22,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel

@@ -1,26 +1,25 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import ExitStack
 import csv
-from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
 import json
 import math
 import os
-from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
 import threading
 import time
+from contextlib import ExitStack
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import httpx
-
 from generate_synthetic_data import CANONICAL_FORMATS, validate_manifest
 
 REQUIRED_ENVIRONMENT_METADATA = {

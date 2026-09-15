@@ -2,18 +2,17 @@ from __future__ import annotations
 
 import argparse
 import csv
-from datetime import UTC, datetime
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
-
 from generate_synthetic_data import validate_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
