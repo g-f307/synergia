@@ -30,7 +30,7 @@ python scripts/validate_project_assets.py
 - `oqc_decisions` registra o estado da decisão sem automatizá-la;
 - `classifications` preserva regra, versão, prioridade, justificativa e evidência;
 - `rule_evaluations` registra também as regras que não foram acionadas;
-- migration `0024` indexa `(workorder_id, execution_id, id)` para o consolidado
+- migration `0027` indexa `(workorder_id, execution_id, id)` para o consolidado
   filtrar e ordenar as avaliações de uma Workorder sem varrer a tabela inteira;
 - `consolidated_field_provenance` liga cada campo consolidado às linhas de origem;
 - `audit_events` registra eventos e contexto adicional em `jsonb`;

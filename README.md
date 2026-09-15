@@ -23,6 +23,12 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [contratos da API](docs/api-contracts.md);
 - [relatórios persistentes, versões e estados](docs/reports.md);
+- [plano de desempenho e confiabilidade pré-RPA](docs/performance-test-plan.md);
+- [síntese da baseline exploratória e decisão pré-RPA](docs/performance-baseline-pre-rpa.md);
+- [baseline exploratória local pré-RPA](docs/performance-baseline-local-pg18.md);
+- [concorrência e idempotência exploratórias pré-RPA](docs/performance-concurrency-local-pg18.md);
+- [falhas controladas e recuperação exploratórias pré-RPA](docs/performance-recovery-local-pg18.md);
+- [planos PostgreSQL exploratórios pré-RPA](docs/performance-postgres-plans-local-pg18.md);
 - [catálogo, visualização e exportação web de relatórios](docs/reports-ui.md);
 - [ciclo de vida, idempotência e reprocessamento](docs/execution-lifecycle.md);
 - [recebimento seguro, quarentena e retenção](docs/upload-security.md);

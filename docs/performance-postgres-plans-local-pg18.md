@@ -4,7 +4,7 @@
 
 **Estado da etapa 7 em 15/09/2026:** investigação e correção **locais**
 concluídas; validação de referência ainda pendente. Decisão formal: manter a
-migration `0024` no ramo de preparação **somente como correção candidata**,
+migration `0027` no ramo de preparação **somente como correção candidata**,
 pois o defeito de scan global é comprovado e a regressão local passou, mas
 não declarar ganho fim a fim nem aprovação de capacidade antes de PG16/`V05`.
 O custo adicional de índice, WAL e INSERT direto foi medido e aceito apenas
@@ -20,7 +20,7 @@ HTTP mais lenta de V02, identificou o defeito: a leitura de avaliações de
 regras por Workorder varria paralelamente a tabela inteira de 853.842 linhas
 (203 MB) para retornar 309 linhas. O p95 SQL era 115,182 ms.
 
-Foi criada a migration `0024_index_rule_evaluations_workorder.sql` com índice
+Foi criada a migration `0027_index_rule_evaluations_workorder.sql` com índice
 `(workorder_id, execution_id, id)`. No mesmo banco, massa, parâmetros e série
 de cinco medidas aquecidas, o plano passou a usar esse índice e o p95 SQL caiu
 para **0,579 ms**. O índice ocupa 63 MB. Não houve mudança de consulta,
@@ -93,7 +93,7 @@ ignorados pelo Git para anexação ao PR.
 | Relatório Workorder | 49,191 | 1.700 Workorders/lotes, `idx_serials_workorder` para 22.000 seriais; sorts em memória |
 | Relatório OQC | 91,261 | scan de 45.700 decisões da execução; sort em memória (~3,9 MB) |
 
-### Avaliações: antes e depois da migration 0024
+### Avaliações: antes e depois da migration 0027
 
 | Métrica | Antes | Depois |
 | --- | ---: | ---: |
@@ -128,7 +128,7 @@ Para não atribuir o ganho somente ao `EXPLAIN`, foi medida a chamada completa
 execução de aquecimento e cinco medidas por fase. A sonda de escrita executou
 cinco `EXPLAIN ANALYZE INSERT` de 1.000 avaliações sintéticas por fase,
 revertendo a execução, fonte, Workorder e avaliações em cada transação. O
-rollback `0024` foi aplicado **somente** no banco descartável e a migration
+rollback `0027` foi aplicado **somente** no banco descartável e a migration
 reaplicada antes de encerrá-lo. O total global de avaliações permaneceu
 853.842 em ambas as fases; o digest funcional do consolidado foi igual.
 
@@ -191,7 +191,7 @@ serviço: ela não equivaleria à massa **processada** e criaria risco de press�
 de memória/armazenamento. Esse é um limite de teste, não um defeito provado da
 aplicação nem capacidade definitiva do banco. A próxima medição deve repetir
 os mesmos planos com PostgreSQL 16, ambiente descartável e massa V05 realmente
-processada, registrar cardinalidades/recursos e comparar a migration 0024 com
+processada, registrar cardinalidades/recursos e comparar a migration 0027 com
 seu rollback isolado, medindo também o custo de escrita e o tempo HTTP do
 consolidado antes/depois.
 
@@ -208,7 +208,7 @@ atual. No ambiente isolado de referência, o responsável deve:
 2. coletar os 15 grupos de planos antes/depois em bancos equivalentes, com
    `ANALYZE`, cache, aquecimento, cinco medidas e hashes dos SQLs registrados;
 3. medir a rota HTTP do consolidado e pelo menos cinco uploads completos com e
-   sem `0024`, junto de RSS, CPU, I/O, WAL, armazenamento e erro;
+   sem `0027`, junto de RSS, CPU, I/O, WAL, armazenamento e erro;
 4. preservar a migration se o ganho seletivo persistir e o custo de escrita
    for aceitável; caso contrário, registrar decisão técnica e comparar
    alternativa sem enfraquecer autorização, auditoria, proveniência ou
