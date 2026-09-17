@@ -25,6 +25,7 @@ STRUCTURAL_ISSUES = {
     "read_error",
     "validation_read_error",
 }
+RULE_DETAIL_DEFER_THRESHOLD = 50_000
 
 
 class PipelineRepository(Protocol):
@@ -227,6 +228,10 @@ def run_pipeline_batch(
         imported_records.extend(imported)
         valid_records += len(eligible_rows)
         rejected_records += len(imported) if structural_blocked else len(rejected_rows)
+        # The normalized/imported representations are now authoritative. Drop
+        # the parsed table rows before reading the next phase so reference
+        # volumes do not retain three complete in-memory copies of each file.
+        item["tables"] = []
 
     if blocked_files and not normalized_records:
         processing = process_normalized_records(
@@ -246,6 +251,9 @@ def run_pipeline_batch(
             normalized_records,
             execution_id=execution_id,
             classified_at=classified_at,
+            defer_rule_details=(
+                len(normalized_records) >= RULE_DETAIL_DEFER_THRESHOLD
+            ),
             on_consolidated=(
                 None
                 if resume

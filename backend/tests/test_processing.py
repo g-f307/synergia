@@ -37,6 +37,33 @@ def process(records: list[dict]) -> dict:
     )
 
 
+def test_deferred_rule_details_preserve_summary_without_retaining_large_lists() -> None:
+    records = [
+        record(
+            "OWM",
+            2,
+            {
+                "workorder_number": "WO-DEFERRED",
+                "lot_number": "LOT-DEFERRED",
+                "serial_number": "SER-DEFERRED",
+                "status": "released",
+            },
+        )
+    ]
+    regular = process(records)
+    deferred = process_normalized_records(
+        records,
+        execution_id=EXECUTION_ID,
+        classified_at=CLASSIFIED_AT,
+        defer_rule_details=True,
+    )
+
+    assert deferred["summary"] == regular["summary"]
+    assert deferred["classifications"]["rule_details_deferred"] is True
+    assert deferred["classifications"]["current_classifications"] == []
+    assert deferred["classifications"]["rule_evaluations"] == []
+
+
 def classifications(result: dict, rule_id: str) -> list[dict]:
     return [
         item

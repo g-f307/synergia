@@ -375,7 +375,7 @@ def list_classifications(
     execution_id: str,
     repository: Repository,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    page_size: Annotated[int, Query(ge=1, le=1000)] = 20,
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> ClassificationPage:
     _ensure_execution(repository, execution_id)

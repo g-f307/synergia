@@ -18,6 +18,8 @@ import run_performance_concurrency as concurrency_runner  # noqa: E402
 from run_performance_baseline import (  # noqa: E402
     HttpRecorder,
     Sample,
+    _csv_value,
+    _expected_oracle,
     _guard_rupture_environment,
     _percentile,
     _preflight,
@@ -234,6 +236,46 @@ def test_resource_summary_calculates_deltas_and_process_cpu() -> None:
     assert resources["rss_bytes_max"] == 200
     assert resources["read_bytes_delta"] == 100
     assert resources["write_bytes_delta"] == 200
+
+
+def test_manifest_oracle_rebuilds_complete_valid_result() -> None:
+    manifest = json.loads(
+        (ROOT / "data/synthetic/fixtures/minimal-valid/manifest.json").read_text()
+    )
+
+    oracle = _expected_oracle(manifest)
+
+    assert oracle["counts"] == {
+        "files": 4,
+        "files_received": 4,
+        "files_accepted": 4,
+        "files_rejected": 0,
+        "rows_read": 32,
+        "valid_records": 32,
+        "rejected_records": 0,
+        "normalized_records": 32,
+        "workorders": 4,
+        "lots": 4,
+        "serials": 12,
+        "classifications": 28,
+        "pending_items": 0,
+        "errors": 0,
+        "warnings": 0,
+    }
+    assert oracle["classification_count"] == 28
+    assert oracle["workorder_count"] == 4
+    assert oracle["oqc_count"] == 28
+    assert all(len(oracle[key]) == 64 for key in (
+        "classification_digest", "workorder_digest", "oqc_digest"
+    ))
+
+
+def test_csv_oracle_matches_export_serialization() -> None:
+    assert _csv_value(None) == ""
+    assert _csv_value(False) == "false"
+    assert _csv_value(True) == "true"
+    assert _csv_value(["SYN-LOT-001"]) == '["SYN-LOT-001"]'
+    assert _csv_value("=unsafe") == "'=unsafe"
 
 
 @pytest.mark.parametrize(

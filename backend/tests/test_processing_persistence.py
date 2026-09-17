@@ -100,8 +100,11 @@ def _record(execution_id: str, source: str, source_file_id: int, row: int, value
     }
 
 
-def test_persists_complete_processing_and_survives_repository_restart() -> None:
-    execution_id = "exec-persistence-complete"
+@pytest.mark.parametrize("defer_rule_details", [False, True])
+def test_persists_complete_processing_and_survives_repository_restart(
+    defer_rule_details: bool,
+) -> None:
+    execution_id = f"exec-persistence-complete-{int(defer_rule_details)}"
     plan_file, receipt_file, quality_file = _seed_execution(
         execution_id, ["N-FP", "OWM", "GMES/OQC"]
     )
@@ -147,6 +150,7 @@ def test_persists_complete_processing_and_survives_repository_restart() -> None:
         ],
         execution_id=execution_id,
         classified_at="2026-08-30T12:00:00+00:00",
+        defer_rule_details=defer_rule_details,
     )
 
     persisted = PostgresProcessingRepository(os.environ["DATABASE_URL"]).persist(

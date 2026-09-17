@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
-from copy import deepcopy
 from typing import Any
 
 from app.business_rules import RULE_CATALOG, BusinessRuleError, classify
@@ -24,7 +23,10 @@ def _validated_records(
             )
         if not isinstance(record.get("values"), Mapping):
             raise ProcessingError("Registro normalizado sem valores rastreáveis")
-        validated.append(deepcopy(dict(record)))
+        # Consolidation treats normalized records as immutable. A shallow copy
+        # protects the top-level contract without duplicating every values/
+        # provenance payload at reference-volume scale.
+        validated.append(dict(record))
     return validated
 
 
@@ -35,6 +37,7 @@ def process_normalized_records(
     classified_at: str,
     catalog: dict[str, Any] = RULE_CATALOG,
     on_consolidated: Callable[[], None] | None = None,
+    defer_rule_details: bool = False,
 ) -> dict[str, Any]:
     """Consolidate and classify eligible normalized records from one execution."""
     eligible = _validated_records(records, execution_id)
@@ -42,6 +45,9 @@ def process_normalized_records(
     if on_consolidated is not None:
         on_consolidated()
     classifiable_workorders = []
+    deferred_rule_counts: Counter[str] = Counter()
+    deferred_classification_count = 0
+    deferred_active_count = 0
     for workorder in consolidation["workorders"]:
         workorder_number = workorder["workorder_number"]
         workorder_issues = [
@@ -50,7 +56,7 @@ def process_normalized_records(
             if issue.get("workorder_number") == workorder_number
         ]
         try:
-            classify(
+            workorder_classifications = classify(
                 {"workorders": [workorder], "issues": workorder_issues},
                 run_id=execution_id,
                 classified_at=classified_at,
@@ -67,19 +73,43 @@ def process_normalized_records(
             consolidation["issues"].append(failure)
             continue
         classifiable_workorders.append(workorder)
+        if defer_rule_details:
+            events = workorder_classifications["current_classifications"]
+            deferred_rule_counts.update(item["rule_id"] for item in events)
+            deferred_classification_count += len(events)
+            deferred_active_count += len(workorder_classifications["active_items"])
     consolidation["workorders"] = classifiable_workorders
     consolidation["workorder_count"] = len(classifiable_workorders)
     consolidation["failed_workorder_count"] = len(consolidation["failed_workorders"])
     consolidation["issue_count"] = len(consolidation["issues"])
-    classifications = classify(
-        consolidation,
-        run_id=execution_id,
-        classified_at=classified_at,
-        catalog=catalog,
-    )
+    if defer_rule_details:
+        classifications = {
+            "run_id": execution_id,
+            "classified_at": classified_at,
+            "rule_catalog_version": catalog["version"],
+            "active_items": [],
+            "entities": [],
+            "current_classifications": [],
+            "rule_evaluations": [],
+            "history": [],
+            "divergence_report": [],
+            "rule_details_deferred": True,
+            "rule_catalog": catalog,
+        }
+    else:
+        classifications = classify(
+            consolidation,
+            run_id=execution_id,
+            classified_at=classified_at,
+            catalog=catalog,
+        )
     workorders = consolidation["workorders"]
-    rule_counts = Counter(
-        item["rule_id"] for item in classifications["current_classifications"]
+    rule_counts = (
+        deferred_rule_counts
+        if defer_rule_details
+        else Counter(
+            item["rule_id"] for item in classifications["current_classifications"]
+        )
     )
     consolidated_quantities = {}
     for field in QUANTITY_FIELDS:
@@ -106,8 +136,16 @@ def process_normalized_records(
         ),
         "consolidation_issues": consolidation["issue_count"],
         "failed_workorders": consolidation["failed_workorder_count"],
-        "classifications": len(classifications["current_classifications"]),
-        "active_pending_items": len(classifications["active_items"]),
+        "classifications": (
+            deferred_classification_count
+            if defer_rule_details
+            else len(classifications["current_classifications"])
+        ),
+        "active_pending_items": (
+            deferred_active_count
+            if defer_rule_details
+            else len(classifications["active_items"])
+        ),
         "classifications_by_rule": dict(sorted(rule_counts.items())),
         "consolidated_quantities": consolidated_quantities,
     }

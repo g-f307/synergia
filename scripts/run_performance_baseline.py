@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import io
 import json
 import math
 import os
@@ -16,11 +18,17 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from collections import Counter
+from typing import Any, Iterable
 from uuid import uuid4
 
 import httpx
-from generate_synthetic_data import CANONICAL_FORMATS, validate_manifest
+from generate_synthetic_data import (
+    CANONICAL_FORMATS,
+    PROFILES,
+    build_dataset,
+    validate_manifest,
+)
 
 REQUIRED_ENVIRONMENT_METADATA = {
     "backend_limits",
@@ -568,6 +576,304 @@ def _check(checks: list[dict[str, Any]], name: str, expected: Any, actual: Any) 
     )
 
 
+def _canonical_digest(rows: Iterable[dict[str, Any]], fields: tuple[str, ...]) -> str:
+    """Digest a multiset of semantic rows, preserving duplicate multiplicity."""
+    encoded = [
+        json.dumps(
+            {field: row.get(field) for field in fields},
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        for row in rows
+    ]
+    payload = "\n".join(sorted(encoded)).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _reference_records(manifest: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Rebuild the independent deterministic oracle described by the manifest."""
+    organizations = manifest["expectations"]["known_organizations"]
+    starts = [int(code.rsplit("-", 1)[-1]) for code in organizations]
+    configuration = manifest["configuration"]
+    profile = manifest["profile"] if manifest["profile"] in PROFILES else None
+    records, _ = build_dataset(
+        profile_name=profile,
+        seed=manifest["seed"],
+        scenario=manifest["scenario"],
+        workorders=None if profile else configuration["workorders"],
+        serials=None if profile else configuration["serials"],
+        organization_count=len(organizations),
+        organization_start=min(starts),
+    )
+    logical_payload = json.dumps(
+        records, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode()
+    if hashlib.sha256(logical_payload).hexdigest() != manifest["logical_digest"]:
+        raise ValueError("Oráculo reconstruído diverge do digest lógico do manifesto")
+    return records
+
+
+CLASSIFICATION_FIELDS = (
+    "workorder_number",
+    "lot_number",
+    "serial_number",
+    "rule_id",
+    "state",
+    "entity_type",
+    "entity_id",
+    "data_quality",
+    "source",
+)
+WORKORDER_REPORT_FIELDS = (
+    "workorder_number",
+    "organization_code",
+    "processing_status",
+    "planned_quantity",
+    "produced_quantity",
+    "received_quantity",
+    "released_quantity",
+    "pending_quantity",
+    "retained_quantity",
+    "partially_released",
+    "lots",
+    "serial_count",
+    "open_pending_count",
+)
+OQC_REPORT_FIELDS = (
+    "workorder_number",
+    "lot_number",
+    "organization_code",
+    "decision_state",
+    "reason",
+    "pending_item_id",
+    "priority",
+    "priority_score",
+    "pending_reason",
+    "pending_status",
+)
+
+
+def _expected_oracle(manifest: dict[str, Any]) -> dict[str, Any]:
+    if manifest["scenario"] != "valid":
+        raise ValueError("A reconciliação integral exige uma massa de cenário valid")
+    records = _reference_records(manifest)
+    plans = {row["workorder_number"]: row for row in records["N-FP"]}
+    serials_by_workorder: Counter[str] = Counter(
+        row["workorder_number"] for row in records["OWM"]
+    )
+    workorders = []
+    for number, row in sorted(plans.items()):
+        serial_count = serials_by_workorder[number]
+        workorders.append(
+            {
+                "workorder_number": number,
+                "organization_code": row["organization_code"],
+                "processing_status": "consolidated",
+                "planned_quantity": row["planned_quantity"],
+                "produced_quantity": row["produced_quantity"],
+                "received_quantity": serial_count,
+                "released_quantity": serial_count,
+                "pending_quantity": max(row["planned_quantity"] - serial_count, 0),
+                "retained_quantity": 0,
+                "partially_released": False,
+                "lots": [row["lot_number"]],
+                "serial_count": serial_count,
+                "open_pending_count": 0,
+            }
+        )
+
+    classifications = []
+    for source in ("OWM", "GMES/OQC", "TMS"):
+        for row in records[source]:
+            serial = row.get("serial_number") or None
+            lot = row.get("lot_number") or None
+            entity_type = "serial" if serial else "lot" if lot else "workorder"
+            classifications.append(
+                {
+                    "workorder_number": row["workorder_number"],
+                    "lot_number": lot,
+                    "serial_number": serial,
+                    "rule_id": "oqc_pass",
+                    "state": "closed",
+                    "entity_type": entity_type,
+                    "entity_id": serial or lot or row["workorder_number"],
+                    "data_quality": "complete",
+                    "source": source,
+                }
+            )
+
+    oqc_items = []
+    organization_by_workorder = {
+        number: row["organization_code"] for number, row in plans.items()
+    }
+    for item in classifications:
+        oqc_items.append(
+            {
+                "workorder_number": item["workorder_number"],
+                "lot_number": item["lot_number"],
+                "organization_code": organization_by_workorder[item["workorder_number"]],
+                "decision_state": "approved",
+                "reason": None,
+                "pending_item_id": None,
+                "priority": None,
+                "priority_score": None,
+                "pending_reason": None,
+                "pending_status": None,
+            }
+        )
+    pipeline = manifest["expectations"]["valid_pipeline"]
+    return {
+        "counts": {
+            "files": 4,
+            "files_received": 4,
+            "files_accepted": 4,
+            "files_rejected": 0,
+            "rows_read": pipeline["rows_read"],
+            "valid_records": pipeline["valid_records"],
+            "rejected_records": pipeline["rejected_records"],
+            "normalized_records": pipeline["normalized_records"],
+            "workorders": pipeline["consolidated_workorders"],
+            "lots": pipeline["consolidated_lots"],
+            "serials": pipeline["consolidated_serials"],
+            "classifications": len(classifications),
+            "pending_items": 0,
+            "errors": 0,
+            "warnings": 0,
+        },
+        "classification_count": len(classifications),
+        "classification_digest": _canonical_digest(
+            classifications, CLASSIFICATION_FIELDS
+        ),
+        "workorder_count": len(workorders),
+        "workorder_digest": _canonical_digest(workorders, WORKORDER_REPORT_FIELDS),
+        "oqc_count": len(oqc_items),
+        "oqc_digest": _canonical_digest(oqc_items, OQC_REPORT_FIELDS),
+    }
+
+
+def _all_pages(
+    recorder: HttpRecorder, url: str, route: str, *, page_size: int = 100
+) -> tuple[list[dict[str, Any]], int | None]:
+    items: list[dict[str, Any]] = []
+    page = 1
+    reported_total = None
+    while True:
+        response = recorder.request(
+            "ORACLE",
+            route,
+            "GET",
+            url,
+            {200},
+            measured=False,
+            params={"page": page, "page_size": page_size, "sort": "oldest"},
+        )
+        if response is None or response.status_code != 200:
+            break
+        payload = response.json()
+        pagination = payload["pagination"]
+        reported_total = pagination["total"]
+        items.extend(payload["items"])
+        if page >= pagination["pages"]:
+            break
+        page += 1
+    return items, reported_total
+
+
+def _classification_semantics(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **item,
+        "source": (item.get("evidence") or {}).get("source"),
+    }
+
+
+def _csv_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    text = "" if value is None else str(value)
+    return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+
+
+def _csv_digest(content: bytes, fields: tuple[str, ...]) -> tuple[int, str]:
+    rows = list(csv.DictReader(io.StringIO(content.decode("utf-8-sig"))))
+    normalized = [
+        {field: row.get(field, "") for field in fields}
+        for row in rows
+    ]
+    return len(rows), _canonical_digest(normalized, fields)
+
+
+def _json_rows_digest(
+    rows: list[dict[str, Any]], fields: tuple[str, ...]
+) -> tuple[int, str]:
+    return len(rows), _canonical_digest(rows, fields)
+
+
+def _reconcile_report(
+    recorder: HttpRecorder,
+    checks: list[dict[str, Any]],
+    report_type: str,
+    report: dict[str, Any],
+    expected_count: int,
+    expected_digest: str,
+    fields: tuple[str, ...],
+) -> dict[str, Any]:
+    base = f"/reports/{report['report_id']}/versions/{report['version']}"
+    response = recorder.request(
+        "ORACLE", f"GET report ({report_type})", "GET", base, {200}, measured=False
+    )
+    if response is None or response.status_code != 200:
+        return {"report_type": report_type, "status": "unavailable"}
+    payload = response.json()
+    key = "workorders" if report_type == "workorder_consolidated" else "items"
+    rows = payload["data"][key]
+    count, digest = _json_rows_digest(rows, fields)
+    _check(checks, f"oracle.{report_type}.report_count", expected_count, count)
+    _check(checks, f"oracle.{report_type}.report_digest", expected_digest, digest)
+
+    exports: dict[str, Any] = {}
+    for export_format in ("json", "csv"):
+        exported = recorder.request(
+            "ORACLE",
+            f"GET report export ({report_type}/{export_format})",
+            "GET",
+            f"{base}/export",
+            {200},
+            measured=False,
+            params={"format": export_format},
+        )
+        if exported is None or exported.status_code != 200:
+            continue
+        if export_format == "json":
+            export_rows = exported.json()["data"][key]
+            export_count, export_digest = _json_rows_digest(export_rows, fields)
+            expected_export_digest = expected_digest
+        else:
+            export_count, export_digest = _csv_digest(exported.content, fields)
+            expected_csv_rows = [
+                {field: _csv_value(row.get(field)) for field in fields}
+                for row in rows
+            ]
+            expected_export_digest = _canonical_digest(expected_csv_rows, fields)
+        _check(
+            checks,
+            f"oracle.{report_type}.{export_format}_count",
+            expected_count,
+            export_count,
+        )
+        _check(
+            checks,
+            f"oracle.{report_type}.{export_format}_digest",
+            expected_export_digest,
+            export_digest,
+        )
+        exports[export_format] = {"count": export_count, "digest": export_digest}
+    return {"report_type": report_type, "count": count, "digest": digest, "exports": exports}
+
+
 def _upload(
     recorder: HttpRecorder,
     bundle: Path,
@@ -678,7 +984,8 @@ def _report_rounds(
     execution_id: str,
     warmups: int,
     repetitions: int,
-) -> None:
+) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
     for round_index in range(warmups + repetitions):
         measured = round_index >= warmups
         for report_type in ("workorder_consolidated", "oqc_summary"):
@@ -700,6 +1007,7 @@ def _report_rounds(
             if response is None or response.status_code != 201:
                 continue
             report = response.json()
+            latest[report_type] = report
             for export_format in ("csv", "json"):
                 recorder.request(
                     "EXPORT",
@@ -710,6 +1018,113 @@ def _report_rounds(
                     measured=measured,
                     params={"format": export_format},
                 )
+    return latest
+
+
+def _reconcile_full_oracle(
+    recorder: HttpRecorder,
+    manifest: dict[str, Any],
+    execution_id: str,
+    reports: dict[str, dict[str, Any]],
+    checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    expected = _expected_oracle(manifest)
+    result: dict[str, Any] = {
+        "manifest_logical_digest": manifest["logical_digest"],
+        "expected": expected,
+    }
+    execution = recorder.request(
+        "ORACLE",
+        "GET /executions/{id}",
+        "GET",
+        f"/executions/{execution_id}",
+        {200},
+        measured=False,
+    )
+    if execution is not None and execution.status_code == 200:
+        actual_counts = execution.json()["counts"]
+        for key, expected_value in expected["counts"].items():
+            _check(
+                checks,
+                f"oracle.execution_counts.{key}",
+                expected_value,
+                actual_counts[key],
+            )
+        result["execution_counts"] = actual_counts
+
+    classifications, classification_total = _all_pages(
+        recorder,
+        f"/executions/{execution_id}/classifications",
+        "GET /executions/{id}/classifications",
+        page_size=1000,
+    )
+    classification_digest = _canonical_digest(
+        (_classification_semantics(item) for item in classifications),
+        CLASSIFICATION_FIELDS,
+    )
+    _check(
+        checks,
+        "oracle.classifications.total",
+        expected["classification_count"],
+        classification_total,
+    )
+    _check(
+        checks,
+        "oracle.classifications.fetched",
+        expected["classification_count"],
+        len(classifications),
+    )
+    _check(
+        checks,
+        "oracle.classifications.digest",
+        expected["classification_digest"],
+        classification_digest,
+    )
+    result["classifications"] = {
+        "reported_total": classification_total,
+        "fetched": len(classifications),
+        "digest": classification_digest,
+    }
+
+    pending, pending_total = _all_pages(
+        recorder,
+        f"/executions/{execution_id}/pending-items",
+        "GET /executions/{id}/pending-items",
+    )
+    _check(checks, "oracle.pending.total", 0, pending_total)
+    _check(checks, "oracle.pending.fetched", 0, len(pending))
+    result["pending"] = {"reported_total": pending_total, "fetched": len(pending)}
+
+    report_results = []
+    report_specs = {
+        "workorder_consolidated": (
+            expected["workorder_count"],
+            expected["workorder_digest"],
+            WORKORDER_REPORT_FIELDS,
+        ),
+        "oqc_summary": (
+            expected["oqc_count"],
+            expected["oqc_digest"],
+            OQC_REPORT_FIELDS,
+        ),
+    }
+    for report_type, (count, digest, fields) in report_specs.items():
+        report = reports.get(report_type)
+        _check(checks, f"oracle.{report_type}.generated", True, report is not None)
+        if report is not None:
+            report_results.append(
+                _reconcile_report(
+                    recorder,
+                    checks,
+                    report_type,
+                    report,
+                    count,
+                    digest,
+                    fields,
+                )
+            )
+    result["reports"] = report_results
+    return result
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -840,15 +1255,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scenario-id", default="V05")
     parser.add_argument("--output", type=Path, default=Path("artifacts/performance"))
     parser.add_argument("--run-id")
+    parser.add_argument(
+        "--existing-execution-id",
+        help=(
+            "Reconcilia uma execução terminal existente, sem realizar um novo upload"
+        ),
+    )
     parser.add_argument("--token-env", default="SYNERGIA_PERFORMANCE_TOKEN")
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--process", action="append", default=[])
     parser.add_argument("--sample-interval", type=_positive_float, default=1.0)
+    parser.add_argument("--request-timeout", type=_positive_float, default=3600.0)
     parser.add_argument("--query-warmups", type=_nonnegative_int, default=1)
     parser.add_argument("--query-repetitions", type=_nonnegative_int, default=5)
     parser.add_argument("--report-warmups", type=_nonnegative_int, default=1)
     parser.add_argument("--report-repetitions", type=_nonnegative_int, default=5)
     parser.add_argument("--skip-reports", action="store_true")
+    parser.add_argument(
+        "--skip-full-oracle",
+        action="store_true",
+        help="Desativa a reconciliação integral (somente para sondas exploratórias)",
+    )
     parser.add_argument("--include-reprocess", action="store_true")
     parser.add_argument(
         "--isolation-kind", choices=("isolated-container", "isolated-vm")
@@ -896,9 +1323,12 @@ def main() -> int:
         "report_warmups": args.report_warmups,
         "report_repetitions": args.report_repetitions,
         "reports_enabled": not args.skip_reports,
+        "full_oracle_enabled": not args.skip_full_oracle,
         "reprocess_enabled": args.include_reprocess,
         "sample_interval_seconds": args.sample_interval,
+        "request_timeout_seconds": args.request_timeout,
         "isolation_kind": args.isolation_kind or "not_declared",
+        "existing_execution_id": args.existing_execution_id,
     }
     checks: list[dict[str, Any]] = []
     processes = parse_processes(args.process)
@@ -909,33 +1339,62 @@ def main() -> int:
         database_url,
     )
     headers = {"Authorization": f"Bearer {token}"}
-    with httpx.Client(base_url=args.base_url, headers=headers, timeout=900) as client:
+    with httpx.Client(
+        base_url=args.base_url, headers=headers, timeout=args.request_timeout
+    ) as client:
         recorder = HttpRecorder(client, args.scenario_id)
+        reports: dict[str, dict[str, Any]] = {}
+        oracle_result: dict[str, Any] | None = None
         monitor.start()
         try:
-            ready, problems = _preflight(recorder, manifest, args.organization_id)
-            _check(checks, "upload_preflight", [], problems)
-            if ready:
-                response = _upload(
-                    recorder, args.bundle, manifest, args.organization_id
+            execution_id = args.existing_execution_id
+            if execution_id:
+                response = recorder.request(
+                    "PROCESS",
+                    "GET /executions/{id}",
+                    "GET",
+                    f"/executions/{execution_id}",
+                    {200},
                 )
+                if response is not None and response.status_code == 200:
+                    _check(
+                        checks,
+                        "existing_execution_terminal_state",
+                        (
+                            "completed"
+                            if manifest["scenario"] == "valid"
+                            else "completed_with_errors"
+                        ),
+                        response.json()["status"],
+                    )
+                else:
+                    execution_id = None
             else:
-                response = None
-            execution_id = None
-            if response is not None and response.status_code == 201:
-                upload_result = response.json()
-                execution_id = upload_result["execution_id"]
-                expected_state = (
-                    "completed"
-                    if manifest["scenario"] == "valid"
-                    else "completed_with_errors"
+                ready, problems = _preflight(
+                    recorder, manifest, args.organization_id
                 )
-                _check(
-                    checks,
-                    "upload_terminal_state",
-                    expected_state,
-                    upload_result["status"],
+                _check(checks, "upload_preflight", [], problems)
+                response = (
+                    _upload(recorder, args.bundle, manifest, args.organization_id)
+                    if ready
+                    else None
                 )
+                if response is not None and response.status_code == 201:
+                    upload_result = response.json()
+                    execution_id = upload_result["execution_id"]
+                    expected_state = (
+                        "completed"
+                        if manifest["scenario"] == "valid"
+                        else "completed_with_errors"
+                    )
+                    _check(
+                        checks,
+                        "upload_terminal_state",
+                        expected_state,
+                        upload_result["status"],
+                    )
+
+            if execution_id is not None:
                 summary_response = recorder.request(
                     "PROCESS",
                     "GET /imports/{id}/pipeline-summary",
@@ -969,13 +1428,29 @@ def main() -> int:
                     args.query_repetitions,
                 )
                 if not args.skip_reports:
-                    _report_rounds(
+                    reports = _report_rounds(
                         recorder,
                         args.organization_id,
                         execution_id,
                         args.report_warmups,
                         args.report_repetitions,
                     )
+                if not args.skip_full_oracle:
+                    if args.skip_reports:
+                        _check(
+                            checks,
+                            "oracle.reports_enabled",
+                            True,
+                            False,
+                        )
+                    else:
+                        oracle_result = _reconcile_full_oracle(
+                            recorder,
+                            manifest,
+                            execution_id,
+                            reports,
+                            checks,
+                        )
                 if args.include_reprocess:
                     idempotency_key = f"performance-{run_id}"
                     first = recorder.request(
@@ -1028,6 +1503,8 @@ def main() -> int:
     _write_json(output / "workload.json", workload)
     _write_json(output / "summary.json", summary)
     _write_json(output / "correctness.json", {"checks": checks})
+    if oracle_result is not None:
+        _write_json(output / "oracle-results.json", oracle_result)
     _write_csv(
         output / "samples.csv",
         [asdict(sample) for sample in recorder.samples],

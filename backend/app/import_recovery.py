@@ -180,7 +180,9 @@ def _recover_import_locked(
         )
         for file in files
     ]
-    if len({path.parent for path in paths}) != 1:
+    # Multi-source imports live under accepted/<source>/<execution_id>. The
+    # source directories differ by design; the execution directory must not.
+    if {path.parent.name for path in paths} != {execution_id}:
         raise ImportRecoveryError("Arquivos aceitos não compartilham a execução")
     preview = {
         "execution_id": execution_id,
