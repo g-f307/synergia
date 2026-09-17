@@ -59,6 +59,25 @@ def _events(directory: Path) -> dict[str, int]:
     }
 
 
+def _cpu_stat(directory: Path) -> dict[str, int]:
+    return {
+        key: int(value)
+        for key, value in (
+            line.split()
+            for line in (directory / "cpu.stat").read_text().splitlines()
+        )
+    }
+
+
+def _cpu_limit(directory: Path) -> dict[str, int | float]:
+    quota_text, period_text = (directory / "cpu.max").read_text().split()
+    if quota_text == "max":
+        raise ValueError("Limite de CPU não configurado")
+    quota = int(quota_text)
+    period = int(period_text)
+    return {"quota_us": quota, "period_us": period, "cpus": quota / period}
+
+
 def _host_available() -> int:
     for line in Path("/proc/meminfo").read_text().splitlines():
         if line.startswith("MemAvailable:"):
@@ -79,14 +98,20 @@ def _isolation(api: dict[str, Any], postgres: dict[str, Any]) -> dict[str, Any]:
         cgroup_limit = _integer_file(directory / "memory.max")
         if cgroup_limit != limit:
             raise ValueError(f"{role} não recebeu o limite de cgroup declarado")
+        cpu_limit = _cpu_limit(directory)
+        nano_cpus = int(config.get("NanoCpus") or 0)
+        if nano_cpus <= 0 or abs(cpu_limit["cpus"] - nano_cpus / 1e9) > 0.001:
+            raise ValueError(f"{role} não recebeu o limite de CPU declarado")
         result[role] = {
             "container_id": container["Id"],
             "host_pid": container["State"]["Pid"],
             "memory_limit_bytes": limit,
             "memory_swap_limit_bytes": config["MemorySwap"],
-            "nano_cpus": config.get("NanoCpus"),
+            "nano_cpus": nano_cpus,
+            "cpu_limit": cpu_limit,
             "cgroup": str(directory),
             "memory_events_before": _events(directory),
+            "cpu_stat_before": _cpu_stat(directory),
         }
     if (
         sum(item["memory_limit_bytes"] for item in result.values())
@@ -134,17 +159,49 @@ def _token(base_url: str, email: str, password_env: str) -> str:
 def _sample(api_directory: Path, pg_directory: Path, storage: Path) -> dict[str, Any]:
     api_events = _events(api_directory)
     pg_events = _events(pg_directory)
+    api_cpu = _cpu_stat(api_directory)
+    pg_cpu = _cpu_stat(pg_directory)
+    disk = shutil.disk_usage(storage)
     return {
         "at": datetime.now(UTC).isoformat(),
+        "monotonic_seconds": time.monotonic(),
         "api_memory_bytes": _integer_file(api_directory / "memory.current"),
         "api_memory_limit_bytes": _integer_file(api_directory / "memory.max"),
         "api_oom_kill": api_events.get("oom_kill", 0),
+        "api_cpu_usage_usec": api_cpu.get("usage_usec", 0),
+        "api_cpu_nr_throttled": api_cpu.get("nr_throttled", 0),
+        "api_cpu_throttled_usec": api_cpu.get("throttled_usec", 0),
+        "api_cpu_fraction": None,
         "pg_memory_bytes": _integer_file(pg_directory / "memory.current"),
         "pg_memory_limit_bytes": _integer_file(pg_directory / "memory.max"),
         "pg_oom_kill": pg_events.get("oom_kill", 0),
+        "pg_cpu_usage_usec": pg_cpu.get("usage_usec", 0),
+        "pg_cpu_nr_throttled": pg_cpu.get("nr_throttled", 0),
+        "pg_cpu_throttled_usec": pg_cpu.get("throttled_usec", 0),
+        "pg_cpu_fraction": None,
         "host_memory_available_bytes": _host_available(),
-        "storage_free_bytes": shutil.disk_usage(storage).free,
+        "storage_capacity_bytes": disk.total,
+        "storage_used_bytes": disk.used,
+        "storage_free_bytes": disk.free,
+        "storage_used_fraction": disk.used / disk.total,
     }
+
+
+def _cpu_fractions(
+    sample: dict[str, Any], previous: dict[str, Any] | None, isolation: dict[str, Any]
+) -> None:
+    if previous is None:
+        return
+    elapsed = sample["monotonic_seconds"] - previous["monotonic_seconds"]
+    if elapsed <= 0:
+        return
+    for role in ("api", "pg"):
+        delta = sample[f"{role}_cpu_usage_usec"] - previous[
+            f"{role}_cpu_usage_usec"
+        ]
+        limit_key = "api" if role == "api" else "postgres"
+        cpus = float(isolation[limit_key]["cpu_limit"]["cpus"])
+        sample[f"{role}_cpu_fraction"] = max(delta / (elapsed * 1_000_000 * cpus), 0)
 
 
 def _stop_reason(
@@ -164,7 +221,7 @@ def _stop_reason(
         return "postgres_memory_threshold"
     if sample["host_memory_available_bytes"] < 512 * 1024 * 1024:
         return "host_memory_safety"
-    if sample["storage_free_bytes"] / shutil.disk_usage(Path.cwd()).total < 0.15:
+    if sample["storage_used_fraction"] >= 0.85:
         return "storage_safety"
     return None
 
@@ -222,6 +279,8 @@ def _run_step(
     events_file = output / f"{run_id}-cgroup.csv"
     log_file = output / f"{run_id}-runner.log"
     reason = None
+    cpu_hot_samples = {"api": 0, "postgres": 0}
+    previous_sample = None
     started = time.monotonic()
     with log_file.open("w") as log, events_file.open("w", newline="") as events:
         process = subprocess.Popen(
@@ -234,12 +293,24 @@ def _run_step(
                 Path(isolation["postgres"]["cgroup"]),
                 output,
             )
+            _cpu_fractions(sample, previous_sample, isolation)
+            previous_sample = sample
             if writer is None:
                 writer = csv.DictWriter(events, fieldnames=list(sample))
                 writer.writeheader()
             writer.writerow(sample)
             events.flush()
             reason = _stop_reason(sample, isolation, args.memory_stop_fraction)
+            for role, sample_key in (
+                ("api", "api_cpu_fraction"),
+                ("postgres", "pg_cpu_fraction"),
+            ):
+                if (sample[sample_key] or 0) >= args.cpu_stop_fraction:
+                    cpu_hot_samples[role] += 1
+                else:
+                    cpu_hot_samples[role] = 0
+                if cpu_hot_samples[role] >= args.cpu_stop_samples:
+                    reason = reason or f"{role}_cpu_sustained"
             if reason or time.monotonic() - started > args.max_step_seconds:
                 reason = reason or "step_timeout"
                 process.terminate()
@@ -248,7 +319,7 @@ def _run_step(
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-                if reason.endswith(("threshold", "safety")):
+                if reason.endswith(("threshold", "safety", "sustained")):
                     subprocess.run(
                         ["podman", "stop", "--time", "2", args.api_container],
                         check=True,
@@ -305,8 +376,15 @@ def main() -> int:
     parser.add_argument("--sample-interval", type=float, default=1.0)
     parser.add_argument("--max-step-seconds", type=float, default=900.0)
     parser.add_argument("--memory-stop-fraction", type=float, default=0.9)
+    parser.add_argument("--cpu-stop-fraction", type=float, default=0.95)
+    parser.add_argument("--cpu-stop-samples", type=int, default=10)
     args = parser.parse_args()
-    if not 0 < args.memory_stop_fraction < 1 or args.sample_interval <= 0:
+    if (
+        not 0 < args.memory_stop_fraction < 1
+        or not 0 < args.cpu_stop_fraction <= 1
+        or args.cpu_stop_samples < 1
+        or args.sample_interval <= 0
+    ):
         parser.error("threshold e intervalo de amostra inválidos")
     if (
         args.output.exists()
@@ -328,6 +406,15 @@ def main() -> int:
     api = _podman_inspect(args.api_container)
     postgres = _podman_inspect(args.postgres_container)
     isolation = _isolation(api, postgres)
+    storage = shutil.disk_usage(args.output)
+    isolation["storage"] = {
+        "path": str(args.output.resolve()),
+        "capacity_bytes": storage.total,
+        "free_bytes_before": storage.free,
+        "used_fraction_before": storage.used / storage.total,
+        "stop_used_fraction": 0.85,
+        "container_quota": "not_configured_shared_host_filesystem",
+    }
     _readiness(args.base_url)
     token = _token(args.base_url, args.login_email, args.password_env)
     result = {
