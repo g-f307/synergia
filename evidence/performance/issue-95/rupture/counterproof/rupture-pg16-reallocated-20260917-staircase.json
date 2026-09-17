@@ -1,0 +1,1140 @@
+{
+  "finished_at": "2026-09-17T13:07:47.293123+00:00",
+  "first_limit": "api_memory_threshold",
+  "isolation": {
+    "api": {
+      "cgroup": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/user.slice/user-libpod_pod_841ef46f86c8e89f76a96e78525bb9caf2f9f8ff03f81261453528252651430b.slice/libpod-b82464756d8ec8498f6dddfc4d2bb2f453a150c4a8d360c96119ce89a763de6e.scope/container",
+      "container_id": "b82464756d8ec8498f6dddfc4d2bb2f453a150c4a8d360c96119ce89a763de6e",
+      "cpu_limit": {
+        "cpus": 2.0,
+        "period_us": 100000,
+        "quota_us": 200000
+      },
+      "cpu_stat_before": {
+        "burst_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nice_usec": 0,
+        "nr_bursts": 0,
+        "nr_periods": 3869,
+        "nr_throttled": 0,
+        "system_usec": 459699,
+        "throttled_usec": 0,
+        "usage_usec": 4072656,
+        "user_usec": 3612956
+      },
+      "host_pid": 32003,
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_limit_bytes": 671088640,
+      "memory_swap_limit_bytes": 671088640,
+      "nano_cpus": 2000000000
+    },
+    "postgres": {
+      "cgroup": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/user.slice/user-libpod_pod_841ef46f86c8e89f76a96e78525bb9caf2f9f8ff03f81261453528252651430b.slice/libpod-21534d8de11d5c1b4bd4e79c54f658cf01f7801d2fe1c999e11246e3299cc602.scope/container",
+      "container_id": "21534d8de11d5c1b4bd4e79c54f658cf01f7801d2fe1c999e11246e3299cc602",
+      "cpu_limit": {
+        "cpus": 2.0,
+        "period_us": 100000,
+        "quota_us": 200000
+      },
+      "cpu_stat_before": {
+        "burst_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nice_usec": 0,
+        "nr_bursts": 0,
+        "nr_periods": 411,
+        "nr_throttled": 0,
+        "system_usec": 2012364,
+        "throttled_usec": 0,
+        "usage_usec": 3223467,
+        "user_usec": 1211102
+      },
+      "host_pid": 31952,
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_limit_bytes": 536870912,
+      "memory_swap_limit_bytes": 536870912,
+      "nano_cpus": 2000000000
+    },
+    "storage": {
+      "capacity_bytes": 509332160512,
+      "container_quota": "not_configured_shared_host_filesystem",
+      "free_bytes_before": 448799805440,
+      "path": "${WORKSPACE}/artifacts/performance",
+      "stop_used_fraction": 0.85,
+      "used_fraction_before": 0.11366338516264975
+    }
+  },
+  "manifests": [
+    {
+      "mass": {
+        "configuration": {
+          "serials": 500,
+          "workorders": 50
+        },
+        "entities": {
+          "lots": 50,
+          "organizations": 1,
+          "serials": 500,
+          "workorders": 50
+        },
+        "expectations": {
+          "absent_values": {
+            "N-FP.planned_quantity": 0,
+            "OWM.planned_quantity": 500,
+            "TMS.quantity": 0
+          },
+          "classification_rule_ids": [
+            "oqc_pass"
+          ],
+          "known_organizations": [
+            "SYN-ORG-001"
+          ],
+          "processing_issue_codes": {},
+          "query_samples": {
+            "missing": {
+              "lot": "SYN-LOT-NOT-FOUND",
+              "serial": "SYN-SER-NOT-FOUND",
+              "workorder": "SYN-WO-NOT-FOUND"
+            },
+            "organizations": {
+              "SYN-ORG-001": {
+                "lots": {
+                  "first": "SYN-LOT-000001",
+                  "last": "SYN-LOT-000050",
+                  "median": "SYN-LOT-000025"
+                },
+                "serials": {
+                  "first": "SYN-SER-00000001",
+                  "last": "SYN-SER-00000500",
+                  "median": "SYN-SER-00000250"
+                },
+                "workorders": {
+                  "first": "SYN-WO-000001",
+                  "last": "SYN-WO-000050",
+                  "median": "SYN-WO-000025"
+                }
+              }
+            }
+          },
+          "valid_pipeline": {
+            "consolidated_lots": 50,
+            "consolidated_serials": 500,
+            "consolidated_workorders": 50,
+            "entities_by_organization": {
+              "SYN-ORG-001": {
+                "lots": 50,
+                "serials": 500,
+                "workorders": 50
+              }
+            },
+            "normalized_records": 1100,
+            "rejected_records": 0,
+            "rows_read": 1100,
+            "valid_records": 1100
+          },
+          "validation_issue_codes": {}
+        },
+        "files": [
+          {
+            "file": "n-fp.xlsx",
+            "format": "xlsx",
+            "records": 50,
+            "sha256": "afe47f7c578939497d4a092e4f051ccfba6f5863081a959f6c34ed5be70cebee",
+            "size_bytes": 7547,
+            "source": "N-FP"
+          },
+          {
+            "file": "owm.json",
+            "format": "json",
+            "records": 500,
+            "sha256": "4434312a4102767f5aabf73f029e3157b90c3e420b5ce9800f1a7d8e770c039b",
+            "size_bytes": 230503,
+            "source": "OWM"
+          },
+          {
+            "file": "gmes-oqc.csv",
+            "format": "csv",
+            "records": 500,
+            "sha256": "76436e7200a264ca5cbc79693ed675db301a6c2002c0383378a758e288a1cca5",
+            "size_bytes": 67661,
+            "source": "GMES/OQC"
+          },
+          {
+            "file": "tms.json",
+            "format": "json",
+            "records": 50,
+            "sha256": "60b26bbc1c5ca76ec8b690a9eb052c5a851708c31d2b8805b935c4492d53ee74",
+            "size_bytes": 17453,
+            "source": "TMS"
+          }
+        ],
+        "generator_version": "1.1.0",
+        "logical_digest": "87abc303a2f4b4a211ab5a1f587a48e498516d27c6b8d30b48eb7e35327e8f6d",
+        "profile": "small",
+        "scenario": "valid",
+        "scenario_counts": {
+          "fully_valid": 1100
+        },
+        "schema_version": "1.1",
+        "seed": 20260830,
+        "sources": {
+          "GMES/OQC": {
+            "records": 500
+          },
+          "N-FP": {
+            "records": 50
+          },
+          "OWM": {
+            "records": 500
+          },
+          "TMS": {
+            "records": 50
+          }
+        },
+        "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+      },
+      "path": "artifacts/synthetic/v00-org001-valid",
+      "scenario_id": "V00"
+    },
+    {
+      "mass": {
+        "configuration": {
+          "serials": 8800,
+          "workorders": 680
+        },
+        "entities": {
+          "lots": 680,
+          "organizations": 1,
+          "serials": 8800,
+          "workorders": 680
+        },
+        "expectations": {
+          "absent_values": {
+            "N-FP.planned_quantity": 0,
+            "OWM.planned_quantity": 8800,
+            "TMS.quantity": 0
+          },
+          "classification_rule_ids": [
+            "oqc_pass"
+          ],
+          "known_organizations": [
+            "SYN-ORG-001"
+          ],
+          "processing_issue_codes": {},
+          "query_samples": {
+            "missing": {
+              "lot": "SYN-LOT-NOT-FOUND",
+              "serial": "SYN-SER-NOT-FOUND",
+              "workorder": "SYN-WO-NOT-FOUND"
+            },
+            "organizations": {
+              "SYN-ORG-001": {
+                "lots": {
+                  "first": "SYN-LOT-000001",
+                  "last": "SYN-LOT-000680",
+                  "median": "SYN-LOT-000340"
+                },
+                "serials": {
+                  "first": "SYN-SER-00000001",
+                  "last": "SYN-SER-00008800",
+                  "median": "SYN-SER-00004400"
+                },
+                "workorders": {
+                  "first": "SYN-WO-000001",
+                  "last": "SYN-WO-000680",
+                  "median": "SYN-WO-000340"
+                }
+              }
+            }
+          },
+          "valid_pipeline": {
+            "consolidated_lots": 680,
+            "consolidated_serials": 8800,
+            "consolidated_workorders": 680,
+            "entities_by_organization": {
+              "SYN-ORG-001": {
+                "lots": 680,
+                "serials": 8800,
+                "workorders": 680
+              }
+            },
+            "normalized_records": 18960,
+            "rejected_records": 0,
+            "rows_read": 18960,
+            "valid_records": 18960
+          },
+          "validation_issue_codes": {}
+        },
+        "files": [
+          {
+            "file": "n-fp.xlsx",
+            "format": "xlsx",
+            "records": 680,
+            "sha256": "eada6bbdb6f77126f0e1f648183ccb14d0bc07f3ba85b518b197dc838ef07a11",
+            "size_bytes": 36477,
+            "source": "N-FP"
+          },
+          {
+            "file": "owm.json",
+            "format": "json",
+            "records": 8800,
+            "sha256": "0281950fa04145174e8479ad323e09e9498909d56ba22f79ce0ae73f154096e8",
+            "size_bytes": 4056803,
+            "source": "OWM"
+          },
+          {
+            "file": "gmes-oqc.csv",
+            "format": "csv",
+            "records": 8800,
+            "sha256": "fbd9ba28aafbb6967ac08def856ffec68da2efa2bc0dd14c4ac3bb4bf3fc7c20",
+            "size_bytes": 1188161,
+            "source": "GMES/OQC"
+          },
+          {
+            "file": "tms.json",
+            "format": "json",
+            "records": 680,
+            "sha256": "8d9446ebba164e091a64dcafb36a2d498da5d64815c2b7be2fa99216240a638c",
+            "size_bytes": 237323,
+            "source": "TMS"
+          }
+        ],
+        "generator_version": "1.1.0",
+        "logical_digest": "89d70947ae3b49da80e93cdc6435c2dc31fa3f3cde438e19104d609f4c4f4192",
+        "profile": "custom",
+        "scenario": "valid",
+        "scenario_counts": {
+          "fully_valid": 18960
+        },
+        "schema_version": "1.1",
+        "seed": 20260830,
+        "sources": {
+          "GMES/OQC": {
+            "records": 8800
+          },
+          "N-FP": {
+            "records": 680
+          },
+          "OWM": {
+            "records": 8800
+          },
+          "TMS": {
+            "records": 680
+          }
+        },
+        "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+      },
+      "path": "artifacts/synthetic/v01-org001-valid",
+      "scenario_id": "V01"
+    },
+    {
+      "mass": {
+        "configuration": {
+          "serials": 22000,
+          "workorders": 1700
+        },
+        "entities": {
+          "lots": 1700,
+          "organizations": 1,
+          "serials": 22000,
+          "workorders": 1700
+        },
+        "expectations": {
+          "absent_values": {
+            "N-FP.planned_quantity": 0,
+            "OWM.planned_quantity": 22000,
+            "TMS.quantity": 0
+          },
+          "classification_rule_ids": [
+            "oqc_pass"
+          ],
+          "known_organizations": [
+            "SYN-ORG-001"
+          ],
+          "processing_issue_codes": {},
+          "query_samples": {
+            "missing": {
+              "lot": "SYN-LOT-NOT-FOUND",
+              "serial": "SYN-SER-NOT-FOUND",
+              "workorder": "SYN-WO-NOT-FOUND"
+            },
+            "organizations": {
+              "SYN-ORG-001": {
+                "lots": {
+                  "first": "SYN-LOT-000001",
+                  "last": "SYN-LOT-001700",
+                  "median": "SYN-LOT-000850"
+                },
+                "serials": {
+                  "first": "SYN-SER-00000001",
+                  "last": "SYN-SER-00022000",
+                  "median": "SYN-SER-00011000"
+                },
+                "workorders": {
+                  "first": "SYN-WO-000001",
+                  "last": "SYN-WO-001700",
+                  "median": "SYN-WO-000850"
+                }
+              }
+            }
+          },
+          "valid_pipeline": {
+            "consolidated_lots": 1700,
+            "consolidated_serials": 22000,
+            "consolidated_workorders": 1700,
+            "entities_by_organization": {
+              "SYN-ORG-001": {
+                "lots": 1700,
+                "serials": 22000,
+                "workorders": 1700
+              }
+            },
+            "normalized_records": 47400,
+            "rejected_records": 0,
+            "rows_read": 47400,
+            "valid_records": 47400
+          },
+          "validation_issue_codes": {}
+        },
+        "files": [
+          {
+            "file": "n-fp.xlsx",
+            "format": "xlsx",
+            "records": 1700,
+            "sha256": "e8396fdce6f836c705e0572821e6adc40d903872a67656dacc3a4da28f826768",
+            "size_bytes": 83038,
+            "source": "N-FP"
+          },
+          {
+            "file": "owm.json",
+            "format": "json",
+            "records": 22000,
+            "sha256": "75fa51efb72e19a334d55968b7455ecaf0b929b89abf8d438eb265a7698ea5f2",
+            "size_bytes": 10142003,
+            "source": "OWM"
+          },
+          {
+            "file": "gmes-oqc.csv",
+            "format": "csv",
+            "records": 22000,
+            "sha256": "02d8ad5af97a9a74995281f103beef058bf567f932488698f50e82ce082a809d",
+            "size_bytes": 2970161,
+            "source": "GMES/OQC"
+          },
+          {
+            "file": "tms.json",
+            "format": "json",
+            "records": 1700,
+            "sha256": "739b657da7a538f170c18194a85069952e0ba9390338704dd94f07d5bea7767c",
+            "size_bytes": 593303,
+            "source": "TMS"
+          }
+        ],
+        "generator_version": "1.1.0",
+        "logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+        "profile": "custom",
+        "scenario": "valid",
+        "scenario_counts": {
+          "fully_valid": 47400
+        },
+        "schema_version": "1.1",
+        "seed": 20260830,
+        "sources": {
+          "GMES/OQC": {
+            "records": 22000
+          },
+          "N-FP": {
+            "records": 1700
+          },
+          "OWM": {
+            "records": 22000
+          },
+          "TMS": {
+            "records": 1700
+          }
+        },
+        "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+      },
+      "path": "artifacts/synthetic/v02-org001-valid",
+      "scenario_id": "V02"
+    }
+  ],
+  "run_id": "rupture-pg16-reallocated-20260917",
+  "started_at": "2026-09-17T13:07:30.881536+00:00",
+  "steps": [
+    {
+      "bundle": "artifacts/synthetic/v00-org001-valid",
+      "cgroup_samples": "${WORKSPACE}/artifacts/performance/rupture-pg16-reallocated-20260917-v00-cgroup.csv",
+      "correctness": {
+        "checks": [
+          {
+            "actual": [],
+            "check": "upload_preflight",
+            "expected": [],
+            "passed": true
+          },
+          {
+            "actual": "completed",
+            "check": "upload_terminal_state",
+            "expected": "completed",
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "pipeline_summary.rows_read",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "pipeline_summary.valid_records",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "pipeline_summary.rejected_records",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "pipeline_summary.normalized_records",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 4,
+            "check": "oracle.execution_counts.files",
+            "expected": 4,
+            "passed": true
+          },
+          {
+            "actual": 4,
+            "check": "oracle.execution_counts.files_received",
+            "expected": 4,
+            "passed": true
+          },
+          {
+            "actual": 4,
+            "check": "oracle.execution_counts.files_accepted",
+            "expected": 4,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.execution_counts.files_rejected",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "oracle.execution_counts.rows_read",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "oracle.execution_counts.valid_records",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.execution_counts.rejected_records",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 1100,
+            "check": "oracle.execution_counts.normalized_records",
+            "expected": 1100,
+            "passed": true
+          },
+          {
+            "actual": 50,
+            "check": "oracle.execution_counts.workorders",
+            "expected": 50,
+            "passed": true
+          },
+          {
+            "actual": 50,
+            "check": "oracle.execution_counts.lots",
+            "expected": 50,
+            "passed": true
+          },
+          {
+            "actual": 500,
+            "check": "oracle.execution_counts.serials",
+            "expected": 500,
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.execution_counts.classifications",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.execution_counts.pending_items",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.execution_counts.errors",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.execution_counts.warnings",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.classifications.total",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.classifications.fetched",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+            "check": "oracle.classifications.digest",
+            "expected": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.pending.total",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": 0,
+            "check": "oracle.pending.fetched",
+            "expected": 0,
+            "passed": true
+          },
+          {
+            "actual": true,
+            "check": "oracle.workorder_consolidated.generated",
+            "expected": true,
+            "passed": true
+          },
+          {
+            "actual": 50,
+            "check": "oracle.workorder_consolidated.report_count",
+            "expected": 50,
+            "passed": true
+          },
+          {
+            "actual": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+            "check": "oracle.workorder_consolidated.report_digest",
+            "expected": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+            "passed": true
+          },
+          {
+            "actual": 50,
+            "check": "oracle.workorder_consolidated.json_count",
+            "expected": 50,
+            "passed": true
+          },
+          {
+            "actual": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+            "check": "oracle.workorder_consolidated.json_digest",
+            "expected": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+            "passed": true
+          },
+          {
+            "actual": 50,
+            "check": "oracle.workorder_consolidated.csv_count",
+            "expected": 50,
+            "passed": true
+          },
+          {
+            "actual": "ae7052d22874f79ddfdc50bdbbb077a0863b048fe6a1beb16ad9466da57cb8aa",
+            "check": "oracle.workorder_consolidated.csv_digest",
+            "expected": "ae7052d22874f79ddfdc50bdbbb077a0863b048fe6a1beb16ad9466da57cb8aa",
+            "passed": true
+          },
+          {
+            "actual": true,
+            "check": "oracle.oqc_summary.generated",
+            "expected": true,
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.oqc_summary.report_count",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+            "check": "oracle.oqc_summary.report_digest",
+            "expected": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.oqc_summary.json_count",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+            "check": "oracle.oqc_summary.json_digest",
+            "expected": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+            "passed": true
+          },
+          {
+            "actual": 1050,
+            "check": "oracle.oqc_summary.csv_count",
+            "expected": 1050,
+            "passed": true
+          },
+          {
+            "actual": "2231b0db7a2a2c5335aa879b28e4a5034846c0d2b18b45f3ad71f6f4630e7d0a",
+            "check": "oracle.oqc_summary.csv_digest",
+            "expected": "2231b0db7a2a2c5335aa879b28e4a5034846c0d2b18b45f3ad71f6f4630e7d0a",
+            "passed": true
+          }
+        ]
+      },
+      "duration_seconds": 10.015,
+      "exit_code": 0,
+      "run_id": "rupture-pg16-reallocated-20260917-v00",
+      "runner_log": "${WORKSPACE}/artifacts/performance/rupture-pg16-reallocated-20260917-v00-runner.log",
+      "scenario_id": "V00",
+      "stop_reason": null,
+      "summary": {
+        "comparability": "non_comparable",
+        "correctness_passed": true,
+        "generated_at": "2026-09-17T13:07:40.761844+00:00",
+        "measured_samples": 72,
+        "operations": [
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 59.946137,
+              "p95": 64.483136,
+              "p99": 64.483136
+            },
+            "latency_ms": {
+              "max": 64.859409,
+              "min": 49.305866,
+              "p50": 60.266689,
+              "p95": 64.859409,
+              "p99": 64.859409
+            },
+            "operation": "EXPORT",
+            "response_bytes": 982790,
+            "route": "GET /reports/version/export (oqc_summary/csv)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 17.035944674597598,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 53.892822,
+              "p95": 56.749774,
+              "p99": 56.749774
+            },
+            "latency_ms": {
+              "max": 57.458525,
+              "min": 42.495898,
+              "p50": 54.776013,
+              "p95": 57.458525,
+              "p99": 57.458525
+            },
+            "operation": "EXPORT",
+            "response_bytes": 1905465,
+            "route": "GET /reports/version/export (oqc_summary/json)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 19.362321984796306,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 33.178373,
+              "p95": 49.077522,
+              "p99": 49.077522
+            },
+            "latency_ms": {
+              "max": 49.246975,
+              "min": 25.882776,
+              "p50": 33.328207,
+              "p95": 49.246975,
+              "p99": 49.246975
+            },
+            "operation": "EXPORT",
+            "response_bytes": 59175,
+            "route": "GET /reports/version/export (workorder_consolidated/csv)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 28.69264795886126,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 39.203702,
+              "p95": 45.168378,
+              "p99": 45.168378
+            },
+            "latency_ms": {
+              "max": 45.332929,
+              "min": 23.745845,
+              "p50": 39.442631,
+              "p95": 45.332929,
+              "p99": 45.332929
+            },
+            "operation": "EXPORT",
+            "response_bytes": 128635,
+            "route": "GET /reports/version/export (workorder_consolidated/json)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 26.20044532268104,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 49.861293,
+              "p95": 49.861293,
+              "p99": 49.861293
+            },
+            "latency_ms": {
+              "max": 50.027369,
+              "min": 50.027369,
+              "p50": 50.027369,
+              "p95": 50.027369,
+              "p99": 50.027369
+            },
+            "operation": "PROCESS",
+            "response_bytes": 110,
+            "route": "GET /imports/{id}/pipeline-summary",
+            "samples": 1,
+            "successes": 1,
+            "throughput_requests_per_second": 19.989058389218908,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 73.655351,
+              "p95": 84.811726,
+              "p99": 84.811726
+            },
+            "latency_ms": {
+              "max": 85.014243,
+              "min": 51.205871,
+              "p50": 73.920362,
+              "p95": 85.014243,
+              "p99": 85.014243
+            },
+            "operation": "QUERY",
+            "response_bytes": 564730,
+            "route": "consolidated",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 14.114737350553762,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 32.166225,
+              "p95": 38.273738,
+              "p99": 38.273738
+            },
+            "latency_ms": {
+              "max": 38.504118,
+              "min": 21.173306,
+              "p50": 32.396967,
+              "p95": 38.504118,
+              "p99": 38.504118
+            },
+            "operation": "QUERY",
+            "response_bytes": 110530,
+            "route": "history-list",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 33.369894502079624,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 39.064187,
+              "p95": 49.186872,
+              "p99": 49.186872
+            },
+            "latency_ms": {
+              "max": 49.459098,
+              "min": 35.594992,
+              "p50": 39.238564,
+              "p95": 49.459098,
+              "p99": 49.459098
+            },
+            "operation": "QUERY",
+            "response_bytes": 2345,
+            "route": "indicators",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 24.80512276982971,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 46.342935,
+              "p95": 50.755026,
+              "p99": 50.755026
+            },
+            "latency_ms": {
+              "max": 50.921805,
+              "min": 35.963233,
+              "p50": 46.507901,
+              "p95": 50.921805,
+              "p99": 50.921805
+            },
+            "operation": "QUERY",
+            "response_bytes": 1825,
+            "route": "lot-detail",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 22.451369379740285,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 36.67408,
+              "p95": 46.676815,
+              "p99": 46.676815
+            },
+            "latency_ms": {
+              "max": 46.841712,
+              "min": 33.673284,
+              "p50": 36.867968,
+              "p95": 46.841712,
+              "p99": 46.841712
+            },
+            "operation": "QUERY",
+            "response_bytes": 665,
+            "route": "pending-list",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 25.318108103359254,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 38.048561,
+              "p95": 46.463449,
+              "p99": 46.463449
+            },
+            "latency_ms": {
+              "max": 46.693348,
+              "min": 26.304055,
+              "p50": 38.204265,
+              "p95": 46.693348,
+              "p99": 46.693348
+            },
+            "operation": "QUERY",
+            "response_bytes": 2580,
+            "route": "search-workorder",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 26.492133243159056,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 35.911303,
+              "p95": 40.703094,
+              "p99": 40.703094
+            },
+            "latency_ms": {
+              "max": 40.941723,
+              "min": 28.425205,
+              "p50": 36.14292,
+              "p95": 40.941723,
+              "p99": 40.941723
+            },
+            "operation": "QUERY",
+            "response_bytes": 1110,
+            "route": "serial-detail",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 28.67222832966172,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 40.810574,
+              "p95": 48.715221,
+              "p99": 48.715221
+            },
+            "latency_ms": {
+              "max": 48.868787,
+              "min": 21.539202,
+              "p50": 40.963965,
+              "p95": 48.868787,
+              "p99": 48.868787
+            },
+            "operation": "QUERY",
+            "response_bytes": 2955,
+            "route": "workorder-detail",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 26.22131462910323,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 75.821863,
+              "p95": 79.201556,
+              "p99": 79.201556
+            },
+            "latency_ms": {
+              "max": 79.845056,
+              "min": 57.862976,
+              "p50": 76.347804,
+              "p95": 79.845056,
+              "p99": 79.845056
+            },
+            "operation": "REPORT",
+            "response_bytes": 1306090,
+            "route": "POST /reports (oqc_summary)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 13.84775528579205,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 70.094245,
+              "p95": 77.561415,
+              "p99": 77.561415
+            },
+            "latency_ms": {
+              "max": 77.727184,
+              "min": 61.386366,
+              "p50": 70.242052,
+              "p95": 77.727184,
+              "p99": 77.727184
+            },
+            "operation": "REPORT",
+            "response_bytes": 87075,
+            "route": "POST /reports (workorder_consolidated)",
+            "samples": 5,
+            "successes": 5,
+            "throughput_requests_per_second": 14.472022555747026,
+            "unexpected_errors": 0
+          },
+          {
+            "error_rate": 0.0,
+            "first_byte_ms": {
+              "p50": 4596.185354,
+              "p95": 4596.185354,
+              "p99": 4596.185354
+            },
+            "latency_ms": {
+              "max": 4596.385562,
+              "min": 4596.385562,
+              "p50": 4596.385562,
+              "p95": 4596.385562,
+              "p99": 4596.385562
+            },
+            "operation": "UPLOAD",
+            "response_bytes": 525,
+            "route": "POST /imports",
+            "samples": 1,
+            "successes": 1,
+            "throughput_requests_per_second": 0.21756225332081922,
+            "unexpected_errors": 0
+          }
+        ],
+        "resources": {
+          "backend": {
+            "collection_errors": 0,
+            "cpu_percent_average": 29.45677716280295,
+            "cpu_seconds_delta": 2.6599999999999993,
+            "read_bytes_delta": 3194880,
+            "rss_bytes_max": 102699008,
+            "samples": 10,
+            "write_bytes_delta": 17076224
+          },
+          "postgres": {
+            "collection_errors": 0,
+            "db_active_max": 2,
+            "db_blocks_hit_delta": 909946,
+            "db_blocks_read_delta": 89,
+            "db_commits_delta": 534,
+            "db_connections_max": 2,
+            "db_deadlocks_delta": 0,
+            "db_rollbacks_delta": 0,
+            "db_temp_bytes_delta": 0,
+            "db_temp_files_delta": 0,
+            "db_waiting_max": 1,
+            "samples": 10
+          },
+          "system": {
+            "collection_errors": 0,
+            "disk_free_bytes_min": 448801226752,
+            "load_1m_max": 0.8125,
+            "memory_available_bytes_min": 1521995776,
+            "samples": 10
+          }
+        },
+        "unexpected_errors": 0
+      }
+    },
+    {
+      "bundle": "artifacts/synthetic/v01-org001-valid",
+      "cgroup_samples": "${WORKSPACE}/artifacts/performance/rupture-pg16-reallocated-20260917-v01-cgroup.csv",
+      "correctness": null,
+      "duration_seconds": 6.396,
+      "exit_code": -15,
+      "run_id": "rupture-pg16-reallocated-20260917-v01",
+      "runner_log": "${WORKSPACE}/artifacts/performance/rupture-pg16-reallocated-20260917-v01-runner.log",
+      "scenario_id": "V01",
+      "stop_reason": "api_memory_threshold",
+      "summary": null
+    }
+  ]
+}

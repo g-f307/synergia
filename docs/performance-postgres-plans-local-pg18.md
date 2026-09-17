@@ -68,10 +68,10 @@ operações do backend: mantêm tabelas, joins, filtros e ordenação relevantes
 mas reduzem a projeção de colunas; o tempo deles não é o tempo integral da
 rota. `run.json` registra ambiente, massa, cardinalidades, aquecimento,
 repetições, parâmetros sintéticos, percentis, buffers, scans e sorts; cada
-amostra conserva SQL, hash do SQL e plano JSON completo. Os arquivos brutos
-estão em `artifacts/performance/pgplans-v02-consolidated-local-pg18/` (antes)
-e `artifacts/performance/pgplans-v02-index-after-local-pg18/` (depois),
-ignorados pelo Git para anexação ao PR.
+amostra conserva SQL, hash do SQL e plano JSON completo. Os arquivos
+sanitizados e versionados estão em
+`evidence/performance/issue-95/postgres-plans/before-0027/` (antes) e
+`evidence/performance/issue-95/postgres-plans/after-0027/` (depois).
 
 ## Planos avaliados
 
@@ -147,8 +147,8 @@ transações, cache, concorrência e distribuição de regras são diferentes.
 Uma execução de diagnóstico com índice havia produzido p95 de 75,563 ms para
 o INSERT; ela foi descartada do comparativo por variabilidade e não foi usada
 para escolher o resultado. Os artefatos do comparativo estão em
-`artifacts/performance/workorder-index-absent-local-pg18/run.json` e
-`artifacts/performance/workorder-index-present-local-pg18/run.json`; o runner
+`evidence/performance/issue-95/migration-comparison/before-0027.json` e
+`evidence/performance/issue-95/migration-comparison/after-0027.json`; o runner
 versionado é `scripts/benchmark_postgres_workorder_index.py`.
 
 O relatório OQC percorre aproximadamente 61% das 74.490 decisões OQC

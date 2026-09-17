@@ -1,0 +1,128 @@
+{
+  "captured_at": "2026-09-17T12:40:15.949641+00:00",
+  "commit": "f4bd4284cca0357a5daa9b4b20454a314fa45426",
+  "comparability": "non_comparable",
+  "comparability_issues": [
+    "worktree_dirty"
+  ],
+  "environment_name": "perf-staircase-pg16-cgroup",
+  "host": {
+    "architecture": "x86_64",
+    "cpu_model": "not_available",
+    "logical_cpus": 12,
+    "memory_total_bytes": 8022982656,
+    "operating_system": "Linux-7.1.5-201.fc44.x86_64-x86_64-with-glibc2.43"
+  },
+  "isolation_kind": "isolated-container",
+  "mass": {
+    "bundle": "v00-org001-valid",
+    "configuration": {
+      "serials": 500,
+      "workorders": 50
+    },
+    "entities": {
+      "lots": 50,
+      "organizations": 1,
+      "serials": 500,
+      "workorders": 50
+    },
+    "files": [
+      {
+        "file": "n-fp.xlsx",
+        "format": "xlsx",
+        "records": 50,
+        "sha256": "afe47f7c578939497d4a092e4f051ccfba6f5863081a959f6c34ed5be70cebee",
+        "size_bytes": 7547,
+        "source": "N-FP"
+      },
+      {
+        "file": "owm.json",
+        "format": "json",
+        "records": 500,
+        "sha256": "4434312a4102767f5aabf73f029e3157b90c3e420b5ce9800f1a7d8e770c039b",
+        "size_bytes": 230503,
+        "source": "OWM"
+      },
+      {
+        "file": "gmes-oqc.csv",
+        "format": "csv",
+        "records": 500,
+        "sha256": "76436e7200a264ca5cbc79693ed675db301a6c2002c0383378a758e288a1cca5",
+        "size_bytes": 67661,
+        "source": "GMES/OQC"
+      },
+      {
+        "file": "tms.json",
+        "format": "json",
+        "records": 50,
+        "sha256": "60b26bbc1c5ca76ec8b690a9eb052c5a851708c31d2b8805b935c4492d53ee74",
+        "size_bytes": 17453,
+        "source": "TMS"
+      }
+    ],
+    "generator_version": "1.1.0",
+    "logical_digest": "87abc303a2f4b4a211ab5a1f587a48e498516d27c6b8d30b48eb7e35327e8f6d",
+    "profile": "small",
+    "scenario": "valid",
+    "schema_version": "1.1",
+    "seed": 20260830
+  },
+  "metadata": {
+    "backend_limits": "2 CPU/1342177280 B no swap",
+    "container_runtime": "Podman 5.8.4 rootless cgroup v2",
+    "network_topology": "generator host loopback, API and PG same Podman pod",
+    "postgres_limits": "2 CPU/402653184 B no swap",
+    "resource_collection": "runner procfs pg_stat and staircase cgroup v2",
+    "storage_type": "container overlay on btrfs"
+  },
+  "missing_required_metadata": [],
+  "postgres": {
+    "collection_status": "collected",
+    "server_version": "16.15",
+    "settings": {
+      "effective_cache_size": {
+        "setting": "524288",
+        "unit": "8kB"
+      },
+      "maintenance_work_mem": {
+        "setting": "65536",
+        "unit": "kB"
+      },
+      "max_connections": {
+        "setting": "100",
+        "unit": null
+      },
+      "max_parallel_workers": {
+        "setting": "8",
+        "unit": null
+      },
+      "max_parallel_workers_per_gather": {
+        "setting": "2",
+        "unit": null
+      },
+      "shared_buffers": {
+        "setting": "16384",
+        "unit": "8kB"
+      },
+      "temp_file_limit": {
+        "setting": "-1",
+        "unit": "kB"
+      },
+      "work_mem": {
+        "setting": "4096",
+        "unit": "kB"
+      }
+    }
+  },
+  "software": {
+    "httpx": "0.28.1",
+    "psycopg": "3.3.4",
+    "python": "3.14.7"
+  },
+  "storage": {
+    "capacity_bytes": 509332160512,
+    "free_bytes_final": 448992464896,
+    "free_bytes_initial": 448992464896
+  },
+  "worktree": "dirty"
+}

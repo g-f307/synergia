@@ -1,0 +1,19 @@
+{
+  "base_url": "http://127.0.0.1:58001",
+  "existing_execution_id": "9945d638-c048-44c2-80d7-93a5ce24900e",
+  "full_oracle_enabled": true,
+  "isolation_kind": "isolated-container",
+  "organization_code": "SYN-ORG-001",
+  "organization_id": "63000000-0000-4000-8000-000000000011",
+  "query_repetitions": 1,
+  "query_warmups": 0,
+  "report_repetitions": 1,
+  "report_warmups": 0,
+  "reports_enabled": true,
+  "reprocess_enabled": false,
+  "request_timeout_seconds": 3600.0,
+  "run_id": "v05-org001-reconciled-pg16-20260917",
+  "sample_interval_seconds": 2.0,
+  "scenario_id": "V05",
+  "token_source": "SYNERGIA_PERFORMANCE_TOKEN"
+}

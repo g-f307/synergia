@@ -1,0 +1,19 @@
+{
+  "base_url": "http://127.0.0.1:58002",
+  "existing_execution_id": null,
+  "full_oracle_enabled": true,
+  "isolation_kind": "isolated-container",
+  "organization_code": "SYN-ORG-001",
+  "organization_id": "63000000-0000-4000-8000-000000000011",
+  "query_repetitions": 5,
+  "query_warmups": 1,
+  "report_repetitions": 5,
+  "report_warmups": 1,
+  "reports_enabled": true,
+  "reprocess_enabled": false,
+  "request_timeout_seconds": 3600.0,
+  "run_id": "rupture-pg16-reallocated-20260917-v00",
+  "sample_interval_seconds": 1.0,
+  "scenario_id": "V00",
+  "token_source": "SYNERGIA_PERFORMANCE_TOKEN"
+}

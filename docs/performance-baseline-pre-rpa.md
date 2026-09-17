@@ -4,19 +4,20 @@
 
 **Baseline local publicada para investigação, não baseline de referência. Release
 candidate ainda não aprovada por desempenho/confiabilidade.** A massa de
-referência `V05` (6.800 linhas de plano/88.000 seriais) foi gerada, mas **não
-foi processada nem consultada**. Não houve teste de ruptura, que requer ambiente
-isolado. Não é válido extrapolar percentis de `V02` ou de concorrência pequena
-para `V05`.
+referência `V05` de uma organização (6.800 linhas de plano/88.000 seriais) foi
+processada, consultada e reconciliada em PostgreSQL 16 com 39/39 checks. O
+[relatório V05](performance-reference-v05-pg16.md) registra contagens e digests
+integrais. O [ensaio de ruptura](performance-rupture-pg16.md) identificou a
+memória do PostgreSQL como primeiro limite do envelope isolado e confirmou a
+classificação por contraprova. As evidências sanitizadas estão versionadas e
+possuem inventário e hashes verificáveis.
 
-O índice reproduzível `artifacts/performance/evidence-index-local-pg18-v3.json`
-registra SHA-256 e tamanho dos artefatos, ambiente, massa, workload, percentis,
-recursos e verificações. São sete rodadas indexadas: seis `exploratory_pass` e
-uma `diagnostic` (`C03/C08` inicial, 14/17 oráculos). Ambas as suítes JUnit
-indexadas não têm falhas. Os dois manifestos `V05` e os hashes das oito fontes
-também são indexados como `generated_only_not_processed`. O índice declara
-`exploratory_non_comparable` e
-`not_approved`, independentemente de os oráculos locais terem passado.
+O índice reproduzível `evidence/performance/issue-95/index.json` registra
+SHA-256, tamanho, categoria e origem de 188 arquivos publicados. Ele cobre a
+rodada `V05` processada, os dois ensaios de ruptura, planos PostgreSQL antes e
+depois do índice, comparativo da migration e manifestos `V00`, `V01`, `V02` e
+`V05`. `evidence/performance/issue-95/SHA256SUMS` permite verificar o conjunto
+sem depender do diretório local ignorado pelo Git.
 
 ## Ambiente, massa e comparabilidade
 
@@ -46,7 +47,8 @@ contém o **mesmo volume total**, mas uma organização; seu digest lógico é
 `e8aac580f62c91a11a199a44a4daca8c40f498fc4cb7f9fdbda1af40cd0aa059`
 e o SHA-256 do manifesto é
 `7e351dfbb2689a06d261d6e64ff92f5771b20631f2a75d8b78774fa65325d9e5`.
-Ele também foi somente gerado. O teste cumulativo de oito organizações exige
+Ele foi processado e reconciliado integralmente na execução
+`9945d638-c048-44c2-80d7-93a5ce24900e`. O teste cumulativo de oito organizações exige
 reservas/importações e atores autorizados separados por organização; não se
 deve enviar um bundle multi-organização como se fosse uma única organização.
 `V00`–`V02` usaram apenas a organização sintética 001, com 50/500, 680/8.800 e
@@ -102,11 +104,12 @@ não foram escondidos na taxa de erro inesperado.
 | PostgreSQL | até 3 conexões, 2 em espera; 0 rollback, deadlock e arquivo temporário; 239.274 blocos lidos, 27.499.132 hits | até 4 conexões, 1 em espera; 0 rollback, deadlock e arquivo temporário; 13 blocos lidos, 711.878 hits | `pg_stat` mede o banco misto, não CPU/RSS específicos do processo PostgreSQL |
 | Armazenamento | filesystem dos artefatos: livre inicial 450.405.404.672 B, final 450.404.892.672 B | livre mínima do mesmo filesystem 450.403.827.712 B | o coletor não apurou separadamente espaço/IO de importações e banco temporários em `/tmp`; WAL só foi medido na sonda de índice |
 
-O primeiro **recurso saturado** não foi identificado: `V02` concluiu, e o
-degrau seguinte foi interrompido preventivamente por risco de pressão de
-memória no host sem isolamento. Não houve ponto de ruptura observado. Os
-números de CPU, banco e disco acima não permitem atribuir a eles a limitação
-do teste; a projeção de RSS também não equivale a medição em `V05`.
+Na rodada exploratória antiga, o primeiro recurso saturado não foi identificado:
+`V02` concluiu e o degrau seguinte foi interrompido preventivamente. O ensaio
+isolado posterior encerrou `V01` quando o PostgreSQL atingiu 90,93% de seu
+cgroup de 384 MiB. Ao ampliar o banco para 512 MiB e reduzir a API, o primeiro
+limite mudou para a memória da API. CPU ficou abaixo de 50%, storage abaixo de
+12% e não houve OOM. A classificação atual é `environment_limit` por memória.
 
 ### Esperado versus observado
 
@@ -117,8 +120,8 @@ do teste; a projeção de RSS também não equivale a medição em `V05`.
 | Duplicidade `C02`, reprocessamento `C03` | uma vencedora + `409`; uma tentativa + replay | respostas e vínculos esperados na massa pequena | verificado localmente |
 | Consultas `C05` | conteúdo funcional estável nos níveis 2/4, sem erro inesperado | 81/81 checks e 240/240 HTTP `200` | verificado localmente |
 | Isolamento `C08` | ator de outra organização não vê detalhes da organização 001 | seis respostas `404` contra seis `200` de controle | verificado localmente na massa pequena |
-| Recuperação `F01`–`F06` | transação revertida antes do commit; terminal/no-op depois | fixtures pequenas e 63/63 testes integrados | verificado localmente; referência pendente |
-| Referência `V05` | 6.800/88.000 processados, consultados e reconciliados | bundle gerado e hashes das quatro fontes válidos; nenhum upload | **não verificado** |
+| Recuperação `F01`–`F06` | transação revertida antes do commit; terminal/no-op depois | 63/63 testes integrados; a mesma execução V05 foi revertida sem saídas parciais, retomada e reconciliada após o commit | verificado localmente e no volume de referência; automatização continua pendente |
+| Referência `V05` | 6.800/88.000 processados, consultados e reconciliados | 189.600 linhas normalizadas; 6.800 Workorders/lotes; 88.000 seriais; 182.800 classificações buscadas; relatórios/exports comparados por digest | **verificado**, 39/39 checks |
 
 ## Concorrência, falha e decisão sobre gargalos
 
@@ -162,29 +165,26 @@ de saturação por conexões, deadlocks ou temporários PostgreSQL em `V02`.
 
 | Classe solicitada | Evidência e alcance | Decisão, risco e acompanhamento |
 | --- | --- | --- |
-| Limite conhecido do ambiente | host físico de 8,0 GiB, swap em uso e serviços sem limite explícito; `/tmp` temporário sem observação de espaço por serviço | **limite de teste preventivo**, não `environment_limit` comprovado; não executar ruptura neste host. Risco alto de interferir em outras cargas. Repetir em VM/container descartável, com limites e contraprova por carga menor/recurso ampliado. |
+| Limite conhecido do ambiente | pod descartável, swap desativada, 2 CPUs por serviço; PostgreSQL 384 MiB atingiu 90,93% no `V01` | **`environment_limit` comprovado**. Com PostgreSQL 512 MiB, o gargalo mudou para a API limitada a 640 MiB. Não houve OOM nem publicação parcial. |
 | Degradação aceitável | `C05` 2/4 leitores pequenos, p95 consolidado 182,283 ms, 0/240 erro e 81/81 checks | aceitável **somente** como smoke funcional local. Sem séries equivalentes de mesma massa/configuração não há decisão de degradação aceitável em `V05`. Acompanhar p95 e throughput no ambiente isolado. |
 | Configuração inadequada | um worker com processamento síncrono; saúde da API não respondeu durante upload `V02`; sem cgroup e sem métricas do storage de banco/importações | hipótese de configuração/capacidade, **não** fix validado. Risco alto de indisponibilidade concorrente. Perfilar fases, medir workers/timeouts/limites e instrumentar armazenamento; não ampliar workers às cegas com RSS crescente. |
-| Defeito da aplicação | scan global de avaliações no consolidado e publicação parcial antes do commit observados nas etapas 7 e 6 | migration `0027` e commit atômico/filtro terminal corrigidos localmente. Regressões 46/46 e 63/63. Risco residual médio: PG16/`V05`, HTTP, escrita e falha de container ainda não validados. |
-| Gargalo crítico para a release | `V02` upload 453,59 s > meta proposta 300 s, RSS 2,15 GiB; `V05` não executado; oráculo completo de consolidado ausente | **bloqueador de aprovação** por evidência insuficiente e provável escala de memória. Corrigir após perfil ou registrar aceitação formal com limites/risco no ambiente-alvo; não promover RC nem declarar capacidade de 88.000 seriais antes de `V05` reconciliado. |
+| Defeito da aplicação | scan global de avaliações, publicação parcial antes do commit e retenção excessiva de detalhes de regras | migration `0027`, commit atômico e processamento adiado de detalhes validados; a V05 terminou e passou 39/39 checks. Permanecem a série reproduzível de processamento e a falha controlada de container. |
+| Gargalo crítico para a release | a `V05` funcional passou 39/39; o ensaio isolado localizou a ruptura por memória já no `V01` sob o envelope reduzido | O bloqueio de identificação está encerrado e as evidências estão publicadas. Dimensionar memória do ambiente-alvo antes da aprovação de capacidade. |
 
-Nenhum recurso limitante do sistema sob teste foi isolado por correlação e
-contraprova. A classificação acima separa fatos de hipóteses; a decisão de
-aceitar custo do índice é restrita à investigação local, não ao upload de
-referência. Os acompanhamentos exigem responsável e data no PR/issue da
-execução em infraestrutura; esses campos ainda não foram atribuídos aqui.
+O recurso limitante foi isolado por correlação temporal e contraprova. A
+classificação vale para os envelopes locais registrados, não como recomendação
+de dimensionamento do ambiente corporativo. Os acompanhamentos exigem
+responsável e data no PR/issue; esses campos ainda não foram atribuídos aqui.
 
 ## Portões ainda abertos para a release candidate
 
-1. Repetir em ambiente descartável com recursos/limites registrados,
-   PostgreSQL 16 e código commitado; processar **e consultar** `V05`, construir
-   oráculo completo derivado do manifesto e comparar contagens, consolidados,
-   classificações, relatórios/exports e `null` no volume de uma organização;
-   repetir isolamento/cumulativo com massas particionadas nas oito organizações.
-2. Fazer degraus `V03`–`V06+`, inclusive ruptura **somente** no ambiente
-   isolado, até saturação/ponto de parada com CPU, memória, banco,
-   armazenamento de API/importações/PG separadamente, duração e erro;
-   classificar primeiro recurso limitante com contraprova.
+1. Repetir a `V05` a partir de código commitado para obter uma série de upload
+   fim a fim comparável; repetir isolamento/cumulativo com massas particionadas
+   nas oito organizações. A execução funcional de uma organização e seu
+   oráculo completo estão concluídos no relatório V05.
+2. Calibrar o envelope do ambiente-alvo: o ensaio isolado já encontrou o
+   primeiro limite e sua contraprova, mas os valores locais de 384/512 MiB para
+   PostgreSQL e 640/1.280 MiB para API não são recomendação de produção.
 3. Repetir upload pelo menos cinco vezes, instrumentar fases e corrigir ou
    formalizar decisão sobre memória/processamento síncrono sem reduzir
    auditoria, autorização, proveniência ou integridade.
@@ -214,16 +214,16 @@ continuam requisitos absolutos, sem margem de erro. Percentis de upload
 exigem cinco rodadas independentes e duas séries equivalentes com variação de
 p95 ≤ 20%, como definido no plano de testes.
 
-## Como reproduzir e anexar a evidência
+## Como reproduzir e verificar a evidência
 
 Os documentos versionados de [volume](performance-baseline-local-pg18.md),
 [concorrência](performance-concurrency-local-pg18.md),
 [recuperação](performance-recovery-local-pg18.md) e
 [planos/índice](performance-postgres-plans-local-pg18.md) contêm método,
-interpretação e limitações. Os artefatos brutos ficam ignorados pelo Git em
-`artifacts/performance/`; os bundles/manifests em `artifacts/synthetic/`.
-**Anexar ambos ao PR** ou armazenar em repositório de artefatos com hashes do
-índice. Eles não estarão presentes em um clone limpo por padrão.
+interpretação e limitações. As saídas originais continuam ignoradas pelo Git em
+`artifacts/`; a cópia sanitizada necessária para revisão está versionada em
+`evidence/performance/issue-95/`. O índice associa cada arquivo publicado à sua
+origem, e `SHA256SUMS` permite conferir sua integridade em um clone limpo.
 
 No **ambiente isolado PG16**, com API iniciada, política de upload acima dos
 bytes do manifesto e token temporário do gestor definido apenas em variável
@@ -253,7 +253,8 @@ vezes e preservar ambiente, manifesto, amostras e oráculos. `V03` e `V04`
 seguem o mesmo comando com seus bundles/IDs; `V06+` deve ser gerado com
 `scripts/generate_synthetic_data.py --workorders 8500 --serials 110000
 --organization-count 1 --output <diretorio-novo>` para o primeiro degrau
-de 125%, **apenas após** comprovar isolamento/limites e concluir `V05`.
+de 125%. A `V05` funcional já foi concluída; antes de `V06+`, ainda é
+obrigatório comprovar isolamento/limites e registrar os critérios de parada.
 O runner agora recusa `V06+` ou massa acima de 6.800/88.000 sem
 `--isolation-kind isolated-container` (com runtime registrado) ou
 `--isolation-kind isolated-vm` (com `--metadata vm_limits='<cpu-ram-io>'`),
@@ -275,31 +276,16 @@ antes/depois de `0027` usam
 restritos ao banco descartável conforme o
 [relatório de planos](performance-postgres-plans-local-pg18.md).
 
-Com os diretórios locais preservados, o índice é reproduzido por:
+Com os diretórios locais preservados, a publicação sanitizada é reproduzida por:
 
 ```bash
-backend/.venv/bin/python scripts/build_performance_evidence_index.py \
-  --run artifacts/performance/v00-formal-local-pg18 \
-  --run artifacts/performance/v01-local-pg18 \
-  --run artifacts/performance/v02-local-pg18 \
-  --run artifacts/performance/c01-c02-c07-small-local-pg18-repeat \
-  --run artifacts/performance/c03-c08-smoke-local-pg18 \
-  --run artifacts/performance/c05-local-pg18-five-cycles \
-  --run artifacts/performance/c06-export-integrity-smoke-local-pg18 \
-  --junit artifacts/performance/f01-f06-final-local-pg18-junit.xml \
-  --junit artifacts/performance/pgplans-v02-index-final-regression-local-pg18-junit.xml \
-  --plan-run artifacts/performance/pgplans-v02-consolidated-local-pg18 \
-  --plan-run artifacts/performance/pgplans-v02-index-after-local-pg18 \
-  --benchmark-run artifacts/performance/workorder-index-absent-local-pg18 \
-  --benchmark-run artifacts/performance/workorder-index-present-local-pg18 \
-  --manifest artifacts/synthetic/v05-reference-valid/manifest.json \
-  --manifest artifacts/synthetic/v05-org001-valid/manifest.json \
-  --output artifacts/performance/evidence-index-repeat-local-pg18.json
+backend/.venv/bin/python scripts/publish_performance_evidence.py \
+  --spec evidence/performance/issue-95-publication.json
 ```
 
-O comando recusa artefato sem ambiente/massa/oráculos, resultados de sonda
-inconsistentes ou sobrescrita de índice. `created_at` muda em cada geração;
-os hashes dos arquivos-fonte permitem verificar que o conteúdo da evidência
-permaneceu igual. Releases futuras devem usar este esquema de artefatos e
-comparar **somente** cenários, massa, código, PostgreSQL e recursos
-equivalentes, anotando toda diferença de configuração.
+O comando recusa origem ausente, categoria obrigatória vazia, segredo detectado
+ou sobrescrita do destino. Caminhos absolutos e chaves sensíveis são
+sanitizados. O resultado determinístico contém o inventário e os hashes para
+verificação independente. Releases futuras devem comparar **somente** cenários,
+massa, código, PostgreSQL e recursos equivalentes, anotando toda diferença de
+configuração.

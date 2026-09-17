@@ -1,0 +1,119 @@
+{
+  "published_at": "2026-09-17T13:30:00Z",
+  "output": "evidence/performance/issue-95",
+  "claims": {
+    "reference_execution": "9945d638-c048-44c2-80d7-93a5ce24900e",
+    "reference_manifest_digest": "e8aac580f62c91a11a199a44a4daca8c40f498fc4cb7f9fdbda1af40cd0aa059",
+    "reference_checks": "39/39",
+    "reference_volume": "6800 workorders, 6800 lots, 88000 serials",
+    "rupture_classification": "environment_limit",
+    "rupture_first_limit": "postgres_memory_threshold at V01",
+    "migration": "0027_index_rule_evaluations_workorder.sql"
+  },
+  "scope": {
+    "included": [
+      "complete V05 reference run and full oracle output",
+      "primary and counterproof rupture results, cgroup samples, and complete V00 runs",
+      "all collected PostgreSQL plans before and after migration 0027",
+      "before and after migration benchmark results",
+      "manifests for processed V00, V01, V02, and V05 workloads"
+    ],
+    "omitted": [
+      "empty runner logs from interrupted V01 rupture steps",
+      "synthetic source payloads whose hashes are retained in the manifests"
+    ],
+    "interrupted_steps": "V01 rupture steps were terminated at the memory threshold before a complete functional run directory was produced; their stop state and resource samples are included in the staircase JSON and cgroup CSV files"
+  },
+  "entries": [
+    {
+      "category": "reference_run",
+      "source": "artifacts/performance/v05-org001-reconciled-pg16-20260917",
+      "target": "runs/v05-reference",
+      "include": ["*.json", "*.csv", "*.md"]
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-1280m-20260917-staircase.json",
+      "target": "rupture/primary"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-1280m-20260917-v00-cgroup.csv",
+      "target": "rupture/primary"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-1280m-20260917-v01-cgroup.csv",
+      "target": "rupture/primary"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-1280m-20260917-v00",
+      "target": "rupture/primary/v00",
+      "include": ["*.json", "*.csv", "*.md"]
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-reallocated-20260917-staircase.json",
+      "target": "rupture/counterproof"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-reallocated-20260917-v00-cgroup.csv",
+      "target": "rupture/counterproof"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-reallocated-20260917-v01-cgroup.csv",
+      "target": "rupture/counterproof"
+    },
+    {
+      "category": "rupture_run",
+      "source": "artifacts/performance/rupture-pg16-reallocated-20260917-v00",
+      "target": "rupture/counterproof/v00",
+      "include": ["*.json", "*.csv", "*.md"]
+    },
+    {
+      "category": "postgres_plan_before",
+      "source": "artifacts/performance/pgplans-v02-consolidated-local-pg18",
+      "target": "postgres-plans/before-0027",
+      "include": ["*.json"]
+    },
+    {
+      "category": "postgres_plan_after",
+      "source": "artifacts/performance/pgplans-v02-index-after-local-pg18",
+      "target": "postgres-plans/after-0027",
+      "include": ["*.json"]
+    },
+    {
+      "category": "migration_comparison",
+      "source": "artifacts/performance/workorder-index-absent-local-pg18/run.json",
+      "target": "migration-comparison/before-0027"
+    },
+    {
+      "category": "migration_comparison",
+      "source": "artifacts/performance/workorder-index-present-local-pg18/run.json",
+      "target": "migration-comparison/after-0027"
+    },
+    {
+      "category": "manifest",
+      "source": "artifacts/synthetic/v00-org001-valid/manifest.json",
+      "target": "manifests/v00"
+    },
+    {
+      "category": "manifest",
+      "source": "artifacts/synthetic/v01-org001-valid/manifest.json",
+      "target": "manifests/v01"
+    },
+    {
+      "category": "manifest",
+      "source": "artifacts/synthetic/v02-org001-valid/manifest.json",
+      "target": "manifests/v02"
+    },
+    {
+      "category": "manifest",
+      "source": "artifacts/synthetic/v05-org001-valid/manifest.json",
+      "target": "manifests/v05"
+    }
+  ]
+}

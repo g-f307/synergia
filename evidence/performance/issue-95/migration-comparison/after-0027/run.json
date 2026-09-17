@@ -1,0 +1,860 @@
+{
+  "baseline_environment": {
+    "captured_at": "2026-09-15T04:38:33.355861+00:00",
+    "commit": "61c25fb6a158c1a25f0932b72646e06ca0637c1e",
+    "comparability": "comparable",
+    "environment_name": "local-isolated-pg18",
+    "host": {
+      "architecture": "x86_64",
+      "cpu_model": "not_available",
+      "logical_cpus": 12,
+      "memory_total_bytes": 8022978560,
+      "operating_system": "Linux-7.1.5-201.fc44.x86_64-x86_64-with-glibc2.43"
+    },
+    "mass": {
+      "bundle": "v02-org001-valid",
+      "configuration": {
+        "serials": 22000,
+        "workorders": 1700
+      },
+      "entities": {
+        "lots": 1700,
+        "organizations": 1,
+        "serials": 22000,
+        "workorders": 1700
+      },
+      "files": [
+        {
+          "file": "n-fp.xlsx",
+          "format": "xlsx",
+          "records": 1700,
+          "sha256": "e8396fdce6f836c705e0572821e6adc40d903872a67656dacc3a4da28f826768",
+          "size_bytes": 83038,
+          "source": "N-FP"
+        },
+        {
+          "file": "owm.json",
+          "format": "json",
+          "records": 22000,
+          "sha256": "75fa51efb72e19a334d55968b7455ecaf0b929b89abf8d438eb265a7698ea5f2",
+          "size_bytes": 10142003,
+          "source": "OWM"
+        },
+        {
+          "file": "gmes-oqc.csv",
+          "format": "csv",
+          "records": 22000,
+          "sha256": "02d8ad5af97a9a74995281f103beef058bf567f932488698f50e82ce082a809d",
+          "size_bytes": 2970161,
+          "source": "GMES/OQC"
+        },
+        {
+          "file": "tms.json",
+          "format": "json",
+          "records": 1700,
+          "sha256": "739b657da7a538f170c18194a85069952e0ba9390338704dd94f07d5bea7767c",
+          "size_bytes": 593303,
+          "source": "TMS"
+        }
+      ],
+      "generator_version": "1.1.0",
+      "logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+      "profile": "custom",
+      "scenario": "valid",
+      "schema_version": "1.1",
+      "seed": 20260830
+    },
+    "metadata": {
+      "backend_limits": "1 uvicorn worker; access token 120min; no explicit cgroup limit",
+      "container_runtime": "host processes",
+      "network_topology": "generator API and PostgreSQL on loopback",
+      "postgres_limits": "PostgreSQL 18.3; no explicit cgroup limit; shared_buffers 128MB; max_connections 100",
+      "resource_collection": "runner procfs and pg_stat",
+      "storage_type": "local filesystem"
+    },
+    "missing_required_metadata": [],
+    "postgres": {
+      "collection_status": "collected",
+      "server_version": "18.3",
+      "settings": {
+        "effective_cache_size": {
+          "setting": "524288",
+          "unit": "8kB"
+        },
+        "maintenance_work_mem": {
+          "setting": "65536",
+          "unit": "kB"
+        },
+        "max_connections": {
+          "setting": "100",
+          "unit": null
+        },
+        "max_parallel_workers": {
+          "setting": "8",
+          "unit": null
+        },
+        "max_parallel_workers_per_gather": {
+          "setting": "2",
+          "unit": null
+        },
+        "shared_buffers": {
+          "setting": "16384",
+          "unit": "8kB"
+        },
+        "temp_file_limit": {
+          "setting": "-1",
+          "unit": "kB"
+        },
+        "work_mem": {
+          "setting": "4096",
+          "unit": "kB"
+        }
+      }
+    },
+    "software": {
+      "httpx": "0.28.1",
+      "psycopg": "3.3.4",
+      "python": "3.14.7"
+    },
+    "storage": {
+      "capacity_bytes": 509332160512,
+      "free_bytes_final": 450404892672,
+      "free_bytes_initial": 450405404672
+    },
+    "worktree": "dirty"
+  },
+  "comparability": "non_comparable",
+  "execution_id": "5250fbd3-3b11-4395-aabf-e92c2f8e4d60",
+  "index_present": true,
+  "mass_manifest": {
+    "configuration": {
+      "serials": 22000,
+      "workorders": 1700
+    },
+    "entities": {
+      "lots": 1700,
+      "organizations": 1,
+      "serials": 22000,
+      "workorders": 1700
+    },
+    "expectations": {
+      "absent_values": {
+        "N-FP.planned_quantity": 0,
+        "OWM.planned_quantity": 22000,
+        "TMS.quantity": 0
+      },
+      "classification_rule_ids": [
+        "oqc_pass"
+      ],
+      "known_organizations": [
+        "SYN-ORG-001"
+      ],
+      "processing_issue_codes": {},
+      "query_samples": {
+        "missing": {
+          "lot": "SYN-LOT-NOT-FOUND",
+          "serial": "SYN-SER-NOT-FOUND",
+          "workorder": "SYN-WO-NOT-FOUND"
+        },
+        "organizations": {
+          "SYN-ORG-001": {
+            "lots": {
+              "first": "SYN-LOT-000001",
+              "last": "SYN-LOT-001700",
+              "median": "SYN-LOT-000850"
+            },
+            "serials": {
+              "first": "SYN-SER-00000001",
+              "last": "SYN-SER-00022000",
+              "median": "SYN-SER-00011000"
+            },
+            "workorders": {
+              "first": "SYN-WO-000001",
+              "last": "SYN-WO-001700",
+              "median": "SYN-WO-000850"
+            }
+          }
+        }
+      },
+      "valid_pipeline": {
+        "consolidated_lots": 1700,
+        "consolidated_serials": 22000,
+        "consolidated_workorders": 1700,
+        "entities_by_organization": {
+          "SYN-ORG-001": {
+            "lots": 1700,
+            "serials": 22000,
+            "workorders": 1700
+          }
+        },
+        "normalized_records": 47400,
+        "rejected_records": 0,
+        "rows_read": 47400,
+        "valid_records": 47400
+      },
+      "validation_issue_codes": {}
+    },
+    "files": [
+      {
+        "file": "n-fp.xlsx",
+        "format": "xlsx",
+        "records": 1700,
+        "sha256": "e8396fdce6f836c705e0572821e6adc40d903872a67656dacc3a4da28f826768",
+        "size_bytes": 83038,
+        "source": "N-FP"
+      },
+      {
+        "file": "owm.json",
+        "format": "json",
+        "records": 22000,
+        "sha256": "75fa51efb72e19a334d55968b7455ecaf0b929b89abf8d438eb265a7698ea5f2",
+        "size_bytes": 10142003,
+        "source": "OWM"
+      },
+      {
+        "file": "gmes-oqc.csv",
+        "format": "csv",
+        "records": 22000,
+        "sha256": "02d8ad5af97a9a74995281f103beef058bf567f932488698f50e82ce082a809d",
+        "size_bytes": 2970161,
+        "source": "GMES/OQC"
+      },
+      {
+        "file": "tms.json",
+        "format": "json",
+        "records": 1700,
+        "sha256": "739b657da7a538f170c18194a85069952e0ba9390338704dd94f07d5bea7767c",
+        "size_bytes": 593303,
+        "source": "TMS"
+      }
+    ],
+    "generator_version": "1.1.0",
+    "logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+    "profile": "custom",
+    "scenario": "valid",
+    "scenario_counts": {
+      "fully_valid": 47400
+    },
+    "schema_version": "1.1",
+    "seed": 20260830,
+    "sources": {
+      "GMES/OQC": {
+        "records": 22000
+      },
+      "N-FP": {
+        "records": 1700
+      },
+      "OWM": {
+        "records": 22000
+      },
+      "TMS": {
+        "records": 1700
+      }
+    },
+    "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+  },
+  "organization_id": "63000000-0000-4000-8000-000000000011",
+  "phase": "present",
+  "read": {
+    "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+    "p50_ms": 82.505387,
+    "p95_ms": 85.138881,
+    "p99_ms": 85.138881,
+    "samples": [
+      {
+        "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+        "duration_ms": 82.505387,
+        "payload_bytes": 159689
+      },
+      {
+        "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+        "duration_ms": 85.138881,
+        "payload_bytes": 159689
+      },
+      {
+        "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+        "duration_ms": 83.66486,
+        "payload_bytes": 159689
+      },
+      {
+        "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+        "duration_ms": 77.62265,
+        "payload_bytes": 159689
+      },
+      {
+        "digest": "a006c13e1cad382c85ded07745293c2d9e3f3c58e8700a077ad5e8eb05d508f9",
+        "duration_ms": 76.064082,
+        "payload_bytes": 159689
+      }
+    ]
+  },
+  "repetitions": 5,
+  "rule_evaluations_after": 853842,
+  "rule_evaluations_before": 853842,
+  "run_id": "workorder-index-present-local-pg18",
+  "warmups": 1,
+  "workorder_number": "SYN-WO-000850",
+  "write": {
+    "p50_ms": 30.14,
+    "p95_ms": 32.463,
+    "p99_ms": 32.463,
+    "rows_per_sample": 1000,
+    "samples": [
+      {
+        "execution_ms": 30.14,
+        "plan": {
+          "Execution Time": 30.14,
+          "Plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 0.0,
+            "Actual Startup Time": 10.13,
+            "Actual Total Time": 10.131,
+            "Alias": "rule_evaluations",
+            "Async Capable": false,
+            "Disabled": false,
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Node Type": "ModifyTable",
+            "Operation": "Insert",
+            "Parallel Aware": false,
+            "Plan Rows": 0,
+            "Plan Width": 0,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1000.0,
+                "Actual Startup Time": 0.153,
+                "Actual Total Time": 0.887,
+                "Alias": "generate_series",
+                "Async Capable": false,
+                "Disabled": false,
+                "Function Name": "generate_series",
+                "Local Dirtied Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Written Blocks": 0,
+                "Node Type": "Function Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1000,
+                "Plan Width": 224,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 1010,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Startup Cost": 0.0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 15.0,
+                "WAL Buffers Full": 0,
+                "WAL Bytes": 2970,
+                "WAL FPI": 0,
+                "WAL Records": 30
+              }
+            ],
+            "Relation Name": "rule_evaluations",
+            "Shared Dirtied Blocks": 37,
+            "Shared Hit Blocks": 7222,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 37,
+            "Startup Cost": 0.0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 15.0,
+            "WAL Buffers Full": 0,
+            "WAL Bytes": 557290,
+            "WAL FPI": 0,
+            "WAL Records": 4103
+          },
+          "Planning": {
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.059,
+          "Settings": {},
+          "Triggers": [
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.044,
+              "Trigger Name": "RI_ConstraintTrigger_c_17085"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_workorder_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.706,
+              "Trigger Name": "RI_ConstraintTrigger_c_17090"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_source_file_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 0.937,
+              "Trigger Name": "RI_ConstraintTrigger_c_17095"
+            }
+          ]
+        },
+        "rows": 1000,
+        "shared_dirtied_blocks": 37,
+        "wal_bytes": 557290,
+        "wal_records": 4103
+      },
+      {
+        "execution_ms": 30.125,
+        "plan": {
+          "Execution Time": 30.125,
+          "Plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 0.0,
+            "Actual Startup Time": 10.062,
+            "Actual Total Time": 10.063,
+            "Alias": "rule_evaluations",
+            "Async Capable": false,
+            "Disabled": false,
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Node Type": "ModifyTable",
+            "Operation": "Insert",
+            "Parallel Aware": false,
+            "Plan Rows": 0,
+            "Plan Width": 0,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1000.0,
+                "Actual Startup Time": 0.155,
+                "Actual Total Time": 0.886,
+                "Alias": "generate_series",
+                "Async Capable": false,
+                "Disabled": false,
+                "Function Name": "generate_series",
+                "Local Dirtied Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Written Blocks": 0,
+                "Node Type": "Function Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1000,
+                "Plan Width": 224,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 1010,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Startup Cost": 0.0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 15.0,
+                "WAL Buffers Full": 0,
+                "WAL Bytes": 2970,
+                "WAL FPI": 0,
+                "WAL Records": 30
+              }
+            ],
+            "Relation Name": "rule_evaluations",
+            "Shared Dirtied Blocks": 38,
+            "Shared Hit Blocks": 7230,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 38,
+            "Startup Cost": 0.0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 15.0,
+            "WAL Buffers Full": 0,
+            "WAL Bytes": 558454,
+            "WAL FPI": 0,
+            "WAL Records": 4105
+          },
+          "Planning": {
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.066,
+          "Settings": {},
+          "Triggers": [
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.125,
+              "Trigger Name": "RI_ConstraintTrigger_c_17085"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_workorder_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.656,
+              "Trigger Name": "RI_ConstraintTrigger_c_17090"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_source_file_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 0.953,
+              "Trigger Name": "RI_ConstraintTrigger_c_17095"
+            }
+          ]
+        },
+        "rows": 1000,
+        "shared_dirtied_blocks": 38,
+        "wal_bytes": 558454,
+        "wal_records": 4105
+      },
+      {
+        "execution_ms": 30.303,
+        "plan": {
+          "Execution Time": 30.303,
+          "Plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 0.0,
+            "Actual Startup Time": 10.184,
+            "Actual Total Time": 10.185,
+            "Alias": "rule_evaluations",
+            "Async Capable": false,
+            "Disabled": false,
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Node Type": "ModifyTable",
+            "Operation": "Insert",
+            "Parallel Aware": false,
+            "Plan Rows": 0,
+            "Plan Width": 0,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1000.0,
+                "Actual Startup Time": 0.153,
+                "Actual Total Time": 0.925,
+                "Alias": "generate_series",
+                "Async Capable": false,
+                "Disabled": false,
+                "Function Name": "generate_series",
+                "Local Dirtied Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Written Blocks": 0,
+                "Node Type": "Function Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1000,
+                "Plan Width": 224,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 1010,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Startup Cost": 0.0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 15.0,
+                "WAL Buffers Full": 0,
+                "WAL Bytes": 3069,
+                "WAL FPI": 0,
+                "WAL Records": 31
+              }
+            ],
+            "Relation Name": "rule_evaluations",
+            "Shared Dirtied Blocks": 38,
+            "Shared Hit Blocks": 7226,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 38,
+            "Startup Cost": 0.0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 15.0,
+            "WAL Buffers Full": 0,
+            "WAL Bytes": 557741,
+            "WAL FPI": 0,
+            "WAL Records": 4104
+          },
+          "Planning": {
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.058,
+          "Settings": {},
+          "Triggers": [
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.084,
+              "Trigger Name": "RI_ConstraintTrigger_c_17085"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_workorder_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.751,
+              "Trigger Name": "RI_ConstraintTrigger_c_17090"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_source_file_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 0.946,
+              "Trigger Name": "RI_ConstraintTrigger_c_17095"
+            }
+          ]
+        },
+        "rows": 1000,
+        "shared_dirtied_blocks": 38,
+        "wal_bytes": 557741,
+        "wal_records": 4104
+      },
+      {
+        "execution_ms": 32.463,
+        "plan": {
+          "Execution Time": 32.463,
+          "Plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 0.0,
+            "Actual Startup Time": 12.126,
+            "Actual Total Time": 12.127,
+            "Alias": "rule_evaluations",
+            "Async Capable": false,
+            "Disabled": false,
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Node Type": "ModifyTable",
+            "Operation": "Insert",
+            "Parallel Aware": false,
+            "Plan Rows": 0,
+            "Plan Width": 0,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1000.0,
+                "Actual Startup Time": 0.328,
+                "Actual Total Time": 1.244,
+                "Alias": "generate_series",
+                "Async Capable": false,
+                "Disabled": false,
+                "Function Name": "generate_series",
+                "Local Dirtied Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Written Blocks": 0,
+                "Node Type": "Function Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1000,
+                "Plan Width": 224,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 1010,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Startup Cost": 0.0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 15.0,
+                "WAL Buffers Full": 0,
+                "WAL Bytes": 2970,
+                "WAL FPI": 0,
+                "WAL Records": 30
+              }
+            ],
+            "Relation Name": "rule_evaluations",
+            "Shared Dirtied Blocks": 39,
+            "Shared Hit Blocks": 7223,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 38,
+            "Startup Cost": 0.0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 15.0,
+            "WAL Buffers Full": 0,
+            "WAL Bytes": 559770,
+            "WAL FPI": 0,
+            "WAL Records": 4104
+          },
+          "Planning": {
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.101,
+          "Settings": {},
+          "Triggers": [
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.176,
+              "Trigger Name": "RI_ConstraintTrigger_c_17085"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_workorder_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.876,
+              "Trigger Name": "RI_ConstraintTrigger_c_17090"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_source_file_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 0.942,
+              "Trigger Name": "RI_ConstraintTrigger_c_17095"
+            }
+          ]
+        },
+        "rows": 1000,
+        "shared_dirtied_blocks": 39,
+        "wal_bytes": 559770,
+        "wal_records": 4104
+      },
+      {
+        "execution_ms": 29.989,
+        "plan": {
+          "Execution Time": 29.989,
+          "Plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 0.0,
+            "Actual Startup Time": 10.151,
+            "Actual Total Time": 10.152,
+            "Alias": "rule_evaluations",
+            "Async Capable": false,
+            "Disabled": false,
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Node Type": "ModifyTable",
+            "Operation": "Insert",
+            "Parallel Aware": false,
+            "Plan Rows": 0,
+            "Plan Width": 0,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1000.0,
+                "Actual Startup Time": 0.164,
+                "Actual Total Time": 0.891,
+                "Alias": "generate_series",
+                "Async Capable": false,
+                "Disabled": false,
+                "Function Name": "generate_series",
+                "Local Dirtied Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Written Blocks": 0,
+                "Node Type": "Function Scan",
+                "Parallel Aware": false,
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1000,
+                "Plan Width": 224,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 1010,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Startup Cost": 0.0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 15.0,
+                "WAL Buffers Full": 0,
+                "WAL Bytes": 2970,
+                "WAL FPI": 0,
+                "WAL Records": 30
+              }
+            ],
+            "Relation Name": "rule_evaluations",
+            "Shared Dirtied Blocks": 38,
+            "Shared Hit Blocks": 7230,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 38,
+            "Startup Cost": 0.0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 15.0,
+            "WAL Buffers Full": 0,
+            "WAL Bytes": 558566,
+            "WAL FPI": 0,
+            "WAL Records": 4105
+          },
+          "Planning": {
+            "Local Dirtied Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Written Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.058,
+          "Settings": {},
+          "Triggers": [
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 8.974,
+              "Trigger Name": "RI_ConstraintTrigger_c_17085"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_workorder_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 9.601,
+              "Trigger Name": "RI_ConstraintTrigger_c_17090"
+            },
+            {
+              "Calls": 1000,
+              "Constraint Name": "rule_evaluations_source_file_id_execution_id_fkey",
+              "Relation": "rule_evaluations",
+              "Time": 0.938,
+              "Trigger Name": "RI_ConstraintTrigger_c_17095"
+            }
+          ]
+        },
+        "rows": 1000,
+        "shared_dirtied_blocks": 38,
+        "wal_bytes": 558566,
+        "wal_records": 4105
+      }
+    ]
+  }
+}

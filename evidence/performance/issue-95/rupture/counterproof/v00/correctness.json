@@ -1,0 +1,244 @@
+{
+  "checks": [
+    {
+      "actual": [],
+      "check": "upload_preflight",
+      "expected": [],
+      "passed": true
+    },
+    {
+      "actual": "completed",
+      "check": "upload_terminal_state",
+      "expected": "completed",
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "pipeline_summary.rows_read",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "pipeline_summary.valid_records",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "pipeline_summary.rejected_records",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "pipeline_summary.normalized_records",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "check": "oracle.execution_counts.files",
+      "expected": 4,
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "check": "oracle.execution_counts.files_received",
+      "expected": 4,
+      "passed": true
+    },
+    {
+      "actual": 4,
+      "check": "oracle.execution_counts.files_accepted",
+      "expected": 4,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.execution_counts.files_rejected",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "oracle.execution_counts.rows_read",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "oracle.execution_counts.valid_records",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.execution_counts.rejected_records",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 1100,
+      "check": "oracle.execution_counts.normalized_records",
+      "expected": 1100,
+      "passed": true
+    },
+    {
+      "actual": 50,
+      "check": "oracle.execution_counts.workorders",
+      "expected": 50,
+      "passed": true
+    },
+    {
+      "actual": 50,
+      "check": "oracle.execution_counts.lots",
+      "expected": 50,
+      "passed": true
+    },
+    {
+      "actual": 500,
+      "check": "oracle.execution_counts.serials",
+      "expected": 500,
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.execution_counts.classifications",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.execution_counts.pending_items",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.execution_counts.errors",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.execution_counts.warnings",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.classifications.total",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.classifications.fetched",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+      "check": "oracle.classifications.digest",
+      "expected": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.pending.total",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": 0,
+      "check": "oracle.pending.fetched",
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "actual": true,
+      "check": "oracle.workorder_consolidated.generated",
+      "expected": true,
+      "passed": true
+    },
+    {
+      "actual": 50,
+      "check": "oracle.workorder_consolidated.report_count",
+      "expected": 50,
+      "passed": true
+    },
+    {
+      "actual": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+      "check": "oracle.workorder_consolidated.report_digest",
+      "expected": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+      "passed": true
+    },
+    {
+      "actual": 50,
+      "check": "oracle.workorder_consolidated.json_count",
+      "expected": 50,
+      "passed": true
+    },
+    {
+      "actual": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+      "check": "oracle.workorder_consolidated.json_digest",
+      "expected": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+      "passed": true
+    },
+    {
+      "actual": 50,
+      "check": "oracle.workorder_consolidated.csv_count",
+      "expected": 50,
+      "passed": true
+    },
+    {
+      "actual": "ae7052d22874f79ddfdc50bdbbb077a0863b048fe6a1beb16ad9466da57cb8aa",
+      "check": "oracle.workorder_consolidated.csv_digest",
+      "expected": "ae7052d22874f79ddfdc50bdbbb077a0863b048fe6a1beb16ad9466da57cb8aa",
+      "passed": true
+    },
+    {
+      "actual": true,
+      "check": "oracle.oqc_summary.generated",
+      "expected": true,
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.oqc_summary.report_count",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+      "check": "oracle.oqc_summary.report_digest",
+      "expected": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.oqc_summary.json_count",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+      "check": "oracle.oqc_summary.json_digest",
+      "expected": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+      "passed": true
+    },
+    {
+      "actual": 1050,
+      "check": "oracle.oqc_summary.csv_count",
+      "expected": 1050,
+      "passed": true
+    },
+    {
+      "actual": "2231b0db7a2a2c5335aa879b28e4a5034846c0d2b18b45f3ad71f6f4630e7d0a",
+      "check": "oracle.oqc_summary.csv_digest",
+      "expected": "2231b0db7a2a2c5335aa879b28e4a5034846c0d2b18b45f3ad71f6f4630e7d0a",
+      "passed": true
+    }
+  ]
+}
