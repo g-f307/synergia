@@ -70,11 +70,15 @@ SAFE_JUNIT_CASE_NAME = re.compile(r"^[A-Za-z0-9_.:/\-[\]]{1,200}$")
 SAFE_JUNIT_NUMBER = re.compile(r"^\d+(?:\.\d+)?$")
 JUNIT_COUNT_ATTRIBUTES = {"tests", "errors", "failures", "skipped", "time"}
 FORBIDDEN_ARTIFACT_PATTERNS = {
-    "active-html": re.compile(r"(?:<|&lt;)\s*(?:script|iframe|object)\b", re.I),
-    "javascript": re.compile(r"\b(?:javascript:|function\s+\w+\s*\()", re.I),
-    "authorization": re.compile(r"\b(?:authorization|set-cookie)\s*[:=]", re.I),
+    "active-html": re.compile(
+        r"(?:<|&lt;)\s*(?:script|iframe|object)\b", re.IGNORECASE
+    ),
+    "javascript": re.compile(r"\b(?:javascript:|function\s+\w+\s*\()", re.IGNORECASE),
+    "authorization": re.compile(
+        r"\b(?:authorization|set-cookie)\s*[:=]", re.IGNORECASE
+    ),
     "binary-repr": re.compile(
-        r"\bb(?:'|&(?:apos|quot);)(?:PK\\x03\\x04|MZ\\x90)", re.I
+        r"\bb(?:'|&(?:apos|quot);)(?:PK\\x03\\x04|MZ\\x90)", re.IGNORECASE
     ),
 }
 

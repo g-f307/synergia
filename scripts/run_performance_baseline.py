@@ -13,13 +13,14 @@ import subprocess
 import sys
 import threading
 import time
+from collections import Counter
+from collections.abc import Iterable
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from collections import Counter
-from typing import Any, Iterable
+from typing import Any
 from uuid import uuid4
 
 import httpx
@@ -713,7 +714,9 @@ def _expected_oracle(manifest: dict[str, Any]) -> dict[str, Any]:
             {
                 "workorder_number": item["workorder_number"],
                 "lot_number": item["lot_number"],
-                "organization_code": organization_by_workorder[item["workorder_number"]],
+                "organization_code": organization_by_workorder[
+                    item["workorder_number"]
+                ],
                 "decision_state": "approved",
                 "reason": None,
                 "pending_item_id": None,
@@ -791,7 +794,7 @@ def _classification_semantics(item: dict[str, Any]) -> dict[str, Any]:
 def _csv_value(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (list, dict)):
+    if isinstance(value, list | dict):
         return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
     text = "" if value is None else str(value)
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
@@ -871,7 +874,12 @@ def _reconcile_report(
             export_digest,
         )
         exports[export_format] = {"count": export_count, "digest": export_digest}
-    return {"report_type": report_type, "count": count, "digest": digest, "exports": exports}
+    return {
+        "report_type": report_type,
+        "count": count,
+        "digest": digest,
+        "exports": exports,
+    }
 
 
 def _upload(

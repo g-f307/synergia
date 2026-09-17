@@ -108,14 +108,14 @@ jobs:
           path: backend/reports/pytest.xml
           if-no-files-found: error
       - name: Publicar relatório de segurança
-        if: always()
+        if: always() && hashFiles('backend/reports/security.xml', 'docs/security-test-report.md') != ''
         uses: actions/upload-artifact@v4
         with:
           name: seguranca-fastapi
           path: |
             backend/reports/security.xml
             docs/security-test-report.md
-          if-no-files-found: error
+          if-no-files-found: warn
 
   project-data:
     name: Banco e dados sintéticos

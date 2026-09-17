@@ -100,7 +100,10 @@ def _sources(root: Path, entry: dict[str, Any]) -> list[Path]:
         path
         for path in source.rglob("*")
         if path.is_file()
-        and any(fnmatch.fnmatch(str(path.relative_to(source)), pattern) for pattern in patterns)
+        and any(
+            fnmatch.fnmatch(str(path.relative_to(source)), pattern)
+            for pattern in patterns
+        )
     ]
     if not files:
         raise ValueError(f"Entrada sem arquivos: {entry['source']}")
@@ -131,7 +134,11 @@ def publish(spec_path: Path) -> dict[str, Any]:
     for entry in spec["entries"]:
         source_root = (root / entry["source"]).resolve(strict=True)
         for source in _sources(root, entry):
-            relative = source.name if source_root.is_file() else source.relative_to(source_root)
+            relative = (
+                source.name
+                if source_root.is_file()
+                else source.relative_to(source_root)
+            )
             target = Path(entry["target"]) / relative
             target_text = target.as_posix()
             if target_text in targets or target.is_absolute() or ".." in target.parts:

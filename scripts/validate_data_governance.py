@@ -76,14 +76,16 @@ def validate_runbooks() -> None:
         path = ROOT / relative
         assert path.is_file(), f"Runbook ausente: {relative}"
         content = path.read_text(encoding="utf-8")
-        assert REQUIRED_RUNBOOK_SECTIONS <= set(re.findall(r"^## .+$", content, re.M))
+        assert REQUIRED_RUNBOOK_SECTIONS <= set(
+            re.findall(r"^## .+$", content, re.MULTILINE)
+        )
 
 
 def validate_no_secret_material() -> None:
     public_files = [POLICY, *sorted((ROOT / "docs" / "runbooks").glob("*.md"))]
     forbidden = re.compile(
         r"(postgres(?:ql)?://[^\s:]+:[^\s@]+@|BEGIN (?:RSA |OPENSSH )?PRIVATE KEY)",
-        re.I,
+        re.IGNORECASE,
     )
     for path in public_files:
         assert not forbidden.search(path.read_text(encoding="utf-8")), path
