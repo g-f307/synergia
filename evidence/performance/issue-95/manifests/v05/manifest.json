@@ -1,0 +1,127 @@
+{
+  "configuration": {
+    "serials": 88000,
+    "workorders": 6800
+  },
+  "entities": {
+    "lots": 6800,
+    "organizations": 1,
+    "serials": 88000,
+    "workorders": 6800
+  },
+  "expectations": {
+    "absent_values": {
+      "N-FP.planned_quantity": 0,
+      "OWM.planned_quantity": 88000,
+      "TMS.quantity": 0
+    },
+    "classification_rule_ids": [
+      "oqc_pass"
+    ],
+    "known_organizations": [
+      "SYN-ORG-001"
+    ],
+    "processing_issue_codes": {},
+    "query_samples": {
+      "missing": {
+        "lot": "SYN-LOT-NOT-FOUND",
+        "serial": "SYN-SER-NOT-FOUND",
+        "workorder": "SYN-WO-NOT-FOUND"
+      },
+      "organizations": {
+        "SYN-ORG-001": {
+          "lots": {
+            "first": "SYN-LOT-000001",
+            "last": "SYN-LOT-006800",
+            "median": "SYN-LOT-003400"
+          },
+          "serials": {
+            "first": "SYN-SER-00000001",
+            "last": "SYN-SER-00088000",
+            "median": "SYN-SER-00044000"
+          },
+          "workorders": {
+            "first": "SYN-WO-000001",
+            "last": "SYN-WO-006800",
+            "median": "SYN-WO-003400"
+          }
+        }
+      }
+    },
+    "valid_pipeline": {
+      "consolidated_lots": 6800,
+      "consolidated_serials": 88000,
+      "consolidated_workorders": 6800,
+      "entities_by_organization": {
+        "SYN-ORG-001": {
+          "lots": 6800,
+          "serials": 88000,
+          "workorders": 6800
+        }
+      },
+      "normalized_records": 189600,
+      "rejected_records": 0,
+      "rows_read": 189600,
+      "valid_records": 189600
+    },
+    "validation_issue_codes": {}
+  },
+  "files": [
+    {
+      "file": "n-fp.xlsx",
+      "format": "xlsx",
+      "records": 6800,
+      "sha256": "262f29bab7f73973cbc51f6c1538dbb29a46b025b105d03208422ad5c5e174d3",
+      "size_bytes": 315232,
+      "source": "N-FP"
+    },
+    {
+      "file": "owm.json",
+      "format": "json",
+      "records": 88000,
+      "sha256": "1606d6e30cb3ebbced001cb91fe8cc75a33213b0ca14b2365c5251e807a6826b",
+      "size_bytes": 40568003,
+      "source": "OWM"
+    },
+    {
+      "file": "gmes-oqc.csv",
+      "format": "csv",
+      "records": 88000,
+      "sha256": "3c3a883ac04813014afc7452d1d75ce4447734893d1440d762459686a66b114b",
+      "size_bytes": 11880161,
+      "source": "GMES/OQC"
+    },
+    {
+      "file": "tms.json",
+      "format": "json",
+      "records": 6800,
+      "sha256": "c10dc8abedf9f00e311089a98e9a9de3c5c923b2b165019f3bd2424cf700d17e",
+      "size_bytes": 2373203,
+      "source": "TMS"
+    }
+  ],
+  "generator_version": "1.1.0",
+  "logical_digest": "e8aac580f62c91a11a199a44a4daca8c40f498fc4cb7f9fdbda1af40cd0aa059",
+  "profile": "reference",
+  "scenario": "valid",
+  "scenario_counts": {
+    "fully_valid": 189600
+  },
+  "schema_version": "1.1",
+  "seed": 20260830,
+  "sources": {
+    "GMES/OQC": {
+      "records": 88000
+    },
+    "N-FP": {
+      "records": 6800
+    },
+    "OWM": {
+      "records": 88000
+    },
+    "TMS": {
+      "records": 6800
+    }
+  },
+  "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+}

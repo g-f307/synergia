@@ -151,6 +151,33 @@ def test_ci_preserves_unfixed_trivy_findings() -> None:
     assert "ignore-unfixed" not in workflow
 
 
+def test_performance_image_runs_as_non_root() -> None:
+    dockerfile = (ROOT / "backend/Dockerfile.performance").read_text(encoding="utf-8")
+    users = [
+        line.split(maxsplit=1)[1]
+        for line in dockerfile.splitlines()
+        if line.strip().upper().startswith("USER ")
+    ]
+
+    assert users
+    assert users[-1].lower() not in {"0", "0:0", "root"}
+
+
+def test_dast_database_is_prepared_before_api_start() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    security_job = workflow.index("  security-release:")
+    migration = workflow.index(
+        "python scripts/validate_project_assets.py", security_job
+    )
+    table_check = workflow.index(
+        "SELECT 1 FROM synergia.data_operation_events", migration
+    )
+    bootstrap = workflow.index("python scripts/bootstrap_web_e2e.py", migration)
+    api_start = workflow.index("python -m uvicorn app.main:app", bootstrap)
+
+    assert migration < table_check < bootstrap < api_start
+
+
 def test_expired_exception_does_not_bypass_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

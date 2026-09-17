@@ -7,6 +7,8 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from app.business_rules import RULE_CATALOG, classify
+
 
 class ProcessingPersistenceError(ValueError):
     """Raised when a processing unit cannot be mapped safely to the database."""
@@ -29,6 +31,10 @@ class PostgresProcessingRepository:
             )
         consolidation = processing.get("consolidation", {})
         classifications = processing.get("classifications", {})
+        deferred = bool(classifications.get("rule_details_deferred"))
+        events_by_workorder, evaluations_by_workorder = self._group_rule_details(
+            classifications
+        )
         confirmed: list[str] = []
         failures: list[dict[str, str]] = []
         for workorder in sorted(
@@ -36,16 +42,16 @@ class PostgresProcessingRepository:
             key=lambda item: str(item["workorder_number"]),
         ):
             number = str(workorder["workorder_number"])
-            events = [
-                item
-                for item in classifications.get("current_classifications", [])
-                if item.get("workorder_number") == number
-            ]
-            evaluations = [
-                item
-                for item in classifications.get("rule_evaluations", [])
-                if item.get("workorder_number") == number
-            ]
+            events, evaluations = (
+                self._deferred_rule_details(
+                    execution_id, workorder, consolidation, classifications
+                )
+                if deferred
+                else (
+                    events_by_workorder.get(number, []),
+                    evaluations_by_workorder.get(number, []),
+                )
+            )
             try:
                 with self._connect() as connection:
                     self._persist_workorder(
@@ -64,6 +70,94 @@ class PostgresProcessingRepository:
             "confirmed_workorders": confirmed,
             "failed_workorders": failures,
         }
+
+    def persist_in_transaction(
+        self, connection, execution_id: str, processing: Mapping[str, Any]
+    ) -> dict:
+        """Persist independent units with savepoints, but commit them together."""
+        if processing.get("execution_id") != execution_id:
+            raise ProcessingPersistenceError(
+                "O processamento deve pertencer à execução persistida"
+            )
+        consolidation = processing.get("consolidation", {})
+        classifications = processing.get("classifications", {})
+        deferred = bool(classifications.get("rule_details_deferred"))
+        events_by_workorder, evaluations_by_workorder = self._group_rule_details(
+            classifications
+        )
+        confirmed: list[str] = []
+        failures: list[dict[str, str]] = []
+        for workorder in sorted(
+            consolidation.get("workorders", []),
+            key=lambda item: str(item["workorder_number"]),
+        ):
+            number = str(workorder["workorder_number"])
+            events, evaluations = (
+                self._deferred_rule_details(
+                    execution_id, workorder, consolidation, classifications
+                )
+                if deferred
+                else (
+                    events_by_workorder.get(number, []),
+                    evaluations_by_workorder.get(number, []),
+                )
+            )
+            try:
+                with connection.transaction():
+                    self._persist_workorder(
+                        connection, execution_id, workorder, events, evaluations
+                    )
+                confirmed.append(number)
+            except Exception as exc:
+                failure = {"workorder_number": number, "reason": str(exc)}
+                failures.append(failure)
+                connection.execute(
+                    """
+                    INSERT INTO synergia.audit_events
+                        (execution_id, entity_type, entity_id, event_type, payload)
+                    VALUES (%s, 'workorder', %s, 'processing_persistence_failed', %s)
+                    """,
+                    (execution_id, number, Jsonb({"reason": failure["reason"]})),
+                )
+        return {
+            "confirmed_workorders": confirmed,
+            "failed_workorders": failures,
+        }
+
+    @staticmethod
+    def _group_rule_details(
+        classifications: Mapping[str, Any],
+    ) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
+        events: dict[str, list[dict]] = {}
+        evaluations: dict[str, list[dict]] = {}
+        for item in classifications.get("current_classifications", []):
+            events.setdefault(str(item["workorder_number"]), []).append(item)
+        for item in classifications.get("rule_evaluations", []):
+            evaluations.setdefault(str(item["workorder_number"]), []).append(item)
+        return events, evaluations
+
+    @staticmethod
+    def _deferred_rule_details(
+        execution_id: str,
+        workorder: Mapping[str, Any],
+        consolidation: Mapping[str, Any],
+        classifications: Mapping[str, Any],
+    ) -> tuple[list[dict], list[dict]]:
+        number = str(workorder["workorder_number"])
+        result = classify(
+            {
+                "workorders": [workorder],
+                "issues": [
+                    issue
+                    for issue in consolidation.get("issues", [])
+                    if issue.get("workorder_number") == number
+                ],
+            },
+            run_id=execution_id,
+            classified_at=str(classifications["classified_at"]),
+            catalog=classifications.get("rule_catalog", RULE_CATALOG),
+        )
+        return result["current_classifications"], result["rule_evaluations"]
 
     def _record_failure(self, execution_id: str, failure: dict[str, str]) -> None:
         with self._connect() as connection:
@@ -354,29 +448,35 @@ class PostgresProcessingRepository:
     def _persist_evaluations(
         self, connection, execution_id, workorder_id, evaluations
     ) -> None:
-        for evaluation in evaluations:
-            evidence = {
-                key: evaluation.get(key)
-                for key in ("source", "sheet", "row")
-                if evaluation.get(key) is not None
-            }
-            connection.execute(
+        if not evaluations:
+            return
+        with connection.cursor() as cursor:
+            cursor.executemany(
                 """
                 INSERT INTO synergia.rule_evaluations (
                     execution_id, workorder_id, source_file_id, rule_id,
                     rule_catalog_version, result, justification, evidence
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (
-                    execution_id,
-                    workorder_id,
-                    evaluation.get("source_file_id"),
-                    evaluation["rule_id"],
-                    evaluation["rule_catalog_version"],
-                    evaluation["result"],
-                    evaluation["justification"],
-                    Jsonb(evidence),
-                ),
+                [
+                    (
+                        execution_id,
+                        workorder_id,
+                        evaluation.get("source_file_id"),
+                        evaluation["rule_id"],
+                        evaluation["rule_catalog_version"],
+                        evaluation["result"],
+                        evaluation["justification"],
+                        Jsonb(
+                            {
+                                key: evaluation.get(key)
+                                for key in ("source", "sheet", "row")
+                                if evaluation.get(key) is not None
+                            }
+                        ),
+                    )
+                    for evaluation in evaluations
+                ],
             )
 
     def _persist_operational_events(

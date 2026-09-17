@@ -1,0 +1,393 @@
+{
+  "comparability": "non_comparable",
+  "correctness_passed": true,
+  "generated_at": "2026-09-17T12:21:36.820898+00:00",
+  "measured_samples": 16,
+  "operations": [
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 3112.781523,
+        "p95": 3112.781523,
+        "p99": 3112.781523
+      },
+      "latency_ms": {
+        "max": 3150.742098,
+        "min": 3150.742098,
+        "p50": 3150.742098,
+        "p95": 3150.742098,
+        "p99": 3150.742098
+      },
+      "operation": "EXPORT",
+      "response_bytes": 34183808,
+      "route": "GET /reports/version/export (oqc_summary/csv)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 0.31738554565756777,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 1447.833417,
+        "p95": 1447.833417,
+        "p99": 1447.833417
+      },
+      "latency_ms": {
+        "max": 1529.117192,
+        "min": 1529.117192,
+        "p50": 1529.117192,
+        "p95": 1529.117192,
+        "p99": 1529.117192
+      },
+      "operation": "EXPORT",
+      "response_bytes": 66174603,
+      "route": "GET /reports/version/export (oqc_summary/json)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 0.6539721122957592,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 251.320231,
+        "p95": 251.320231,
+        "p99": 251.320231
+      },
+      "latency_ms": {
+        "max": 253.170164,
+        "min": 253.170164,
+        "p50": 253.170164,
+        "p95": 253.170164,
+        "p99": 253.170164
+      },
+      "operation": "EXPORT",
+      "response_bytes": 1571085,
+      "route": "GET /reports/version/export (workorder_consolidated/csv)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 3.9499125181275314,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 162.34268,
+        "p95": 162.34268,
+        "p99": 162.34268
+      },
+      "latency_ms": {
+        "max": 165.870902,
+        "min": 165.870902,
+        "p50": 165.870902,
+        "p95": 165.870902,
+        "p99": 165.870902
+      },
+      "operation": "EXPORT",
+      "response_bytes": 3387229,
+      "route": "GET /reports/version/export (workorder_consolidated/json)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 6.028784964345343,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 99.954505,
+        "p95": 99.954505,
+        "p99": 99.954505
+      },
+      "latency_ms": {
+        "max": 100.21181,
+        "min": 100.21181,
+        "p50": 100.21181,
+        "p95": 100.21181,
+        "p99": 100.21181
+      },
+      "operation": "PROCESS",
+      "response_bytes": 1645,
+      "route": "GET /executions/{id}",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 9.97886376865162,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 41.069343,
+        "p95": 41.069343,
+        "p99": 41.069343
+      },
+      "latency_ms": {
+        "max": 41.331425,
+        "min": 41.331425,
+        "p50": 41.331425,
+        "p95": 41.331425,
+        "p99": 41.331425
+      },
+      "operation": "PROCESS",
+      "response_bytes": 116,
+      "route": "GET /imports/{id}/pipeline-summary",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 24.194665439190636,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 112.450559,
+        "p95": 112.450559,
+        "p99": 112.450559
+      },
+      "latency_ms": {
+        "max": 112.785484,
+        "min": 112.785484,
+        "p50": 112.785484,
+        "p95": 112.785484,
+        "p99": 112.785484
+      },
+      "operation": "QUERY",
+      "response_bytes": 147021,
+      "route": "consolidated",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 8.8663892243438,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 50.13499,
+        "p95": 50.13499,
+        "p99": 50.13499
+      },
+      "latency_ms": {
+        "max": 50.349217,
+        "min": 50.349217,
+        "p50": 50.349217,
+        "p95": 50.349217,
+        "p99": 50.349217
+      },
+      "operation": "QUERY",
+      "response_bytes": 33069,
+      "route": "history-list",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 19.861282053303828,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 48.089529,
+        "p95": 48.089529,
+        "p99": 48.089529
+      },
+      "latency_ms": {
+        "max": 48.310328,
+        "min": 48.310328,
+        "p50": 48.310328,
+        "p95": 48.310328,
+        "p99": 48.310328
+      },
+      "operation": "QUERY",
+      "response_bytes": 499,
+      "route": "indicators",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 20.699507566994786,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 48.772815,
+        "p95": 48.772815,
+        "p99": 48.772815
+      },
+      "latency_ms": {
+        "max": 48.9174,
+        "min": 48.9174,
+        "p50": 48.9174,
+        "p95": 48.9174,
+        "p99": 48.9174
+      },
+      "operation": "QUERY",
+      "response_bytes": 422,
+      "route": "lot-detail",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 20.442623688094624,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 33.937394,
+        "p95": 33.937394,
+        "p99": 33.937394
+      },
+      "latency_ms": {
+        "max": 34.13935,
+        "min": 34.13935,
+        "p50": 34.13935,
+        "p95": 34.13935,
+        "p99": 34.13935
+      },
+      "operation": "QUERY",
+      "response_bytes": 133,
+      "route": "pending-list",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 29.291711763697904,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 84.552469,
+        "p95": 84.552469,
+        "p99": 84.552469
+      },
+      "latency_ms": {
+        "max": 84.798449,
+        "min": 84.798449,
+        "p50": 84.798449,
+        "p95": 84.798449,
+        "p99": 84.798449
+      },
+      "operation": "QUERY",
+      "response_bytes": 516,
+      "route": "search-workorder",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 11.79266851920841,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 22.699295,
+        "p95": 22.699295,
+        "p99": 22.699295
+      },
+      "latency_ms": {
+        "max": 22.855742,
+        "min": 22.855742,
+        "p50": 22.855742,
+        "p95": 22.855742,
+        "p99": 22.855742
+      },
+      "operation": "QUERY",
+      "response_bytes": 222,
+      "route": "serial-detail",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 43.75268149246697,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 42.093827,
+        "p95": 42.093827,
+        "p99": 42.093827
+      },
+      "latency_ms": {
+        "max": 42.346126,
+        "min": 42.346126,
+        "p50": 42.346126,
+        "p95": 42.346126,
+        "p99": 42.346126
+      },
+      "operation": "QUERY",
+      "response_bytes": 648,
+      "route": "workorder-detail",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 23.614911078288486,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 2572.562737,
+        "p95": 2572.562737,
+        "p99": 2572.562737
+      },
+      "latency_ms": {
+        "max": 2662.418429,
+        "min": 2662.418429,
+        "p50": 2662.418429,
+        "p95": 2662.418429,
+        "p99": 2662.418429
+      },
+      "operation": "REPORT",
+      "response_bytes": 45335228,
+      "route": "POST /reports (oqc_summary)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 0.3755983616653369,
+      "unexpected_errors": 0
+    },
+    {
+      "error_rate": 0.0,
+      "first_byte_ms": {
+        "p50": 442.324966,
+        "p95": 442.324966,
+        "p99": 442.324966
+      },
+      "latency_ms": {
+        "max": 447.035733,
+        "min": 447.035733,
+        "p50": 447.035733,
+        "p95": 447.035733,
+        "p99": 447.035733
+      },
+      "operation": "REPORT",
+      "response_bytes": 2271917,
+      "route": "POST /reports (workorder_consolidated)",
+      "samples": 1,
+      "successes": 1,
+      "throughput_requests_per_second": 2.236957643831125,
+      "unexpected_errors": 0
+    }
+  ],
+  "resources": {
+    "backend": {
+      "collection_errors": 0,
+      "cpu_percent_average": 15.671247271984045,
+      "cpu_seconds_delta": 16.36,
+      "read_bytes_delta": 16384,
+      "rss_bytes_max": 387874816,
+      "samples": 53,
+      "write_bytes_delta": 0
+    },
+    "postgres": {
+      "collection_errors": 0,
+      "db_active_max": 4,
+      "db_blocks_hit_delta": 3381930,
+      "db_blocks_read_delta": 713976,
+      "db_commits_delta": 3244,
+      "db_connections_max": 4,
+      "db_deadlocks_delta": 0,
+      "db_rollbacks_delta": 0,
+      "db_temp_bytes_delta": 14903255040,
+      "db_temp_files_delta": 543,
+      "db_waiting_max": 2,
+      "samples": 53
+    },
+    "system": {
+      "collection_errors": 0,
+      "disk_free_bytes_min": 449012097024,
+      "load_1m_max": 2.6357421875,
+      "memory_available_bytes_min": 1910689792,
+      "samples": 53
+    }
+  },
+  "unexpected_errors": 0
+}

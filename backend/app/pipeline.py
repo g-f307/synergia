@@ -25,6 +25,7 @@ STRUCTURAL_ISSUES = {
     "read_error",
     "validation_read_error",
 }
+RULE_DETAIL_DEFER_THRESHOLD = 50_000
 
 
 class PipelineRepository(Protocol):
@@ -155,9 +156,11 @@ def run_pipeline_batch(
     classified_at: str,
     known_organizations: Collection[str] | None = None,
     prepare_commit: Callable[[dict[str, Any]], None] | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Process every source file from one execution without rereading originals."""
-    repository.transition_execution(execution_id, "validating", "pipeline_started")
+    if not resume:
+        repository.transition_execution(execution_id, "validating", "pipeline_started")
     imported_records: list[dict[str, Any]] = []
     normalized_records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
@@ -225,6 +228,10 @@ def run_pipeline_batch(
         imported_records.extend(imported)
         valid_records += len(eligible_rows)
         rejected_records += len(imported) if structural_blocked else len(rejected_rows)
+        # The normalized/imported representations are now authoritative. Drop
+        # the parsed table rows before reading the next phase so reference
+        # volumes do not retain three complete in-memory copies of each file.
+        item["tables"] = []
 
     if blocked_files and not normalized_records:
         processing = process_normalized_records(
@@ -233,18 +240,26 @@ def run_pipeline_batch(
             classified_at=classified_at,
         )
     else:
-        repository.transition_execution(
-            execution_id, "normalizing", "validation_completed"
-        )
-        repository.transition_execution(
-            execution_id, "consolidating", "normalization_completed"
-        )
+        if not resume:
+            repository.transition_execution(
+                execution_id, "normalizing", "validation_completed"
+            )
+            repository.transition_execution(
+                execution_id, "consolidating", "normalization_completed"
+            )
         processing = process_normalized_records(
             normalized_records,
             execution_id=execution_id,
             classified_at=classified_at,
-            on_consolidated=lambda: repository.transition_execution(
-                execution_id, "applying_rules", "consolidation_completed"
+            defer_rule_details=(
+                len(normalized_records) >= RULE_DETAIL_DEFER_THRESHOLD
+            ),
+            on_consolidated=(
+                None
+                if resume
+                else lambda: repository.transition_execution(
+                    execution_id, "applying_rules", "consolidation_completed"
+                )
             ),
         )
     error_count = sum(issue["severity"] == "error" for issue in issues)

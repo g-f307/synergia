@@ -1,0 +1,86 @@
+{
+  "classifications": {
+    "digest": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+    "fetched": 1050,
+    "reported_total": 1050
+  },
+  "execution_counts": {
+    "classifications": 1050,
+    "errors": 0,
+    "files": 4,
+    "files_accepted": 4,
+    "files_received": 4,
+    "files_rejected": 0,
+    "lots": 50,
+    "normalized_records": 1100,
+    "pending_items": 0,
+    "rejected_records": 0,
+    "rows_read": 1100,
+    "serials": 500,
+    "valid_records": 1100,
+    "warnings": 0,
+    "workorders": 50
+  },
+  "expected": {
+    "classification_count": 1050,
+    "classification_digest": "2f7f470f55125f4de940387c44e9d6eac62be1c642a32ab910f45b1cdded2e53",
+    "counts": {
+      "classifications": 1050,
+      "errors": 0,
+      "files": 4,
+      "files_accepted": 4,
+      "files_received": 4,
+      "files_rejected": 0,
+      "lots": 50,
+      "normalized_records": 1100,
+      "pending_items": 0,
+      "rejected_records": 0,
+      "rows_read": 1100,
+      "serials": 500,
+      "valid_records": 1100,
+      "warnings": 0,
+      "workorders": 50
+    },
+    "oqc_count": 1050,
+    "oqc_digest": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+    "workorder_count": 50,
+    "workorder_digest": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953"
+  },
+  "manifest_logical_digest": "87abc303a2f4b4a211ab5a1f587a48e498516d27c6b8d30b48eb7e35327e8f6d",
+  "pending": {
+    "fetched": 0,
+    "reported_total": 0
+  },
+  "reports": [
+    {
+      "count": 50,
+      "digest": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953",
+      "exports": {
+        "csv": {
+          "count": 50,
+          "digest": "ae7052d22874f79ddfdc50bdbbb077a0863b048fe6a1beb16ad9466da57cb8aa"
+        },
+        "json": {
+          "count": 50,
+          "digest": "f1536a195f4e7cd9890f4849ee36247c4523be4c3da096a17b2528b99b511953"
+        }
+      },
+      "report_type": "workorder_consolidated"
+    },
+    {
+      "count": 1050,
+      "digest": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d",
+      "exports": {
+        "csv": {
+          "count": 1050,
+          "digest": "2231b0db7a2a2c5335aa879b28e4a5034846c0d2b18b45f3ad71f6f4630e7d0a"
+        },
+        "json": {
+          "count": 1050,
+          "digest": "2d28030c3715c570528b6d00479a69f8a3e6838bc91998c70a3e33ef0157c68d"
+        }
+      },
+      "report_type": "oqc_summary"
+    }
+  ]
+}

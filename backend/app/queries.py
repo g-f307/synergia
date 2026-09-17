@@ -285,7 +285,7 @@ class IndicatorsResponse(BaseModel):
     executions: dict[str, int]
     workorders: dict[str, int]
     pending_items: dict[str, int]
-    quantities: dict[str, int]
+    quantities: dict[str, int | None]
 
 
 class IndicatorRelatedPage(BaseModel):
@@ -401,6 +401,8 @@ class QueryRepository(Protocol):
 
 
 class PostgresQueryRepository:
+    PUBLISHED_EXECUTION_FILTER = "e.status IN ('completed', 'completed_with_errors')"
+
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
 
@@ -451,7 +453,7 @@ class PostgresQueryRepository:
             if entity_type == "serial"
             else ""
         )
-        filters = [f"{identifier} = %s"]
+        filters = [f"{identifier} = %s", self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = [query]
         if organization_ids is not None:
             filters.append("e.organization_id = ANY(%s)")
@@ -577,7 +579,7 @@ class PostgresQueryRepository:
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
     ) -> dict | None:
-        filters = ["w.workorder_number = %s"]
+        filters = ["w.workorder_number = %s", self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = [workorder_number]
         if execution_id:
             filters.append("w.execution_id = %s")
@@ -633,7 +635,7 @@ class PostgresQueryRepository:
         organization_ids: frozenset | None = None,
         execution_id: str | None = None,
     ) -> dict | None:
-        filters = ["l.lot_number = %s"]
+        filters = ["l.lot_number = %s", self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = [lot_number]
         if workorder_number:
             filters.append("w.workorder_number = %s")
@@ -679,7 +681,7 @@ class PostgresQueryRepository:
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
     ) -> dict | None:
-        filters = ["s.serial_number = %s"]
+        filters = ["s.serial_number = %s", self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = [serial_number]
         if execution_id:
             filters.append("s.execution_id = %s")
@@ -729,7 +731,7 @@ class PostgresQueryRepository:
         sort: str,
         organization_ids: frozenset | None = None,
     ) -> tuple[list[dict], int]:
-        filters: list[str] = []
+        filters: list[str] = [self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = []
         if organization_ids is not None:
             filters.append("e.organization_id = ANY(%s)")
@@ -789,7 +791,7 @@ class PostgresQueryRepository:
     def get_pending(
         self, pending_id: int, organization_ids: frozenset | None = None
     ) -> dict | None:
-        filters = ["p.id = %s"]
+        filters = ["p.id = %s", self.PUBLISHED_EXECUTION_FILTER]
         parameters: list[Any] = [pending_id]
         if organization_ids is not None:
             filters.append("e.organization_id = ANY(%s)")
@@ -1126,6 +1128,9 @@ class PostgresQueryRepository:
             filters.append("e.started_at::date <= %s")
             parameters.append(date_to)
         where = f" WHERE {' AND '.join(filters)}" if filters else ""
+        published_where = (
+            f" WHERE {' AND '.join([*filters, self.PUBLISHED_EXECUTION_FILTER])}"
+        )
         sql_parameters = tuple(parameters)
         with self._connect() as connection:
             execution_rows = connection.execute(
@@ -1137,20 +1142,24 @@ class PostgresQueryRepository:
                 f"""
                 SELECT count(*) AS total,
                        count(*) FILTER (WHERE partially_released) AS partial,
-                       COALESCE(sum(planned_quantity), 0) AS planned,
-                       COALESCE(sum(produced_quantity), 0) AS produced,
-                       COALESCE(sum(received_quantity), 0) AS received,
-                       COALESCE(sum(released_quantity), 0) AS released
+                       CASE WHEN count(*) = 0 OR bool_or(planned_quantity IS NULL)
+                            THEN NULL ELSE sum(planned_quantity) END AS planned,
+                       CASE WHEN count(*) = 0 OR bool_or(produced_quantity IS NULL)
+                            THEN NULL ELSE sum(produced_quantity) END AS produced,
+                       CASE WHEN count(*) = 0 OR bool_or(received_quantity IS NULL)
+                            THEN NULL ELSE sum(received_quantity) END AS received,
+                       CASE WHEN count(*) = 0 OR bool_or(released_quantity IS NULL)
+                            THEN NULL ELSE sum(released_quantity) END AS released
                 FROM synergia.workorders w
                 JOIN synergia.executions e ON e.id = w.execution_id
-                {where}
+                {published_where}
                 """,
                 sql_parameters,
             ).fetchone()
             pending_rows = connection.execute(
                 "SELECT p.status, count(*) AS total "
                 "FROM synergia.pending_items p JOIN synergia.executions e ON e.id = p.execution_id "
-                f"{where} GROUP BY p.status",
+                f"{published_where} GROUP BY p.status",
                 sql_parameters,
             ).fetchall()
         return {
@@ -1204,6 +1213,9 @@ class PostgresQueryRepository:
             ),
         }
         source, columns = definitions[entity]
+        if entity != "executions":
+            filters.append(self.PUBLISHED_EXECUTION_FILTER)
+            where = f" WHERE {' AND '.join(filters)}"
         with self._connect() as connection:
             total = connection.execute(
                 f"SELECT count(*) AS total FROM {source}{where}", parameters

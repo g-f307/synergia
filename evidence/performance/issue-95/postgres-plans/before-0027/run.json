@@ -1,0 +1,888 @@
+{
+  "baseline_environment": {
+    "captured_at": "2026-09-15T04:38:33.355861+00:00",
+    "commit": "61c25fb6a158c1a25f0932b72646e06ca0637c1e",
+    "comparability": "comparable",
+    "environment_name": "local-isolated-pg18",
+    "host": {
+      "architecture": "x86_64",
+      "cpu_model": "not_available",
+      "logical_cpus": 12,
+      "memory_total_bytes": 8022978560,
+      "operating_system": "Linux-7.1.5-201.fc44.x86_64-x86_64-with-glibc2.43"
+    },
+    "mass": {
+      "bundle": "v02-org001-valid",
+      "configuration": {
+        "serials": 22000,
+        "workorders": 1700
+      },
+      "entities": {
+        "lots": 1700,
+        "organizations": 1,
+        "serials": 22000,
+        "workorders": 1700
+      },
+      "files": [
+        {
+          "file": "n-fp.xlsx",
+          "format": "xlsx",
+          "records": 1700,
+          "sha256": "e8396fdce6f836c705e0572821e6adc40d903872a67656dacc3a4da28f826768",
+          "size_bytes": 83038,
+          "source": "N-FP"
+        },
+        {
+          "file": "owm.json",
+          "format": "json",
+          "records": 22000,
+          "sha256": "75fa51efb72e19a334d55968b7455ecaf0b929b89abf8d438eb265a7698ea5f2",
+          "size_bytes": 10142003,
+          "source": "OWM"
+        },
+        {
+          "file": "gmes-oqc.csv",
+          "format": "csv",
+          "records": 22000,
+          "sha256": "02d8ad5af97a9a74995281f103beef058bf567f932488698f50e82ce082a809d",
+          "size_bytes": 2970161,
+          "source": "GMES/OQC"
+        },
+        {
+          "file": "tms.json",
+          "format": "json",
+          "records": 1700,
+          "sha256": "739b657da7a538f170c18194a85069952e0ba9390338704dd94f07d5bea7767c",
+          "size_bytes": 593303,
+          "source": "TMS"
+        }
+      ],
+      "generator_version": "1.1.0",
+      "logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+      "profile": "custom",
+      "scenario": "valid",
+      "schema_version": "1.1",
+      "seed": 20260830
+    },
+    "metadata": {
+      "backend_limits": "1 uvicorn worker; access token 120min; no explicit cgroup limit",
+      "container_runtime": "host processes",
+      "network_topology": "generator API and PostgreSQL on loopback",
+      "postgres_limits": "PostgreSQL 18.3; no explicit cgroup limit; shared_buffers 128MB; max_connections 100",
+      "resource_collection": "runner procfs and pg_stat",
+      "storage_type": "local filesystem"
+    },
+    "missing_required_metadata": [],
+    "postgres": {
+      "collection_status": "collected",
+      "server_version": "18.3",
+      "settings": {
+        "effective_cache_size": {
+          "setting": "524288",
+          "unit": "8kB"
+        },
+        "maintenance_work_mem": {
+          "setting": "65536",
+          "unit": "kB"
+        },
+        "max_connections": {
+          "setting": "100",
+          "unit": null
+        },
+        "max_parallel_workers": {
+          "setting": "8",
+          "unit": null
+        },
+        "max_parallel_workers_per_gather": {
+          "setting": "2",
+          "unit": null
+        },
+        "shared_buffers": {
+          "setting": "16384",
+          "unit": "8kB"
+        },
+        "temp_file_limit": {
+          "setting": "-1",
+          "unit": "kB"
+        },
+        "work_mem": {
+          "setting": "4096",
+          "unit": "kB"
+        }
+      }
+    },
+    "software": {
+      "httpx": "0.28.1",
+      "psycopg": "3.3.4",
+      "python": "3.14.7"
+    },
+    "storage": {
+      "capacity_bytes": 509332160512,
+      "free_bytes_final": 450404892672,
+      "free_bytes_initial": 450405404672
+    },
+    "worktree": "dirty"
+  },
+  "cache_label": "warm",
+  "captured_at": "2026-09-15T06:13:45.958808+00:00",
+  "commit": "61c25fb6a158c1a25f0932b72646e06ca0637c1e",
+  "comparability": "non_comparable",
+  "execution_counts": {
+    "audit_events": 1711,
+    "classifications": 45700,
+    "consolidated_field_provenance": 372400,
+    "lots": 1700,
+    "oqc_decisions": 45700,
+    "pending_items": 0,
+    "rule_evaluations": 523100,
+    "serials": 22000,
+    "workorders": 1700
+  },
+  "execution_id": "5250fbd3-3b11-4395-aabf-e92c2f8e4d60",
+  "global_counts": "mixed database; plans filtered by execution/org as noted",
+  "host": {
+    "disk_free_bytes": 450263248896,
+    "logical_cpus": 12,
+    "platform": "Linux-7.1.5-201.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.14.7"
+  },
+  "mass_logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+  "mass_manifest": {
+    "configuration": {
+      "serials": 22000,
+      "workorders": 1700
+    },
+    "entities": {
+      "lots": 1700,
+      "organizations": 1,
+      "serials": 22000,
+      "workorders": 1700
+    },
+    "expectations": {
+      "absent_values": {
+        "N-FP.planned_quantity": 0,
+        "OWM.planned_quantity": 22000,
+        "TMS.quantity": 0
+      },
+      "classification_rule_ids": [
+        "oqc_pass"
+      ],
+      "known_organizations": [
+        "SYN-ORG-001"
+      ],
+      "processing_issue_codes": {},
+      "query_samples": {
+        "missing": {
+          "lot": "SYN-LOT-NOT-FOUND",
+          "serial": "SYN-SER-NOT-FOUND",
+          "workorder": "SYN-WO-NOT-FOUND"
+        },
+        "organizations": {
+          "SYN-ORG-001": {
+            "lots": {
+              "first": "SYN-LOT-000001",
+              "last": "SYN-LOT-001700",
+              "median": "SYN-LOT-000850"
+            },
+            "serials": {
+              "first": "SYN-SER-00000001",
+              "last": "SYN-SER-00022000",
+              "median": "SYN-SER-00011000"
+            },
+            "workorders": {
+              "first": "SYN-WO-000001",
+              "last": "SYN-WO-001700",
+              "median": "SYN-WO-000850"
+            }
+          }
+        }
+      },
+      "valid_pipeline": {
+        "consolidated_lots": 1700,
+        "consolidated_serials": 22000,
+        "consolidated_workorders": 1700,
+        "entities_by_organization": {
+          "SYN-ORG-001": {
+            "lots": 1700,
+            "serials": 22000,
+            "workorders": 1700
+          }
+        },
+        "normalized_records": 47400,
+        "rejected_records": 0,
+        "rows_read": 47400,
+        "valid_records": 47400
+      },
+      "validation_issue_codes": {}
+    },
+    "files": [
+      {
+        "file": "n-fp.xlsx",
+        "format": "xlsx",
+        "records": 1700,
+        "sha256": "e8396fdce6f836c705e0572821e6adc40d903872a67656dacc3a4da28f826768",
+        "size_bytes": 83038,
+        "source": "N-FP"
+      },
+      {
+        "file": "owm.json",
+        "format": "json",
+        "records": 22000,
+        "sha256": "75fa51efb72e19a334d55968b7455ecaf0b929b89abf8d438eb265a7698ea5f2",
+        "size_bytes": 10142003,
+        "source": "OWM"
+      },
+      {
+        "file": "gmes-oqc.csv",
+        "format": "csv",
+        "records": 22000,
+        "sha256": "02d8ad5af97a9a74995281f103beef058bf567f932488698f50e82ce082a809d",
+        "size_bytes": 2970161,
+        "source": "GMES/OQC"
+      },
+      {
+        "file": "tms.json",
+        "format": "json",
+        "records": 1700,
+        "sha256": "739b657da7a538f170c18194a85069952e0ba9390338704dd94f07d5bea7767c",
+        "size_bytes": 593303,
+        "source": "TMS"
+      }
+    ],
+    "generator_version": "1.1.0",
+    "logical_digest": "652c5713efb2685b45c61a026af4388654ac0fd8f483d753151a62854b671ff5",
+    "profile": "custom",
+    "scenario": "valid",
+    "scenario_counts": {
+      "fully_valid": 47400
+    },
+    "schema_version": "1.1",
+    "seed": 20260830,
+    "sources": {
+      "GMES/OQC": {
+        "records": 22000
+      },
+      "N-FP": {
+        "records": 1700
+      },
+      "OWM": {
+        "records": 22000
+      },
+      "TMS": {
+        "records": 1700
+      }
+    },
+    "synthetic_notice": "SYNTHETIC DATA - NO REAL OR PERSONAL INFORMATION"
+  },
+  "mass_manifest_sha256": "7772be27d70ed9af44986ae73a535fa058614016354229c9224846345b183fbe",
+  "organization_code": "SYN-ORG-001",
+  "organization_id": "63000000-0000-4000-8000-000000000011",
+  "plans": [
+    {
+      "execution_ms": {
+        "max": 0.09,
+        "min": 0.07,
+        "p50": 0.07,
+        "p95": 0.09,
+        "p99": 0.09
+      },
+      "name": "workorder_detail",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 4.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 5,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.09,
+        "min": 0.07,
+        "p50": 0.075,
+        "p95": 0.09,
+        "p99": 0.09
+      },
+      "name": "lot_detail",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_lots_number",
+          "loops": 1,
+          "relation": "lots",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "workorders_id_execution_key",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Only Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 4.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 8,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.17,
+        "min": 0.16,
+        "p50": 0.166,
+        "p95": 0.17,
+        "p99": 0.17
+      },
+      "name": "serial_detail",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 12.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": "idx_serials_number",
+          "loops": 1,
+          "relation": "serials",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "workorders_id_execution_key",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Only Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 14,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.123,
+        "min": 0.079,
+        "p50": 0.082,
+        "p95": 0.123,
+        "p99": 0.123
+      },
+      "name": "workorder_serials",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "executions_id_organization_key",
+          "loops": 1,
+          "relation": "executions",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "idx_serials_workorder",
+          "loops": 1,
+          "relation": "serials",
+          "rows": 13.0,
+          "type": "Index Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 9,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.069,
+        "min": 0.066,
+        "p50": 0.066,
+        "p95": 0.069,
+        "p99": 0.069
+      },
+      "name": "search_workorder_count",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 4.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 5,
+      "shared_read_blocks_max": 0,
+      "sorts": [],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.074,
+        "min": 0.071,
+        "p50": 0.072,
+        "p95": 0.074,
+        "p99": 0.074
+      },
+      "name": "search_workorder_page",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 4.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 5,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 1.426,
+        "min": 1.404,
+        "p50": 1.423,
+        "p95": 1.426,
+        "p99": 1.426
+      },
+      "name": "history_page",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "executions_id_organization_key",
+          "loops": 1,
+          "relation": "executions",
+          "rows": 1.0,
+          "type": "Index Only Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "audit_events",
+          "rows": 1711.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 117,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "top-N heapsort",
+          "space_kb": 28,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 115.182,
+        "min": 98.443,
+        "p50": 102.864,
+        "p95": 115.182,
+        "p99": 115.182
+      },
+      "name": "consolidated_evaluations",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 3,
+          "relation": "rule_evaluations",
+          "rows": 174366.67,
+          "type": "Seq Scan"
+        },
+        {
+          "index": "idx_workorders_number",
+          "loops": 3,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 2040,
+      "shared_read_blocks_max": 25096,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 32,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.646,
+        "min": 0.439,
+        "p50": 0.457,
+        "p95": 0.646,
+        "p99": 0.646
+      },
+      "name": "consolidated_provenance",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "idx_provenance_workorder_field",
+          "loops": 1,
+          "relation": "consolidated_field_provenance",
+          "rows": 220.0,
+          "type": "Index Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 16,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 37,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.16,
+        "min": 0.096,
+        "p50": 0.115,
+        "p95": 0.16,
+        "p99": 0.16
+      },
+      "name": "consolidated_classifications",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_workorders_number",
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "idx_classifications_workorder",
+          "loops": 1,
+          "relation": "classifications",
+          "rows": 27.0,
+          "type": "Index Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 9,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 27,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.151,
+        "min": 0.128,
+        "p50": 0.14,
+        "p95": 0.151,
+        "p99": 0.151
+      },
+      "name": "pending_page",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 12.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "pending_items",
+          "rows": 15.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 9,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 1.937,
+        "min": 1.884,
+        "p50": 1.905,
+        "p95": 1.937,
+        "p99": 1.937
+      },
+      "name": "indicator_workorders",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 2931.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "executions",
+          "rows": 12.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 67,
+      "shared_read_blocks_max": 0,
+      "sorts": [],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 0.168,
+        "min": 0.132,
+        "p50": 0.134,
+        "p95": 0.168,
+        "p99": 0.168
+      },
+      "name": "indicator_related_workorders",
+      "samples": 5,
+      "scans": [
+        {
+          "index": "idx_executions_authorization_scope",
+          "loops": 1,
+          "relation": "executions",
+          "rows": 2.0,
+          "type": "Index Scan"
+        },
+        {
+          "index": "workorders_execution_id_workorder_number_key",
+          "loops": 2,
+          "relation": "workorders",
+          "rows": 25.5,
+          "type": "Index Only Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 9,
+      "shared_read_blocks_max": 0,
+      "sorts": [],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 49.191,
+        "min": 41.696,
+        "p50": 41.949,
+        "p95": 49.191,
+        "p99": 49.191
+      },
+      "name": "report_workorders",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "lots",
+          "rows": 1700.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1700.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "pending_items",
+          "rows": 0.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": "idx_serials_workorder",
+          "loops": 1,
+          "relation": "serials",
+          "rows": 22000.0,
+          "type": "Index Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 730,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 208,
+          "space_type": "Memory"
+        },
+        {
+          "method": "quicksort",
+          "space_kb": 221,
+          "space_type": "Memory"
+        },
+        {
+          "method": "quicksort",
+          "space_kb": 25,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    },
+    {
+      "execution_ms": {
+        "max": 91.261,
+        "min": 81.3,
+        "p50": 81.772,
+        "p95": 91.261,
+        "p99": 91.261
+      },
+      "name": "report_oqc",
+      "samples": 5,
+      "scans": [
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "oqc_decisions",
+          "rows": 45700.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "workorders",
+          "rows": 1700.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "lots",
+          "rows": 1700.0,
+          "type": "Seq Scan"
+        },
+        {
+          "index": null,
+          "loops": 1,
+          "relation": "pending_items",
+          "rows": 0.0,
+          "type": "Seq Scan"
+        }
+      ],
+      "shared_hit_blocks_max": 2111,
+      "shared_read_blocks_max": 0,
+      "sorts": [
+        {
+          "method": "quicksort",
+          "space_kb": 3974,
+          "space_type": "Memory"
+        }
+      ],
+      "temp_written_blocks_max": 0
+    }
+  ],
+  "postgres": {
+    "max_connections": "100",
+    "shared_buffers": "128MB",
+    "version": "PostgreSQL 18.3 on x86_64-redhat-linux-gnu, compiled by gcc (GCC) 16.0.1 20260321 (Red Hat 16.0.1-0), 64-bit"
+  },
+  "reference_at": "2026-09-15T06:13:44.129387+00:00",
+  "repetitions": 5,
+  "run_id": "pgplans-v02-consolidated-local-pg18",
+  "warmups": 1,
+  "worktree": "dirty"
+}

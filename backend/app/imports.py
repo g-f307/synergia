@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Generator
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Protocol
@@ -58,7 +58,7 @@ from app.upload_security import (
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 
-class ImportSource(str, Enum):
+class ImportSource(StrEnum):
     n_fp = "N-FP"
     owm = "OWM"
     gmes_oqc = "GMES/OQC"
@@ -465,39 +465,43 @@ class PostgresImportRepository:
 
     def transition_execution(self, execution_id: str, target: str, reason: str) -> None:
         with self._connect() as connection:
-            current = connection.execute(
-                "SELECT status FROM synergia.executions WHERE id = %s FOR UPDATE",
-                (execution_id,),
-            ).fetchone()
-            if current is None:
-                raise RuntimeError("Execução não encontrada")
-            validate_transition(current["status"], target)
-            terminal = target in {
-                state.value
-                for state in (
-                    ExecutionState.VALIDATION_FAILED,
-                    ExecutionState.COMPLETED,
-                    ExecutionState.COMPLETED_WITH_ERRORS,
-                    ExecutionState.FAILED,
-                    ExecutionState.DUPLICATE,
-                    ExecutionState.CANCELLED,
-                )
-            }
-            connection.execute(
-                """
-                UPDATE synergia.executions
-                SET status = %s, state_changed_by_type = 'system',
-                    state_changed_by = 'synergia-api',
-                    state_change_reason = %s,
-                    failure_reason = CASE
-                        WHEN %s IN ('failed', 'validation_failed') THEN %s
-                        ELSE failure_reason
-                    END,
-                    finished_at = CASE WHEN %s THEN now() ELSE NULL END
-                WHERE id = %s
-                """,
-                (target, reason, target, reason, terminal, execution_id),
+            self._transition_execution(connection, execution_id, target, reason)
+
+    @staticmethod
+    def _transition_execution(connection, execution_id: str, target: str, reason: str):
+        current = connection.execute(
+            "SELECT status FROM synergia.executions WHERE id = %s FOR UPDATE",
+            (execution_id,),
+        ).fetchone()
+        if current is None:
+            raise RuntimeError("Execução não encontrada")
+        validate_transition(current["status"], target)
+        terminal = target in {
+            state.value
+            for state in (
+                ExecutionState.VALIDATION_FAILED,
+                ExecutionState.COMPLETED,
+                ExecutionState.COMPLETED_WITH_ERRORS,
+                ExecutionState.FAILED,
+                ExecutionState.DUPLICATE,
+                ExecutionState.CANCELLED,
             )
+        }
+        connection.execute(
+            """
+            UPDATE synergia.executions
+            SET status = %s, state_changed_by_type = 'system',
+                state_changed_by = 'synergia-api',
+                state_change_reason = %s,
+                failure_reason = CASE
+                    WHEN %s IN ('failed', 'validation_failed') THEN %s
+                    ELSE failure_reason
+                END,
+                finished_at = CASE WHEN %s THEN now() ELSE NULL END
+            WHERE id = %s
+            """,
+            (target, reason, target, reason, terminal, execution_id),
+        )
 
     def mark_completed(self, execution_id: str) -> None:
         self.transition_execution(execution_id, "completed", "pipeline_completed")
@@ -542,6 +546,21 @@ class PostgresImportRepository:
     def commit_pipeline(self, execution_id: str, result: dict) -> None:
         """Persist every pipeline output in one database transaction."""
         with self._connect() as connection:
+            execution = connection.execute(
+                "SELECT status FROM synergia.executions WHERE id = %s FOR UPDATE",
+                (execution_id,),
+            ).fetchone()
+            if execution is None or execution["status"] not in {
+                "validating", "consolidating", "applying_rules"
+            }:
+                raise RuntimeError("Execução não está apta a confirmar o pipeline")
+            already_committed = connection.execute(
+                "SELECT 1 FROM synergia.pipeline_summaries "
+                "WHERE execution_id = %s LIMIT 1",
+                (execution_id,),
+            ).fetchone()
+            if already_committed is not None:
+                raise RuntimeError("Pipeline já confirmado para esta execução")
             source_files = connection.execute(
                 """
                 SELECT id FROM synergia.source_files
@@ -684,23 +703,24 @@ class PostgresImportRepository:
                     Jsonb(summary),
                 ),
             )
-        persistence = PostgresProcessingRepository(self.database_url).persist(
-            execution_id, result["processing"]
-        )
-        final_state = result["status"]
-        if persistence["failed_workorders"] and final_state == "completed":
-            final_state = "completed_with_errors"
-        self.transition_execution(
-            execution_id,
-            final_state,
-            (
-                "processing_completed_with_errors"
-                if final_state == "completed_with_errors"
-                else "validation_failed"
-                if final_state == "validation_failed"
-                else "pipeline_completed"
-            ),
-        )
+            persistence = PostgresProcessingRepository(
+                self.database_url
+            ).persist_in_transaction(connection, execution_id, result["processing"])
+            final_state = result["status"]
+            if persistence["failed_workorders"] and final_state == "completed":
+                final_state = "completed_with_errors"
+            self._transition_execution(
+                connection,
+                execution_id,
+                final_state,
+                (
+                    "processing_completed_with_errors"
+                    if final_state == "completed_with_errors"
+                    else "validation_failed"
+                    if final_state == "validation_failed"
+                    else "pipeline_completed"
+                ),
+            )
         safe_log(
             logging.INFO,
             "pipeline.persistence.completed",
@@ -1157,7 +1177,9 @@ async def upload_import(
                 execution_id=execution_id,
                 inputs=pipeline_inputs,
                 repository=repository,
-                classified_at=datetime.now(UTC).isoformat(),
+                classified_at=repository.get(execution_id)["started_at"].astimezone(
+                    UTC
+                ).isoformat(),
                 known_organizations={organization_code.upper()},
                 prepare_commit=lambda result: _write_pipeline_artifacts(
                     artifact_directory, result

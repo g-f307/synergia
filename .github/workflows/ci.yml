@@ -108,14 +108,14 @@ jobs:
           path: backend/reports/pytest.xml
           if-no-files-found: error
       - name: Publicar relatório de segurança
-        if: always()
+        if: always() && hashFiles('backend/reports/security.xml', 'docs/security-test-report.md') != ''
         uses: actions/upload-artifact@v4
         with:
           name: seguranca-fastapi
           path: |
             backend/reports/security.xml
             docs/security-test-report.md
-          if-no-files-found: error
+          if-no-files-found: warn
 
   project-data:
     name: Banco e dados sintéticos
@@ -311,6 +311,13 @@ jobs:
           set -e
           python scripts/security_release.py audit --ecosystem node \
             --input reports/private/node-audit-raw.json
+      - name: Preparar banco descartável para DAST
+        run: |
+          set -euo pipefail
+          python scripts/validate_project_assets.py
+          psql --set=ON_ERROR_STOP=1 --command \
+            "SELECT 1 FROM synergia.data_operation_events LIMIT 0;"
+          python scripts/bootstrap_web_e2e.py
       - name: Preparar API descartável para DAST
         env:
           RATE_LIMIT_ENABLED: "false"
@@ -323,8 +330,6 @@ jobs:
         run: |
           set -euo pipefail
           export AUTH_JWT_SIGNING_KEY="synthetic-${GITHUB_RUN_ID}-${GITHUB_SHA}"
-          python scripts/validate_project_assets.py
-          python scripts/bootstrap_web_e2e.py
           cd backend
           python -m uvicorn app.main:app --host 127.0.0.1 --port 18000 \
             > ../reports/security/dast-api.log 2>&1 &

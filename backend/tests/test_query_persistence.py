@@ -292,6 +292,27 @@ def test_indicator_filters_and_related_records_use_postgresql() -> None:
         )
         assert rows == []
         assert total == 0
+        empty_quantities = repository.indicators(
+            frozenset({organization_b}), date(2026, 8, 1), date(2026, 8, 31)
+        )["quantities"]
+        assert empty_quantities == {
+            "planned": None,
+            "produced": None,
+            "received": None,
+            "released": None,
+        }
+        with psycopg.connect(database_url) as connection:
+            connection.execute(
+                "UPDATE synergia.workorders "
+                "SET planned_quantity = NULL, produced_quantity = 0 "
+                "WHERE id = %s",
+                (workorder,),
+            )
+        changed_quantities = repository.indicators(
+            frozenset({organization_a}), date(2026, 8, 1), date(2026, 8, 31)
+        )["quantities"]
+        assert changed_quantities["planned"] is None
+        assert changed_quantities["produced"] == 0
     finally:
         with psycopg.connect(database_url) as connection:
             connection.execute(
@@ -323,17 +344,30 @@ def test_indicator_filters_and_related_records_use_postgresql() -> None:
 
 def test_queries_and_reprocessing_use_the_operational_model() -> None:
     database_url = os.environ["DATABASE_URL"]
+    suffix = uuid4().hex[:10]
+    organization_id = uuid4()
+    execution_id = f"exec-api-query-{suffix}"
+    workorder_number = f"WO-API-{suffix}"
+    lot_number = f"LOT-API-{suffix}"
+    serial_number = f"SER-API-{suffix}"
+    container_number = f"CONT-API-{suffix}"
     with psycopg.connect(database_url) as connection:
-        execution_id = "exec-api-query"
+        connection.execute(
+            "INSERT INTO synergia.iam_organizations "
+            "(id, organization_code, display_name) "
+            "VALUES (%s, %s, 'API Query Test')",
+            (organization_id, f"api-query-{suffix}"),
+        )
         connection.execute(
             """
             INSERT INTO synergia.executions (
-                id, status, source, actor_type, actor_identifier, finished_at
+                id, status, source, actor_type, actor_identifier, finished_at,
+                organization_id
             ) VALUES (
-                %s, 'completed', 'OWM', 'technical', 'synthetic-api', now()
+                %s, 'completed', 'OWM', 'technical', 'synthetic-api', now(), %s
             )
             """,
-            (execution_id,),
+            (execution_id, organization_id),
         )
         source_file_id = connection.execute(
             """
@@ -352,29 +386,36 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
                 received_quantity, released_quantity, pending_quantity,
                 retained_quantity, partially_released
             ) VALUES (
-                'WO-API-001', %s, %s, 'consolidated', 10, 8, 8, 6, 2, 1, true
+                %s, %s, %s, 'consolidated', 10, 8, 8, 6, 2, 1, true
             ) RETURNING id
             """,
-            (execution_id, source_file_id),
+            (workorder_number, execution_id, source_file_id),
         ).fetchone()[0]
         lot_id = connection.execute(
             """
             INSERT INTO synergia.lots (
                 lot_number, workorder_id, execution_id, source_file_id
-            ) VALUES ('LOT-API-001', %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s)
             RETURNING id
             """,
-            (workorder_id, execution_id, source_file_id),
+            (lot_number, workorder_id, execution_id, source_file_id),
         ).fetchone()[0]
         serial_id = connection.execute(
             """
             INSERT INTO synergia.serials (
                 serial_number, container_number, workorder_id, lot_id,
                 execution_id, source_file_id
-            ) VALUES ('SER-API-001', 'CONT-API-001', %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (workorder_id, lot_id, execution_id, source_file_id),
+            (
+                serial_number,
+                container_number,
+                workorder_id,
+                lot_id,
+                execution_id,
+                source_file_id,
+            ),
         ).fetchone()[0]
         pending_id = connection.execute(
             """
@@ -395,21 +436,21 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
             """
             INSERT INTO synergia.audit_events (
                 execution_id, entity_type, entity_id, event_type, payload
-            ) VALUES (%s, 'workorder', 'WO-API-001', 'consolidated', '{}')
+            ) VALUES (%s, 'workorder', %s, 'consolidated', '{}')
             """,
-            (execution_id,),
+            (execution_id, workorder_number),
         )
 
     repository = PostgresQueryRepository(database_url)
 
     assert repository.get_execution(execution_id)["status"] == "completed"
-    assert repository.get_workorder("WO-API-001")["lots"] == ["LOT-API-001"]
-    assert repository.get_lot("LOT-API-001")["serials"] == ["SER-API-001"]
-    assert repository.get_serial("SER-API-001")["container_number"] == ("CONT-API-001")
+    assert repository.get_workorder(workorder_number)["lots"] == [lot_number]
+    assert repository.get_lot(lot_number)["serials"] == [serial_number]
+    assert repository.get_serial(serial_number)["container_number"] == container_number
     for entity_type, identifier in (
-        ("workorder", "WO-API-001"),
-        ("lot", "LOT-API-001"),
-        ("serial", "SER-API-001"),
+        ("workorder", workorder_number),
+        ("lot", lot_number),
+        ("serial", serial_number),
     ):
         rows, total = repository.search_operational(
             entity_type=entity_type,
@@ -424,10 +465,10 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     pending, total = repository.list_pending(
         status_filter="open",
         category="long_term_hold",
-        workorder_number="WO-API-001",
+        workorder_number=workorder_number,
         execution_id=execution_id,
-        lot_number="LOT-API-001",
-        serial_number="SER-API-001",
+        lot_number=lot_number,
+        serial_number=serial_number,
         priority="critical",
         responsible_area="Quality",
         page=1,
@@ -443,7 +484,7 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     history, total = repository.list_history(
         execution_id=execution_id,
         entity_type="workorder",
-        entity_id="WO-API-001",
+        entity_id=workorder_number,
         event_type="consolidated",
         page=1,
         page_size=10,
@@ -451,15 +492,16 @@ def test_queries_and_reprocessing_use_the_operational_model() -> None:
     )
     assert total == 1
     assert history[0]["payload"] == {}
-    assert repository.get_consolidated("WO-API-001")["pending_items"] == pending
-    assert repository.indicators()["workorders"]["partially_released"] == 1
+    assert repository.get_consolidated(workorder_number)["pending_items"] == pending
+    scoped_indicators = repository.indicators(frozenset({organization_id}))
+    assert scoped_indicators["workorders"]["partially_released"] == 1
 
-    new_execution_id = "exec-api-query-reprocessed"
+    new_execution_id = f"exec-api-query-reprocessed-{suffix}"
     reprocessed = repository.request_reprocessing(
         execution_id,
         new_execution_id,
         "integration-test",
-        "request-1",
+        f"request-{suffix}",
         "1.0.0",
         "1.0.0",
     )

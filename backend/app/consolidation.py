@@ -517,10 +517,15 @@ def consolidate(
         *unmatched,
     ]
     failed_workorders: list[dict[str, Any]] = []
+    # Relationship indexes are no longer needed once every record has been
+    # assigned. Release their per-identifier sets before materializing the
+    # provenance-rich consolidated Workorders.
+    del indexes, candidates, ordered, seen_records
     for workorder in sorted(grouped):
+        workorder_records = grouped.pop(workorder)
         try:
             consolidated, workorder_issues = _consolidate_workorder(
-                workorder, grouped[workorder]
+                workorder, workorder_records
             )
         except ConsolidationError as exc:
             if not isolate_failures:
