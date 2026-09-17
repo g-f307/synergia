@@ -7,6 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/synergia/backend
 COPY requirements.txt requirements.txt
 RUN python -m pip install --no-cache-dir -r requirements.txt
-COPY app app
+RUN groupadd --gid 10001 synergia \
+    && useradd --uid 10001 --gid synergia --no-log-init \
+        --home-dir /opt/synergia --no-create-home synergia
+COPY --chown=synergia:synergia app app
 
+USER 10001:10001
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
