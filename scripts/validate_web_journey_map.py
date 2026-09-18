@@ -36,6 +36,13 @@ PUBLIC = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
+TECHNICAL = {
+    ("GET", "/health"),
+    ("GET", "/health/live"),
+    ("GET", "/health/ready"),
+    ("GET", "/metrics"),
+}
+EXPOSURES = {"full", "partial", "technical", "planned", "deferred"}
 MATRIX_ROW = re.compile(
     r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` "
     r"\| `(?P<permission>[^`]*)` \| [^|]+ \| "
@@ -76,6 +83,45 @@ def _current_routes() -> set[str]:
     return {f"/{path}" for path in paths - {"", "**"}}
 
 
+def _evidence_text(paths: object, context: str) -> str:
+    if not isinstance(paths, list) or not paths:
+        raise ValueError(f"Evidência Angular ausente em {context}")
+    contents = []
+    for relative in paths:
+        if not isinstance(relative, str) or not relative.startswith("web/src/app/"):
+            raise ValueError(f"Referência Angular inválida em {context}: {relative}")
+        target = ROOT / relative
+        if not target.is_file():
+            raise ValueError(f"Referência Angular inexistente em {context}: {relative}")
+        contents.append(target.read_text(encoding="utf-8"))
+    return "\n".join(contents)
+
+
+def _assert_consumed(operation: tuple[str, str], source: str, context: str) -> None:
+    method, path = operation
+    static_parts = [
+        part
+        for part in path.strip("/").split("/")
+        if part and not (part.startswith("{") and part.endswith("}"))
+    ]
+    position = 0
+    for part in static_parts:
+        found = source.find(part, position)
+        if found < 0:
+            raise ValueError(
+                f"Operação full sem consumo Angular comprovado em {context}: "
+                f"{operation}; trecho ausente={part}"
+            )
+        position = found + len(part)
+    method_pattern = re.compile(
+        rf"(?:\.\s*{method.lower()}\s*(?:<[^>]+>)?\(|['\"]{method}['\"])"
+    )
+    if not method_pattern.search(source):
+        raise ValueError(
+            f"Operação full sem método Angular comprovado em {context}: {operation}"
+        )
+
+
 def validate() -> dict:
     document = json.loads(MAP.read_text(encoding="utf-8"))
     routes = document.get("routes")
@@ -93,6 +139,7 @@ def validate() -> dict:
 
     operations = _openapi_operations()
     contracts = _matrix_contracts()
+    inventoried_operations = set()
     mapped_prototype = set()
     allowed_statuses = {"implemented", "planned", "deferred"}
 
@@ -107,6 +154,13 @@ def validate() -> dict:
             raise ValueError(f"Permissão ou escopo ausente em {route_id}")
         if not isinstance(route.get("url_state"), list):
             raise ValueError(f"Estado de URL ausente em {route_id}")
+        exposure = route.get("exposure", "full")
+        if exposure not in {"full", "partial"}:
+            raise ValueError(f"Exposição da rota inválida em {route_id}: {exposure}")
+        if exposure == "partial" and not route.get("gap"):
+            raise ValueError(f"Rota parcial sem lacuna explícita em {route_id}")
+        if exposure == "full" and route.get("gap"):
+            raise ValueError(f"Rota full não pode possuir lacuna em {route_id}")
 
         prototype_pages = route.get("prototype_pages", [])
         unknown_pages = set(prototype_pages) - PROTOTYPE_PAGES
@@ -128,8 +182,14 @@ def validate() -> dict:
             raise ValueError(f"Rota ativa sem contrato em {route_id}")
 
         endpoint_permissions = set()
+        evidence_source = (
+            _evidence_text(route.get("evidence"), f"rota {route_id}")
+            if exposure == "full"
+            else ""
+        )
         for endpoint in endpoints:
             operation = (endpoint.get("method"), endpoint.get("path"))
+            inventoried_operations.add(operation)
             if operation not in operations:
                 raise ValueError(
                     f"Operação OpenAPI inexistente em {route_id}: {operation}"
@@ -156,12 +216,94 @@ def validate() -> dict:
                     f"Escopo divergente em {route_id}: {operation} "
                     f"esperava {expected_scope}, recebeu {route.get('scope')}"
                 )
+            if exposure == "full":
+                _assert_consumed(operation, evidence_source, f"rota {route_id}")
         if route.get("permission") not in endpoint_permissions:
             raise ValueError(
                 f"Permissão principal divergente em {route_id}: "
                 f"{route.get('permission')} não pertence aos contratos "
                 f"{sorted(endpoint_permissions)}"
             )
+
+    supporting = document.get("supporting_operations")
+    if not isinstance(supporting, list):
+        raise ValueError("Inventário de operações de apoio ausente")
+    valid_consumers = {route["id"] for route in routes} | {
+        "authenticated-shell",
+        "api-safety-contract",
+        "none",
+        "platform",
+        "prometheus",
+    }
+    partial_consumers = {
+        item.get("consumer") for item in supporting if item.get("exposure") == "partial"
+    }
+    for route in routes:
+        if route.get("exposure", "full") == "full" and route["id"] in partial_consumers:
+            raise ValueError(
+                "Rota full possui operações parciais no mesmo consumidor: "
+                f"{route['id']}"
+            )
+
+    for item in supporting:
+        operation = (item.get("method"), item.get("path"))
+        exposure = item.get("exposure")
+        if exposure not in EXPOSURES - {"planned"}:
+            raise ValueError(f"Decisão de exposição inválida: {operation}={exposure}")
+        if operation in inventoried_operations:
+            raise ValueError(f"Operação inventariada mais de uma vez: {operation}")
+        if operation not in operations:
+            raise ValueError(f"Operação de apoio ausente no OpenAPI: {operation}")
+        if item.get("consumer") not in valid_consumers:
+            raise ValueError(
+                f"Consumidor inválido em operação de apoio {operation}: "
+                f"{item.get('consumer')}"
+            )
+        inventoried_operations.add(operation)
+        expected = (
+            ("public", "public")
+            if operation in PUBLIC
+            else ("technical", "technical")
+            if operation in TECHNICAL
+            else contracts.get(operation)
+        )
+        if expected is None:
+            raise ValueError(f"Operação de apoio sem matriz de acesso: {operation}")
+        if (item.get("permission"), item.get("scope")) != expected:
+            raise ValueError(
+                f"Contrato divergente em operação de apoio {operation}: "
+                f"esperava {expected}, recebeu "
+                f"{(item.get('permission'), item.get('scope'))}"
+            )
+        if exposure in {"partial", "deferred"} and not (
+            item.get("decision") and item.get("target")
+        ):
+            raise ValueError(f"Operação {exposure} sem decisão e destino: {operation}")
+        if exposure == "technical" and not item.get("decision"):
+            raise ValueError(f"Operação técnica sem justificativa: {operation}")
+        if exposure == "full":
+            source = _evidence_text(item.get("evidence"), f"operação {operation}")
+            _assert_consumed(operation, source, f"operação {operation}")
+
+    missing_operations = sorted(operations - inventoried_operations)
+    extra_operations = sorted(inventoried_operations - operations)
+    if missing_operations or extra_operations:
+        raise ValueError(
+            "Inventário OpenAPI divergente: "
+            f"ausentes={missing_operations}, excedentes={extra_operations}"
+        )
+
+    capabilities = document.get("planned_capabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        raise ValueError("Capacidades planejadas/adiadas ausentes")
+    capability_ids = [item.get("id") for item in capabilities]
+    if None in capability_ids or len(capability_ids) != len(set(capability_ids)):
+        raise ValueError("IDs de capacidade ausentes ou duplicados")
+    for item in capabilities:
+        if item.get("status") not in {"planned", "deferred"}:
+            raise ValueError(f"Decisão de capacidade inválida: {item.get('id')}")
+        if not item.get("decision") or not item.get("target"):
+            raise ValueError(f"Capacidade sem decisão explícita: {item.get('id')}")
 
     if mapped_prototype != PROTOTYPE_PAGES:
         missing = sorted(PROTOTYPE_PAGES - mapped_prototype)
@@ -190,9 +332,19 @@ def main() -> int:
     routes = document["routes"]
     active = sum(route["status"] != "deferred" for route in routes)
     deferred = len(routes) - active
+    operations = {
+        (endpoint["method"], endpoint["path"])
+        for route in routes
+        for endpoint in route.get("endpoints", [])
+    }
+    operations.update(
+        (item["method"], item["path"])
+        for item in document["supporting_operations"]
+    )
     print(
         f"OK: {active} rotas ativas/planejadas, {deferred} adiadas e "
-        f"{len(PROTOTYPE_PAGES)} páginas do protótipo com decisão."
+        f"{len(PROTOTYPE_PAGES)} páginas do protótipo com decisão; "
+        f"{len(operations)} operações OpenAPI inventariadas."
     )
     return 0
 
