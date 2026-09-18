@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "method": {
     "likelihood": ["unlikely", "possible", "likely"],
     "impact": ["low", "medium", "high", "critical"],
@@ -198,10 +198,10 @@
     },
     {
       "id": "R-12", "journey": "J-04", "category": "denial-of-service", "threat": "Repeated report generation or export exhausts database and application resources.",
-      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Generation limited to gestor", "Shared generation and export rate limits", "Execution state validation", "Cancellation contract"],
-      "evidence": ["backend/tests/test_reports.py", "backend/tests/test_rate_limiting_persistence.py", "docs/reports.md"],
-      "owner": "performance", "treatment_issue": 95, "decision": "Load, concurrency and generation limits must be measured before release."
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Generation limited to gestor", "Shared generation and export rate limits", "Execution state validation", "Cancellation contract", "Reference-volume reconciliation in PostgreSQL 16", "Measured rupture envelope and explicit capacity gate"],
+      "evidence": ["backend/tests/test_reports.py", "backend/tests/test_rate_limiting_persistence.py", "docs/reports.md", "docs/performance-reference-v05-pg16.md", "docs/performance-rupture-pg16.md"],
+      "owner": "performance", "treatment_issue": 95, "decision": "Functional integrity passed at the reference volume; target capacity and SLO approval remain a corporate gate before Stage 6."
     },
     {
       "id": "R-13", "journey": "J-05", "category": "information-disclosure", "threat": "A notification is exposed to the wrong user or organization.",
@@ -289,17 +289,17 @@
     },
     {
       "id": "R-25", "journey": "J-01", "category": "information-disclosure", "threat": "Permissive CORS, cache or browser policy exposes authenticated responses or allows untrusted content execution.",
-      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Configured origin allowlist", "Angular interpolation escapes text by default", "Access token held only in memory"],
-      "evidence": ["backend/tests/test_auth.py", "web/src/app/core/session.service.spec.ts", "backend/app/main.py"],
-      "owner": "security", "treatment_issue": 90, "decision": "CORS, CSP, security headers and sensitive-response cache policy must be verified before release."
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Configured origin allowlist", "Angular interpolation escapes text by default", "Access token held only in memory", "CSP and browser headers on the production Angular build", "No-store policy on sensitive API responses"],
+      "evidence": ["backend/tests/test_auth.py", "web/src/app/core/session.service.spec.ts", "backend/app/main.py", "docs/http-security-validation-report.md", "web/e2e/security-baseline.spec.ts"],
+      "owner": "security", "treatment_issue": 90, "decision": "CORS, CSP, security headers and sensitive-response cache policy passed the automated release regression."
     },
     {
       "id": "R-26", "journey": "J-04", "category": "cross-site-scripting", "threat_class": "xss", "threat": "Stored or reflected operational content executes script in an authenticated browser context.",
-      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Angular interpolation escapes text by default", "No dynamic innerHTML or trust-bypass API", "Export formula neutralization", "Content Security Policy gate"],
-      "evidence": ["web/src/app/domains/queries/workorder-detail.component.spec.ts", "backend/tests/test_reports.py", "docs/security-review-checklist.md"],
-      "owner": "security", "treatment_issue": 90, "decision": "CSP and executable-content regression must be validated before the release candidate."
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Angular interpolation escapes text by default", "No dynamic innerHTML or trust-bypass API", "Export formula neutralization", "Content Security Policy gate", "DAST reflection probes and published-build browser regression"],
+      "evidence": ["web/src/app/domains/queries/workorder-detail.component.spec.ts", "backend/tests/test_reports.py", "docs/security-review-checklist.md", "docs/offensive-security.md", "web/e2e/security-baseline.spec.ts"],
+      "owner": "security", "treatment_issue": 90, "decision": "CSP and executable-content regressions passed; future dynamic rendering must reopen this assessment."
     },
     {
       "id": "R-27", "journey": "J-01", "category": "cross-site-request-forgery", "threat_class": "csrf", "threat": "A hostile origin induces refresh, logout or another cookie-backed session action without user intent.",
