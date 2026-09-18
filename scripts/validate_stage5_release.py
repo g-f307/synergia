@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DECISION = ROOT / "docs" / "stage-5-release-decision.json"
@@ -36,6 +38,14 @@ def _require_evidence(relative_paths: list[str], subject: str) -> None:
             raise ValueError(f"{subject} references missing evidence: {relative}")
 
 
+def _all_signoffs_approved(
+    signoffs: Mapping[str, Mapping[str, Any]],
+) -> bool:
+    return all(
+        signoff.get("status") == "approved" for signoff in signoffs.values()
+    )
+
+
 def validate() -> dict:
     decision = _load(DECISION)
     if decision.get("schema_version") != 1 or decision.get("stage") != 5:
@@ -64,23 +74,35 @@ def validate() -> dict:
         raise ValueError("corporate gates are not recorded")
     tracked_risks: set[str] = set()
     for gate in corporate:
-        required = {"id", "status", "owner", "mitigation", "deadline", "retest_criterion"}
+        required = {
+            "id",
+            "status",
+            "owner",
+            "mitigation",
+            "deadline",
+            "retest_criterion",
+        }
         if not required <= gate.keys() or gate.get("status") not in {
             "pending",
             "blocked",
             "approved",
         }:
-            raise ValueError("corporate gate lacks owner, mitigation, deadline or retest")
+            raise ValueError(
+                "corporate gate lacks owner, mitigation, deadline or retest"
+            )
         related = gate.get("related_risks", [])
         if not related or any(risk_id not in risks for risk_id in related):
-            raise ValueError(f"corporate gate has invalid risk linkage: {gate.get('id')}")
+            raise ValueError(
+                f"corporate gate has invalid risk linkage: {gate.get('id')}"
+            )
         tracked_risks.update(related)
 
     untreated = {
         risk_id
         for risk_id, risk in risks.items()
         if risk.get("residual_severity") in {"high", "critical"}
-        and risk.get("disposition") not in {"mitigated", "accepted", "blocked", "transferred"}
+        and risk.get("disposition")
+        not in {"mitigated", "accepted", "blocked", "transferred"}
     }
     if untreated:
         raise ValueError(f"untreated high or critical risks: {sorted(untreated)}")
@@ -91,14 +113,24 @@ def validate() -> dict:
         and risk.get("disposition") in {"blocked", "transferred"}
     }
     if missing := governed - tracked_risks:
-        raise ValueError(f"high corporate risks absent from release decision: {sorted(missing)}")
+        raise ValueError(
+            f"high corporate risks absent from release decision: {sorted(missing)}"
+        )
 
     signoffs = decision.get("signoffs", {})
+    if not isinstance(signoffs, Mapping) or any(
+        not isinstance(role, str) or not isinstance(item, Mapping)
+        for role, item in signoffs.items()
+    ):
+        raise ValueError("invalid sign-off structure")
     for role in ("product_owner", "technical_owner"):
         item = signoffs.get(role, {})
-        if item.get("status") not in ALLOWED_SIGNOFF_STATES or not item.get("record_at"):
+        if (
+            item.get("status") not in ALLOWED_SIGNOFF_STATES
+            or not item.get("record_at")
+        ):
             raise ValueError(f"invalid or absent sign-off: {role}")
-    fully_signed = all(item["status"] == "approved" for item in signoffs.values())
+    fully_signed = _all_signoffs_approved(signoffs)
     if outcomes["stage_6_entry"] == "authorized" and not fully_signed:
         raise ValueError("Stage 6 cannot be authorized without both sign-offs")
     if outcomes["release_candidate"] == "approved" and any(

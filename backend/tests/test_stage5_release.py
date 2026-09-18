@@ -74,3 +74,16 @@ def test_technical_gate_requires_reproducible_evidence(
 
     with pytest.raises(ValueError, match="missing evidence"):
         validate_stage5_release.validate()
+
+
+def test_signoffs_must_be_mapping_objects(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = _changed_decision(
+        tmp_path,
+        lambda document: document.update(signoffs={"product_owner": "approved"}),
+    )
+    monkeypatch.setattr(validate_stage5_release, "DECISION", target)
+
+    with pytest.raises(ValueError, match="invalid sign-off structure"):
+        validate_stage5_release.validate()
