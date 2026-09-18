@@ -83,6 +83,45 @@ def _current_routes() -> set[str]:
     return {f"/{path}" for path in paths - {"", "**"}}
 
 
+def _evidence_text(paths: object, context: str) -> str:
+    if not isinstance(paths, list) or not paths:
+        raise ValueError(f"Evidência Angular ausente em {context}")
+    contents = []
+    for relative in paths:
+        if not isinstance(relative, str) or not relative.startswith("web/src/app/"):
+            raise ValueError(f"Referência Angular inválida em {context}: {relative}")
+        target = ROOT / relative
+        if not target.is_file():
+            raise ValueError(f"Referência Angular inexistente em {context}: {relative}")
+        contents.append(target.read_text(encoding="utf-8"))
+    return "\n".join(contents)
+
+
+def _assert_consumed(operation: tuple[str, str], source: str, context: str) -> None:
+    method, path = operation
+    static_parts = [
+        part
+        for part in path.strip("/").split("/")
+        if part and not (part.startswith("{") and part.endswith("}"))
+    ]
+    position = 0
+    for part in static_parts:
+        found = source.find(part, position)
+        if found < 0:
+            raise ValueError(
+                f"Operação full sem consumo Angular comprovado em {context}: "
+                f"{operation}; trecho ausente={part}"
+            )
+        position = found + len(part)
+    method_pattern = re.compile(
+        rf"(?:\.\s*{method.lower()}\s*(?:<[^>]+>)?\(|['\"]{method}['\"])"
+    )
+    if not method_pattern.search(source):
+        raise ValueError(
+            f"Operação full sem método Angular comprovado em {context}: {operation}"
+        )
+
+
 def validate() -> dict:
     document = json.loads(MAP.read_text(encoding="utf-8"))
     routes = document.get("routes")
@@ -120,6 +159,8 @@ def validate() -> dict:
             raise ValueError(f"Exposição da rota inválida em {route_id}: {exposure}")
         if exposure == "partial" and not route.get("gap"):
             raise ValueError(f"Rota parcial sem lacuna explícita em {route_id}")
+        if exposure == "full" and route.get("gap"):
+            raise ValueError(f"Rota full não pode possuir lacuna em {route_id}")
 
         prototype_pages = route.get("prototype_pages", [])
         unknown_pages = set(prototype_pages) - PROTOTYPE_PAGES
@@ -141,6 +182,11 @@ def validate() -> dict:
             raise ValueError(f"Rota ativa sem contrato em {route_id}")
 
         endpoint_permissions = set()
+        evidence_source = (
+            _evidence_text(route.get("evidence"), f"rota {route_id}")
+            if exposure == "full"
+            else ""
+        )
         for endpoint in endpoints:
             operation = (endpoint.get("method"), endpoint.get("path"))
             inventoried_operations.add(operation)
@@ -170,6 +216,8 @@ def validate() -> dict:
                     f"Escopo divergente em {route_id}: {operation} "
                     f"esperava {expected_scope}, recebeu {route.get('scope')}"
                 )
+            if exposure == "full":
+                _assert_consumed(operation, evidence_source, f"rota {route_id}")
         if route.get("permission") not in endpoint_permissions:
             raise ValueError(
                 f"Permissão principal divergente em {route_id}: "
@@ -180,6 +228,22 @@ def validate() -> dict:
     supporting = document.get("supporting_operations")
     if not isinstance(supporting, list):
         raise ValueError("Inventário de operações de apoio ausente")
+    valid_consumers = {route["id"] for route in routes} | {
+        "authenticated-shell",
+        "api-safety-contract",
+        "none",
+        "platform",
+        "prometheus",
+    }
+    partial_consumers = {
+        item.get("consumer") for item in supporting if item.get("exposure") == "partial"
+    }
+    for route in routes:
+        if route.get("exposure", "full") == "full" and route["id"] in partial_consumers:
+            raise ValueError(
+                f"Rota full possui operações parciais no mesmo consumidor: {route['id']}"
+            )
+
     for item in supporting:
         operation = (item.get("method"), item.get("path"))
         exposure = item.get("exposure")
@@ -189,6 +253,11 @@ def validate() -> dict:
             raise ValueError(f"Operação inventariada mais de uma vez: {operation}")
         if operation not in operations:
             raise ValueError(f"Operação de apoio ausente no OpenAPI: {operation}")
+        if item.get("consumer") not in valid_consumers:
+            raise ValueError(
+                f"Consumidor inválido em operação de apoio {operation}: "
+                f"{item.get('consumer')}"
+            )
         inventoried_operations.add(operation)
         expected = (
             ("public", "public")
@@ -211,6 +280,9 @@ def validate() -> dict:
             raise ValueError(f"Operação {exposure} sem decisão e destino: {operation}")
         if exposure == "technical" and not item.get("decision"):
             raise ValueError(f"Operação técnica sem justificativa: {operation}")
+        if exposure == "full":
+            source = _evidence_text(item.get("evidence"), f"operação {operation}")
+            _assert_consumed(operation, source, f"operação {operation}")
 
     missing_operations = sorted(operations - inventoried_operations)
     extra_operations = sorted(inventoried_operations - operations)

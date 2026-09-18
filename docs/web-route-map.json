@@ -12,12 +12,13 @@
     "unavailable"
   ],
   "supporting_operations": [
-    {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell"},
-    {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile"},
-    {"method": "POST", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile"},
-    {"method": "GET", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile"},
-    {"method": "DELETE", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile"},
-    {"method": "GET", "path": "/executions/{execution_id}/evidences/{evidence_id}/download", "permission": "artifact.export", "scope": "org", "exposure": "full", "consumer": "execution-detail"},
+    {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "deferred", "consumer": "none", "decision": "A revogação global existe na API, mas ainda não possui ação Angular nem gestão individual de sessões.", "target": "#109"},
+    {"method": "POST", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "GET", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "DELETE", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "GET", "path": "/executions/{execution_id}/evidences/{evidence_id}/download", "permission": "artifact.export", "scope": "org", "exposure": "full", "consumer": "execution-detail", "evidence": ["web/src/app/domains/executions/execution.service.ts"]},
+    {"method": "GET", "path": "/imports/{execution_id}/validation-report", "permission": "artifact.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "O resumo e as inspeções são exibidos, mas o relatório bruto de validação não possui ação web aprovada.", "target": "future-validation-report-ui"},
     {"method": "GET", "path": "/imports/{execution_id}/normalized-data", "permission": "artifact.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "Dados normalizados permanecem disponíveis na API, sem download web até existir necessidade de produto e regra de exposição específicas.", "target": "future-normalized-data-ui"},
     {"method": "GET", "path": "/history", "permission": "audit.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A auditoria é persistida e consultável pela API; uma jornada web dedicada exige filtros, retenção e política de exposição próprios.", "target": "future-audit-ui"},
     {"method": "POST", "path": "/reports/{report_id}/versions", "permission": "report.generate", "scope": "org", "exposure": "partial", "consumer": "reports", "decision": "A interface gera relatórios, mas ainda não oferece ação explícita para criar nova versão de um relatório existente.", "target": "stage-5.1-reports-follow-up"},
@@ -74,6 +75,7 @@
       "menu": null,
       "permission": "public",
       "scope": "public",
+      "evidence": ["web/src/app/core/session.service.ts"],
       "endpoints": [
         {"method": "POST", "path": "/auth/login", "permission": "public"},
         {"method": "POST", "path": "/auth/refresh", "permission": "public"}
@@ -91,6 +93,7 @@
       "menu": "Visão geral",
       "permission": "dashboard.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/dashboard/dashboard.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/indicators", "permission": "dashboard.read"}
       ],
@@ -107,6 +110,7 @@
       "menu": null,
       "permission": "dashboard.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/dashboard/dashboard.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/indicators/{entity}", "permission": "dashboard.read"}
       ],
@@ -123,6 +127,7 @@
       "menu": "Nova importação",
       "permission": "import.create",
       "scope": "org",
+      "evidence": ["web/src/app/domains/imports/import.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/imports/policy", "permission": "import.create"},
         {"method": "POST", "path": "/imports", "permission": "import.create"}
@@ -140,10 +145,10 @@
       "menu": null,
       "permission": "import.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/imports/import.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/imports/{execution_id}", "permission": "import.read"},
         {"method": "GET", "path": "/imports/{execution_id}/inspections", "permission": "import.read"},
-        {"method": "GET", "path": "/imports/{execution_id}/validation-report", "permission": "artifact.read"},
         {"method": "GET", "path": "/imports/{execution_id}/pipeline-summary", "permission": "import.read"}
       ],
       "url_state": ["tab"],
@@ -154,11 +159,14 @@
       "id": "execution-search",
       "route": "/executions",
       "status": "implemented",
+      "exposure": "partial",
+      "gap": "A rota apenas recebe um identificador e navega para o detalhe; o catálogo paginado está destinado à #107.",
       "issue": 59,
       "prototype_pages": ["monitor.html"],
       "menu": "Execucoes",
       "permission": "execution.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/executions/execution.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/executions/{execution_id}", "permission": "execution.read"}
       ],
@@ -175,6 +183,7 @@
       "menu": null,
       "permission": "execution.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/executions/execution.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/executions/{execution_id}", "permission": "execution.read"},
         {"method": "GET", "path": "/executions/{execution_id}/divergences", "permission": "artifact.read"},
@@ -196,6 +205,7 @@
       "menu": "Consulta operacional",
       "permission": "business.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/queries/query.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/search", "permission": "business.read"},
         {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
@@ -215,6 +225,7 @@
       "menu": null,
       "permission": "business.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/queries/query.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/workorders/{workorder_number}", "permission": "business.read"},
         {"method": "GET", "path": "/workorders/{workorder_number}/consolidated-result", "permission": "business.read"}
@@ -232,6 +243,7 @@
       "menu": null,
       "permission": "business.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/queries/query.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/lots/{lot_number}", "permission": "business.read"}
       ],
@@ -248,6 +260,7 @@
       "menu": null,
       "permission": "business.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/queries/query.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/serials/{serial_number}", "permission": "business.read"}
       ],
@@ -264,6 +277,7 @@
       "menu": "Pendências",
       "permission": "pending.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/pending/pending.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/pending-items", "permission": "pending.read"}
       ],
@@ -280,6 +294,7 @@
       "menu": null,
       "permission": "pending.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/pending/pending.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/pending-items/{pending_id}", "permission": "pending.read"},
         {"method": "GET", "path": "/pending-items/{pending_id}/approval", "permission": "approval.read"},
@@ -303,6 +318,7 @@
       "menu": "Perfil e preferências",
       "permission": "profile.own",
       "scope": "own",
+      "evidence": ["web/src/app/core/session.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/me", "permission": "profile.own"},
         {"method": "PATCH", "path": "/me", "permission": "profile.own"}
@@ -336,11 +352,14 @@
       "id": "reports",
       "route": "/reports",
       "status": "implemented",
+      "exposure": "partial",
+      "gap": "Catálogo e geração estão disponíveis, mas a criação explícita de nova versão para um relatório existente ainda não possui ação Angular.",
       "issue": 78,
       "prototype_pages": ["relatorios.html"],
       "menu": "Relatórios",
       "permission": "report.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/reports/report.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/reports", "permission": "report.read"},
         {"method": "GET", "path": "/reports/policy", "permission": "report.read"},
@@ -359,6 +378,7 @@
       "menu": null,
       "permission": "report.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/reports/report.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/reports/{report_id}", "permission": "report.read"},
         {"method": "GET", "path": "/reports/{report_id}/versions", "permission": "report.read"},
@@ -379,6 +399,7 @@
       "menu": "Indicador no cabeçalho",
       "permission": "notification.read",
       "scope": "org",
+      "evidence": ["web/src/app/domains/notifications/notification.service.ts"],
       "endpoints": [
         {"method": "GET", "path": "/notifications", "permission": "notification.read"},
         {"method": "GET", "path": "/notifications/unread-count", "permission": "notification.read"},

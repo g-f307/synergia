@@ -9,6 +9,11 @@ canônico e validável por máquina permanece em
 `supporting_operations` cobrem, sem duplicidade, todas as operações publicadas
 no OpenAPI.
 
+Contratos `full` também informam arquivos Angular de evidência. O validador
+confirma que cada arquivo existe, contém o método HTTP e referencia, em ordem,
+os segmentos estáticos do endpoint. Assim, uma declaração completa não pode se
+apoiar apenas em `consumer` ou `owner` nominal.
+
 Cada contrato recebe uma das decisões abaixo:
 
 | Decisão | Significado |
@@ -87,6 +92,11 @@ O validador reprova quando:
 - uma operação aparece mais de uma vez;
 - permissão ou escopo divergem da matriz de acesso;
 - uma rota parcial não registra sua lacuna;
+- uma rota completa ainda registra lacuna ou possui operação parcial destinada
+  ao mesmo consumidor;
+- uma operação completa não possui referência Angular existente e compatível
+  com seu método e caminho;
+- uma operação informa consumidor desconhecido;
 - uma operação técnica não possui justificativa;
 - uma operação ou capacidade adiada não possui destino;
 - uma rota marcada como implementada não existe no Angular.

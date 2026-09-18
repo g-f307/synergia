@@ -153,6 +153,76 @@ def test_web_journey_map_rejects_partial_route_without_gap(
         validate_web_journey_map.validate()
 
 
+def test_web_journey_map_rejects_admin_marked_as_full(
+    tmp_path, monkeypatch
+) -> None:
+    def mark_admin_as_full(document: dict) -> None:
+        admin = next(route for route in document["routes"] if route["id"] == "admin")
+        admin["exposure"] = "full"
+
+    target = _changed_map(tmp_path, mark_admin_as_full)
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(ValueError, match="Rota full não pode possuir lacuna"):
+        validate_web_journey_map.validate()
+
+
+def test_web_journey_map_rejects_full_route_with_partial_domain_operations(
+    tmp_path, monkeypatch
+) -> None:
+    def hide_reports_gap_and_mark_full(document: dict) -> None:
+        reports = next(
+            route for route in document["routes"] if route["id"] == "reports"
+        )
+        reports["exposure"] = "full"
+        reports.pop("gap")
+
+    target = _changed_map(tmp_path, hide_reports_gap_and_mark_full)
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(
+        ValueError,
+        match="Rota full possui operações parciais no mesmo consumidor",
+    ):
+        validate_web_journey_map.validate()
+
+
+def test_web_journey_map_rejects_full_operation_with_invalid_consumer(
+    tmp_path, monkeypatch
+) -> None:
+    def use_unknown_consumer(document: dict) -> None:
+        operation = next(
+            item
+            for item in document["supporting_operations"]
+            if item["path"] == "/auth/logout"
+        )
+        operation["consumer"] = "missing-angular-consumer"
+
+    target = _changed_map(tmp_path, use_unknown_consumer)
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(ValueError, match="Consumidor inválido"):
+        validate_web_journey_map.validate()
+
+
+def test_web_journey_map_rejects_full_operation_without_angular_consumption(
+    tmp_path, monkeypatch
+) -> None:
+    def point_to_unrelated_source(document: dict) -> None:
+        operation = next(
+            item
+            for item in document["supporting_operations"]
+            if item["path"] == "/auth/logout"
+        )
+        operation["evidence"] = ["web/src/app/features/admin.component.ts"]
+
+    target = _changed_map(tmp_path, point_to_unrelated_source)
+    monkeypatch.setattr(validate_web_journey_map, "MAP", target)
+
+    with pytest.raises(ValueError, match="sem consumo Angular comprovado"):
+        validate_web_journey_map.validate()
+
+
 def test_web_journey_map_rejects_deferred_operation_without_target(
     tmp_path, monkeypatch
 ) -> None:
