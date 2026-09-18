@@ -33,7 +33,20 @@ def test_stage5_decision_is_complete_and_does_not_claim_corporate_approval() -> 
     assert all(gate["status"] == "pending" for gate in decision["corporate_gates"])
 
 
-def test_stage6_requires_both_formal_signoffs(
+def test_release_candidate_rejects_pending_gates_and_signoffs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = _changed_decision(
+        tmp_path,
+        lambda document: document["decisions"].update(release_candidate="approved"),
+    )
+    monkeypatch.setattr(validate_stage5_release, "DECISION", target)
+
+    with pytest.raises(ValueError, match="release candidate requires"):
+        validate_stage5_release.validate()
+
+
+def test_stage6_rejects_unapproved_release_candidate_with_pending_gates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     target = _changed_decision(
@@ -42,7 +55,9 @@ def test_stage6_requires_both_formal_signoffs(
     )
     monkeypatch.setattr(validate_stage5_release, "DECISION", target)
 
-    with pytest.raises(ValueError, match="without both sign-offs"):
+    with pytest.raises(
+        ValueError, match="Stage 6 requires an approved release candidate"
+    ):
         validate_stage5_release.validate()
 
 

@@ -131,16 +131,28 @@ def validate() -> dict:
         ):
             raise ValueError(f"invalid or absent sign-off: {role}")
     fully_signed = _all_signoffs_approved(signoffs)
-    if outcomes["stage_6_entry"] == "authorized" and not fully_signed:
-        raise ValueError("Stage 6 cannot be authorized without both sign-offs")
-    if outcomes["release_candidate"] == "approved" and any(
-        gate["status"] != "passed" for gate in technical
+    technical_approved = all(gate["status"] == "passed" for gate in technical)
+    corporate_approved = all(gate["status"] == "approved" for gate in corporate)
+    release_prerequisites_met = (
+        technical_approved and corporate_approved and fully_signed
+    )
+
+    if (
+        outcomes["release_candidate"] == "approved"
+        and not release_prerequisites_met
     ):
-        raise ValueError("release candidate cannot bypass a technical gate")
-    if outcomes["release_candidate"] == "approved" and any(
-        gate["status"] != "approved" for gate in corporate
-    ):
-        raise ValueError("release candidate cannot bypass a corporate gate")
+        raise ValueError(
+            "release candidate requires approved technical and corporate gates "
+            "and both sign-offs"
+        )
+    if outcomes["stage_6_entry"] == "authorized":
+        if outcomes["release_candidate"] != "approved":
+            raise ValueError("Stage 6 requires an approved release candidate")
+        if not release_prerequisites_met:
+            raise ValueError(
+                "Stage 6 requires approved technical and corporate gates "
+                "and both sign-offs"
+            )
     return decision
 
 
