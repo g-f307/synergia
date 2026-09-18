@@ -169,6 +169,10 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | WEB-G08 | configuração pessoal do protótipo se sobrepõe ao perfil existente | adaptar para `/profile`; manter apenas preferências suportadas | #56/#57 |
 | WEB-G09 | protótipo não possui login, upload ou administração real | implementar com contratos existentes | #56/#58 e #44 |
 | WEB-G10 | organização sintética era filtro livre no navegador | adaptar ao escopo efetivo; filtro só estreita concessões | #56–#62 |
+| WEB-G11 | `/admin` lista recursos, mas não expõe os contratos administrativos de mutação e associação | classificar como parcial e completar a jornada | #105/#106 |
+| WEB-G12 | API possui operações sem jornada Angular ou destinadas exclusivamente à plataforma | inventariar cada contrato como completo, parcial, técnico ou adiado | #105 |
+| WEB-G13 | monitor localiza execução por ID, sem catálogo global | criar contrato paginado e tela própria | #107 |
+| WEB-G14 | sessões persistidas não possuem consulta e revogação individual na interface | criar contratos e jornada segura | #109 |
 
 ## Modo TV
 

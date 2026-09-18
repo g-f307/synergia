@@ -36,7 +36,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementado #62 |
 | `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementado #62 |
 | `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
-| `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado; visual alinhado #69 |
+| `/admin` | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | parcial: listas resumidas implementadas; criação, edição, ciclo de vida e associações destinadas à #106 |
 | `/reports` e detalhe | páginas de relatório | `/reports`, `/reports/policy` e versões/exportação | `report.read`, `report.generate`, `report.export`, `report.cancel` / `org` | implementado #78 |
 | `/notifications` | ícone de notificação | `/notifications`, contador e leitura | `notification.read` + permissão do recurso / `org` | implementado #79; somente canal interno |
 
@@ -60,7 +60,8 @@ O inventário integral e validável de endpoints está em
 
 | Capacidade | Decisão | Issue | Aceite final |
 | --- | --- | --- | --- |
-| autenticação, perfil e administração | implementado/adaptado | #44, #56, #57 | validado #63 |
+| autenticação e perfil | implementado/adaptado | #44, #56, #57 | validado #63 |
+| administração de identidades e acesso | parcial | #44, #105, #106 | listas resumidas existem; gestão completa pendente na #106 |
 | dashboard e indicadores | implementado | #60 | validado #63 |
 | upload manual seguro | implementado, embora ausente no protótipo | #58 | validado no fluxo real #63 |
 | acompanhamento da importação | implementado | #58 | validado no fluxo real #63 |

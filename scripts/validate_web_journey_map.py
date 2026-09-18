@@ -36,6 +36,13 @@ PUBLIC = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
+TECHNICAL = {
+    ("GET", "/health"),
+    ("GET", "/health/live"),
+    ("GET", "/health/ready"),
+    ("GET", "/metrics"),
+}
+EXPOSURES = {"full", "partial", "technical", "planned", "deferred"}
 MATRIX_ROW = re.compile(
     r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` "
     r"\| `(?P<permission>[^`]*)` \| [^|]+ \| "
@@ -93,6 +100,7 @@ def validate() -> dict:
 
     operations = _openapi_operations()
     contracts = _matrix_contracts()
+    inventoried_operations = set()
     mapped_prototype = set()
     allowed_statuses = {"implemented", "planned", "deferred"}
 
@@ -107,6 +115,11 @@ def validate() -> dict:
             raise ValueError(f"Permissão ou escopo ausente em {route_id}")
         if not isinstance(route.get("url_state"), list):
             raise ValueError(f"Estado de URL ausente em {route_id}")
+        exposure = route.get("exposure", "full")
+        if exposure not in {"full", "partial"}:
+            raise ValueError(f"Exposição da rota inválida em {route_id}: {exposure}")
+        if exposure == "partial" and not route.get("gap"):
+            raise ValueError(f"Rota parcial sem lacuna explícita em {route_id}")
 
         prototype_pages = route.get("prototype_pages", [])
         unknown_pages = set(prototype_pages) - PROTOTYPE_PAGES
@@ -130,6 +143,7 @@ def validate() -> dict:
         endpoint_permissions = set()
         for endpoint in endpoints:
             operation = (endpoint.get("method"), endpoint.get("path"))
+            inventoried_operations.add(operation)
             if operation not in operations:
                 raise ValueError(
                     f"Operação OpenAPI inexistente em {route_id}: {operation}"
@@ -163,6 +177,61 @@ def validate() -> dict:
                 f"{sorted(endpoint_permissions)}"
             )
 
+    supporting = document.get("supporting_operations")
+    if not isinstance(supporting, list):
+        raise ValueError("Inventário de operações de apoio ausente")
+    for item in supporting:
+        operation = (item.get("method"), item.get("path"))
+        exposure = item.get("exposure")
+        if exposure not in EXPOSURES - {"planned"}:
+            raise ValueError(f"Decisão de exposição inválida: {operation}={exposure}")
+        if operation in inventoried_operations:
+            raise ValueError(f"Operação inventariada mais de uma vez: {operation}")
+        if operation not in operations:
+            raise ValueError(f"Operação de apoio ausente no OpenAPI: {operation}")
+        inventoried_operations.add(operation)
+        expected = (
+            ("public", "public")
+            if operation in PUBLIC
+            else ("technical", "technical")
+            if operation in TECHNICAL
+            else contracts.get(operation)
+        )
+        if expected is None:
+            raise ValueError(f"Operação de apoio sem matriz de acesso: {operation}")
+        if (item.get("permission"), item.get("scope")) != expected:
+            raise ValueError(
+                f"Contrato divergente em operação de apoio {operation}: "
+                f"esperava {expected}, recebeu "
+                f"{(item.get('permission'), item.get('scope'))}"
+            )
+        if exposure in {"partial", "deferred"} and not (
+            item.get("decision") and item.get("target")
+        ):
+            raise ValueError(f"Operação {exposure} sem decisão e destino: {operation}")
+        if exposure == "technical" and not item.get("decision"):
+            raise ValueError(f"Operação técnica sem justificativa: {operation}")
+
+    missing_operations = sorted(operations - inventoried_operations)
+    extra_operations = sorted(inventoried_operations - operations)
+    if missing_operations or extra_operations:
+        raise ValueError(
+            "Inventário OpenAPI divergente: "
+            f"ausentes={missing_operations}, excedentes={extra_operations}"
+        )
+
+    capabilities = document.get("planned_capabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        raise ValueError("Capacidades planejadas/adiadas ausentes")
+    capability_ids = [item.get("id") for item in capabilities]
+    if None in capability_ids or len(capability_ids) != len(set(capability_ids)):
+        raise ValueError("IDs de capacidade ausentes ou duplicados")
+    for item in capabilities:
+        if item.get("status") not in {"planned", "deferred"}:
+            raise ValueError(f"Decisão de capacidade inválida: {item.get('id')}")
+        if not item.get("decision") or not item.get("target"):
+            raise ValueError(f"Capacidade sem decisão explícita: {item.get('id')}")
+
     if mapped_prototype != PROTOTYPE_PAGES:
         missing = sorted(PROTOTYPE_PAGES - mapped_prototype)
         raise ValueError(f"Páginas do protótipo sem decisão: {missing}")
@@ -190,9 +259,19 @@ def main() -> int:
     routes = document["routes"]
     active = sum(route["status"] != "deferred" for route in routes)
     deferred = len(routes) - active
+    operations = {
+        (endpoint["method"], endpoint["path"])
+        for route in routes
+        for endpoint in route.get("endpoints", [])
+    }
+    operations.update(
+        (item["method"], item["path"])
+        for item in document["supporting_operations"]
+    )
     print(
         f"OK: {active} rotas ativas/planejadas, {deferred} adiadas e "
-        f"{len(PROTOTYPE_PAGES)} páginas do protótipo com decisão."
+        f"{len(PROTOTYPE_PAGES)} páginas do protótipo com decisão; "
+        f"{len(operations)} operações OpenAPI inventariadas."
     )
     return 0
 
