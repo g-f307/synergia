@@ -241,7 +241,8 @@ def validate() -> dict:
     for route in routes:
         if route.get("exposure", "full") == "full" and route["id"] in partial_consumers:
             raise ValueError(
-                f"Rota full possui operações parciais no mesmo consumidor: {route['id']}"
+                "Rota full possui operações parciais no mesmo consumidor: "
+                f"{route['id']}"
             )
 
     for item in supporting:
