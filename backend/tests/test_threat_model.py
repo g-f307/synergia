@@ -26,7 +26,7 @@ def _changed_register(tmp_path: Path, change) -> Path:
 def test_threat_model_matches_openapi_access_matrix_and_evidence() -> None:
     document = validate_threat_model.validate()
 
-    assert document["version"] == "1.1.0"
+    assert document["version"] == "1.2.0"
     assert len(document["journeys"]) == 7
     assert len(document["risks"]) >= 27
 

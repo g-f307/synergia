@@ -138,7 +138,7 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-09 | J-03 | consulta ou reprocessamento abusivo | alto | médio | mitigado | security | #91 |
 | R-10 | J-04 | vazamento de snapshot ou exportação | crítico | médio | mitigado | reports | #92 |
 | R-11 | J-04 | fórmula executável ou histórico alterado | alto | baixo | mitigado | reports | #92 |
-| R-12 | J-04 | geração ou exportação excessiva | alto | alto | bloqueado | performance | #95 |
+| R-12 | J-04 | geração ou exportação excessiva | alto | médio | mitigado; capacidade-alvo ainda é portão corporativo | performance | #95 |
 | R-13 | J-05 | notificação entregue a outro destinatário | alto | baixo | mitigado | notifications | #92 |
 | R-14 | J-05 | entrega duplicada ou worker obsoleto | alto | médio | mitigado | notifications | #95 |
 | R-15 | J-05 | segredo ou mensagem no provedor corporativo | crítico | alto | transferido | platform | #96 / Etapa 8 |
@@ -151,14 +151,17 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-22 | J-03 | degradação não detectada ou sem recuperação | crítico | médio | mitigado | operations | #94 |
 | R-23 | J-02 | dependência, segredo ou build comprometido | crítico | médio | mitigado | security | #92 |
 | R-24 | J-06 | política inicial confundida com alçada final | alto | médio | transferido | product | #96 / Etapa 8 |
-| R-25 | J-01 | CORS, cache ou política do navegador permissiva | crítico | alto | bloqueado | security | #90 |
-| R-26 | J-04 | conteúdo operacional executado como XSS | crítico | alto | bloqueado | security | #90 |
+| R-25 | J-01 | CORS, cache ou política do navegador permissiva | crítico | médio | mitigado | security | #90 |
+| R-26 | J-04 | conteúdo operacional executado como XSS | crítico | médio | mitigado | security | #90 |
 | R-27 | J-01 | ação de sessão induzida por CSRF | alto | médio | mitigado | security | #90 |
 
 Detalhes de ameaça, controles e evidências são mantidos no registro JSON. Um
 controle só reduz a severidade residual quando sua evidência existe no
-repositório. Riscos bloqueados não são aceites tácitos: eles impedem o marco da
-Issue #96 até o tratamento indicado.
+repositório. R-25 e R-26 foram reclassificados após a regressão de CSP, headers,
+cache e conteúdo executável; R-12 foi reduzido após rate limiting, ruptura
+medida e reconciliação V05, sem transformar os números locais em SLO. Riscos
+bloqueados não são aceites tácitos: seu alcance e critério de retomada constam
+da decisão da Etapa 5.
 
 ## Distribuição para a Etapa 5
 
@@ -175,7 +178,8 @@ Issue #96 até o tratamento indicado.
 ## Portões e riscos transferidos
 
 - R-03 bloqueia produção enquanto o adaptador local não estiver proibido pela
-  configuração e a identidade corporativa não estiver homologada.
+  configuração e a identidade corporativa não estiver homologada; não bloqueia
+  homologação descartável com identidades sintéticas.
 - R-15 retorna antes de habilitar qualquer provedor corporativo de e-mail. A
   retomada exige custódia de segredo, política de destinatário e monitoramento.
 - R-24 retorna antes do uso produtivo das aprovações. O negócio deve homologar
@@ -190,6 +194,7 @@ Issue #96 até o tratamento indicado.
 | responsável técnico | revisão do PR da Issue #89 | pendente |
 | segurança ou PO | aceite da classificação e dos portões | pendente |
 
-O merge exige que essas revisões fiquem registradas no PR. Alterações futuras
+O aceite final da Etapa 5 e a entrada na Etapa 6 exigem que essas revisões
+fiquem registradas no PR. Alterações futuras
 em jornada, fronteira, permissão, dado sensível ou componente devem atualizar o
 registro e executar `python scripts/validate_threat_model.py`.
