@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "stage": 5,
+  "issue": 96,
+  "evaluated_on": "2026-09-17",
+  "decisions": {
+    "pre_rpa_homologation": "technically_ready",
+    "release_candidate": "not_approved",
+    "stage_6_entry": "not_authorized"
+  },
+  "technical_gates": [
+    {
+      "id": "environment-and-integrated-journey",
+      "status": "passed",
+      "evidence": [
+        "docs/local-environment.md",
+        "web/e2e/operational-flow.spec.ts",
+        "docs/web-e2e-demonstration.md"
+      ]
+    },
+    {
+      "id": "security-and-supply-chain",
+      "status": "passed",
+      "evidence": [
+        "docs/offensive-security.md",
+        "docs/security-test-report.md",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "id": "abuse-and-recovery",
+      "status": "passed",
+      "evidence": [
+        "docs/rate-limiting.md",
+        "backend/tests/test_rate_limiting_persistence.py"
+      ]
+    },
+    {
+      "id": "observability",
+      "status": "passed",
+      "evidence": [
+        "docs/observability.md",
+        "observability/prometheus/alerts.test.yml"
+      ]
+    },
+    {
+      "id": "backup-and-restore",
+      "status": "passed",
+      "evidence": [
+        "docs/data-recovery-validation-report.md",
+        "backend/tests/test_data_operations_persistence.py"
+      ]
+    },
+    {
+      "id": "reference-volume-integrity",
+      "status": "passed",
+      "evidence": [
+        "docs/performance-reference-v05-pg16.md",
+        "evidence/performance/issue-95/index.json",
+        "evidence/performance/issue-95/SHA256SUMS"
+      ]
+    },
+    {
+      "id": "language-accessibility-and-responsive-ui",
+      "status": "passed",
+      "evidence": [
+        "web/e2e/operational-flow.spec.ts",
+        "docs/web-internationalization-accessibility.md"
+      ]
+    },
+    {
+      "id": "production-build-and-compose",
+      "status": "passed",
+      "evidence": [
+        "web/Dockerfile",
+        "docker-compose.yml",
+        ".github/workflows/ci.yml"
+      ]
+    }
+  ],
+  "corporate_gates": [
+    {
+      "id": "performance-capacity-approval",
+      "status": "pending",
+      "owner": "platform-and-technical-owner",
+      "mitigation": "Keep rate limits enabled, use the measured PG16 envelope and do not treat exploratory latency as an SLO.",
+      "deadline": "before_stage_6_entry",
+      "retest_criterion": "Approve the target infrastructure envelope and repeat the V05 series and C01-C08 concurrency scenarios with comparable committed-code runs.",
+      "related_risks": ["R-12"]
+    },
+    {
+      "id": "corporate-identity",
+      "status": "pending",
+      "owner": "platform",
+      "mitigation": "Keep local authentication disabled in production; use it only with synthetic identities in disposable homologation environments.",
+      "deadline": "before_production_deployment",
+      "retest_criterion": "Approve the corporate IdP contract and rerun authentication, session, role and organization-isolation suites through the production adapter.",
+      "related_risks": ["R-03"]
+    },
+    {
+      "id": "corporate-email-provider",
+      "status": "pending",
+      "owner": "platform",
+      "mitigation": "Leave external delivery disabled and retain the idempotent local capture provider for homologation.",
+      "deadline": "before_enabling_corporate_email",
+      "retest_criterion": "Approve secret custody and recipient policy, then retest delivery, retry, redaction and monitoring with the corporate provider.",
+      "related_risks": ["R-15"]
+    },
+    {
+      "id": "corporate-approval-authority",
+      "status": "pending",
+      "owner": "product-owner",
+      "mitigation": "Treat the current versioned approval policy as a technical workflow only, not as final corporate authority.",
+      "deadline": "before_production_approval_workflows",
+      "retest_criterion": "Approve reviewer groups, authority levels, segregation and consent wording, publish a new policy version and rerun the decision journey.",
+      "related_risks": ["R-24"]
+    },
+    {
+      "id": "corporate-observability-and-disaster-recovery",
+      "status": "pending",
+      "owner": "platform-and-operations",
+      "mitigation": "Use the versioned local Prometheus rules, dashboards and backup runbook only in the controlled homologation environment.",
+      "deadline": "before_production_deployment",
+      "retest_criterion": "Provision corporate telemetry and backup targets, approve SLO/RPO/RTO, and repeat controlled dependency failure plus restore drills.",
+      "related_risks": ["R-22"]
+    }
+  ],
+  "signoffs": {
+    "product_owner": {
+      "status": "pending",
+      "record_at": "pull_request"
+    },
+    "technical_owner": {
+      "status": "pending",
+      "record_at": "pull_request"
+    }
+  }
+}
