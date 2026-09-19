@@ -1,0 +1,47 @@
+<section class="admin-links" [attr.aria-label]="i18n.t(titleKey)">
+  <h2>{{ i18n.t(titleKey) }}</h2>
+  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="reload()">{{ i18n.t('adminUi.retry') }}</button></div> }
+  @else if (result(); as page) {
+    @if (!page.items.length) { <p>{{ i18n.t('adminUi.noLinks') }}</p> }
+    @else { <ul>@for (link of page.items; track link.id) {
+      <li>
+        @if (target !== 'permission') { <a [routerLink]="targetRoute(targetId(link))">{{ label(link) }}</a> }
+        @else { <span>{{ label(link) }}</span> }
+        @if (link.organization_id) { <small>{{ i18n.t('adminUi.orgScoped') }}: {{ link.organization_id }}</small> }
+        @else { <small>{{ i18n.t('adminUi.global') }}</small> }
+        <button type="button" class="secondary" [disabled]="busy()" (click)="revoke(link)">{{ i18n.t('adminUi.revoke') }}</button>
+      </li>
+    }</ul> }
+    @if (page.pages > 1) { <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav> }
+  }
+  <form class="admin-form" (submit)="grant($event)">
+    <h3>{{ i18n.t('adminUi.grant') }}</h3>
+    @if (target === 'user') {
+      <label>{{ i18n.t('adminUi.searchUser') }}<input name="targetQuery" [(ngModel)]="targetQuery"></label>
+      <button type="button" class="secondary" (click)="searchCandidates($event)">{{ i18n.t('adminUi.search') }}</button>
+    }
+    @if (candidateFailure()) { <div role="alert"><p>{{ i18n.t(candidateFailureKey()) }}</p><button type="button" (click)="loadCandidates()">{{ i18n.t('adminUi.retry') }}</button></div> }
+    <label>{{ i18n.t('adminUi.target') }}
+      <select name="target" [(ngModel)]="selectedTarget" required [disabled]="!!candidateFailure()">
+        <option value="">{{ i18n.t('adminUi.choose') }}</option>
+        @for (option of candidateOptions(); track option.id) { <option [value]="option.id">{{ option.label }}</option> }
+      </select>
+    </label>
+    @if (candidatePages() > 1) { <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.targetPages')"><button type="button" [disabled]="candidatePage <= 1" (click)="changeCandidatePage(candidatePage - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ candidatePage }} / {{ candidatePages() }}</span><button type="button" [disabled]="candidatePage >= candidatePages()" (click)="changeCandidatePage(candidatePage + 1)">{{ i18n.t('adminUi.next') }}</button></nav> }
+    @if (scoped()) {
+      <label>{{ i18n.t('adminUi.scope') }}<select name="scope" [(ngModel)]="scope"><option value="global">{{ i18n.t('adminUi.global') }}</option><option value="organization">{{ i18n.t('adminUi.orgScoped') }}</option></select></label>
+      @if (scope === 'organization') {
+        <label>{{ i18n.t('adminUi.searchOrganization') }}<input name="organizationQuery" [(ngModel)]="organizationQuery"></label>
+        <button type="button" class="secondary" (click)="searchOrganizations($event)">{{ i18n.t('adminUi.search') }}</button>
+        @if (organizationFailure()) { <div role="alert"><p>{{ i18n.t(organizationFailureKey()) }}</p><button type="button" (click)="loadOrganizations()">{{ i18n.t('adminUi.retry') }}</button></div> }
+        <label>{{ i18n.t('adminUi.organization') }}<select name="organization" [(ngModel)]="selectedOrganization" required [disabled]="!!organizationFailure()"><option value="">{{ i18n.t('adminUi.choose') }}</option>@for (option of organizationOptions(); track option.id) { <option [value]="option.id">{{ option.label }}</option> }</select></label>
+        @if (organizationPages() > 1) { <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.organizationPages')"><button type="button" [disabled]="organizationPage <= 1" (click)="changeOrganizationPage(organizationPage - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ organizationPage }} / {{ organizationPages() }}</span><button type="button" [disabled]="organizationPage >= organizationPages()" (click)="changeOrganizationPage(organizationPage + 1)">{{ i18n.t('adminUi.next') }}</button></nav> }
+      }
+    }
+    <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
+    @if (formError()) { <p role="alert">{{ formErrorMessage() }}</p> }
+    @if (mutationFailure()) { <p role="alert">{{ i18n.t(mutationFailureKey()) }}</p> }
+    <button type="submit" [disabled]="busy() || !!candidateFailure() || (scoped() && scope === 'organization' && !!organizationFailure())">{{ i18n.t('adminUi.grant') }}</button>
+  </form>
+</section>

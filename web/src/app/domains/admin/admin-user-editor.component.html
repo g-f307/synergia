@@ -1,0 +1,49 @@
+<section class="admin-page" aria-labelledby="admin-user-title">
+  <a routerLink="/admin/users">{{ i18n.t('adminUi.backUsers') }}</a>
+  <h1 id="admin-user-title">{{ i18n.t(id ? 'adminUi.userDetail' : 'adminUi.newUser') }}</h1>
+  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else {
+    @if (user(); as current) {
+      <p>{{ i18n.t('adminUi.status') }}: {{ statusLabel(current.status) }} · {{ i18n.t('adminUi.version') }} {{ current.version }}</p>
+      <p class="admin-muted">{{ i18n.t('adminUi.userId') }}: {{ current.id }}</p>
+    }
+    @if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p>@if (id && failure()?.kind === 'conflict') { <button type="button" (click)="reload()">{{ i18n.t('adminUi.reload') }}</button> }</div> }
+    @if (formError()) { <p role="alert">{{ formErrorMessage() }}</p> }
+    @if (!id || user()) {
+      <form class="admin-form" (submit)="save($event)">
+        <label>{{ i18n.t('adminUi.name') }}<input name="displayName" required maxlength="200" [(ngModel)]="displayName"></label>
+        @if (!id) { <label>{{ i18n.t('adminUi.status') }}<select name="status" [(ngModel)]="status"><option value="active">{{ i18n.t('userStatus.active') }}</option><option value="pending">{{ i18n.t('userStatus.pending') }}</option></select></label> }
+        <fieldset><legend>{{ i18n.t('adminUi.emails') }}</legend>
+          @for (email of emails; track email; let index = $index) {
+            <div class="admin-email-row"><label>{{ i18n.t('adminUi.email') }} {{ index + 1 }}<input type="email" [name]="'email-' + index" required [(ngModel)]="email.email"></label>
+            <label><input type="radio" name="primaryEmail" [checked]="email.is_primary" (change)="setPrimary(index)">{{ i18n.t('adminUi.primary') }}</label>
+            <label><input type="checkbox" [name]="'verified-' + index" [(ngModel)]="email.is_verified">{{ i18n.t('adminUi.verified') }}</label>
+            <button type="button" class="secondary" [disabled]="emails.length === 1" (click)="removeEmail(index)">{{ i18n.t('adminUi.removeEmail') }}</button></div>
+          }
+          <button type="button" class="secondary" [disabled]="emails.length >= 20" (click)="addEmail()">{{ i18n.t('adminUi.addEmail') }}</button>
+        </fieldset>
+        <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
+        <button type="submit" [disabled]="busy()">{{ i18n.t('adminUi.save') }}</button>
+      </form>
+      @if (user(); as current) {
+        <div class="admin-actions" [attr.aria-label]="i18n.t('adminUi.lifecycle')">
+          @if (current.status === 'active' || current.status === 'pending') { <button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus('block')">{{ i18n.t('adminUi.block') }}</button> }
+          @if (current.status === 'blocked') { <button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus('unblock')">{{ i18n.t('adminUi.unblock') }}</button> }
+          @if (current.status !== 'inactive') { <button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus('deactivate')">{{ i18n.t('adminUi.deactivate') }}</button> }
+          @if (current.status === 'inactive') { <button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus('reactivate')">{{ i18n.t('adminUi.reactivate') }}</button> }
+        </div>
+      }
+      @if (id) {
+        <syn-admin-association-panel kind="user_group" side="left" [entityId]="id" target="group" titleKey="adminUi.userGroups" (changed)="loadEffective()" />
+        <syn-admin-association-panel kind="user_role" side="left" [entityId]="id" target="role" titleKey="adminUi.userRoles" (changed)="loadEffective()" />
+        <syn-admin-association-panel kind="user_permission" side="left" [entityId]="id" target="permission" titleKey="adminUi.userPermissions" (changed)="loadEffective()" />
+        <section class="admin-links" aria-labelledby="effective-title"><h2 id="effective-title">{{ i18n.t('adminUi.effectivePermissions') }}</h2>
+          @if (effectiveLoading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+          @else if (effectiveFailure()) { <div role="alert"><p>{{ i18n.t(effectiveFailureKey()) }}</p><button type="button" (click)="loadEffective()">{{ i18n.t('adminUi.retry') }}</button></div> }
+          @else if (!effective().length) { <p>{{ i18n.t('adminUi.noPermissions') }}</p> }
+          @else { <ul>@for (permission of effective(); track permission.permission_key + permission.source_id + permission.organization_id) { <li><strong>{{ permission.permission_key }}</strong><span>{{ sourceLabel(permission.source) }}</span><small>{{ permission.organization_code || i18n.t('adminUi.global') }}</small></li> }</ul> }
+        </section>
+      }
+    }
+  }
+</section>

@@ -2,6 +2,7 @@ import { AsyncPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
@@ -16,14 +17,21 @@ interface Named {
   role_key?: string;
   status?: string;
 }
+interface PermissionNamed { id: string; permission_key: string; }
 
 @Component({
-  imports: [AsyncPipe, BadgeComponent, CardComponent, StateComponent],
+  imports: [AsyncPipe, BadgeComponent, CardComponent, RouterLink, StateComponent],
   template: `
     <section aria-labelledby="admin-title">
       <p class="eyebrow">{{ i18n.t('admin.eyebrow') }}</p>
       <h1 id="admin-title">{{ i18n.t('admin.title') }}</h1>
+      <nav class="admin-navigation" [attr.aria-label]="i18n.t('adminUi.navigation')">
+        <a routerLink="/admin/users">{{ i18n.t('adminUi.users') }}</a>
+        <a routerLink="/admin/groups">{{ i18n.t('adminUi.groups') }}</a>
+        <a routerLink="/admin/roles">{{ i18n.t('adminUi.roles') }}</a>
+      </nav>
       @if (resources$ | async; as resources) {
+        <p>{{ i18n.t('adminUi.permissionCatalogCount', { count: i18n.formatNumber(resources.permissions.length) }) }}</p>
         <div class="grid">
           <article class="card"><h2>{{ i18n.t('admin.users', { count: i18n.formatNumber(resources.users.total) }) }}</h2>
             @for (item of resources.users.items; track item.id) {
@@ -69,7 +77,8 @@ export class AdminComponent {
   readonly resources$ = forkJoin({
     users: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/users`),
     groups: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/access/groups`),
-    roles: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/access/roles`)
+    roles: this.http.get<Page<Named>>(`${environment.apiUrl}/admin/access/roles`),
+    permissions: this.http.get<PermissionNamed[]>(`${environment.apiUrl}/admin/access/permissions`)
   }).pipe(catchError((error: HttpErrorResponse) => {
     if (error.status === 403) this.forbidden.set(true);
     else this.failed.set(true);

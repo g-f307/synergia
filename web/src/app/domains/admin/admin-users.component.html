@@ -1,0 +1,25 @@
+<section class="admin-page" aria-labelledby="admin-users-title">
+  <a routerLink="/admin">{{ i18n.t('adminUi.back') }}</a>
+  <div class="admin-heading"><h1 id="admin-users-title">{{ i18n.t('adminUi.users') }}</h1><a class="button" routerLink="/admin/users/new">{{ i18n.t('adminUi.newUser') }}</a></div>
+  <form class="admin-filters" (submit)="apply($event)">
+    <label>{{ i18n.t('adminUi.name') }}<input name="name" [(ngModel)]="filters.name"></label>
+    <label>{{ i18n.t('adminUi.email') }}<input name="email" type="email" [(ngModel)]="filters.email"></label>
+    <label>{{ i18n.t('adminUi.status') }}<select name="status" [(ngModel)]="filters.status"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></label>
+    <label>{{ i18n.t('adminUi.group') }}<input name="group" [(ngModel)]="filters.group"></label>
+    <label>{{ i18n.t('adminUi.role') }}<input name="role" [(ngModel)]="filters.role"></label>
+    <label>{{ i18n.t('adminUi.organizationCode') }}<input name="organization" [(ngModel)]="filters.organization"></label>
+    <button type="submit">{{ i18n.t('adminUi.filter') }}</button>
+  </form>
+  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="retry()">{{ i18n.t('adminUi.retry') }}</button></div> }
+  @else if (result(); as page) {
+    @if (!page.items.length) { <p role="status">{{ i18n.t('adminUi.empty') }}</p> }
+    @else {
+      <p>{{ i18n.t('adminUi.total', { count: i18n.formatNumber(page.total) }) }}</p>
+      <ul class="admin-list">@for (user of page.items; track user.id) {
+        <li><a [routerLink]="['/admin/users', user.id]">{{ user.display_name }}</a><span>{{ user.emails[0]?.email }}</span><span>{{ statusLabel(user.status) }}</span><span>v{{ user.version }}</span></li>
+      }</ul>
+    }
+    <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages || 1 }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav>
+  }
+</section>
