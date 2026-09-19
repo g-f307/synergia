@@ -1,0 +1,16 @@
+<section class="admin-page" aria-labelledby="admin-access-title">
+  <a routerLink="/admin">{{ i18n.t('adminUi.back') }}</a>
+  <div class="admin-heading"><h1 id="admin-access-title">{{ title() }}</h1><a class="button" [routerLink]="['/admin', kind, 'new']">{{ newTitle() }}</a></div>
+  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="retry()">{{ i18n.t('adminUi.retry') }}</button></div> }
+  @else if (result(); as page) {
+    @if (!page.items.length) { <p role="status">{{ i18n.t('adminUi.empty') }}</p> }
+    @else {
+      <p>{{ i18n.t('adminUi.total', { count: i18n.formatNumber(page.total) }) }}</p>
+      <ul class="admin-list">@for (item of page.items; track item.id) {
+        <li><a [routerLink]="['/admin', kind, item.id]">{{ name(item) }}</a><span>{{ i18n.t(item.is_active ? 'adminUi.active' : 'adminUi.inactive') }}</span><span>v{{ item.version }}</span></li>
+      }</ul>
+    }
+    <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages || 1 }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav>
+  }
+</section>

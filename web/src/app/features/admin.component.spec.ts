@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { I18nService } from '../shared/i18n/i18n.service';
@@ -12,7 +13,7 @@ describe('AdminComponent', () => {
     };
     TestBed.configureTestingModule({
       imports: [AdminComponent],
-      providers: [{ provide: HttpClient, useValue: http }]
+      providers: [provideRouter([]), { provide: HttpClient, useValue: http }]
     });
 
     const fixture = TestBed.createComponent(AdminComponent);
@@ -24,7 +25,7 @@ describe('AdminComponent', () => {
 
   it('translates known user statuses and safely hides unknown codes', () => {
     const http = {
-      get: (url: string) => of(url.endsWith('/users') ? {
+      get: (url: string) => of(url.endsWith('/permissions') ? [] : url.endsWith('/users') ? {
         items: [
           { id: 'user-1', display_name: 'First user', status: 'active' },
           { id: 'user-2', display_name: 'Second user', status: 'future_code' }
@@ -34,7 +35,7 @@ describe('AdminComponent', () => {
     };
     TestBed.configureTestingModule({
       imports: [AdminComponent],
-      providers: [{ provide: HttpClient, useValue: http }]
+      providers: [provideRouter([]), { provide: HttpClient, useValue: http }]
     });
     TestBed.inject(I18nService).configure('en-US');
 

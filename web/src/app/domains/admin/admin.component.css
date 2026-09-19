@@ -1,0 +1,19 @@
+.admin-page { max-width: 72rem; margin-inline: auto; }
+.admin-heading, .admin-actions, .admin-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.admin-heading { justify-content: space-between; }
+.admin-filters, .admin-form { display: grid; gap: 1rem; margin-block: 1.5rem; }
+.admin-filters { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); align-items: end; }
+.admin-form { max-width: 42rem; }
+.admin-filters label, .admin-form label { display: grid; gap: .4rem; }
+.admin-form fieldset { border: 1px solid var(--syn-border, #ccc); border-radius: .5rem; }
+.admin-email-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-block: 1rem; }
+.admin-list { list-style: none; padding: 0; }
+.admin-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: .8rem; padding: .8rem; border-bottom: 1px solid var(--syn-border, #ccc); }
+.admin-list li a { min-width: 12rem; font-weight: 600; }
+.admin-pagination { justify-content: center; margin-block: 1.5rem; }
+.admin-actions { margin-block: 1.5rem; }
+.admin-muted { overflow-wrap: anywhere; opacity: .7; }
+.admin-links { margin-block: 2rem; }
+.admin-links li { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: .5rem; }
+.admin-links small { opacity: .75; }
+@media (max-width: 40rem) { .admin-list li, .admin-email-row { display: grid; } }

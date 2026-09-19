@@ -23,6 +23,57 @@ export const routes: Routes = [
     loadComponent: () => import('./features/profile.component').then((value) => value.ProfileComponent)
   },
   {
+    path: 'admin/users/new',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-user-editor.component').then((value) => value.AdminUserEditorComponent)
+  },
+  {
+    path: 'admin/users/:userId',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-user-editor.component').then((value) => value.AdminUserEditorComponent)
+  },
+  {
+    path: 'admin/users',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-users.component').then((value) => value.AdminUsersComponent)
+  },
+  {
+    path: 'admin/groups/new',
+    data: { kind: 'groups' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-editor.component').then((value) => value.AdminAccessEditorComponent)
+  },
+  {
+    path: 'admin/groups/:groupId',
+    data: { kind: 'groups' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-editor.component').then((value) => value.AdminAccessEditorComponent)
+  },
+  {
+    path: 'admin/groups',
+    data: { kind: 'groups' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-list.component').then((value) => value.AdminAccessListComponent)
+  },
+  {
+    path: 'admin/roles/new',
+    data: { kind: 'roles' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-editor.component').then((value) => value.AdminAccessEditorComponent)
+  },
+  {
+    path: 'admin/roles/:roleId',
+    data: { kind: 'roles' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-editor.component').then((value) => value.AdminAccessEditorComponent)
+  },
+  {
+    path: 'admin/roles',
+    data: { kind: 'roles' },
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/admin/admin-access-list.component').then((value) => value.AdminAccessListComponent)
+  },
+  {
     path: 'admin',
     canActivate: [authenticatedGuard, adminGuard],
     loadComponent: () => import('./features/admin.component').then((value) => value.AdminComponent)

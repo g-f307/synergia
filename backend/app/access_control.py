@@ -164,6 +164,12 @@ class PermissionResponse(BaseModel):
     is_active: bool
 
 
+class OrganizationResponse(BaseModel):
+    id: UUID
+    organization_code: str
+    display_name: str
+
+
 class Page(BaseModel):
     items: list[dict]
     page: int
@@ -171,6 +177,10 @@ class Page(BaseModel):
     total: int
     pages: int
     sort: str
+
+
+class OrganizationPage(Page):
+    items: list[OrganizationResponse]
 
 
 class EffectivePermission(BaseModel):
@@ -226,6 +236,10 @@ class AccessRepository(Protocol):
 
     def list_permissions(self, catalog_version: str | None) -> list[dict]: ...
 
+    def list_organizations(
+        self, page: int, page_size: int, query: str | None
+    ) -> tuple[list[dict], int]: ...
+
     def grant(
         self,
         kind: AssociationKind,
@@ -245,7 +259,14 @@ class AccessRepository(Protocol):
     ) -> dict: ...
 
     def list_associations(
-        self, kind: AssociationKind | None, page: int, page_size: int
+        self,
+        kind: AssociationKind | None,
+        page: int,
+        page_size: int,
+        left_id: UUID | None = None,
+        right_id: UUID | None = None,
+        organization_id: UUID | None = None,
+        active_only: bool = False,
     ) -> tuple[list[dict], int]: ...
 
     def effective_permissions(
@@ -618,6 +639,29 @@ class PostgresAccessRepository:
             )
             return cursor.fetchall()
 
+    def list_organizations(
+        self, page: int, page_size: int, query: str | None
+    ) -> tuple[list[dict], int]:
+        normalized = query.strip() if query else ""
+        where = "WHERE is_active"
+        parameters: list[object] = []
+        if normalized:
+            where += " AND (organization_code ILIKE %s OR display_name ILIKE %s)"
+            parameters.extend((f"%{normalized}%", f"%{normalized}%"))
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT count(*) AS total FROM synergia.iam_organizations {where}",  # noqa: S608
+                parameters,
+            )
+            total = cursor.fetchone()["total"]
+            cursor.execute(
+                "SELECT id, organization_code, display_name "
+                f"FROM synergia.iam_organizations {where} "  # noqa: S608
+                "ORDER BY organization_code, id LIMIT %s OFFSET %s",
+                [*parameters, page_size, (page - 1) * page_size],
+            )
+            return cursor.fetchall(), total
+
     @staticmethod
     def _association_config(kind: AssociationKind) -> tuple[str, str, str, bool]:
         return {
@@ -818,10 +862,16 @@ class PostgresAccessRepository:
             return {"id": result["id"], "idempotent": False, "kind": kind}
 
     def list_associations(
-        self, kind: AssociationKind | None, page: int, page_size: int
+        self,
+        kind: AssociationKind | None,
+        page: int,
+        page_size: int,
+        left_id: UUID | None = None,
+        right_id: UUID | None = None,
+        organization_id: UUID | None = None,
+        active_only: bool = False,
     ) -> tuple[list[dict], int]:
         selects = []
-        parameters: list[object] = []
         for current_kind in (
             "user_group",
             "user_role",
@@ -841,12 +891,29 @@ class PostgresAccessRepository:
                 f"granted_at, revoked_at FROM synergia.{table}"
             )
         union = " UNION ALL ".join(selects)
+        filters = []
+        parameters: list[object] = []
+        if left_id is not None:
+            filters.append("left_id = %s")
+            parameters.append(left_id)
+        if right_id is not None:
+            filters.append("right_id = %s")
+            parameters.append(right_id)
+        if organization_id is not None:
+            filters.append("organization_id = %s")
+            parameters.append(organization_id)
+        if active_only:
+            filters.append("revoked_at IS NULL")
+        where = " WHERE " + " AND ".join(filters) if filters else ""
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(f"SELECT count(*) AS total FROM ({union}) associations")  # noqa: S608
+            cursor.execute(
+                f"SELECT count(*) AS total FROM ({union}) associations{where}",  # noqa: S608
+                parameters,
+            )
             total = cursor.fetchone()["total"]
             cursor.execute(
                 f"SELECT * FROM ({union}) associations "  # noqa: S608
-                "ORDER BY granted_at, kind, id LIMIT %s OFFSET %s",
+                f"{where} ORDER BY granted_at, kind, id LIMIT %s OFFSET %s",
                 [*parameters, page_size, (page - 1) * page_size],
             )
             return cursor.fetchall(), total
@@ -1099,6 +1166,21 @@ def list_permissions(
     return repository.list_permissions(catalog_version)
 
 
+@router.get(
+    "/organizations", response_model=OrganizationPage, responses=ERROR_RESPONSES
+)
+def list_organizations(
+    repository: Repository,
+    actor: CurrentActor,
+    query: Annotated[str | None, Query(max_length=160)] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> Page:
+    _authorize(repository, actor)
+    items, total = repository.list_organizations(page, page_size, query)
+    return _page(items, total, page, page_size, "organization_code,id")
+
+
 def _association_path(kind: AssociationKind):
     def grant_endpoint(
         left_id: UUID,
@@ -1152,11 +1234,17 @@ def list_associations(
     repository: Repository,
     actor: CurrentActor,
     kind: AssociationKind | None = None,
+    left_id: UUID | None = None,
+    right_id: UUID | None = None,
+    organization_id: UUID | None = None,
+    active_only: bool = False,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
 ) -> Page:
     _authorize(repository, actor)
-    items, total = repository.list_associations(kind, page, page_size)
+    items, total = repository.list_associations(
+        kind, page, page_size, left_id, right_id, organization_id, active_only
+    )
     return _page(items, total, page, page_size, "granted_at,kind,id")
 
 

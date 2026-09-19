@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const databaseUrl = process.env.DATABASE_URL ??
   'postgresql://synergia:synergia-local-only@127.0.0.1:5432/synergia_e2e';
 const browserChannel = process.env.E2E_BROWSER_CHANNEL;
+const browserExecutablePath = process.env.E2E_BROWSER_EXECUTABLE_PATH;
 const recordVideo = process.env.E2E_RECORD_VIDEO !== 'false';
 const webPort = process.env.E2E_WEB_PORT ?? '4200';
 const webOrigin = `http://127.0.0.1:${webPort}`;
@@ -60,6 +61,7 @@ export default defineConfig({
     use: {
       ...devices['Desktop Chrome'],
       ...(browserChannel ? { channel: browserChannel } : {}),
+      ...(browserExecutablePath ? { launchOptions: { executablePath: browserExecutablePath } } : {}),
     },
   }],
 });

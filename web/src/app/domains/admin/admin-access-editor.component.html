@@ -1,0 +1,28 @@
+<section class="admin-page" aria-labelledby="admin-access-detail-title">
+  <a [routerLink]="['/admin', kind]">{{ i18n.t('adminUi.back') }}</a>
+  <h1 id="admin-access-detail-title">{{ title() }}</h1>
+  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else {
+    @if (item(); as current) { <p>{{ i18n.t(current.is_active ? 'adminUi.active' : 'adminUi.inactive') }} · {{ i18n.t('adminUi.version') }} {{ current.version }}</p><p class="admin-muted">{{ current.id }}</p> }
+    @if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p>@if (id && failure()?.kind === 'conflict') { <button type="button" (click)="reload()">{{ i18n.t('adminUi.reload') }}</button> }</div> }
+    @if (formError()) { <p role="alert">{{ formErrorMessage() }}</p> }
+    @if (!id || item()) {
+      <form class="admin-form" (submit)="save($event)">
+        <label>{{ nameLabel() }}<input name="name" required [readonly]="kind === 'roles' && !!id" [maxlength]="kind === 'groups' ? 160 : 120" [(ngModel)]="name"></label>
+        <label>{{ detailLabel() }}<textarea name="detail" maxlength="500" [(ngModel)]="detail"></textarea></label>
+        <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
+        <button type="submit" [disabled]="busy()">{{ i18n.t('adminUi.save') }}</button>
+      </form>
+      @if (item(); as current) { <div class="admin-actions"><button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus()">{{ i18n.t(current.is_active ? 'adminUi.deactivate' : 'adminUi.activate') }}</button></div> }
+      @if (id && kind === 'groups') {
+        <syn-admin-association-panel kind="user_group" side="right" [entityId]="id" target="user" titleKey="adminUi.groupUsers" />
+        <syn-admin-association-panel kind="group_role" side="left" [entityId]="id" target="role" titleKey="adminUi.groupRoles" />
+      }
+      @if (id && kind === 'roles') {
+        <syn-admin-association-panel kind="user_role" side="right" [entityId]="id" target="user" titleKey="adminUi.roleUsers" />
+        <syn-admin-association-panel kind="group_role" side="right" [entityId]="id" target="group" titleKey="adminUi.roleGroups" />
+        <syn-admin-association-panel kind="role_permission" side="left" [entityId]="id" target="permission" titleKey="adminUi.rolePermissions" />
+      }
+    }
+  }
+</section>

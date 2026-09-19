@@ -16,7 +16,7 @@ from scripts import validate_web_journey_map  # noqa: E402
 def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
     document = validate_web_journey_map.validate()
 
-    assert document["version"] == "1.1.0"
+    assert document["version"] == "1.2.0"
     assert document["prototype_ref"] == "prototype-v1.0"
     assert {route["id"] for route in document["routes"]} >= {
         "dashboard",
@@ -26,8 +26,9 @@ def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
         "pending-list",
     }
     admin = next(route for route in document["routes"] if route["id"] == "admin")
-    assert admin["exposure"] == "partial"
-    assert admin["gap"]
+    assert admin.get("exposure", "full") == "full"
+    assert "gap" not in admin
+    assert admin["issue"] == 106
     assert document["supporting_operations"]
     assert document["planned_capabilities"]
 
@@ -143,8 +144,10 @@ def test_web_journey_map_rejects_partial_route_without_gap(
     tmp_path, monkeypatch
 ) -> None:
     def remove_gap(document: dict) -> None:
-        admin = next(route for route in document["routes"] if route["id"] == "admin")
-        admin.pop("gap")
+        reports = next(
+            route for route in document["routes"] if route["id"] == "reports"
+        )
+        reports.pop("gap")
 
     target = _changed_map(tmp_path, remove_gap)
     monkeypatch.setattr(validate_web_journey_map, "MAP", target)
@@ -153,14 +156,14 @@ def test_web_journey_map_rejects_partial_route_without_gap(
         validate_web_journey_map.validate()
 
 
-def test_web_journey_map_rejects_admin_marked_as_full(
+def test_web_journey_map_rejects_full_route_with_gap(
     tmp_path, monkeypatch
 ) -> None:
-    def mark_admin_as_full(document: dict) -> None:
+    def add_gap_to_admin(document: dict) -> None:
         admin = next(route for route in document["routes"] if route["id"] == "admin")
-        admin["exposure"] = "full"
+        admin["gap"] = "lacuna incompatível com uma rota completa"
 
-    target = _changed_map(tmp_path, mark_admin_as_full)
+    target = _changed_map(tmp_path, add_gap_to_admin)
     monkeypatch.setattr(validate_web_journey_map, "MAP", target)
 
     with pytest.raises(ValueError, match="Rota full não pode possuir lacuna"):

@@ -381,6 +381,51 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
             assert associations.json()["total"] >= 6
             assert associations.json()["sort"] == "granted_at,kind,id"
 
+            organization_catalog = client.get(
+                "/admin/access/organizations",
+                headers=headers,
+                params={"query": suffix, "page_size": 1},
+            )
+            assert organization_catalog.status_code == 200
+            assert organization_catalog.json()["total"] == 1
+            assert organization_catalog.json()["items"][0]["id"] == str(
+                ids["organization"]
+            )
+            assert client.get(
+                "/admin/access/organizations", headers=subject_headers
+            ).status_code == 403
+
+            member_links = client.get(
+                "/admin/access/associations",
+                headers=headers,
+                params={
+                    "kind": "user_group",
+                    "left_id": str(ids["subject"]),
+                    "right_id": str(ids["group"]),
+                    "active_only": "true",
+                },
+            )
+            assert member_links.status_code == 200
+            assert member_links.json()["total"] == 1
+            assert member_links.json()["items"][0]["revoked_at"] is None
+            assert client.get(
+                "/admin/access/associations",
+                headers=headers,
+                params={"kind": "user_group", "left_id": str(uuid4())},
+            ).json()["total"] == 0
+            scoped_links = client.get(
+                "/admin/access/associations",
+                headers=headers,
+                params={
+                    "kind": "group_role",
+                    "left_id": str(ids["group"]),
+                    "organization_id": str(ids["organization"]),
+                    "active_only": "true",
+                },
+            )
+            assert scoped_links.status_code == 200
+            assert scoped_links.json()["total"] == 1
+
             last_admin = client.request(
                 "DELETE",
                 f"/admin/access/users/{ids['actor']}/roles/{ids['admin_role']}",
@@ -397,6 +442,15 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
                 json={"reason": "membership rotation"},
             )
             assert revoked.status_code == 200
+            assert client.get(
+                "/admin/access/associations",
+                headers=headers,
+                params={
+                    "kind": "user_group",
+                    "left_id": str(ids["subject"]),
+                    "active_only": "true",
+                },
+            ).json()["total"] == 0
             repeated = client.request(
                 "DELETE",
                 association_requests[0][0],
