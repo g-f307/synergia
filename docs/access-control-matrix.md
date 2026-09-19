@@ -158,6 +158,7 @@ também dependerá da política de rede da TI.
 | `POST /admin/access/roles/{role_id}/deactivate` | `access.admin` | papel | global | admin |
 | `POST /admin/access/roles/{role_id}/activate` | `access.admin` | papel | global | admin |
 | `GET /admin/access/permissions` | `access.admin` | catálogo de permissões | global | admin |
+| `GET /admin/access/organizations` | `access.admin` | catálogo ativo de organizações | global | admin |
 | `PUT /admin/access/users/{left_id}/groups/{right_id}` | `access.admin` | vínculo usuário-grupo | global | admin |
 | `DELETE /admin/access/users/{left_id}/groups/{right_id}` | `access.admin` | vínculo usuário-grupo | global | admin |
 | `PUT /admin/access/users/{left_id}/roles/{right_id}` | `access.admin` | vínculo usuário-papel | global/org | admin |
