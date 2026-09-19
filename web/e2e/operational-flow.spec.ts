@@ -67,8 +67,13 @@ test.describe.serial('integrated operational journey', () => {
     await expect(page.getByText(executionId).first()).toBeVisible();
     await page.locator('a[href="/executions"]').first().click();
     await page.getByLabel(/identificador da execução|execution identifier/i).fill(executionId);
-    await page.getByRole('button', { name: /localizar|locate/i }).click();
+    await page.getByRole('button', { name: /aplicar filtros|apply filters/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
+    await page.locator('button.execution-row').filter({ hasText: executionId }).click();
+    await expect(page).toHaveURL(new RegExp(`/executions/${executionId}`));
     await expect(page.getByText(executionId).first()).toBeVisible();
+    await page.getByRole('button', { name: /voltar ao monitor|back to monitor/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
 
     await page.locator('a[href="/imports/new"]').click();
     await page.getByLabel(/fonte|source/i).selectOption('GMES/OQC');

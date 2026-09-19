@@ -42,7 +42,6 @@
     {"method": "GET", "path": "/metrics", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "prometheus", "decision": "Superfície protegida por credencial técnica exclusiva, sem jornada de usuário no Angular."}
   ],
   "planned_capabilities": [
-    {"id": "execution-catalog", "status": "planned", "target": "#107", "decision": "Criar GET /executions e catálogo Angular paginado; a rota atual localiza somente por identificador."},
     {"id": "supported-preferences", "status": "planned", "target": "#108", "decision": "Completar apenas preferências pessoais aprovadas e persistidas pelo backend."},
     {"id": "session-management", "status": "planned", "target": "#109", "decision": "Criar consulta e revogação individual de sessões próprias e administrativas autorizadas."},
     {"id": "notification-template-management", "status": "planned", "target": "#110", "decision": "Administrar templates versionados; notificações emitidas continuam imutáveis e não são criadas manualmente."},
@@ -143,8 +142,7 @@
       "id": "execution-search",
       "route": "/executions",
       "status": "implemented",
-      "exposure": "partial",
-      "gap": "A rota apenas recebe um identificador e navega para o detalhe; o catálogo paginado está destinado à #107.",
+      "exposure": "full",
       "issue": 59,
       "prototype_pages": ["monitor.html"],
       "menu": "Execucoes",
@@ -152,7 +150,7 @@
       "scope": "org",
       "evidence": ["web/src/app/domains/executions/execution.service.ts"],
       "endpoints": [
-        {"method": "GET", "path": "/executions/{execution_id}", "permission": "execution.read"}
+        {"method": "GET", "path": "/executions", "permission": "execution.read"}
       ],
       "url_state": [],
       "states": ["empty"],

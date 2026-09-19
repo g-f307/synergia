@@ -363,6 +363,23 @@ def test_authentication_vertical_and_horizontal_access(monkeypatch) -> None:
         )
         assert evidence_outside.status_code == 404
 
+        catalog = client.get("/executions?page_size=1&sort=newest", headers=headers)
+        assert catalog.status_code == 200
+        assert [item["execution_id"] for item in catalog.json()["items"]] == [
+            ids["execution_a"]
+        ]
+        assert catalog.json()["pagination"]["total"] == 1
+        other_organization = client.get(
+            f"/executions?organization_id={ids['organization_b']}", headers=headers
+        )
+        assert other_organization.status_code == 200
+        assert other_organization.json()["items"] == []
+        direct_outside = client.get(
+            f"/executions?execution_id={ids['execution_b']}", headers=headers
+        )
+        assert direct_outside.status_code == 200
+        assert direct_outside.json()["items"] == []
+
         upload = client.post(
             "/imports",
             headers=headers,
@@ -383,6 +400,38 @@ def test_authentication_vertical_and_horizontal_access(monkeypatch) -> None:
             json={"technical_origin": "authorization-test"},
         )
         assert vertical.status_code == 403
+
+
+def test_execution_catalog_paginates_with_stable_tiebreak_and_combined_filters(
+    monkeypatch,
+) -> None:
+    config = _configure(monkeypatch)
+    database_url = os.environ["DATABASE_URL"]
+    ids = _bootstrap(database_url, "analista")
+    execution_c = str(ids["execution_a"]).replace("authz-a-", "authz-c-")
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            """INSERT INTO synergia.executions
+                   (id,status,source,actor_type,actor_identifier,organization_id,
+                    initiated_by_user_id,initiated_by_session_id,started_at)
+               SELECT %s,'pending','OWM','user',actor_identifier,
+                      organization_id,initiated_by_user_id,initiated_by_session_id,
+                      started_at
+               FROM synergia.executions WHERE id=%s""",
+            (execution_c, ids["execution_a"]),
+        )
+    headers = {"Authorization": f"Bearer {_token(config, ids)}"}
+    query = (
+        f"organization_id={ids['organization_a']}&status=pending"
+        "&lifecycle=active&source=OWM&sort=newest&page_size=1"
+    )
+    with TestClient(app) as client:
+        first = client.get(f"/executions?{query}&page=1", headers=headers).json()
+        second = client.get(f"/executions?{query}&page=2", headers=headers).json()
+        assert first["pagination"]["total"] == 2
+        assert first["items"][0]["execution_id"] == execution_c
+        assert second["items"][0]["execution_id"] == ids["execution_a"]
+        assert first["items"][0]["execution_id"] != second["items"][0]["execution_id"]
 
 
 def test_role_change_and_session_revocation_are_immediate(monkeypatch) -> None:

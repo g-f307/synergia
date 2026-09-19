@@ -12,6 +12,26 @@ NOW = datetime(2026, 8, 30, 12, tzinfo=UTC)
 
 
 class MemoryMonitoringRepository:
+    def catalog(self, **filters):
+        item = {
+            "execution_id": "exec-1",
+            "organization_id": None,
+            "status": "completed_with_errors",
+            "lifecycle": "partial",
+            "attempt": 1,
+            "source": "OWM",
+            "file_types": ["csv"],
+            "file_count": 1,
+            "rows_read": 3,
+            "error_count": 1,
+            "warning_count": 1,
+            "started_at": NOW,
+            "finished_at": NOW,
+        }
+        if filters["execution_id"] not in (None, "exec-1"):
+            return [], 0
+        return [item], 1
+
     def execution_exists(self, execution_id: str) -> bool:
         return execution_id == "exec-1"
 
@@ -130,6 +150,30 @@ def test_lists_monitoring_resources_with_deterministic_contract(api) -> None:
     assert evidence["safe_name"] == "evidence-7.csv"
     assert "storage_key" not in evidence
     assert evidence_page["pagination"]["total"] == 1
+
+
+def test_lists_execution_catalog_and_preserves_direct_identifier_search(api) -> None:
+    response = api.get(
+        "/executions?execution_id=exec-1&lifecycle=partial&page=1&sort=newest"
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["execution_id"] == "exec-1"
+    assert payload["items"][0]["lifecycle"] == "partial"
+    assert payload["pagination"] == {
+        "page": 1,
+        "page_size": 20,
+        "total": 1,
+        "pages": 1,
+    }
+
+
+def test_rejects_invalid_catalog_period(api) -> None:
+    response = api.get(
+        "/executions?date_from=2026-08-31T00:00:00Z&date_to=2026-08-30T00:00:00Z"
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_period"
 
 
 def test_standardizes_not_found_period_and_quarantine_errors(api) -> None:

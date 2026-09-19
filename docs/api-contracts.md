@@ -38,6 +38,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `POST /imports` | inicia uma importação rastreável | `201` |
 | `GET /imports/policy` | políticas por fonte e organizações ativas autorizadas | `200` |
 | `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |
+| `GET /executions` | catálogo paginado e filtrado no escopo autorizado | `200` |
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
 | `GET /imports/{execution_id}/validation-report` | erros e avisos | `200` |
 | `GET /workorders/{workorder_number}` | Workorder, lotes e seriais | `200` |

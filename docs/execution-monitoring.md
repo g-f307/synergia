@@ -6,6 +6,9 @@ Todos os contratos usam o PostgreSQL como fonte de verdade e erros seguem o enve
 
 ## Contratos
 
+- `GET /executions`: catálogo paginado no escopo autorizado, com filtros por
+  organização, estado persistido e público, origem, tipo de arquivo, período e
+  identificador. A ordem usa `started_at` e `id` como desempate determinístico.
 - `GET /executions/{id}`: estado atual, ciclo (`active`, `completed`, `partial` ou
   `failed`), versões, datas, relação de reprocessamento, histórico e contagens.
 - `GET /executions/{id}/divergences`: erros e avisos paginados. Aceita `source`,
