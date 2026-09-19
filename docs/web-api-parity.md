@@ -36,22 +36,24 @@ Cada contrato recebe uma das decisões abaixo:
 | pendências e decisão | fila, detalhe, submissão, atribuição, devolução, reenvio e decisão | completo |
 | relatórios | catálogo, geração, histórico, cancelamento e exportação | parcial; nova versão explícita permanece pendente |
 | notificações | central, contador, leitura e preferências | completo para ocorrências; templates na #110 |
-| administração de acesso | listas resumidas de usuários, grupos e papéis | parcial; gestão completa na #106 |
+| administração de acesso | usuários, grupos, papéis, associações e permissões efetivas | completo na #106 |
 | auditoria | consulta protegida disponível na API | interface adiada |
 | saúde e métricas | sondas e métricas protegidas para plataforma | técnico, sem interface Angular |
 
-## Lacuna administrativa
+## Jornada administrativa
 
-A rota `/admin` não representa CRUD completo. A implementação atual executa
-somente `GET /admin/users`, `GET /admin/access/groups` e
-`GET /admin/access/roles`. O catálogo de permissões está relacionado à rota,
-mas as ações de criação, detalhe, edição, ciclo de vida, concessão, revogação e
-permissões efetivas não são expostas pelo Angular.
+A issue #106 completou a administração de usuários, grupos e papéis com listas
+paginadas, filtros, criação, detalhe, edição, ciclo de vida e concorrência
+otimista. As cinco associações podem ser concedidas e revogadas com motivo, em
+escopo global ou organizacional quando o contrato permitir, e a tela do usuário
+mostra permissões efetivas e suas origens.
 
-Por isso, `/admin` permanece uma rota implementada com `exposure=partial`. A
-#106 é responsável por completar a jornada. A classificação só poderá mudar
-para `full` quando os contratos administrativos estiverem cobertos por testes
-Angular e E2E reais.
+Durante o planejamento foi aprovada uma extensão mínima de leitura para evitar
+varrer todo o histórico de associações e impedir entrada manual de UUIDs de
+organização. `GET /admin/access/associations` passou a aceitar filtros de
+entidade, organização e vínculo ativo, e `GET /admin/access/organizations`
+publica o catálogo paginado de organizações ativas. Ambos continuam protegidos
+por `access.admin`; a autorização e a validação de escopo permanecem no backend.
 
 ## Contratos deliberadamente sem tela
 

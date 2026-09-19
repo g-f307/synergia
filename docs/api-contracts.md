@@ -53,7 +53,8 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /indicators/{entity}` | registros paginados do indicador; exige `dashboard.read` e permissão específica da entidade | `200` |
 | `GET /indicators/{entity}` | registros paginados relacionados aos indicadores com o mesmo escopo e período | `200` |
 | `GET /admin/access/permissions` | catálogo versionado de permissões | `200` |
-| `GET /admin/access/associations` | associações administrativas paginadas | `200` |
+| `GET /admin/access/organizations` | organizações ativas para escopo administrativo | `200` |
+| `GET /admin/access/associations` | associações paginadas e filtráveis por entidade, organização e estado | `200` |
 | `GET /admin/access/users/{user_id}/effective-permissions` | permissões efetivas e origens | `200` |
 | `POST /reports` | gera e persiste o primeiro snapshot de um relatório | `201` |
 | `POST /reports/{report_id}/versions` | gera uma nova versão sem sobrescrever anteriores | `201` |
