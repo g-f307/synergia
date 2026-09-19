@@ -6,6 +6,7 @@ import path from 'node:path';
 const operatorEmail = 'operator.e2e@example.invalid';
 const readerEmail = 'reader.e2e@example.invalid';
 const managerEmail = 'manager.e2e@example.invalid';
+const adminEmail = 'admin.e2e@example.invalid';
 const managerId = '63000000-0000-4000-8000-000000000003';
 const password = process.env.E2E_PASSWORD ?? 'synthetic-e2e-password-63';
 const fixture = path.resolve('../data/synthetic/fixtures/minimal-comprehensive/n-fp.xlsx');
@@ -268,6 +269,75 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByRole('searchbox', { name: /identifier|identificador/i }).fill('SYN-WO-000001');
     await page.getByRole('button', { name: /search|buscar|pesquisar/i }).click();
     await expect(page.getByText(/nenhum resultado|no results/i)).toBeVisible();
+  });
+
+  test('completes the administrative lifecycle with scoped associations', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    const suffix = Date.now().toString(36);
+    const userName = `E2E Admin Subject ${suffix}`;
+    const userEmail = `admin-subject-${suffix}@example.invalid`;
+    const roleKey = `e2e-role-${suffix}`;
+    const groupName = `E2E Group ${suffix}`;
+    await login(page, adminEmail);
+    await page.locator('a[href="/admin"]').click();
+    await page.locator('a[href="/admin/users"]').click();
+    await page.locator('a[href="/admin/users/new"]').click();
+    await page.getByLabel(/^nome$|^name$/i).fill(userName);
+    await page.getByLabel(/e-mail 1|email 1/i).fill(userEmail);
+    await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved user onboarding');
+    await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
+    await expect(page).toHaveURL(/\/admin\/users\/[0-9a-f-]+/);
+
+    await page.getByRole('link', { name: /voltar aos usuários|back to users/i }).click();
+    await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
+    await page.locator('a[href="/admin/roles"]').click();
+    await page.locator('a[href="/admin/roles/new"]').click();
+    await page.getByLabel(/chave do papel|role key/i).fill(roleKey);
+    await page.getByLabel(/descrição|description/i).fill('E2E scoped administrative role');
+    await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved role creation');
+    await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
+    const rolePermissions = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /permissões do papel|role permissions/i }) });
+    await rolePermissions.getByLabel(/destino|target/i).selectOption({ label: 'dashboard.read' });
+    await rolePermissions.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved role permission');
+    await rolePermissions.getByRole('button', { name: /conceder associação|grant association/i }).click();
+    await expect(rolePermissions.locator('ul').getByText('dashboard.read', { exact: true })).toBeVisible();
+
+    await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
+    await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
+    await page.locator('a[href="/admin/groups"]').click();
+    await page.locator('a[href="/admin/groups/new"]').click();
+    await page.getByLabel(/nome do grupo|group name/i).fill(groupName);
+    await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved group creation');
+    await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
+    const members = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /membros do grupo|group members/i }) });
+    await members.getByLabel(/buscar usuário|search user/i).fill(userName);
+    await members.getByRole('button', { name: /^buscar$|^search$/i }).click();
+    await members.getByLabel(/destino|target/i).selectOption({ label: userName });
+    await members.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved membership');
+    await members.getByRole('button', { name: /conceder associação|grant association/i }).click();
+    await expect(members.getByRole('link', { name: userName })).toBeVisible();
+    const roles = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /papéis associados|assigned roles/i }) });
+    await roles.getByLabel(/destino|target/i).selectOption({ label: roleKey });
+    await roles.getByLabel(/escopo|scope/i).selectOption('organization');
+    await roles.locator('select[name="organization"]').selectOption({ index: 1 });
+    await roles.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved scoped role');
+    await roles.getByRole('button', { name: /conceder associação|grant association/i }).click();
+    await expect(roles.getByRole('link', { name: roleKey })).toBeVisible();
+
+    await members.getByRole('link', { name: userName }).click();
+    const effective = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /permissões efetivas|effective permissions/i }) });
+    await expect(effective.getByText('dashboard.read')).toBeVisible();
+    await expect(effective.getByText(/via grupo|via group/i)).toBeVisible();
+    await expectAccessible(page, testInfo, 'admin-detail-desktop');
+    const userGroups = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /grupos do usuário|user groups/i }) });
+    page.once('dialog', (dialog) => dialog.accept());
+    await userGroups.getByLabel(/motivo da ação|reason for this action/i).fill('E2E membership removal');
+    await userGroups.getByRole('button', { name: /revogar|revoke/i }).click();
+    await expect(effective.getByText('dashboard.read')).toHaveCount(0);
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByLabel(/motivo da ação|reason for this action/i).first().fill('E2E lifecycle completion');
+    await page.getByRole('button', { name: /desativar|deactivate/i }).first().click();
+    await expect(page.getByText(/inativo|inactive/i).first()).toBeVisible();
   });
 
   test('supports English, keyboard navigation and a mobile viewport', async ({ page }, testInfo) => {
