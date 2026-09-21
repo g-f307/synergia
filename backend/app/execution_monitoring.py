@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -30,6 +30,27 @@ ERRORS = {
     404: {"model": ErrorResponse, "description": "Recurso não encontrado"},
     422: {"model": ErrorResponse, "description": "Filtros inválidos"},
 }
+
+
+def _normalize_period(
+    date_from: datetime | None,
+    date_to: datetime | None,
+) -> tuple[datetime | None, datetime | None]:
+    values = (date_from, date_to)
+    if any(value is not None and value.utcoffset() is None for value in values):
+        raise ApiError(
+            422,
+            "timezone_required",
+            "Os limites do período devem incluir o fuso horário",
+        )
+
+    normalized_from = date_from.astimezone(UTC) if date_from else None
+    normalized_to = date_to.astimezone(UTC) if date_to else None
+    if normalized_from and normalized_to and normalized_from > normalized_to:
+        raise ApiError(
+            422, "invalid_period", "O início do período deve anteceder o fim"
+        )
+    return normalized_from, normalized_to
 
 
 class Pagination(BaseModel):
@@ -452,10 +473,7 @@ def list_executions(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     sort: Literal["oldest", "newest"] = "newest",
 ) -> ExecutionCatalogPage:
-    if date_from and date_to and date_from > date_to:
-        raise ApiError(
-            422, "invalid_period", "O início do período deve anteceder o fim"
-        )
+    date_from, date_to = _normalize_period(date_from, date_to)
     items, total = repository.catalog(
         organization_scopes=actor.scope_filter("execution.read"),
         organization_id=organization_id,
@@ -491,10 +509,7 @@ def list_divergences(
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> DivergencePage:
     _ensure_execution(repository, execution_id)
-    if date_from and date_to and date_from > date_to:
-        raise ApiError(
-            422, "invalid_period", "O início do período deve anteceder o fim"
-        )
+    date_from, date_to = _normalize_period(date_from, date_to)
     items, total = repository.divergences(
         execution_id,
         source=source,

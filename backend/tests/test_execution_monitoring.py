@@ -12,7 +12,10 @@ NOW = datetime(2026, 8, 30, 12, tzinfo=UTC)
 
 
 class MemoryMonitoringRepository:
+    catalog_filters: dict = {}
+
     def catalog(self, **filters):
+        type(self).catalog_filters = filters
         item = {
             "execution_id": "exec-1",
             "organization_id": None,
@@ -129,6 +132,7 @@ class MemoryMonitoringRepository:
 
 @pytest.fixture
 def api():
+    MemoryMonitoringRepository.catalog_filters = {}
     app.dependency_overrides[get_monitoring_repository] = MemoryMonitoringRepository
     with TestClient(app) as client:
         yield client
@@ -168,9 +172,41 @@ def test_lists_execution_catalog_and_preserves_direct_identifier_search(api) -> 
     }
 
 
-def test_rejects_invalid_catalog_period(api) -> None:
+def test_normalizes_catalog_period_with_offsets_to_utc(api) -> None:
     response = api.get(
-        "/executions?date_from=2026-08-31T00:00:00Z&date_to=2026-08-30T00:00:00Z"
+        "/executions?date_from=2026-09-01T08:30:00-04:00"
+        "&date_to=2026-09-02T09:45:00-03:00"
+    )
+
+    assert response.status_code == 200
+    filters = MemoryMonitoringRepository.catalog_filters
+    assert filters["date_from"] == datetime(2026, 9, 1, 12, 30, tzinfo=UTC)
+    assert filters["date_to"] == datetime(2026, 9, 2, 12, 45, tzinfo=UTC)
+
+
+def test_rejects_catalog_period_without_offsets(api) -> None:
+    response = api.get(
+        "/executions?date_from=2026-09-01T08:30:00&date_to=2026-09-02T08:30:00"
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "timezone_required"
+
+
+def test_rejects_catalog_period_with_mixed_timezone_awareness(api) -> None:
+    response = api.get(
+        "/executions?date_from=2026-09-01T08:30:00"
+        "&date_to=2026-09-02T08:30:00Z"
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "timezone_required"
+
+
+def test_rejects_catalog_period_inverted_after_utc_normalization(api) -> None:
+    response = api.get(
+        "/executions?date_from=2026-09-01T08:00:00-04:00"
+        "&date_to=2026-09-01T11:00:00Z"
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_period"
