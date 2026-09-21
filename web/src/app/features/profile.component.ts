@@ -44,6 +44,22 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
           <label class="check">
             <input type="checkbox" formControlName="in_app"> {{ i18n.t('profile.inAppNotifications') }}
           </label>
+          <fieldset>
+            <legend>{{ i18n.t('profile.appearance') }}</legend>
+            <label>{{ i18n.t('profile.density') }}
+              <select formControlName="density">
+                <option value="comfortable">{{ i18n.t('profile.density.comfortable') }}</option>
+                <option value="compact">{{ i18n.t('profile.density.compact') }}</option>
+              </select>
+            </label>
+            <label>{{ i18n.t('profile.fontScale') }}
+              <select formControlName="font_scale">
+                <option value="small">{{ i18n.t('profile.fontScale.small') }}</option>
+                <option value="normal">{{ i18n.t('profile.fontScale.normal') }}</option>
+                <option value="large">{{ i18n.t('profile.fontScale.large') }}</option>
+              </select>
+            </label>
+          </fieldset>
           <button type="submit" [disabled]="busy()">
             {{ i18n.t('profile.save') }}
           </button>
@@ -75,6 +91,7 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
     .profile-grid{display:grid;gap:var(--syn-space-5);grid-template-columns:minmax(0,2fr) minmax(17rem,1fr)}
     .profile-email{color:var(--syn-text-secondary);margin-bottom:var(--syn-space-5)}
     .avatar-panel{align-self:start;margin-top:0;text-align:center}.avatar-panel label{text-align:left}.avatar-preview{margin:0 auto var(--syn-space-5)}
+    fieldset{border:1px solid var(--syn-border);border-radius:var(--syn-radius);display:grid;gap:var(--syn-space-4);padding:var(--syn-space-4)}
     @media(max-width:767px){.profile-grid{grid-template-columns:1fr}.avatar-panel{order:-1}}
   `]
 })
@@ -93,7 +110,9 @@ export class ProfileComponent {
     locale: ['pt-BR'],
     timezone: ['America/Manaus', Validators.required],
     email: [true],
-    in_app: [true]
+    in_app: [true],
+    density: ['comfortable' as 'comfortable' | 'compact'],
+    font_scale: ['normal' as 'small' | 'normal' | 'large']
   });
 
   constructor() {
@@ -104,7 +123,8 @@ export class ProfileComponent {
           display_name: profile.display_name,
           locale: isSupportedLocale(profile.locale) ? profile.locale : 'pt-BR',
           timezone: profile.timezone,
-          ...profile.notifications
+          ...profile.notifications,
+          ...profile.appearance
         });
         if (profile.avatar && profile.avatar.sha256 !== this.loadedAvatarSha) {
           this.loadAvatar(profile.avatar.sha256);
@@ -129,7 +149,8 @@ export class ProfileComponent {
       display_name: value.display_name,
       locale: value.locale,
       timezone: value.timezone,
-      notifications: { email: value.email, in_app: value.in_app }
+      notifications: { email: value.email, in_app: value.in_app },
+      appearance: { density: value.density, font_scale: value.font_scale }
     }).pipe(finalize(() => this.busy.set(false))).subscribe({
       next: () => this.message.set(this.i18n.t('profile.saved')),
       error: () => this.error.set(true)

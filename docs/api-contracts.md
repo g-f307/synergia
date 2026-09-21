@@ -28,7 +28,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /metrics` | métricas Prometheus com credencial técnica dedicada | `200` |
 | `POST /auth/login` | cria sessão e emite access/refresh | `200` |
 | `GET /me` | consulta identidade e preferências próprias | `200` |
-| `PATCH /me` | atualiza perfil e preferências próprias | `200` |
+| `PATCH /me` | atualiza perfil, notificações e aparência próprias com versão otimista | `200` |
 | `POST /me/avatar` | valida e grava avatar próprio | `201` |
 | `GET /me/avatar` | baixa avatar próprio após autenticação | `200` |
 | `DELETE /me/avatar` | remove avatar próprio | `200` |

@@ -16,7 +16,7 @@ foram alinhadas na #69 e são verificadas separadamente na
 | `detalhe-pendencia.html` | contexto, histórico, observações, execução e decisão | ID da pendência | reprocessar, atribuir, anotar, aprovar/rejeitar | contexto somente leitura #62; decisão, atribuição e anotação são adiadas |
 | `relatorios.html` | catálogo, cards, histórico e paginação | organização, tipo, estado, execução, ordenação e página | atualizar, gerar, visualizar e exportar | implementado #78 com filtros do contrato real |
 | `visualizar-relatorio.html` | resumo, abas de dados e histórico e paginação | ID, versão, aba e página | voltar, navegar para entidades, cancelar e exportar | implementado #78 sobre snapshots persistidos |
-| `configuracoes.html` | seletores, toggles e parâmetros bloqueados | tema, densidade, fonte, TV, atualização, período e tamanho de página | salvar preferências e solicitar acesso | preferências suportadas em `/profile`; TV, solicitação e parâmetros adiados |
+| `configuracoes.html` | seletores, toggles e parâmetros bloqueados | tema, densidade, fonte, TV, atualização, período e tamanho de página | salvar preferências e solicitar acesso | `/profile` persiste densidade e escala na #108; período, página, atualização, TV e solicitação permanecem adiados |
 
 O menu observado contém Dashboard, Consulta, Monitor, Pendências, Relatórios e
 Configurações. A navegação alvo substitui Relatórios por Nova importação durante
@@ -35,7 +35,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | detalhes de WO/lote/serial | `consulta.html` | detalhes e consolidado | `business.read` / `org` | implementado #61; validado E2E #63 |
 | `/pending-items` | `pendencias.html` | `GET /pending-items` | `pending.read` / `org` | implementado #62 |
 | `/pending-items/:pendingId` | `detalhe-pendencia.html` | `GET /pending-items/{pending_id}` | `pending.read` / `org` | implementado #62 |
-| `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; visual alinhado #69 |
+| `/profile` | `configuracoes.html` | `GET/PATCH /me` | `profile.own` / `own` | implementado; densidade e escala persistentes na #108; demais decisões documentadas |
 | `/admin` e rotas filhas | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado #106: gestão de usuários, grupos, papéis, associações e permissões efetivas |
 | `/reports` e detalhe | páginas de relatório | `/reports`, `/reports/policy` e versões/exportação | `report.read`, `report.generate`, `report.export`, `report.cancel` / `org` | implementado #78 |
 | `/notifications` | ícone de notificação | `/notifications`, contador e leitura | `notification.read` + permissão do recurso / `org` | implementado #79; somente canal interno |
@@ -60,7 +60,7 @@ O inventário integral e validável de endpoints está em
 
 | Capacidade | Decisão | Issue | Aceite final |
 | --- | --- | --- | --- |
-| autenticação e perfil | implementado/adaptado | #44, #56, #57 | validado #63 |
+| autenticação e perfil | implementado/adaptado | #44, #56, #57, #108 | densidade e escala persistentes e aplicadas; parâmetros sem contrato permanecem adiados |
 | administração de identidades e acesso | implementado | #44, #105, #106 | gestão completa e ciclo administrativo validados na #106 |
 | dashboard e indicadores | implementado | #60 | validado #63 |
 | upload manual seguro | implementado, embora ausente no protótipo | #58 | validado no fluxo real #63 |

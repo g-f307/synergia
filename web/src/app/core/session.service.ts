@@ -6,12 +6,14 @@ import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap,
 import { environment } from '../../environments/environment';
 import { SessionState, TokenResponse, UserProfile } from './session.models';
 import { I18nService } from '../shared/i18n/i18n.service';
+import { AppearanceService } from './appearance.service';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
+  private readonly appearance = inject(AppearanceService);
   private readonly tokenState = signal<string | null>(null);
   private refreshRequest?: Observable<boolean>;
 
@@ -74,6 +76,7 @@ export class SessionService {
       tap((profile) => {
         this.profile.set(profile);
         this.i18n.configure(profile.locale, profile.timezone);
+        this.appearance.configure(profile.appearance);
         this.state.set('authenticated');
       })
     );
@@ -84,6 +87,7 @@ export class SessionService {
       tap((profile) => {
         this.profile.set(profile);
         this.i18n.configure(profile.locale, profile.timezone);
+        this.appearance.configure(profile.appearance);
       })
     );
   }
@@ -124,6 +128,7 @@ export class SessionService {
     this.profile.set(null);
     this.state.set(state);
     if (resetLocale) this.i18n.configure('pt-BR');
+    this.appearance.configure();
   }
 
   private acceptToken(token: TokenResponse): void {

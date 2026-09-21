@@ -10,6 +10,11 @@ export interface EffectivePermission {
   organizations: string[] | null;
 }
 
+export interface AppearancePreferences {
+  density: 'comfortable' | 'compact';
+  font_scale: 'small' | 'normal' | 'large';
+}
+
 export interface UserProfile {
   id: string;
   status: string;
@@ -18,6 +23,7 @@ export interface UserProfile {
   locale: 'pt-BR' | 'en-US' | 'es-ES';
   timezone: string;
   notifications: { email: boolean; in_app: boolean };
+  appearance: AppearancePreferences;
   avatar: { media_type: string; size_bytes: number; sha256: string; url: string } | null;
   permissions: EffectivePermission[];
   version: number;

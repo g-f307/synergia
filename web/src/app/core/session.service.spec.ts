@@ -9,6 +9,7 @@ import { provideRouter } from '@angular/router';
 import { SessionService } from './session.service';
 import { UserProfile } from './session.models';
 import { I18nService } from '../shared/i18n/i18n.service';
+import { AppearanceService } from './appearance.service';
 
 const profile: UserProfile = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -18,6 +19,7 @@ const profile: UserProfile = {
   locale: 'pt-BR',
   timezone: 'America/Manaus',
   notifications: { email: true, in_app: true },
+  appearance: { density: 'comfortable', font_scale: 'normal' },
   avatar: null,
   permissions: [{ key: 'access.admin', organizations: null }],
   version: 1
@@ -57,6 +59,7 @@ describe('SessionService', () => {
     expect(service.isAuthenticated()).toBeTrue();
     expect(service.isAdministrator()).toBeTrue();
     expect(TestBed.inject(I18nService).locale()).toBe('pt-BR');
+    expect(TestBed.inject(AppearanceService).preferences()).toEqual(profile.appearance);
     expect(localStorage.length).toBe(0);
   });
 
@@ -83,6 +86,25 @@ describe('SessionService', () => {
     expect(service.profile()?.locale).toBe('en-US');
     expect(TestBed.inject(I18nService).locale()).toBe('en-US');
     expect(document.documentElement.lang).toBe('en-US');
+  });
+
+  it('applies persisted appearance again after loading a new session', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token',
+      token_type: 'Bearer',
+      expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush({
+      ...profile,
+      appearance: { density: 'compact', font_scale: 'large' }
+    });
+
+    expect(TestBed.inject(AppearanceService).preferences()).toEqual({
+      density: 'compact',
+      font_scale: 'large'
+    });
   });
 
   it('keeps the anonymous locale after rejected credentials', () => {

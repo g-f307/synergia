@@ -88,6 +88,7 @@ def test_profile_preferences_avatar_and_audit_persist(monkeypatch, tmp_path) -> 
                 "locale": "en-US",
                 "timezone": "UTC",
                 "notifications": {"email": False, "in_app": True},
+                "appearance": {"density": "compact", "font_scale": "large"},
             },
         )
         assert updated.status_code == 200, updated.text
@@ -114,7 +115,7 @@ def test_profile_preferences_avatar_and_audit_persist(monkeypatch, tmp_path) -> 
         persisted = connection.execute(
             """
             SELECT display_name, locale, timezone, notification_preferences,
-                   avatar_storage_key
+                   ui_density, font_scale, avatar_storage_key
             FROM synergia.identity_users WHERE id = %s
             """,
             (user_id,),
@@ -124,6 +125,8 @@ def test_profile_preferences_avatar_and_audit_persist(monkeypatch, tmp_path) -> 
             "en-US",
             "UTC",
             {"email": False, "in_app": True},
+            "compact",
+            "large",
             None,
         )
         events = connection.execute(

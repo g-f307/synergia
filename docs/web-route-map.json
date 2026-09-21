@@ -42,7 +42,6 @@
     {"method": "GET", "path": "/metrics", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "prometheus", "decision": "Superfície protegida por credencial técnica exclusiva, sem jornada de usuário no Angular."}
   ],
   "planned_capabilities": [
-    {"id": "supported-preferences", "status": "planned", "target": "#108", "decision": "Completar apenas preferências pessoais aprovadas e persistidas pelo backend."},
     {"id": "session-management", "status": "planned", "target": "#109", "decision": "Criar consulta e revogação individual de sessões próprias e administrativas autorizadas."},
     {"id": "notification-template-management", "status": "planned", "target": "#110", "decision": "Administrar templates versionados; notificações emitidas continuam imutáveis e não são criadas manualmente."},
     {"id": "tv-mode", "status": "deferred", "target": "future-tv-mode", "decision": "Permanece adiado até possuir requisitos de autorização, atualização, exposição e acessibilidade."},
@@ -295,12 +294,12 @@
       "id": "profile",
       "route": "/profile",
       "status": "implemented",
-      "issue": 44,
+      "issue": 108,
       "prototype_pages": ["configuracoes.html"],
       "menu": "Perfil e preferências",
       "permission": "profile.own",
       "scope": "own",
-      "evidence": ["web/src/app/core/session.service.ts"],
+      "evidence": ["web/src/app/core/session.service.ts", "web/src/app/core/appearance.service.ts", "web/src/app/features/profile.component.ts"],
       "endpoints": [
         {"method": "GET", "path": "/me", "permission": "profile.own"},
         {"method": "PATCH", "path": "/me", "permission": "profile.own"}

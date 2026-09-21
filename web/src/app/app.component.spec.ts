@@ -23,6 +23,7 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     document.documentElement.dataset['theme'] = 'light';
+    document.documentElement.dataset['fontScale'] = 'normal';
     authenticated.set(false);
     administrator.set(false);
     notificationPermission.set(false);
@@ -51,6 +52,20 @@ describe('AppComponent', () => {
     expect(element.textContent).toContain('Perfil');
     expect(element.textContent).toContain('Visão geral');
     expect(element.textContent).not.toContain('Administração');
+  });
+
+  it('increases the computed sidebar navigation size with the large preference', () => {
+    authenticated.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.sidebar nav a') as HTMLAnchorElement;
+    const normalSize = Number.parseFloat(getComputedStyle(link).fontSize);
+
+    document.documentElement.dataset['fontScale'] = 'large';
+    const largeSize = Number.parseFloat(getComputedStyle(link).fontSize);
+
+    expect(largeSize).toBeGreaterThan(normalSize);
   });
 
   it('updates the authenticated brand variant when the theme changes', () => {
