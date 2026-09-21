@@ -2,12 +2,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Classification, Divergence, Evidence, Execution, Page, PendingItem, ReprocessResult } from './execution.models';
+import { Classification, Divergence, Evidence, Execution, ExecutionCatalogFilters, ExecutionCatalogItem, Page, PendingItem, ReprocessResult } from './execution.models';
 
 @Injectable({ providedIn: 'root' })
 export class ExecutionService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrl}/executions`;
+  list(filters: ExecutionCatalogFilters): Observable<Page<ExecutionCatalogItem>> {
+    let params = new HttpParams().set('page', filters.page).set('page_size', filters.pageSize).set('sort', filters.sort);
+    const optional: Record<string, string|undefined> = { organization_id: filters.organizationId, status: filters.status, lifecycle: filters.lifecycle, source: filters.source, file_type: filters.fileType, date_from: this.localInstant(filters.dateFrom), date_to: this.localInstant(filters.dateTo), execution_id: filters.executionId };
+    for (const [key, value] of Object.entries(optional)) if (value) params = params.set(key, value);
+    return this.http.get<Page<ExecutionCatalogItem>>(this.base, { params });
+  }
   get(id: string): Observable<Execution> { return this.http.get<Execution>(`${this.base}/${encodeURIComponent(id)}`); }
   divergences(id: string, page: number, severity = '', source = ''): Observable<Page<Divergence>> {
     let params = new HttpParams().set('page', page).set('page_size', 20).set('sort', 'oldest');
@@ -20,5 +26,10 @@ export class ExecutionService {
   evidences(id: string, page: number): Observable<Page<Evidence>> { return this.page(`${this.base}/${encodeURIComponent(id)}/evidences`, page); }
   download(id: string, evidenceId: number): Observable<Blob> { return this.http.get(`${this.base}/${encodeURIComponent(id)}/evidences/${evidenceId}/download`, { responseType: 'blob' }); }
   reprocess(id: string, technicalOrigin: string): Observable<ReprocessResult> { return this.http.post<ReprocessResult>(`${this.base}/${encodeURIComponent(id)}/reprocess`, { technical_origin: technicalOrigin, idempotency_key: crypto.randomUUID() }); }
+  private localInstant(value?: string): string|undefined {
+    if (!value) return undefined;
+    const instant = new Date(value);
+    return Number.isNaN(instant.getTime()) ? undefined : instant.toISOString();
+  }
   private page<T>(url: string, page: number): Observable<Page<T>> { return this.http.get<Page<T>>(url, { params: new HttpParams().set('page', page).set('page_size', 20).set('sort', 'oldest') }); }
 }

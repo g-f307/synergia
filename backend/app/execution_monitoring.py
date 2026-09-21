@@ -5,9 +5,10 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from uuid import UUID
 
 import psycopg
 from fastapi import APIRouter, Depends, Query
@@ -15,8 +16,13 @@ from fastapi.responses import FileResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
-from app.authorization import require_execution_permission
+from app.authorization import (
+    ActorContext,
+    require_execution_permission,
+    require_permission,
+)
 from app.errors import ApiError, ErrorResponse
+from app.execution import ExecutionState
 
 router = APIRouter(prefix="/executions", tags=["execution-monitoring"])
 ERRORS = {
@@ -26,11 +32,54 @@ ERRORS = {
 }
 
 
+def _normalize_period(
+    date_from: datetime | None,
+    date_to: datetime | None,
+) -> tuple[datetime | None, datetime | None]:
+    values = (date_from, date_to)
+    if any(value is not None and value.utcoffset() is None for value in values):
+        raise ApiError(
+            422,
+            "timezone_required",
+            "Os limites do período devem incluir o fuso horário",
+        )
+
+    normalized_from = date_from.astimezone(UTC) if date_from else None
+    normalized_to = date_to.astimezone(UTC) if date_to else None
+    if normalized_from and normalized_to and normalized_from > normalized_to:
+        raise ApiError(
+            422, "invalid_period", "O início do período deve anteceder o fim"
+        )
+    return normalized_from, normalized_to
+
+
 class Pagination(BaseModel):
     page: int
     page_size: int
     total: int
     pages: int
+
+
+class ExecutionCatalogItem(BaseModel):
+    execution_id: str
+    organization_id: UUID | None
+    status: str
+    lifecycle: Literal["active", "completed", "partial", "failed"]
+    attempt: int
+    source: str | None
+    file_types: list[str]
+    file_count: int
+    rows_read: int
+    error_count: int
+    warning_count: int
+    started_at: datetime
+    finished_at: datetime | None
+
+
+class ExecutionCatalogPage(BaseModel):
+    items: list[ExecutionCatalogItem]
+    pagination: Pagination
+    sort: str
 
 
 class Divergence(BaseModel):
@@ -133,6 +182,90 @@ class MonitoringRepository:
                 "SELECT EXISTS(SELECT 1 FROM synergia.executions WHERE id=%s) AS found",
                 (execution_id,),
             ).fetchone()["found"]
+
+    def catalog(
+        self,
+        *,
+        organization_scopes: frozenset[UUID] | None,
+        organization_id: UUID | None,
+        status: str | None,
+        lifecycle: str | None,
+        source: str | None,
+        file_type: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+        execution_id: str | None,
+        page: int,
+        page_size: int,
+        sort: str,
+    ) -> tuple[list[dict], int]:
+        if organization_scopes is not None and not organization_scopes:
+            return [], 0
+        # Legacy rows without an IAM organization are deliberately excluded:
+        # no actor can be authorized for an unknown scope.
+        clauses: list[str] = ["e.organization_id IS NOT NULL"]
+        params: list[Any] = []
+        if organization_scopes is not None:
+            clauses.append("e.organization_id = ANY(%s)")
+            params.append(list(organization_scopes))
+        if organization_id is not None:
+            clauses.append("e.organization_id = %s")
+            params.append(organization_id)
+        for expression, value in (
+            ("e.status = %s", status),
+            ("e.source = %s", source),
+            ("e.started_at >= %s", date_from),
+            ("e.started_at <= %s", date_to),
+            ("e.id = %s", execution_id),
+        ):
+            if value is not None:
+                clauses.append(expression)
+                params.append(value)
+        if file_type is not None:
+            clauses.append(
+                "EXISTS (SELECT 1 FROM synergia.source_files filtered "
+                "WHERE filtered.execution_id=e.id AND filtered.extension=%s)"
+            )
+            params.append(file_type.lower().lstrip("."))
+        lifecycle_sql = """CASE
+            WHEN e.status IN ('completed', 'duplicate') THEN 'completed'
+            WHEN e.status = 'completed_with_errors' THEN 'partial'
+            WHEN e.status IN ('validation_failed', 'failed', 'cancelled') THEN 'failed'
+            ELSE 'active' END"""
+        if lifecycle is not None:
+            clauses.append(f"({lifecycle_sql}) = %s")
+            params.append(lifecycle)
+        where = " AND ".join(clauses) if clauses else "TRUE"
+        direction = "DESC" if sort == "newest" else "ASC"
+        with self._connect() as connection:
+            total = connection.execute(
+                f"SELECT count(*) AS total FROM synergia.executions e WHERE {where}",
+                params,
+            ).fetchone()["total"]
+            rows = connection.execute(
+                f"""SELECT e.id AS execution_id,e.organization_id,e.status,
+                           {lifecycle_sql} AS lifecycle,e.attempt,e.source,
+                           COALESCE(files.file_types,ARRAY[]::text[]) AS file_types,
+                           COALESCE(files.file_count,0) AS file_count,
+                           COALESCE(summary.rows_read,0) AS rows_read,
+                           COALESCE(summary.error_count,0) AS error_count,
+                           COALESCE(summary.warning_count,0) AS warning_count,
+                           e.started_at,e.finished_at
+                    FROM synergia.executions e
+                    LEFT JOIN LATERAL (
+                        SELECT array_agg(DISTINCT sf.extension ORDER BY sf.extension)
+                                   FILTER (WHERE sf.extension IS NOT NULL) AS file_types,
+                               count(*) AS file_count
+                        FROM synergia.source_files sf WHERE sf.execution_id=e.id
+                    ) files ON TRUE
+                    LEFT JOIN synergia.pipeline_summaries summary
+                      ON summary.execution_id=e.id
+                    WHERE {where}
+                    ORDER BY e.started_at {direction},e.id {direction}
+                    LIMIT %s OFFSET %s""",
+                [*params, page_size, (page - 1) * page_size],
+            ).fetchall()
+        return [dict(row) for row in rows], total
 
     def divergences(
         self,
@@ -320,6 +453,45 @@ def _page(model, items: list[dict], page: int, page_size: int, total: int, sort:
 
 
 @router.get(
+    "",
+    response_model=ExecutionCatalogPage,
+    responses=ERRORS,
+    summary="Listar execuções autorizadas",
+)
+def list_executions(
+    repository: Repository,
+    actor: Annotated[ActorContext, Depends(require_permission("execution.read"))],
+    organization_id: UUID | None = None,
+    status: ExecutionState | None = None,
+    lifecycle: Literal["active", "completed", "partial", "failed"] | None = None,
+    source: str | None = None,
+    file_type: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    execution_id: str | None = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    sort: Literal["oldest", "newest"] = "newest",
+) -> ExecutionCatalogPage:
+    date_from, date_to = _normalize_period(date_from, date_to)
+    items, total = repository.catalog(
+        organization_scopes=actor.scope_filter("execution.read"),
+        organization_id=organization_id,
+        status=status.value if status else None,
+        lifecycle=lifecycle,
+        source=source,
+        file_type=file_type,
+        date_from=date_from,
+        date_to=date_to,
+        execution_id=execution_id,
+        page=page,
+        page_size=page_size,
+        sort=sort,
+    )
+    return _page(ExecutionCatalogPage, items, page, page_size, total, sort)
+
+
+@router.get(
     "/{execution_id}/divergences", response_model=DivergencePage, responses=ERRORS,
     dependencies=[Depends(require_execution_permission("artifact.read"))],
 )
@@ -337,10 +509,7 @@ def list_divergences(
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> DivergencePage:
     _ensure_execution(repository, execution_id)
-    if date_from and date_to and date_from > date_to:
-        raise ApiError(
-            422, "invalid_period", "O início do período deve anteceder o fim"
-        )
+    date_from, date_to = _normalize_period(date_from, date_to)
     items, total = repository.divergences(
         execution_id,
         source=source,

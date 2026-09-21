@@ -49,6 +49,8 @@ async function expectAccessible(
 
 test.describe.serial('integrated operational journey', () => {
   test('login, upload and execution use the real API and homologated fixture', async ({ page }, testInfo) => {
+    const browserSession = await page.context().newCDPSession(page);
+    await browserSession.send('Emulation.setTimezoneOverride', { timezoneId: 'America/Manaus' });
     const exposed: string[] = [];
     const responseBodies: Promise<string>[] = [];
     page.on('console', (message) => exposed.push(message.text()));
@@ -67,8 +69,20 @@ test.describe.serial('integrated operational journey', () => {
     await expect(page.getByText(executionId).first()).toBeVisible();
     await page.locator('a[href="/executions"]').first().click();
     await page.getByLabel(/identificador da execução|execution identifier/i).fill(executionId);
-    await page.getByRole('button', { name: /localizar|locate/i }).click();
+    await page.getByLabel(/início do período|period start/i).fill('2026-09-01T08:30');
+    const filteredCatalogRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.pathname.endsWith('/executions') && url.searchParams.get('execution_id') === executionId;
+    });
+    await page.getByRole('button', { name: /aplicar filtros|apply filters/i }).click();
+    expect(new URL((await filteredCatalogRequest).url()).searchParams.get('date_from'))
+      .toBe('2026-09-01T12:30:00.000Z');
+    await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
+    await page.locator('button.execution-row').filter({ hasText: executionId }).click();
+    await expect(page).toHaveURL(new RegExp(`/executions/${executionId}`));
     await expect(page.getByText(executionId).first()).toBeVisible();
+    await page.getByRole('button', { name: /voltar ao monitor|back to monitor/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
 
     await page.locator('a[href="/imports/new"]').click();
     await page.getByLabel(/fonte|source/i).selectOption('GMES/OQC');
