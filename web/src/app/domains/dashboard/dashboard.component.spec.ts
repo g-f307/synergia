@@ -17,6 +17,7 @@ describe('DashboardComponent', () => {
   const profile = signal<{ permissions: Array<{ key: string; organizations: string[] | null }> }>({ permissions: [{ key: 'dashboard.read', organizations: ['org-synthetic'] }] });
 
   beforeEach(async () => {
+    document.documentElement.dataset['fontScale'] = 'normal';
     profile.set({ permissions: [{ key: 'dashboard.read', organizations: ['org-synthetic'] }] });
     response = new Subject<Indicators>();
     currentResponse = response;
@@ -44,6 +45,20 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Planejada');
     expect(fixture.nativeElement.querySelectorAll('.indicator-card').length).toBe(3);
     expect(fixture.nativeElement.querySelector('syn-state')).toBeNull();
+  });
+
+  it('scales computed indicator and support text sizes with the large preference', () => {
+    response.next(completeIndicators());
+    fixture.detectChanges();
+    const value = fixture.nativeElement.querySelector('.indicator-value') as HTMLElement;
+    const detail = fixture.nativeElement.querySelector('.indicator-detail') as HTMLElement;
+    const normalValue = Number.parseFloat(getComputedStyle(value).fontSize);
+    const normalDetail = Number.parseFloat(getComputedStyle(detail).fontSize);
+
+    document.documentElement.dataset['fontScale'] = 'large';
+
+    expect(Number.parseFloat(getComputedStyle(value).fontSize)).toBeGreaterThan(normalValue);
+    expect(Number.parseFloat(getComputedStyle(detail).fontSize)).toBeGreaterThan(normalDetail);
   });
 
   it('distinguishes an explicit empty result from absent data', () => {

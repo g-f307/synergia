@@ -50,12 +50,18 @@ class NotificationPreferences(StrictRequest):
     in_app: bool = True
 
 
+class AppearancePreferences(StrictRequest):
+    density: Literal["comfortable", "compact"] = "comfortable"
+    font_scale: Literal["small", "normal", "large"] = "normal"
+
+
 class ProfileUpdate(StrictRequest):
     version: int = Field(ge=1)
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     locale: Literal["pt-BR", "en-US", "es-ES"] | None = None
     timezone: str | None = Field(default=None, min_length=1, max_length=64)
     notifications: NotificationPreferences | None = None
+    appearance: AppearancePreferences | None = None
 
     @field_validator("display_name")
     @classmethod
@@ -87,6 +93,7 @@ class ProfileUpdate(StrictRequest):
                 self.locale,
                 self.timezone,
                 self.notifications,
+                self.appearance,
             )
         ):
             raise ValueError("informe ao menos uma preferencia")
@@ -119,6 +126,7 @@ class ProfileResponse(BaseModel):
     locale: str
     timezone: str
     notifications: NotificationPreferences
+    appearance: AppearancePreferences
     avatar: AvatarMetadata | None
     permissions: list[EffectivePermission]
     version: int
@@ -182,6 +190,10 @@ class PostgresProfileRepository:
             """
             SELECT id, status, display_name, locale, timezone,
                    notification_preferences AS notifications,
+                   jsonb_build_object(
+                       'density', ui_density,
+                       'font_scale', font_scale
+                   ) AS appearance,
                    avatar_media_type, avatar_size_bytes, avatar_sha256, version
             FROM synergia.identity_users WHERE id = %s
             """,
@@ -237,6 +249,8 @@ class PostgresProfileRepository:
             "notification_preferences": Jsonb(payload.notifications.model_dump())
             if payload.notifications
             else None,
+            "ui_density": payload.appearance.density if payload.appearance else None,
+            "font_scale": payload.appearance.font_scale if payload.appearance else None,
         }
         assignments = [
             f"{key} = %s" for key, value in columns.items() if value is not None

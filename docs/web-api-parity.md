@@ -28,7 +28,7 @@ Cada contrato recebe uma das decisões abaixo:
 
 | Domínio | Situação web | Decisão |
 | --- | --- | --- |
-| autenticação e perfil | login, refresh, logout, perfil, avatar e preferências suportadas | completo |
+| autenticação e perfil | login, refresh, logout, perfil, avatar, notificações, densidade e escala tipográfica | completo na #108 |
 | dashboard | indicadores e registros relacionados | completo |
 | importação | upload, política, inspeção, validação e resumo; normalizado sem ação web | parcial por decisão |
 | execuções | localização por ID, detalhe, artefatos e reprocessamento | parcial; catálogo planejado na #107 |
@@ -69,7 +69,6 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
 ## Capacidades sem contrato completo
 
 - catálogo paginado de execuções: #107;
-- preferências pessoais adicionais suportadas: #108;
 - consulta e revogação individual de sessões: #109;
 - gestão versionada de templates de notificação: #110;
 - Modo TV: adiado;
@@ -78,6 +77,19 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
 Notificações já emitidas não são CRUD administrativo: são ocorrências
 imutáveis geradas por eventos. A futura administração atua sobre templates e
 políticas versionados.
+
+## Decisão sobre preferências pessoais
+
+A issue #108 aprovou como preferências pessoais persistentes a densidade
+`comfortable|compact` e a escala tipográfica `small|normal|large`, além de
+preservar nome, idioma, fuso, avatar e canais `email`/`in_app`. O backend valida
+os valores e o shell aplica as preferências após login, refresh e atualização
+do perfil; respostas antigas ou desconhecidas recebem fallback visual seguro.
+
+Tamanho padrão de página, período padrão de consultas e atualização automática
+foram adiados: exigem semântica por jornada, limites operacionais e critérios de
+atualização antes de virarem controles. Tema permanece uma opção local do shell,
+sem contrato de sincronização. Modo TV continua fora do escopo.
 
 ## Verificação automática
 

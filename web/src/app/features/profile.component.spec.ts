@@ -15,6 +15,7 @@ describe('ProfileComponent', () => {
     locale: 'pt-BR',
     timezone: 'America/Manaus',
     notifications: { email: true, in_app: true },
+    appearance: { density: 'comfortable', font_scale: 'normal' },
     avatar: { media_type: 'image/png', size_bytes: 3, sha256: 'sha-initial', url: '/me/avatar' },
     permissions: [],
     version: 1
@@ -29,11 +30,13 @@ describe('ProfileComponent', () => {
   };
 
   beforeEach(async () => {
+    document.documentElement.dataset['fontScale'] = 'normal';
     profileState.set(profile);
     session.loadAvatar.calls.reset();
     session.loadAvatar.and.returnValue(of(new Blob(['png'])));
     session.uploadAvatar.calls.reset();
     session.removeAvatar.calls.reset();
+    session.updateProfile.calls.reset();
     spyOn(URL, 'createObjectURL').and.returnValue('blob:avatar');
     spyOn(URL, 'revokeObjectURL');
     await TestBed.configureTestingModule({
@@ -85,5 +88,37 @@ describe('ProfileComponent', () => {
     expect(fixture.nativeElement.querySelector('.page-header')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.profile-settings')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.avatar-panel')).not.toBeNull();
+  });
+
+  it('increases computed title and form label sizes with the large preference', () => {
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+    const title = fixture.nativeElement.querySelector('h1') as HTMLHeadingElement;
+    const label = fixture.nativeElement.querySelector('label') as HTMLLabelElement;
+    const normalTitle = Number.parseFloat(getComputedStyle(title).fontSize);
+    const normalLabel = Number.parseFloat(getComputedStyle(label).fontSize);
+
+    document.documentElement.dataset['fontScale'] = 'large';
+
+    expect(Number.parseFloat(getComputedStyle(title).fontSize)).toBeGreaterThan(normalTitle);
+    expect(Number.parseFloat(getComputedStyle(label).fontSize)).toBeGreaterThan(normalLabel);
+  });
+
+  it('persists only supported appearance preferences with the profile version', () => {
+    session.updateProfile.and.returnValue(of({
+      ...profile,
+      appearance: { density: 'compact', font_scale: 'large' },
+      version: 2
+    }));
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.form.patchValue({ density: 'compact', font_scale: 'large' });
+
+    fixture.componentInstance.save();
+
+    expect(session.updateProfile).toHaveBeenCalledWith(jasmine.objectContaining({
+      version: 1,
+      appearance: { density: 'compact', font_scale: 'large' }
+    }));
   });
 });

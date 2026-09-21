@@ -40,6 +40,7 @@ class FakeProfileRepository:
             "locale": "pt-BR",
             "timezone": "America/Manaus",
             "notifications": {"email": True, "in_app": True},
+            "appearance": {"density": "comfortable", "font_scale": "normal"},
             "avatar": None,
             "permissions": [{"key": "business.read", "organizations": []}],
             "version": 1,
@@ -56,6 +57,8 @@ class FakeProfileRepository:
                 self.profile[field] = value
         if payload.notifications:
             self.profile["notifications"] = payload.notifications.model_dump()
+        if payload.appearance:
+            self.profile["appearance"] = payload.appearance.model_dump()
         self.profile["version"] += 1
         return self.profile
 
@@ -118,11 +121,16 @@ def test_reads_and_updates_own_profile(profile_api) -> None:
             "locale": "en-US",
             "timezone": "UTC",
             "notifications": {"email": False, "in_app": True},
+            "appearance": {"density": "compact", "font_scale": "large"},
         },
     )
     assert updated.status_code == 200
     assert updated.json()["locale"] == "en-US"
     assert updated.json()["notifications"]["email"] is False
+    assert updated.json()["appearance"] == {
+        "density": "compact",
+        "font_scale": "large",
+    }
 
 
 @pytest.mark.parametrize(
@@ -131,6 +139,8 @@ def test_reads_and_updates_own_profile(profile_api) -> None:
         {"version": 1, "locale": "fr-FR"},
         {"version": 1, "timezone": "Unknown/Nowhere"},
         {"version": 1, "is_admin": True},
+        {"version": 1, "appearance": {"density": "dense", "font_scale": "normal"}},
+        {"version": 1, "appearance": {"density": "compact", "font_scale": "huge"}},
         {"version": 1},
     ],
 )
