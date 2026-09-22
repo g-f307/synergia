@@ -35,7 +35,7 @@ Cada contrato recebe uma das decisões abaixo:
 | consultas | busca, Workorder, lote, serial e consolidado | completo |
 | pendências e decisão | fila, detalhe, submissão, atribuição, devolução, reenvio e decisão | completo |
 | relatórios | catálogo, geração, histórico, cancelamento e exportação | parcial; nova versão explícita permanece pendente |
-| notificações | central, contador, leitura e preferências | completo para ocorrências; templates na #110 |
+| notificações | central, contador, leitura, preferências e gestão versionada de templates | completo na #110; SMTP corporativo permanece fora do escopo |
 | administração de acesso | usuários, grupos, papéis, associações e permissões efetivas | completo na #106 |
 | auditoria | consulta protegida disponível na API | interface adiada |
 | saúde e métricas | sondas e métricas protegidas para plataforma | técnico, sem interface Angular |
@@ -70,13 +70,12 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
 
 - catálogo paginado de execuções: #107;
 - leitura administrativa de sessões: adiada até permissão explícita; sessões próprias implementadas na #109;
-- gestão versionada de templates de notificação: #110;
 - Modo TV: adiado;
 - conectores corporativos e RPA: Etapa 6, ainda não autorizada.
 
 Notificações já emitidas não são CRUD administrativo: são ocorrências
-imutáveis geradas por eventos. A futura administração atua sobre templates e
-políticas versionados.
+imutáveis geradas por eventos. A administração da #110 atua somente sobre
+revisões e ativações futuras, com `access.admin`, histórico e auditoria.
 
 ## Decisão sobre preferências pessoais
 

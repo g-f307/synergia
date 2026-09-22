@@ -39,6 +39,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/admin` e rotas filhas | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado #106: gestão de usuários, grupos, papéis, associações e permissões efetivas |
 | `/reports` e detalhe | páginas de relatório | `/reports`, `/reports/policy` e versões/exportação | `report.read`, `report.generate`, `report.export`, `report.cancel` / `org` | implementado #78 |
 | `/notifications` | ícone de notificação | `/notifications`, contador e leitura | `notification.read` + permissão do recurso / `org` | implementado #79; somente canal interno |
+| `/admin/notification-templates` e detalhe | ausente | `/admin/notification-templates/*` | `access.admin` / global | implementado #110; versões publicadas imutáveis, sem criação manual de ocorrências |
 
 O inventário integral e validável de endpoints está em
 [`web-route-map.json`](web-route-map.json).
@@ -62,6 +63,7 @@ O inventário integral e validável de endpoints está em
 | --- | --- | --- | --- |
 | autenticação e perfil | implementado/adaptado | #44, #56, #57, #108 | densidade e escala persistentes e aplicadas; parâmetros sem contrato permanecem adiados |
 | administração de identidades e acesso | implementado | #44, #105, #106 | gestão completa e ciclo administrativo validados na #106 |
+| administração de templates de notificação | implementado, embora ausente no protótipo | #110 | catálogo, rascunho, prévia sintética, publicação, desativação e histórico auditável |
 | dashboard e indicadores | implementado | #60 | validado #63 |
 | upload manual seguro | implementado, embora ausente no protótipo | #58 | validado no fluxo real #63 |
 | acompanhamento da importação | implementado | #58 | validado no fluxo real #63 |

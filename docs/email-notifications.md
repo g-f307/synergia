@@ -39,8 +39,10 @@ Ao reservar uma entrega, o processador confirma usuário ativo, preferência
 Endereços não verificados e preferências desabilitadas ficam como `skipped`, sem
 tentativa. O endereço primário verificado tem precedência.
 
-Assunto e corpo são versionados em `pt-BR` e `en-US`; idiomas não suportados
-usam `pt-BR`. Apenas identificador de execução, contagem e versão podem ser
+Assunto e corpo são versionados em `pt-BR` e `en-US`. A projeção fixa a revisão
+ativa do canal de e-mail no locale do destinatário, com fallback determinístico
+para `pt-BR` e depois `en-US`; uma publicação posterior não reescreve a entrega
+reservada. Apenas os placeholders declarados pela política do evento podem ser
 interpolados. A consolidação reutiliza a chave atômica da caixa interna, então
 um resumo de pendências produz uma mensagem, não uma mensagem por ocorrência.
 Enquanto a entrega não começou, novas versões substituem o conteúdo reservado e
@@ -69,3 +71,7 @@ Cada finalização também informa o número da tentativa reservada. A atualiza�
 só ocorre se a entrega ainda estiver em `processing` e continuar pertencendo à
 mesma tentativa. Assim, um worker cujo lease expirou não pode concluir, falhar
 ou produzir auditoria em nome do worker que recuperou a entrega.
+
+A interface administrativa informa apenas `desabilitado`, `captura local` ou
+`indisponível`. Captura local não representa SMTP corporativo, que permanece
+fora do escopo e exige integração e credenciais próprias.

@@ -123,7 +123,7 @@ SQL, token ou caminho interno.
 - Execução: aba, paginação, fonte, severidade e ordenação.
 - Consulta: tipo, texto, paginação e ordenação quando suportadas pelo contrato.
 - Pendências: estado, categoria, prioridade, área, Workorder, paginação e ordem.
-- Administração: seção, busca e paginação.
+- Administração: seção, busca, paginação e filtros versionados de templates na URL.
 - Perfil: seção ativa.
 
 Preferências puramente visuais, como tema e densidade, pertencem ao perfil ou
@@ -146,6 +146,7 @@ web/src/app/
     ├── queries/          busca e detalhes de entidades                  #61
     ├── pending/          fila e detalhe                                 #62
     ├── notifications/    caixa interna e indicador não lido             #79
+    ├── notification-admin/ templates e políticas versionados            #110
     ├── profile/          perfil e preferências                          #44
     └── admin/            identidades e acesso                           #44
 ```
@@ -173,6 +174,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | WEB-G12 | API possui operações sem jornada Angular ou destinadas exclusivamente à plataforma | inventariar cada contrato como completo, parcial, técnico ou adiado | #105 |
 | WEB-G13 | monitor localiza execução por ID, sem catálogo global | criar contrato paginado e tela própria | #107 |
 | WEB-G14 | sessões persistidas não possuíam consulta e revogação individual na interface | resolvido para sessões próprias; visão administrativa adiada até permissão explícita | #109 |
+| WEB-G15 | templates de notificação eram apenas seeds técnicos sem jornada de governança | resolvido com revisões imutáveis, ativação auditada e prévia sintética; ocorrências continuam sem CRUD manual | #110 |
 
 ## Modo TV
 

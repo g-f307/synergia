@@ -38,7 +38,7 @@ uma execução.
 | Armazenamento controlado | quarentena isolada, original aceito com nome aleatório, relatório e resultado normalizado | `IMPORT_STORAGE_DIR`; `data/imports/` apenas em desenvolvimento |
 | Identidade e autorização | JWT, refresh rotativo, sessões revogáveis, RBAC e escopo organizacional | `backend/app/auth/`, `authorization.py` e `docs/access-control-matrix.md` |
 | Relatórios | snapshots persistentes, versões imutáveis e exportação segura | `backend/app/reports.py` e `docs/reports.md` |
-| Notificações | caixa interna, preferências e entrega externa desacoplada | `backend/app/notifications.py`, `email_delivery.py` |
+| Notificações | caixa interna, preferências, templates administráveis e entrega externa desacoplada | `backend/app/notifications.py`, `notification_templates.py`, `email_delivery.py` |
 | Aprovação humana | política versionada, atribuição, justificativa, consentimento e histórico | `backend/app/approvals.py` e `docs/human-approvals.md` |
 | Observabilidade | logs estruturados, sondas, métricas, alertas e painel técnico | `backend/app/observability/`, `observability/` e `docs/observability.md` |
 | CI | lint, testes, builds, migrations, dados e preservação do protótipo | `.github/workflows/ci.yml` |

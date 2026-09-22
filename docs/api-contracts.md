@@ -73,6 +73,14 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /notifications/unread-count` | conta notificações próprias não lidas | `200` |
 | `PATCH /notifications/{notification_id}/read` | persiste a leitura individual com versão otimista | `200` |
 | `POST /notifications/read-all` | persiste a leitura em lote dentro do escopo atual | `200` |
+| `GET /admin/notification-templates/policy` | eventos permitidos, placeholders, canais, locales e estado do e-mail | `200` |
+| `GET /admin/notification-templates` | catálogo paginado e histórico filtrável de revisões | `200` |
+| `POST /admin/notification-templates/drafts` | cria nova revisão editável e auditada | `201` |
+| `GET /admin/notification-templates/{revision_id}` | consulta uma revisão exata | `200` |
+| `PATCH /admin/notification-templates/{revision_id}` | altera somente rascunho com versão otimista | `200` |
+| `POST /admin/notification-templates/{revision_id}/preview` | renderiza prévia exclusivamente sintética | `200` |
+| `POST /admin/notification-templates/{revision_id}/publish` | publica e ativa uma revisão imutável | `200` |
+| `POST /admin/notification-templates/{revision_id}/deactivate` | encerra a ativação sem excluir histórico | `200` |
 
 Recursos inexistentes retornam `404`, estado incompatível retorna `409`, corpo
 ou parâmetros inválidos retornam `422`, arquivo acima do limite retorna `413`,

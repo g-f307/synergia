@@ -42,11 +42,13 @@ ainda existe no mesmo escopo; a rota de destino repete sua própria autorizaçã
 
 ## Conteúdo e auditoria
 
-O tipo, o estado e a versão do template são códigos estáveis. Título e corpo
-são renderizados no idioma atual do perfil; locales sem template usam `pt-BR`
-como fallback. Apenas `execution_id`, contagem e versão numérica podem ser
-interpolados. Payloads fontes, nomes de arquivo, caminhos, credenciais e tokens
-não são copiados.
+O tipo, o estado e a versão do template são códigos estáveis. Cada ocorrência
+fixa a revisão publicada que a produziu. Ao exibir outro idioma, somente uma
+tradução publicada da mesma versão pode ser escolhida; sem ela, usa-se o locale
+persistido, depois `pt-BR` e `en-US`. Uma publicação posterior nunca altera uma
+notificação já emitida. Apenas placeholders declarados pela política do evento
+podem ser interpolados. Payloads fontes, nomes de arquivo, caminhos,
+credenciais e tokens não são copiados.
 
 `notification_events` registra criação, entrega interna, consolidação,
 supressão, falha técnica e leitura. Leituras incluem usuário, sessão e
@@ -55,3 +57,6 @@ vínculo técnico com o evento fonte sem reproduzir seu conteúdo.
 
 O canal assíncrono e opcional de e-mail reutiliza essa projeção e está descrito
 em [`email-notifications.md`](email-notifications.md).
+
+A gestão administrativa das revisões, publicação e desativação está descrita
+em [`notification-template-administration.md`](notification-template-administration.md).

@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "issue": 106,
+  "version": "1.3.0",
+  "issue": 110,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
     "loading",
@@ -46,7 +46,6 @@
   ],
   "planned_capabilities": [
     {"id": "admin-session-management", "status": "deferred", "target": "future-admin-session-permission", "decision": "Leitura administrativa de sessões não consta da matriz de acesso; não há interface nem listagem de terceiros sem permissão específica."},
-    {"id": "notification-template-management", "status": "planned", "target": "#110", "decision": "Administrar templates versionados; notificações emitidas continuam imutáveis e não são criadas manualmente."},
     {"id": "tv-mode", "status": "deferred", "target": "future-tv-mode", "decision": "Permanece adiado até possuir requisitos de autorização, atualização, exposição e acessibilidade."},
     {"id": "corporate-integrations-and-rpa", "status": "deferred", "target": "stage-6", "decision": "Conectores e RPA dependem de autorização formal para entrada na Etapa 6."}
   ],
@@ -479,6 +478,62 @@
       "url_state": [],
       "states": ["loading", "error", "forbidden", "unavailable"],
       "owner": "domains/admin"
+    },
+    {
+      "id": "notification-template-list",
+      "route": "/admin/notification-templates",
+      "status": "implemented",
+      "issue": 110,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "access.admin",
+      "scope": "global",
+      "evidence": ["web/src/app/domains/notification-admin/notification-template.service.ts"],
+      "endpoints": [
+        {"method": "GET", "path": "/admin/notification-templates", "permission": "access.admin"},
+        {"method": "GET", "path": "/admin/notification-templates/policy", "permission": "access.admin"}
+      ],
+      "url_state": ["event", "channel", "locale", "state", "page"],
+      "states": ["loading", "empty", "error", "forbidden", "unavailable"],
+      "owner": "domains/notification-admin"
+    },
+    {
+      "id": "notification-template-new",
+      "route": "/admin/notification-templates/new",
+      "status": "implemented",
+      "issue": 110,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "access.admin",
+      "scope": "global",
+      "evidence": ["web/src/app/domains/notification-admin/notification-template.service.ts"],
+      "endpoints": [
+        {"method": "POST", "path": "/admin/notification-templates/drafts", "permission": "access.admin"}
+      ],
+      "url_state": [],
+      "states": ["loading", "error", "forbidden", "unavailable"],
+      "owner": "domains/notification-admin"
+    },
+    {
+      "id": "notification-template-detail",
+      "route": "/admin/notification-templates/:templateId",
+      "status": "implemented",
+      "issue": 110,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "access.admin",
+      "scope": "global",
+      "evidence": ["web/src/app/domains/notification-admin/notification-template.service.ts"],
+      "endpoints": [
+        {"method": "GET", "path": "/admin/notification-templates/{revision_id}", "permission": "access.admin"},
+        {"method": "PATCH", "path": "/admin/notification-templates/{revision_id}", "permission": "access.admin"},
+        {"method": "POST", "path": "/admin/notification-templates/{revision_id}/preview", "permission": "access.admin"},
+        {"method": "POST", "path": "/admin/notification-templates/{revision_id}/publish", "permission": "access.admin"},
+        {"method": "POST", "path": "/admin/notification-templates/{revision_id}/deactivate", "permission": "access.admin"}
+      ],
+      "url_state": [],
+      "states": ["loading", "error", "forbidden", "unavailable"],
+      "owner": "domains/notification-admin"
     },
     {
       "id": "reports",
