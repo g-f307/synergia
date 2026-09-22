@@ -30,3 +30,12 @@ export interface UserProfile {
 }
 
 export type SessionState = 'anonymous' | 'loading' | 'authenticated' | 'expired' | 'unavailable';
+
+export interface ActiveSession {
+  id: string;
+  current: boolean;
+  device: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+}

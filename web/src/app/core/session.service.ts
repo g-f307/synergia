@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { SessionState, TokenResponse, UserProfile } from './session.models';
+import { ActiveSession, SessionState, TokenResponse, UserProfile } from './session.models';
 import { I18nService } from '../shared/i18n/i18n.service';
 import { AppearanceService } from './appearance.service';
 
@@ -15,6 +15,7 @@ export class SessionService {
   private readonly i18n = inject(I18nService);
   private readonly appearance = inject(AppearanceService);
   private readonly tokenState = signal<string | null>(null);
+  private readonly currentSessionId = signal<string | null>(null);
   private refreshRequest?: Observable<boolean>;
 
   readonly state = signal<SessionState>('anonymous');
@@ -110,6 +111,28 @@ export class SessionService {
     );
   }
 
+  listSessions(): Observable<ActiveSession[]> {
+    return this.http.get<{ items: ActiveSession[] }>(`${environment.apiUrl}/auth/sessions`)
+      .pipe(map((response) => response.items));
+  }
+
+  revokeSession(session: ActiveSession): Observable<void> {
+    return this.http.delete(`${environment.apiUrl}/auth/sessions/${session.id}`, {
+      withCredentials: true
+    }).pipe(tap(() => {
+      if (session.id === this.currentSessionId()) {
+        this.clear('expired');
+        void this.router.navigateByUrl('/login');
+      }
+    }), map(() => undefined));
+  }
+
+  revokeOtherSessions(): Observable<number> {
+    return this.http.post<{ revoked_sessions: number }>(
+      `${environment.apiUrl}/auth/sessions/revoke-others`, {}, { withCredentials: true }
+    ).pipe(map((result) => result.revoked_sessions));
+  }
+
   logout(): Observable<void> {
     return this.http.post(
       `${environment.apiUrl}/auth/logout`, {}, { withCredentials: true }
@@ -125,6 +148,7 @@ export class SessionService {
 
   clear(state: SessionState = 'expired', resetLocale = true): void {
     this.tokenState.set(null);
+    this.currentSessionId.set(null);
     this.profile.set(null);
     this.state.set(state);
     if (resetLocale) this.i18n.configure('pt-BR');
@@ -133,5 +157,6 @@ export class SessionService {
 
   private acceptToken(token: TokenResponse): void {
     this.tokenState.set(token.access_token);
+    this.currentSessionId.set(token.session_id);
   }
 }

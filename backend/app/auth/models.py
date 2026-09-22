@@ -35,6 +35,19 @@ class LogoutResponse(BaseModel):
     revoked_sessions: int
 
 
+class SessionView(BaseModel):
+    id: UUID
+    current: bool
+    device: str
+    created_at: datetime
+    last_used_at: datetime
+    expires_at: datetime
+
+
+class SessionListResponse(BaseModel):
+    items: list[SessionView]
+
+
 @dataclass(frozen=True)
 class CredentialRecord:
     user_id: UUID

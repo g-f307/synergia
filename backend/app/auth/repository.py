@@ -37,6 +37,7 @@ class AuthRepository(Protocol):
         idle_hours: int,
         absolute_hours: int,
         password_hash: str | None,
+        device_label: str = "Dispositivo desconhecido",
     ) -> SessionResult: ...
 
     def rotate_refresh(
@@ -49,6 +50,12 @@ class AuthRepository(Protocol):
     def revoke_session(self, user_id: UUID, session_id: UUID, now: datetime) -> int: ...
 
     def revoke_all_sessions(self, user_id: UUID, now: datetime) -> int: ...
+
+    def list_sessions(self, user_id: UUID, now: datetime) -> list[dict]: ...
+
+    def revoke_other_sessions(
+        self, user_id: UUID, current_session_id: UUID, now: datetime
+    ) -> int: ...
 
 
 class PostgresAuthRepository:
@@ -253,6 +260,7 @@ class PostgresAuthRepository:
         idle_hours: int,
         absolute_hours: int,
         password_hash: str | None,
+        device_label: str = "Dispositivo desconhecido",
     ) -> SessionResult:
         session_id = uuid4()
         family_id = uuid4()
@@ -290,8 +298,8 @@ class PostgresAuthRepository:
                 """
                 INSERT INTO synergia.identity_sessions (
                     id, user_id, authenticated_at, last_seen_at, idle_expires_at,
-                    absolute_expires_at, authentication_method
-                ) VALUES (%s, %s, %s, %s, %s, %s, 'local')
+                    absolute_expires_at, authentication_method, device_label
+                ) VALUES (%s, %s, %s, %s, %s, %s, 'local', %s)
                 """,
                 (
                     session_id,
@@ -300,6 +308,7 @@ class PostgresAuthRepository:
                     now,
                     idle_expires_at,
                     absolute_expires_at,
+                    device_label,
                 ),
             )
             cursor.execute(
@@ -359,6 +368,25 @@ class PostgresAuthRepository:
     ) -> RefreshResult:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
+                """SELECT rt.session_id, s.user_id
+                   FROM synergia.session_refresh_tokens rt
+                   JOIN synergia.identity_sessions s ON s.id = rt.session_id
+                   WHERE rt.token_hash = %s""",
+                (token_hash,),
+            )
+            token_session = cursor.fetchone()
+            if token_session is not None:
+                cursor.execute(
+                    """SELECT id FROM synergia.identity_users
+                       WHERE id = %s FOR UPDATE""",
+                    (token_session["user_id"],),
+                )
+                cursor.execute(
+                    """SELECT id FROM synergia.identity_sessions
+                       WHERE id = %s FOR UPDATE""",
+                    (token_session["session_id"],),
+                )
+            cursor.execute(
                 """
                 SELECT rt.id, rt.session_id, rt.family_id, rt.status AS token_status,
                        rt.expires_at, s.user_id, s.status AS session_status,
@@ -368,7 +396,7 @@ class PostgresAuthRepository:
                 JOIN synergia.identity_sessions s ON s.id = rt.session_id
                 JOIN synergia.identity_users u ON u.id = s.user_id
                 WHERE rt.token_hash = %s
-                FOR UPDATE OF rt, s
+                FOR UPDATE OF rt
                 """,
                 (token_hash,),
             )
@@ -488,22 +516,53 @@ class PostgresAuthRepository:
                 refresh_expires_at=idle_expires_at,
             )
 
+    def list_sessions(self, user_id: UUID, now: datetime) -> list[dict]:
+        with self._connect() as connection, connection.cursor() as cursor:
+            # Return every active session, including legacy/imported rows above
+            # the normal concurrent-login cap, so each remains revocable.
+            cursor.execute(
+                """
+                SELECT id, device_label, authenticated_at, last_seen_at,
+                       idle_expires_at, absolute_expires_at
+                FROM synergia.identity_sessions
+                WHERE user_id = %s AND status = 'active'
+                  AND idle_expires_at > %s AND absolute_expires_at > %s
+                ORDER BY authenticated_at DESC, id DESC
+                """,
+                (user_id, now, now),
+            )
+            sessions = list(cursor.fetchall())
+            self._event(
+                cursor,
+                "auth.sessions_listed",
+                "identity_user",
+                str(user_id),
+                user_id=user_id,
+                payload={"active_sessions": len(sessions)},
+            )
+            return sessions
+
     def revoke_session(self, user_id: UUID, session_id: UUID, now: datetime) -> int:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT id FROM synergia.identity_sessions
-                WHERE id = %s AND user_id = %s FOR UPDATE
-                """,
-                (session_id, user_id),
+                "SELECT id FROM synergia.identity_users WHERE id = %s FOR UPDATE",
+                (user_id,),
             )
             if cursor.fetchone() is None:
                 return 0
             cursor.execute(
-                "SELECT status FROM synergia.identity_sessions WHERE id = %s",
-                (session_id,),
+                """
+                SELECT id, status, idle_expires_at, absolute_expires_at
+                FROM synergia.identity_sessions
+                WHERE id = %s AND user_id = %s FOR UPDATE
+                """,
+                (session_id, user_id),
             )
-            was_active = cursor.fetchone()["status"] == "active"
+            session = cursor.fetchone()
+            if session is None or session["status"] != "active" or min(
+                session["idle_expires_at"], session["absolute_expires_at"]
+            ) <= now:
+                return 0
             self._revoke_family(cursor, session_id, now, "logout")
             self._event(
                 cursor,
@@ -513,7 +572,42 @@ class PostgresAuthRepository:
                 user_id=user_id,
                 session_id=session_id,
             )
-            return int(was_active)
+            return 1
+
+    def revoke_other_sessions(
+        self, user_id: UUID, current_session_id: UUID, now: datetime
+    ) -> int:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id FROM synergia.identity_users
+                WHERE id = %s FOR UPDATE
+                """,
+                (user_id,),
+            )
+            if cursor.fetchone() is None:
+                return 0
+            cursor.execute(
+                """
+                SELECT id FROM synergia.identity_sessions
+                WHERE user_id = %s AND id <> %s AND status = 'active'
+                ORDER BY id FOR UPDATE
+                """,
+                (user_id, current_session_id),
+            )
+            session_ids = [row["id"] for row in cursor.fetchall()]
+            for session_id in session_ids:
+                self._revoke_family(cursor, session_id, now, "other_sessions_revoked")
+            self._event(
+                cursor,
+                "auth.logout_others",
+                "identity_user",
+                str(user_id),
+                user_id=user_id,
+                session_id=current_session_id,
+                payload={"revoked_sessions": len(session_ids)},
+            )
+            return len(session_ids)
 
     def revoke_all_sessions(self, user_id: UUID, now: datetime) -> int:
         with self._connect() as connection, connection.cursor() as cursor:

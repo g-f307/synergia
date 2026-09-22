@@ -707,5 +707,22 @@
   "adminUi.targetPages": "Target pages",
   "adminUi.organizationPages": "Organization pages",
   "adminUi.associationRequired": "Select a target and scope, and provide a reason of at least three characters.",
-  "adminUi.permissionCatalogCount": "{count} catalog permissions available"
+  "adminUi.permissionCatalogCount": "{count} catalog permissions available",
+  "sessions.title": "Sessions",
+  "sessions.description": "Review and end your active sign-ins.",
+  "sessions.refresh": "Refresh sessions",
+  "sessions.current": "Current session",
+  "sessions.created": "Created",
+  "sessions.lastUsed": "Last used",
+  "sessions.expires": "Expires",
+  "sessions.revoke": "End session",
+  "sessions.revokeCurrent": "Sign out of this session",
+  "sessions.revokeOthers": "End other sessions",
+  "sessions.confirmRevoke": "End this session?",
+  "sessions.confirmCurrent": "End your current session and sign out?",
+  "sessions.confirmOthers": "End all other sessions?",
+  "sessions.revoked": "Session ended.",
+  "sessions.othersRevoked": "Other sessions ended.",
+  "sessions.empty": "No active sessions found.",
+  "sessions.error": "Sessions could not be loaded or ended."
 }

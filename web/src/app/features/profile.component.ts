@@ -5,9 +5,10 @@ import { finalize } from 'rxjs';
 import { SessionService } from '../core/session.service';
 import { I18nService } from '../shared/i18n/i18n.service';
 import { isSupportedLocale } from '../shared/i18n/i18n.models';
+import { SessionsComponent } from './sessions.component';
 
 @Component({
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, SessionsComponent],
   template: `
     <section class="profile-page" aria-labelledby="profile-title">
       <header class="page-header"><div>
@@ -79,6 +80,7 @@ import { isSupportedLocale } from '../shared/i18n/i18n.models';
             </button>
           }
         </aside></div>
+        <syn-sessions />
         @if (message()) { <p class="success" role="status">{{ message() }}</p> }
         @if (error()) {
           <p class="error" role="alert">{{ i18n.t('profile.error') }}</p>

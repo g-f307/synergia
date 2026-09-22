@@ -707,5 +707,22 @@
   "adminUi.targetPages": "Páginas de destinos",
   "adminUi.organizationPages": "Páginas de organizações",
   "adminUi.associationRequired": "Selecione destino e escopo e informe um motivo com pelo menos três caracteres.",
-  "adminUi.permissionCatalogCount": "{count} permissões disponíveis no catálogo"
+  "adminUi.permissionCatalogCount": "{count} permissões disponíveis no catálogo",
+  "sessions.title": "Sessões",
+  "sessions.description": "Consulte e encerre seus acessos ativos.",
+  "sessions.refresh": "Atualizar sessões",
+  "sessions.current": "Sessão atual",
+  "sessions.created": "Criada em",
+  "sessions.lastUsed": "Último uso",
+  "sessions.expires": "Expira em",
+  "sessions.revoke": "Encerrar sessão",
+  "sessions.revokeCurrent": "Sair desta sessão",
+  "sessions.revokeOthers": "Encerrar outras sessões",
+  "sessions.confirmRevoke": "Encerrar esta sessão?",
+  "sessions.confirmCurrent": "Encerrar sua sessão atual e sair da aplicação?",
+  "sessions.confirmOthers": "Encerrar todas as outras sessões?",
+  "sessions.revoked": "Sessão encerrada.",
+  "sessions.othersRevoked": "Outras sessões encerradas.",
+  "sessions.empty": "Nenhuma sessão ativa encontrada.",
+  "sessions.error": "Não foi possível consultar ou encerrar as sessões."
 }

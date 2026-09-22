@@ -35,6 +35,9 @@ escopo organizacional a todas as operações existentes será incremental.
 | `POST /auth/refresh` | rotaciona refresh e renova access | `200` |
 | `POST /auth/logout` | revoga a sessão atual | `200` |
 | `POST /auth/logout-all` | revoga as sessões próprias | `200` |
+| `GET /auth/sessions` | lista somente sessões próprias ativas com metadados sanitizados | `200` |
+| `DELETE /auth/sessions/{session_id}` | revoga sessão própria específica; `404` uniforme para ausente, alheia ou inativa | `200` |
+| `POST /auth/sessions/revoke-others` | revoga outras sessões próprias, mantendo a atual | `200` |
 | `POST /imports` | inicia uma importação rastreável | `201` |
 | `GET /imports/policy` | políticas por fonte e organizações ativas autorizadas | `200` |
 | `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |

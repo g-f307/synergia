@@ -172,7 +172,7 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 | WEB-G11 | `/admin` listava recursos, mas não expunha os contratos administrativos de mutação e associação | resolvido com as jornadas completas de usuários, grupos, papéis e associações | #105/#106 |
 | WEB-G12 | API possui operações sem jornada Angular ou destinadas exclusivamente à plataforma | inventariar cada contrato como completo, parcial, técnico ou adiado | #105 |
 | WEB-G13 | monitor localiza execução por ID, sem catálogo global | criar contrato paginado e tela própria | #107 |
-| WEB-G14 | sessões persistidas não possuem consulta e revogação individual na interface | criar contratos e jornada segura | #109 |
+| WEB-G14 | sessões persistidas não possuíam consulta e revogação individual na interface | resolvido para sessões próprias; visão administrativa adiada até permissão explícita | #109 |
 
 ## Modo TV
 
