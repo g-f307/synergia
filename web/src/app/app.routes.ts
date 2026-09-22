@@ -74,6 +74,21 @@ export const routes: Routes = [
     loadComponent: () => import('./domains/admin/admin-access-list.component').then((value) => value.AdminAccessListComponent)
   },
   {
+    path: 'admin/notification-templates/new',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/notification-admin/notification-template-editor.component').then((value) => value.NotificationTemplateEditorComponent)
+  },
+  {
+    path: 'admin/notification-templates/:templateId',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/notification-admin/notification-template-editor.component').then((value) => value.NotificationTemplateEditorComponent)
+  },
+  {
+    path: 'admin/notification-templates',
+    canActivate: [authenticatedGuard, adminGuard],
+    loadComponent: () => import('./domains/notification-admin/notification-template-list.component').then((value) => value.NotificationTemplateListComponent)
+  },
+  {
     path: 'admin',
     canActivate: [authenticatedGuard, adminGuard],
     loadComponent: () => import('./features/admin.component').then((value) => value.AdminComponent)

@@ -1,0 +1,32 @@
+<section class="admin-page" aria-labelledby="notification-template-editor-title">
+  <a routerLink="/admin/notification-templates">{{ i18n.t('notificationAdmin.back') }}</a>
+  <h1 id="notification-template-editor-title">{{ i18n.t(id ? 'notificationAdmin.detailTitle' : 'notificationAdmin.newTitle') }}</h1>
+  @if (loading()) { <p role="status">{{ i18n.t('notificationAdmin.loading') }}</p> }
+  @else {
+    @if (item(); as current) { <p><strong>{{ i18n.t(stateKey(current.state)) }}</strong> · v{{ current.version_number }} · {{ i18n.t(channelKey(current.channel)) }} · {{ current.locale }}</p> }
+    @if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p>@if (failure()?.kind === 'conflict') { <button type="button" (click)="reload()">{{ i18n.t('adminUi.reload') }}</button> }</div> }
+    @if (formError()) { <p role="alert">{{ i18n.t(formError()!) }}</p> }
+    @if (policy(); as configuration) {
+      <form class="admin-form template-form" (submit)="save($event)">
+        <label>{{ i18n.t('notificationAdmin.event') }}<select name="event" required [disabled]="!!item()" [(ngModel)]="eventType">@for (eventPolicy of configuration.events; track eventPolicy.notification_type) { <option [value]="eventPolicy.notification_type">{{ eventPolicy.notification_type }}</option> }</select></label>
+        <label>{{ i18n.t('notificationAdmin.channel') }}<select name="channel" required [disabled]="!!item()" [(ngModel)]="channel">@for (value of configuration.channels; track value) { <option [value]="value">{{ i18n.t(channelKey(value)) }}</option> }</select></label>
+        @if (channel === 'email') { <p class="delivery-status" role="status">{{ i18n.t(deliveryKey()) }} {{ i18n.t('notificationAdmin.noCorporateSmtp') }}</p> }
+        <label>{{ i18n.t('notificationAdmin.locale') }}<select name="locale" required [disabled]="!!item()" [(ngModel)]="locale">@for (value of configuration.locales; track value) { <option [value]="value">{{ value }}</option> }</select></label>
+        <div><strong>{{ i18n.t('notificationAdmin.placeholders') }}</strong>@if (selectedPlaceholders().length) { <ul class="placeholder-list">@for (placeholder of selectedPlaceholders(); track placeholder) { <li><code>{{ '{' + placeholder + '}' }}</code></li> }</ul> } @else { <p>{{ i18n.t('notificationAdmin.noPlaceholders') }}</p> }</div>
+        <label>{{ i18n.t(channel === 'email' ? 'notificationAdmin.subject' : 'notificationAdmin.heading') }}<input name="title" required maxlength="200" [readonly]="!editable()" [(ngModel)]="titleTemplate"></label>
+        <label>{{ i18n.t('notificationAdmin.body') }}<textarea name="body" required maxlength="2000" rows="8" [readonly]="!editable()" [(ngModel)]="bodyTemplate"></textarea></label>
+        <label>{{ i18n.t('notificationAdmin.reason') }}<textarea name="reason" required minlength="3" maxlength="500" rows="3" [(ngModel)]="reason"></textarea></label>
+        @if (editable()) { <button type="submit" [disabled]="busy()">{{ i18n.t(item() ? 'notificationAdmin.saveDraft' : 'notificationAdmin.createDraft') }}</button> }
+      </form>
+      @if (item(); as current) {
+        <div class="admin-actions">
+          <button type="button" class="secondary" [disabled]="busy()" (click)="requestPreview()">{{ i18n.t('notificationAdmin.preview') }}</button>
+          @if (current.state === 'draft') { <button type="button" [disabled]="busy()" (click)="publish()">{{ i18n.t('notificationAdmin.publish') }}</button> }
+          @if (current.state === 'active') { <button type="button" class="secondary" [disabled]="busy()" (click)="deactivate()">{{ i18n.t('notificationAdmin.deactivate') }}</button> }
+        </div>
+        @if (preview(); as rendered) { <section class="template-preview" aria-labelledby="template-preview-title"><h2 id="template-preview-title">{{ i18n.t('notificationAdmin.syntheticPreview') }}</h2><h3>{{ rendered.title }}</h3><p class="preview-text">{{ rendered.body }}</p><dl>@for (entry of rendered.sample_data | keyvalue; track entry.key) { <div><dt>{{ entry.key }}</dt><dd>{{ entry.value }}</dd></div> }</dl></section> }
+        <section aria-labelledby="template-history-title"><h2 id="template-history-title">{{ i18n.t('notificationAdmin.history') }}</h2><ul class="admin-list">@for (version of history(); track version.id) { <li><a [routerLink]="['/admin/notification-templates', version.id]">v{{ version.version_number }}</a><span>{{ i18n.t(stateKey(version.state)) }}</span><span>{{ i18n.formatDate(version.created_at) }}</span></li> }</ul></section>
+      }
+    }
+  }
+</section>

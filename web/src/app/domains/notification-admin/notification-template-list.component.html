@@ -1,0 +1,30 @@
+<section class="admin-page" aria-labelledby="notification-template-title">
+  <a routerLink="/admin">{{ i18n.t('adminUi.back') }}</a>
+  <div class="admin-heading">
+    <div><p class="eyebrow">{{ i18n.t('notificationAdmin.eyebrow') }}</p><h1 id="notification-template-title">{{ i18n.t('notificationAdmin.title') }}</h1></div>
+    <a class="button" routerLink="/admin/notification-templates/new">{{ i18n.t('notificationAdmin.newDraft') }}</a>
+  </div>
+  <p>{{ i18n.t('notificationAdmin.subtitle') }}</p>
+  @if (policy()) { <p class="delivery-status" role="status">{{ i18n.t(deliveryKey()) }} {{ i18n.t('notificationAdmin.noCorporateSmtp') }}</p> }
+  @if (loading()) { <p role="status">{{ i18n.t('notificationAdmin.loading') }}</p> }
+  @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="load()">{{ i18n.t('adminUi.retry') }}</button></div> }
+  @else if (policy(); as configuration) {
+    <form class="admin-filters" (submit)="apply($event)">
+      <label>{{ i18n.t('notificationAdmin.event') }}<select name="event" [(ngModel)]="event"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (item of configuration.events; track item.notification_type) { <option [value]="item.notification_type">{{ item.notification_type }}</option> }</select></label>
+      <label>{{ i18n.t('notificationAdmin.channel') }}<select name="channel" [(ngModel)]="channel"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (item of configuration.channels; track item) { <option [value]="item">{{ i18n.t(channelKey(item)) }}</option> }</select></label>
+      <label>{{ i18n.t('notificationAdmin.locale') }}<select name="locale" [(ngModel)]="locale"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (item of configuration.locales; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+      <label>{{ i18n.t('notificationAdmin.state') }}<select name="state" [(ngModel)]="state"><option value="">{{ i18n.t('adminUi.all') }}</option><option value="draft">{{ i18n.t('notificationAdmin.state.draft') }}</option><option value="active">{{ i18n.t('notificationAdmin.state.active') }}</option><option value="inactive">{{ i18n.t('notificationAdmin.state.inactive') }}</option></select></label>
+      <button type="submit">{{ i18n.t('adminUi.filter') }}</button>
+    </form>
+    @if (result(); as page) {
+      @if (!page.items.length) { <p role="status">{{ i18n.t('notificationAdmin.empty') }}</p> }
+      @else {
+        <p>{{ i18n.t('adminUi.total', { count: i18n.formatNumber(page.total) }) }}</p>
+        <ul class="admin-list template-list">@for (item of page.items; track item.id) {
+          <li><a [routerLink]="['/admin/notification-templates', item.id]">{{ item.notification_type }}</a><span>{{ i18n.t(channelKey(item.channel)) }}</span><span>{{ item.locale }}</span><span>{{ i18n.t(stateKey(item.state)) }}</span><span>v{{ item.version_number }}</span></li>
+        }</ul>
+      }
+      <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages || 1 }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav>
+    }
+  }
+</section>
