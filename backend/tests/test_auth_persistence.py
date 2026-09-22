@@ -4,7 +4,7 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import psycopg
 import pytest
@@ -280,6 +280,57 @@ def test_own_session_catalog_revocation_and_audit() -> None:
     assert repository.revoke_session(
         user_id, current.session_id, expired
     ) == 0
+
+
+def test_session_catalog_returns_more_than_100_and_audits_full_count() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    user_id, email, password, _ = _create_user(database_url)
+    repository = PostgresAuthRepository(database_url)
+    now = datetime.now(UTC)
+    current = _login(repository, email, password, now)
+    later_ids = [UUID(int=current.session_id.int + n) for n in range(1, 106)]
+    with psycopg.connect(database_url) as connection:
+        inserted = connection.execute(
+            """
+            INSERT INTO synergia.identity_sessions (
+                id, user_id, status, authenticated_at, last_seen_at,
+                idle_expires_at, absolute_expires_at, authentication_method
+            )
+            SELECT n, %s, 'expired', %s, %s,
+                   %s + interval '8 hours', %s + interval '24 hours',
+                   'synthetic'
+            FROM unnest(%s::uuid[]) AS n
+            RETURNING id
+            """,
+            (user_id, now, now, now, now, later_ids),
+        ).fetchall()
+        # The login trigger caps ordinary inserts at three active sessions.
+        # Reactivation simulates a legacy/imported catalog above that cap.
+        connection.execute(
+            """UPDATE synergia.identity_sessions SET status = 'active'
+               WHERE id = ANY(%s)""",
+            ([row[0] for row in inserted],),
+        )
+
+    sessions = repository.list_sessions(user_id, now)
+    assert len(sessions) == 106
+    assert sessions[-1]["id"] == current.session_id
+    assert len({row["id"] for row in sessions}) == 106
+    with psycopg.connect(database_url) as connection:
+        event = connection.execute(
+            """
+            SELECT payload FROM synergia.identity_access_events
+            WHERE subject_user_id = %s AND event_key = 'auth.sessions_listed'
+            ORDER BY occurred_at DESC, id DESC LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+    assert event is not None
+    assert event[0]["active_sessions"] == 106
+    assert repository.revoke_session(user_id, current.session_id, now) == 1
+    assert current.session_id not in {
+        row["id"] for row in repository.list_sessions(user_id, now)
+    }
 
 
 def test_revoke_other_sessions_and_concurrent_refresh() -> None:

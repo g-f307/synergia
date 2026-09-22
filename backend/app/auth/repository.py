@@ -518,6 +518,8 @@ class PostgresAuthRepository:
 
     def list_sessions(self, user_id: UUID, now: datetime) -> list[dict]:
         with self._connect() as connection, connection.cursor() as cursor:
+            # Return every active session, including legacy/imported rows above
+            # the normal concurrent-login cap, so each remains revocable.
             cursor.execute(
                 """
                 SELECT id, device_label, authenticated_at, last_seen_at,
@@ -526,7 +528,6 @@ class PostgresAuthRepository:
                 WHERE user_id = %s AND status = 'active'
                   AND idle_expires_at > %s AND absolute_expires_at > %s
                 ORDER BY authenticated_at DESC, id DESC
-                LIMIT 100
                 """,
                 (user_id, now, now),
             )
