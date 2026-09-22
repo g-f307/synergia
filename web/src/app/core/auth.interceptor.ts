@@ -9,7 +9,10 @@ import { SessionService } from './session.service';
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const session = inject(SessionService);
   const router = inject(Router);
-  const isAuthRequest = request.url.startsWith(`${environment.apiUrl}/auth/`);
+  const isAuthRequest = [
+    `${environment.apiUrl}/auth/login`,
+    `${environment.apiUrl}/auth/refresh`
+  ].includes(request.url);
   const token = session.accessToken();
   const authorized = token && !isAuthRequest
     ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })

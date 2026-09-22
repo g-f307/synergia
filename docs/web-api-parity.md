@@ -69,7 +69,7 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
 ## Capacidades sem contrato completo
 
 - catálogo paginado de execuções: #107;
-- consulta e revogação individual de sessões: #109;
+- leitura administrativa de sessões: adiada até permissão explícita; sessões próprias implementadas na #109;
 - gestão versionada de templates de notificação: #110;
 - Modo TV: adiado;
 - conectores corporativos e RPA: Etapa 6, ainda não autorizada.

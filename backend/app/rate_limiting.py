@@ -44,6 +44,8 @@ DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
     "report_generate": (20, 300, True),
     "report_export": (60, 60, True),
     "decision": (30, 60, True),
+    "session_read": (30, 60, True),
+    "session_revoke": (10, 60, True),
 }
 
 ORGANIZATION_PERMISSIONS: Final[dict[str, str]] = {
@@ -84,6 +86,12 @@ def classify_operation(method: str, path: str) -> str | None:
         return "login"
     if method == "POST" and path == "/auth/refresh":
         return "refresh"
+    if method == "GET" and path == "/auth/sessions":
+        return "session_read"
+    if method == "POST" and path == "/auth/sessions/revoke-others":
+        return "session_revoke"
+    if method == "DELETE" and path.startswith("/auth/sessions/"):
+        return "session_revoke"
     if method == "POST" and path == "/imports":
         return "upload"
     if method == "GET" and path == "/search":

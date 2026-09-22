@@ -13,7 +13,10 @@
   ],
   "supporting_operations": [
     {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell", "evidence": ["web/src/app/core/session.service.ts"]},
-    {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "deferred", "consumer": "none", "decision": "A revogação global existe na API, mas ainda não possui ação Angular nem gestão individual de sessões.", "target": "#109"},
+    {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "deferred", "consumer": "none", "decision": "A revogação global, incluindo a sessão atual, permanece disponível na API; o perfil oferece revogação individual e das outras sessões.", "target": "future-global-logout-ui"},
+    {"method": "GET", "path": "/auth/sessions", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "DELETE", "path": "/auth/sessions/{session_id}", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
+    {"method": "POST", "path": "/auth/sessions/revoke-others", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
     {"method": "POST", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
     {"method": "GET", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
     {"method": "DELETE", "path": "/me/avatar", "permission": "profile.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
@@ -42,7 +45,7 @@
     {"method": "GET", "path": "/metrics", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "prometheus", "decision": "Superfície protegida por credencial técnica exclusiva, sem jornada de usuário no Angular."}
   ],
   "planned_capabilities": [
-    {"id": "session-management", "status": "planned", "target": "#109", "decision": "Criar consulta e revogação individual de sessões próprias e administrativas autorizadas."},
+    {"id": "admin-session-management", "status": "deferred", "target": "future-admin-session-permission", "decision": "Leitura administrativa de sessões não consta da matriz de acesso; não há interface nem listagem de terceiros sem permissão específica."},
     {"id": "notification-template-management", "status": "planned", "target": "#110", "decision": "Administrar templates versionados; notificações emitidas continuam imutáveis e não são criadas manualmente."},
     {"id": "tv-mode", "status": "deferred", "target": "future-tv-mode", "decision": "Permanece adiado até possuir requisitos de autorização, atualização, exposição e acessibilidade."},
     {"id": "corporate-integrations-and-rpa", "status": "deferred", "target": "stage-6", "decision": "Conectores e RPA dependem de autorização formal para entrada na Etapa 6."}
@@ -299,7 +302,7 @@
       "menu": "Perfil e preferências",
       "permission": "profile.own",
       "scope": "own",
-      "evidence": ["web/src/app/core/session.service.ts", "web/src/app/core/appearance.service.ts", "web/src/app/features/profile.component.ts"],
+      "evidence": ["web/src/app/core/session.service.ts", "web/src/app/core/appearance.service.ts", "web/src/app/features/profile.component.ts", "web/src/app/features/sessions.component.ts"],
       "endpoints": [
         {"method": "GET", "path": "/me", "permission": "profile.own"},
         {"method": "PATCH", "path": "/me", "permission": "profile.own"}

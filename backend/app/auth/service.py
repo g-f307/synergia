@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from uuid import UUID
 
 import jwt
 
 from app.auth.config import AuthConfig
-from app.auth.models import RefreshResult, SessionResult
+from app.auth.models import RefreshResult, SessionResult, SessionView
 from app.auth.repository import AuthRepository
 from app.auth.security import (
     AccessClaims,
@@ -15,10 +16,45 @@ from app.auth.security import (
     protected_identifier,
     sha256_token,
 )
+from app.authorization import ActorContext
 from app.errors import ApiError
 
 INVALID_CREDENTIALS = "E-mail ou credencial invalidos"
 INVALID_SESSION = "Sessao invalida ou expirada"
+
+
+def device_label(user_agent: str | None) -> str:
+    """Return a coarse, non-identifying label; never persist the raw header."""
+    agent = (user_agent or "")[:512].lower()
+    browser = next(
+        (
+            name
+            for marker, name in (
+                ("edg/", "Edge"),
+                ("firefox/", "Firefox"),
+                ("chrome/", "Chrome"),
+                ("safari/", "Safari"),
+            )
+            if marker in agent
+        ),
+        "Navegador desconhecido",
+    )
+    system = next(
+        (
+            name
+            for marker, name in (
+                ("android", "Android"),
+                ("iphone", "iOS"),
+                ("ipad", "iOS"),
+                ("windows", "Windows"),
+                ("macintosh", "macOS"),
+                ("linux", "Linux"),
+            )
+            if marker in agent
+        ),
+        "Sistema desconhecido",
+    )
+    return f"{browser} / {system}"
 
 
 class AuthService:
@@ -38,7 +74,8 @@ class AuthService:
         self.tokens = tokens or TokenCodec(config, self.clock)
 
     def login(
-        self, email: str, password: str, client_ip: str | None
+        self, email: str, password: str, client_ip: str | None,
+        user_agent: str | None = None,
     ) -> tuple[SessionResult, str, int]:
         if not self.config.local_auth_enabled:
             raise ApiError(
@@ -88,6 +125,7 @@ class AuthService:
                 self.config.refresh_idle_hours,
                 self.config.refresh_absolute_hours,
                 updated_hash,
+                device_label(user_agent),
             )
         except ValueError as exc:
             self.repository.fail_login(
@@ -128,3 +166,27 @@ class AuthService:
 
     def logout_all(self, claims: AccessClaims) -> int:
         return self.repository.revoke_all_sessions(claims.user_id, self.clock())
+
+    def sessions(self, actor: ActorContext) -> list[SessionView]:
+        rows = self.repository.list_sessions(actor.user_id, self.clock())
+        return [
+            SessionView(
+                id=row["id"],
+                current=row["id"] == actor.session_id,
+                device=row["device_label"],
+                created_at=row["authenticated_at"],
+                last_used_at=row["last_seen_at"],
+                expires_at=min(row["idle_expires_at"], row["absolute_expires_at"]),
+            )
+            for row in rows
+        ]
+
+    def revoke_own_session(self, actor: ActorContext, session_id: UUID) -> int:
+        return self.repository.revoke_session(
+            actor.user_id, session_id, self.clock()
+        )
+
+    def revoke_other_sessions(self, actor: ActorContext) -> int:
+        return self.repository.revoke_other_sessions(
+            actor.user_id, actor.session_id, self.clock()
+        )

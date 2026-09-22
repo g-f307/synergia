@@ -48,6 +48,29 @@ async function expectAccessible(
 }
 
 test.describe.serial('integrated operational journey', () => {
+  test('revokes another browser session and blocks its next authenticated request', async ({ browser, page }) => {
+    test.setTimeout(60_000);
+    await login(page);
+    const secondContext = await browser.newContext();
+    try {
+      const secondPage = await secondContext.newPage();
+      await secondPage.goto('/login');
+      await secondPage.getByLabel(/e-mail|email/i).fill(operatorEmail);
+      await secondPage.getByLabel(/senha|password/i).fill(password);
+      await secondPage.getByRole('button', { name: /entrar|sign in/i }).click();
+      await expect(secondPage).toHaveURL(/\/profile/);
+      await page.getByRole('button', { name: /atualizar|refresh sessions/i }).click();
+      await expect(page.locator('.session-list li')).toHaveCount(2);
+      page.once('dialog', (dialog) => dialog.accept());
+      await page.getByRole('button', { name: /encerrar outras|end other sessions/i }).click();
+      await expect(page.locator('.session-list li')).toHaveCount(1);
+      await secondPage.reload();
+      await expect(secondPage).toHaveURL(/\/login/);
+    } finally {
+      await secondContext.close();
+    }
+  });
+
   test('login, upload and execution use the real API and homologated fixture', async ({ page }, testInfo) => {
     const browserSession = await page.context().newCDPSession(page);
     await browserSession.send('Emulation.setTimezoneOverride', { timezoneId: 'America/Manaus' });

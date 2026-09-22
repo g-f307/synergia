@@ -7,7 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { SessionService } from './session.service';
-import { UserProfile } from './session.models';
+import { ActiveSession, UserProfile } from './session.models';
 import { I18nService } from '../shared/i18n/i18n.service';
 import { AppearanceService } from './appearance.service';
 
@@ -129,5 +129,31 @@ describe('SessionService', () => {
     expect(refreshed).toBeFalse();
     expect(service.state()).toBe('expired');
     expect(service.profile()).toBeNull();
+  });
+
+  it('lists sessions without exposing credentials and clears the revoked current session', () => {
+    const current: ActiveSession = {
+      id: '00000000-0000-4000-8000-000000000002', current: true,
+      device: 'Chrome / Windows', created_at: '2026-09-01T00:00:00Z',
+      last_used_at: '2026-09-01T01:00:00Z', expires_at: '2026-09-02T00:00:00Z'
+    };
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: current.id
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+    let sessions: ActiveSession[] = [];
+    service.listSessions().subscribe((items) => { sessions = items; });
+    http.expectOne('http://localhost:8000/auth/sessions').flush({ items: [current] });
+    expect(sessions).toEqual([current]);
+
+    service.revokeSession(current).subscribe();
+    const revoked = http.expectOne(`http://localhost:8000/auth/sessions/${current.id}`);
+    expect(revoked.request.method).toBe('DELETE');
+    expect(revoked.request.withCredentials).toBeTrue();
+    revoked.flush({ revoked_sessions: 1 });
+    expect(service.state()).toBe('expired');
+    expect(service.accessToken()).toBeNull();
   });
 });

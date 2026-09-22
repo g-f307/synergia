@@ -35,6 +35,11 @@ def test_operation_matrix_covers_every_critical_contract() -> None:
         ("POST", "/approvals/id/return"): "decision",
         ("POST", "/approvals/id/assign"): "decision",
         ("POST", "/approvals/id/resubmit"): "decision",
+        ("GET", "/auth/sessions"): "session_read",
+        (
+            "DELETE", "/auth/sessions/11111111-1111-4111-8111-111111111111"
+        ): "session_revoke",
+        ("POST", "/auth/sessions/revoke-others"): "session_revoke",
     }
     for request, expected in cases.items():
         assert classify_operation(*request) == expected
@@ -85,6 +90,24 @@ def test_429_contract_is_stable_and_hides_sensitive_data(monkeypatch) -> None:
     assert limited.json()["error"]["code"] == "rate_limit_exceeded"
     assert limited.json()["error"]["details"] == {"retry_after_seconds": 17}
     assert "secret" not in limited.text
+
+
+def test_session_revocation_is_rate_limited(monkeypatch) -> None:
+    app = FastAPI()
+    app.add_middleware(RateLimitMiddleware)
+
+    @app.delete("/auth/sessions/{session_id}")
+    def revoke(session_id: str) -> dict[str, str]:
+        return {"id": session_id}
+
+    monkeypatch.setenv("RATE_LIMIT_ENABLED", "true")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://unused")
+    monkeypatch.setenv("RATE_LIMIT_KEY_SECRET", "x" * 32)
+    with patch("app.rate_limiting.PostgresRateLimiter.consume", return_value=19):
+        response = TestClient(app).delete(f"/auth/sessions/{uuid4()}")
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "19"
+    assert response.json()["error"]["code"] == "rate_limit_exceeded"
 
 
 def test_429_keeps_cors_security_and_correlation_headers(monkeypatch) -> None:

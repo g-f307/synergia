@@ -55,6 +55,17 @@ quarta.
 | `POST /auth/refresh` | refresh cookie | rotação e novo par |
 | `POST /auth/logout` | Bearer access token | revoga a sessão atual |
 | `POST /auth/logout-all` | Bearer access token | revoga as sessões do próprio usuário |
+| `GET /auth/sessions` | Bearer access token e `session.revoke.own` | sessões próprias ativas, sem credenciais |
+| `DELETE /auth/sessions/{session_id}` | Bearer access token e `session.revoke.own` | revoga uma sessão própria |
+| `POST /auth/sessions/revoke-others` | Bearer access token e `session.revoke.own` | revoga as demais sessões próprias |
+
+A lista retorna UUID, indicação da sessão atual, navegador/sistema genéricos,
+criação, último uso e expiração efetiva. O User-Agent bruto, IP, tokens e hashes
+não são retornados nem persistidos como rótulo. Sessões expiradas, revogadas ou
+de outro usuário não aparecem; revogação dessas sessões retorna o mesmo `404`.
+Refresh e revogação travam a linha da sessão antes do token, evitando inversão
+de locks. A matriz ainda não aprova leitura administrativa de sessões; portanto
+nenhuma listagem ou interface de terceiros é exposta nesta entrega.
 
 Login e refresh são as únicas operações públicas além das sondas `/health`,
 `/health/live` e `/health/ready`; ambas validam sua própria credencial. A rota

@@ -12,6 +12,7 @@ from app.auth.models import CredentialRecord, RefreshResult, SessionResult
 from app.auth.routes import get_auth_config, get_auth_repository, get_auth_service
 from app.auth.security import TokenCodec, sha256_token
 from app.auth.service import AuthService
+from app.authorization import ActorContext, get_actor_context
 from app.main import app, create_app
 
 NOW = datetime.now(UTC).replace(microsecond=0)
@@ -80,6 +81,21 @@ class FakeRepository:
     def revoke_all_sessions(self, user_id, _now):
         self.revoked.append((user_id, None))
         return 3
+
+    def list_sessions(self, user_id, _now):
+        assert user_id == USER_ID
+        return [{
+            "id": SESSION_ID,
+            "device_label": "Chrome / Windows",
+            "authenticated_at": NOW,
+            "last_seen_at": NOW,
+            "idle_expires_at": NOW + timedelta(hours=8),
+            "absolute_expires_at": NOW + timedelta(hours=24),
+        }]
+
+    def revoke_other_sessions(self, user_id, current_session_id, _now):
+        assert (user_id, current_session_id) == (USER_ID, SESSION_ID)
+        return 2
 
 
 def service(repository=None, **config_changes) -> AuthService:
@@ -233,6 +249,40 @@ def test_logout_uses_identity_from_validated_access_token() -> None:
     assert selected.logout(claims) == 1
     assert selected.logout_all(claims) == 3
     assert repository.revoked == [(USER_ID, SESSION_ID), (USER_ID, None)]
+
+
+def test_session_management_returns_only_safe_metadata_and_revokes_own() -> None:
+    repository = FakeRepository()
+    actor = ActorContext(
+        USER_ID, SESSION_ID, UUID("33333333-3333-3333-3333-333333333333"),
+        {"session.revoke.own": frozenset({None})},
+        UUID("44444444-4444-4444-4444-444444444444"),
+    )
+    app.dependency_overrides[get_auth_repository] = lambda: repository
+    app.dependency_overrides[get_auth_config] = lambda: config()
+    app.dependency_overrides[get_auth_service] = lambda: service(repository)
+    app.dependency_overrides[get_actor_context] = lambda: actor
+    try:
+        with TestClient(app) as client:
+            listed = client.get("/auth/sessions")
+            assert listed.status_code == 200
+            assert listed.json() == {"items": [{
+                "id": str(SESSION_ID), "current": True,
+                "device": "Chrome / Windows",
+                "created_at": NOW.isoformat().replace("+00:00", "Z"),
+                "last_used_at": NOW.isoformat().replace("+00:00", "Z"),
+                "expires_at": (
+                    NOW + timedelta(hours=8)
+                ).isoformat().replace("+00:00", "Z"),
+            }]}
+            assert "token" not in listed.text and "hash" not in listed.text
+            others = client.post("/auth/sessions/revoke-others")
+            assert others.json() == {"revoked_sessions": 2}
+            revoked = client.delete(f"/auth/sessions/{SESSION_ID}")
+            assert revoked.status_code == 200
+            assert repository.revoked[-1] == (USER_ID, SESSION_ID)
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_auth_http_contract_sets_secure_cookie_and_hides_refresh() -> None:

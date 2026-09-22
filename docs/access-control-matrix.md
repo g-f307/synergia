@@ -86,6 +86,9 @@ também dependerá da política de rede da TI.
 | --- | --- | --- | --- | --- |
 | `POST /auth/logout` | `session.revoke.own` | sessão atual | `own` | admin, gestor, analista, operador, consulta |
 | `POST /auth/logout-all` | `session.revoke.own` | sessões próprias | `own` | admin, gestor, analista, operador, consulta |
+| `GET /auth/sessions` | `session.revoke.own` | sessões próprias ativas | `own` | admin, gestor, analista, operador, consulta |
+| `POST /auth/sessions/revoke-others` | `session.revoke.own` | outras sessões próprias | `own` | admin, gestor, analista, operador, consulta |
+| `DELETE /auth/sessions/{session_id}` | `session.revoke.own` | sessão própria indicada | `own` | admin, gestor, analista, operador, consulta |
 | `GET /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `PATCH /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `POST /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |

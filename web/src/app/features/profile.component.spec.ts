@@ -26,7 +26,8 @@ describe('ProfileComponent', () => {
     loadAvatar: jasmine.createSpy('loadAvatar').and.returnValue(of(new Blob(['png']))),
     uploadAvatar: jasmine.createSpy('uploadAvatar'),
     removeAvatar: jasmine.createSpy('removeAvatar'),
-    updateProfile: jasmine.createSpy('updateProfile')
+    updateProfile: jasmine.createSpy('updateProfile'),
+    listSessions: jasmine.createSpy('listSessions').and.returnValue(of([]))
   };
 
   beforeEach(async () => {

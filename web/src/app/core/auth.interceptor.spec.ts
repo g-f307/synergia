@@ -50,6 +50,18 @@ describe('authInterceptor', () => {
     request.flush({});
   });
 
+  it('authenticates protected session endpoints but not login or refresh', () => {
+    http.get('http://localhost:8000/auth/sessions').subscribe();
+    const sessions = controller.expectOne('http://localhost:8000/auth/sessions');
+    expect(sessions.request.headers.get('Authorization')).toBe('Bearer initial-token');
+    sessions.flush({ items: [] });
+
+    http.post('http://localhost:8000/auth/login', {}).subscribe();
+    const login = controller.expectOne('http://localhost:8000/auth/login');
+    expect(login.request.headers.has('Authorization')).toBeFalse();
+    login.flush({});
+  });
+
   it('renews and retries once after an unauthorized response', () => {
     http.get('/protected').subscribe();
     controller.expectOne('/protected').flush(

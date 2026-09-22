@@ -4,12 +4,18 @@ import os
 from collections.abc import Generator
 from datetime import UTC, datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.config import AuthConfig
-from app.auth.models import LoginRequest, LogoutResponse, TokenResponse
+from app.auth.models import (
+    LoginRequest,
+    LogoutResponse,
+    SessionListResponse,
+    TokenResponse,
+)
 from app.auth.repository import AuthRepository, PostgresAuthRepository
 from app.auth.security import AccessClaims
 from app.auth.service import AuthService
@@ -112,7 +118,7 @@ def login(
     _validate_origin(request, config)
     client_ip = request.client.host if request.client else None
     session, access_token, expires_in = service.login(
-        payload.email, payload.password, client_ip
+        payload.email, payload.password, client_ip, request.headers.get("user-agent")
     )
     _set_refresh_cookie(
         response, config, session.refresh_token, session.refresh_expires_at
@@ -181,3 +187,47 @@ def logout_all(
     revoked = service.logout_all(claims)
     _clear_refresh_cookie(response, config)
     return LogoutResponse(revoked_sessions=revoked)
+
+
+@router.get("/sessions", response_model=SessionListResponse, responses=ERROR_RESPONSES)
+def list_own_sessions(
+    claims: Annotated[ActorContext, Depends(require_permission("session.revoke.own"))],
+    service: Service,
+) -> SessionListResponse:
+    return SessionListResponse(items=service.sessions(claims))
+
+
+@router.post(
+    "/sessions/revoke-others",
+    response_model=LogoutResponse,
+    responses=ERROR_RESPONSES,
+)
+def revoke_other_sessions(
+    request: Request,
+    claims: Annotated[ActorContext, Depends(require_permission("session.revoke.own"))],
+    service: Service,
+    config: Config,
+) -> LogoutResponse:
+    _validate_origin(request, config)
+    return LogoutResponse(revoked_sessions=service.revoke_other_sessions(claims))
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    response_model=LogoutResponse,
+    responses={**ERROR_RESPONSES, 404: {"model": ErrorResponse}},
+)
+def revoke_own_session(
+    session_id: UUID,
+    request: Request,
+    response: Response,
+    claims: Annotated[ActorContext, Depends(require_permission("session.revoke.own"))],
+    service: Service,
+    config: Config,
+) -> LogoutResponse:
+    _validate_origin(request, config)
+    if not service.revoke_own_session(claims, session_id):
+        raise ApiError(404, "session_not_found", "Sessao nao encontrada")
+    if session_id == claims.session_id:
+        _clear_refresh_cookie(response, config)
+    return LogoutResponse(revoked_sessions=1)
