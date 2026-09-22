@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import psycopg
 from argon2 import PasswordHasher
@@ -130,11 +130,31 @@ def revoke(email: str) -> None:
         )
 
 
+def emit_execution_notification() -> None:
+    execution_id = f"exec-template-e2e-{uuid4().hex[:12]}"
+    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """INSERT INTO synergia.executions (
+                   id, status, organization_id, initiated_by_user_id,
+                   state_changed_by_type, state_changed_by, state_change_reason
+               ) VALUES (%s, 'completed', %s, %s, 'system',
+                         'notification-template-e2e', 'synthetic_event')""",
+            (execution_id, ORGANIZATION_A, OPERATOR_ID),
+        )
+    print(execution_id)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--revoke-email")
+    parser.add_argument("--emit-execution-notification", action="store_true")
     args = parser.parse_args()
-    revoke(args.revoke_email) if args.revoke_email else bootstrap()
+    if args.revoke_email:
+        revoke(args.revoke_email)
+    elif args.emit_execution_notification:
+        emit_execution_notification()
+    else:
+        bootstrap()
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from scripts import validate_web_journey_map  # noqa: E402
 def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
     document = validate_web_journey_map.validate()
 
-    assert document["version"] == "1.2.0"
+    assert document["version"] == "1.3.0"
     assert document["prototype_ref"] == "prototype-v1.0"
     assert {route["id"] for route in document["routes"]} >= {
         "dashboard",
@@ -24,6 +24,7 @@ def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
         "execution-detail",
         "search",
         "pending-list",
+        "notification-template-list",
     }
     admin = next(route for route in document["routes"] if route["id"] == "admin")
     assert admin.get("exposure", "full") == "full"
