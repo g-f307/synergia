@@ -58,26 +58,34 @@ INSERT INTO synergia.notification_template_revisions (
     title_template, body_template, created_reason, published_reason,
     published_at
 )
-SELECT notification_type, 'in_app', locale,
+SELECT t.notification_type, 'in_app', t.locale,
        dense_rank() OVER (
-         PARTITION BY notification_type, locale ORDER BY template_version
+         PARTITION BY t.notification_type, t.locale
+         ORDER BY v.created_at, t.template_version
        ),
-       template_version, title_template, body_template,
+       t.template_version, t.title_template, t.body_template,
        'Migração do catálogo inicial', 'Versão inicial homologada', now()
-FROM synergia.notification_templates;
+FROM synergia.notification_templates t
+JOIN synergia.notification_template_versions v
+  ON v.notification_type = t.notification_type
+ AND v.template_version = t.template_version;
 
 INSERT INTO synergia.notification_template_revisions (
     notification_type, channel, locale, version_number, version_label,
     title_template, body_template, created_reason, published_reason,
     published_at
 )
-SELECT notification_type, 'email', locale,
+SELECT t.notification_type, 'email', t.locale,
        dense_rank() OVER (
-         PARTITION BY notification_type, locale ORDER BY template_version
+         PARTITION BY t.notification_type, t.locale
+         ORDER BY v.created_at, t.template_version
        ),
-       template_version, subject_template, body_template,
+       t.template_version, t.subject_template, t.body_template,
        'Migração do catálogo inicial', 'Versão inicial homologada', now()
-FROM synergia.email_notification_templates;
+FROM synergia.email_notification_templates t
+JOIN synergia.notification_template_versions v
+  ON v.notification_type = t.notification_type
+ AND v.template_version = t.template_version;
 
 CREATE TABLE synergia.notification_template_activations (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -112,13 +120,16 @@ CREATE INDEX idx_notification_template_history
 CREATE UNIQUE INDEX uq_notification_template_version_label_after_seed
     ON synergia.notification_template_revisions (
       notification_type, channel, version_number
-    ) WHERE version_number > 1;
+    ) WHERE created_by_user_id IS NOT NULL;
 
 INSERT INTO synergia.notification_template_activations (
     revision_id, notification_type, channel, locale, activated_reason
 )
-SELECT id, notification_type, channel, locale, 'Versão inicial homologada'
-FROM synergia.notification_template_revisions;
+SELECT DISTINCT ON (notification_type, channel, locale)
+       id, notification_type, channel, locale, 'Versão inicial homologada'
+FROM synergia.notification_template_revisions
+ORDER BY notification_type, channel, locale,
+         version_number DESC, version_label DESC, id DESC;
 
 CREATE TABLE synergia.notification_template_events (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

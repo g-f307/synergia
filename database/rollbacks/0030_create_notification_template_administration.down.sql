@@ -5,6 +5,99 @@ DROP TRIGGER IF EXISTS notification_template_activation_immutable
 DROP TRIGGER IF EXISTS notification_template_revision_immutable
     ON synergia.notification_template_revisions;
 
+-- Preserve every published revision still referenced by a notification or an
+-- e-mail delivery before removing the versioned administration tables.  This
+-- makes the rollback consumable by the previous application release instead
+-- of leaving template_version values without renderable legacy content.
+WITH referenced_revisions AS (
+    SELECT template_revision_id AS revision_id
+    FROM synergia.notifications
+    WHERE template_revision_id IS NOT NULL
+    UNION
+    SELECT email_template_revision_id
+    FROM synergia.notifications
+    WHERE email_template_revision_id IS NOT NULL
+    UNION
+    SELECT template_revision_id
+    FROM synergia.email_deliveries
+    WHERE template_revision_id IS NOT NULL
+)
+INSERT INTO synergia.notification_template_versions (
+    notification_type, template_version, required_permission, resource_type
+)
+SELECT DISTINCT r.notification_type, r.version_label,
+       p.required_permission, p.resource_type
+FROM referenced_revisions referenced
+JOIN synergia.notification_template_revisions r
+  ON r.id = referenced.revision_id
+JOIN synergia.notification_event_policies p
+  ON p.notification_type = r.notification_type
+WHERE r.published_at IS NOT NULL
+ON CONFLICT (notification_type, template_version) DO NOTHING;
+
+WITH referenced_internal_versions AS (
+    SELECT DISTINCT used.notification_type, used.version_label
+    FROM synergia.notifications n
+    JOIN synergia.notification_template_revisions used
+      ON used.id = n.template_revision_id
+)
+INSERT INTO synergia.notification_templates (
+    notification_type, template_version, locale,
+    title_template, body_template
+)
+SELECT r.notification_type, r.version_label, r.locale,
+       r.title_template, r.body_template
+FROM referenced_internal_versions referenced
+CROSS JOIN (VALUES ('pt-BR'), ('en-US')) AS target(locale)
+JOIN LATERAL (
+    SELECT candidate.notification_type, candidate.version_label,
+           target.locale, candidate.title_template, candidate.body_template
+    FROM synergia.notification_template_revisions candidate
+    WHERE candidate.notification_type = referenced.notification_type
+      AND candidate.version_label = referenced.version_label
+      AND candidate.channel = 'in_app'
+      AND candidate.published_at IS NOT NULL
+    ORDER BY CASE WHEN candidate.locale = target.locale THEN 0
+                  WHEN candidate.locale = 'pt-BR' THEN 1 ELSE 2 END,
+             candidate.locale, candidate.id
+    LIMIT 1
+) r ON true
+ON CONFLICT (notification_type, template_version, locale) DO NOTHING;
+
+WITH referenced_email_versions AS (
+    SELECT DISTINCT used.notification_type, used.version_label
+    FROM synergia.notifications n
+    JOIN synergia.notification_template_revisions used
+      ON used.id = n.email_template_revision_id
+    UNION
+    SELECT DISTINCT used.notification_type, used.version_label
+    FROM synergia.email_deliveries d
+    JOIN synergia.notification_template_revisions used
+      ON used.id = d.template_revision_id
+)
+INSERT INTO synergia.email_notification_templates (
+    notification_type, template_version, locale,
+    subject_template, body_template
+)
+SELECT r.notification_type, r.version_label, r.locale,
+       r.title_template, r.body_template
+FROM referenced_email_versions referenced
+CROSS JOIN (VALUES ('pt-BR'), ('en-US')) AS target(locale)
+JOIN LATERAL (
+    SELECT candidate.notification_type, candidate.version_label,
+           target.locale, candidate.title_template, candidate.body_template
+    FROM synergia.notification_template_revisions candidate
+    WHERE candidate.notification_type = referenced.notification_type
+      AND candidate.version_label = referenced.version_label
+      AND candidate.channel = 'email'
+      AND candidate.published_at IS NOT NULL
+    ORDER BY CASE WHEN candidate.locale = target.locale THEN 0
+                  WHEN candidate.locale = 'pt-BR' THEN 1 ELSE 2 END,
+             candidate.locale, candidate.id
+    LIMIT 1
+) r ON true
+ON CONFLICT (notification_type, template_version, locale) DO NOTHING;
+
 ALTER TABLE IF EXISTS synergia.email_deliveries
     DROP COLUMN IF EXISTS template_revision_id;
 ALTER TABLE synergia.notifications
