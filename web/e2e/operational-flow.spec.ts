@@ -106,6 +106,9 @@ test.describe.serial('integrated operational journey', () => {
     await expect(page.getByText(executionId).first()).toBeVisible();
     await page.getByRole('button', { name: /voltar ao monitor|back to monitor/i }).click();
     await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
+    await testInfo.attach('execution-catalog-context-desktop', {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    });
 
     await page.locator('a[href="/imports/new"]').click();
     await page.getByLabel(/fonte|source/i).selectOption('GMES/OQC');
@@ -300,7 +303,21 @@ test.describe.serial('integrated operational journey', () => {
   });
 
   test('enforces role and organization scope', async ({ page }) => {
+    const authenticatedRequest = page.waitForRequest((request) =>
+      request.url().endsWith('/me') && request.headers()['authorization']?.startsWith('Bearer ') === true);
     await login(page, readerEmail);
+    const profileRequest = await authenticatedRequest;
+    const authorization = profileRequest.headers()['authorization'];
+    expect(authorization).toBeTruthy();
+    const adminApiUrl = new URL('/admin/users', profileRequest.url()).toString();
+    const denied = await page.request.get(adminApiUrl, {
+      headers: { Authorization: authorization! },
+    });
+    expect(denied.status()).toBe(403);
+    expect((await denied.json()).error.code).toBe('access_denied');
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.locator('a[href="/admin"]')).toHaveCount(0);
     await expect(page.getByRole('link', { name: /new import|nova importação/i })).toHaveCount(0);
     await page.locator('a[href="/search"]').click();
     await page.getByRole('searchbox', { name: /identifier|identificador/i }).fill('SYN-WO-000001');
@@ -309,7 +326,7 @@ test.describe.serial('integrated operational journey', () => {
   });
 
   test('completes the administrative lifecycle with scoped associations', async ({ page }, testInfo) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     const suffix = Date.now().toString(36);
     const userName = `E2E Admin Subject ${suffix}`;
     const userEmail = `admin-subject-${suffix}@example.invalid`;
@@ -319,6 +336,7 @@ test.describe.serial('integrated operational journey', () => {
     await page.locator('a[href="/admin"]').click();
     await page.locator('a[href="/admin/users"]').click();
     await page.locator('a[href="/admin/users/new"]').click();
+    await page.waitForLoadState('networkidle');
     await page.getByLabel(/^nome$|^name$/i).fill(userName);
     await page.getByLabel(/e-mail 1|email 1/i).fill(userEmail);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved user onboarding');
@@ -371,15 +389,52 @@ test.describe.serial('integrated operational journey', () => {
     await expect(effective.getByText('dashboard.read')).toBeVisible();
     await expect(effective.getByText(/via grupo|via group/i)).toBeVisible();
     await expectAccessible(page, testInfo, 'admin-detail-desktop');
+
+    const userForm = page.locator('form.admin-form');
+    const userReason = userForm.locator('textarea[name="reason"]').first();
+    const updatedName = `${userName} Updated`;
+    await userForm.getByLabel(/^nome$|^name$/i).fill(updatedName);
+    await userReason.fill('E2E approved user update');
+    const userUpdated = page.waitForResponse((response) =>
+      response.url().includes('/admin/users/') && response.request().method() === 'PATCH');
+    await userForm.getByRole('button', { name: /^salvar$|^save$/i }).click();
+    expect((await userUpdated).status()).toBe(200);
+    await expect(userForm.getByLabel(/^nome$|^name$/i)).toHaveValue(updatedName);
+
+    const changeStatus = async (action: 'block' | 'unblock' | 'deactivate' | 'reactivate', label: RegExp) => {
+      await userReason.fill(`E2E ${action} lifecycle`);
+      if (action === 'block' || action === 'deactivate') page.once('dialog', (dialog) => dialog.accept());
+      const changed = page.waitForResponse((response) =>
+        response.url().endsWith(`/${action}`) && response.request().method() === 'POST');
+      await page.getByRole('button', { name: label }).first().click();
+      expect((await changed).status()).toBe(200);
+    };
+    await changeStatus('block', /bloquear|block/i);
+    await expect(page.getByText(/bloqueado|blocked/i).first()).toBeVisible();
+    await changeStatus('unblock', /desbloquear|unblock/i);
+    await expect(page.getByText(/ativo|active/i).first()).toBeVisible();
+    await changeStatus('deactivate', /desativar|deactivate/i);
+    await expect(page.getByText(/inativo|inactive/i).first()).toBeVisible();
+    await changeStatus('reactivate', /reativar|reactivate/i);
+    await expect(page.getByText(/ativo|active/i).first()).toBeVisible();
+
     const userGroups = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /grupos do usuário|user groups/i }) });
     page.once('dialog', (dialog) => dialog.accept());
     await userGroups.getByLabel(/motivo da ação|reason for this action/i).fill('E2E membership removal');
     await userGroups.getByRole('button', { name: /revogar|revoke/i }).click();
     await expect(effective.getByText('dashboard.read')).toHaveCount(0);
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.getByLabel(/motivo da ação|reason for this action/i).first().fill('E2E lifecycle completion');
-    await page.getByRole('button', { name: /desativar|deactivate/i }).first().click();
-    await expect(page.getByText(/inativo|inactive/i).first()).toBeVisible();
+    const audit = execFileSync(
+      process.env.E2E_PYTHON ?? 'python',
+      ['../scripts/bootstrap_web_e2e.py', '--assert-admin-audit', userEmail],
+      { cwd: process.cwd(), env: process.env },
+    ).toString();
+    expect(audit).toContain('Administrative audit verified: 12 ordered mutations.');
+    await testInfo.attach('administrative-audit-summary', {
+      body: Buffer.from(audit), contentType: 'text/plain',
+    });
+    await testInfo.attach('admin-lifecycle-desktop', {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    });
   });
 
   test('supports English, keyboard navigation and a mobile viewport', async ({ page }, testInfo) => {
@@ -419,6 +474,9 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByRole('button', { name: /publicar versão|publish version/i }).click();
     await expect(page.getByText(/publicada e ativa|published and active/i)).toBeVisible();
     await expectAccessible(page, testInfo, 'notification-template-admin');
+    await testInfo.attach('notification-template-published-desktop', {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    });
 
     const execution = execFileSync(
       process.env.E2E_PYTHON ?? 'python',

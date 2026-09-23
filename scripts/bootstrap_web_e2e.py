@@ -144,15 +144,70 @@ def emit_execution_notification() -> None:
     print(execution_id)
 
 
+def assert_admin_audit(email: str) -> None:
+    expected = [
+        ("user.admin_created", "identity_user"),
+        ("access.role_created", "role"),
+        ("access.association_granted", "role_permission"),
+        ("access.group_created", "identity_group"),
+        ("access.association_granted", "user_group"),
+        ("access.association_granted", "group_role"),
+        ("user.admin_updated", "identity_user"),
+        ("user.admin_block", "identity_user"),
+        ("user.admin_unblock", "identity_user"),
+        ("user.admin_deactivate", "identity_user"),
+        ("user.admin_reactivate", "identity_user"),
+        ("access.association_revoked", "user_group"),
+    ]
+    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT event.event_key, event.entity_type, event.actor_user_id
+            FROM synergia.identity_access_events event
+            WHERE event.id >= (
+                SELECT min(created.id)
+                FROM synergia.identity_access_events created
+                JOIN synergia.user_emails email
+                  ON email.user_id = created.subject_user_id
+                WHERE email.normalized_email = lower(btrim(%s))
+                  AND created.event_key = 'user.admin_created'
+            )
+              AND (
+                event.event_key LIKE 'user.admin_%%'
+                OR event.event_key LIKE 'access.%%'
+              )
+            ORDER BY event.id
+            """,
+            (email,),
+        )
+        events = cursor.fetchall()
+    mutations = [(event[0], event[1]) for event in events]
+    position = 0
+    for mutation in mutations:
+        if position < len(expected) and mutation == expected[position]:
+            position += 1
+    if position != len(expected):
+        raise RuntimeError(
+            "administrative audit is incomplete: "
+            f"expected ordered events {expected}, received {mutations}"
+        )
+    if any(actor_id != ADMIN_ID for _event_key, _entity_type, actor_id in events):
+        raise RuntimeError("administrative audit contains an unexpected actor")
+    print(f"Administrative audit verified: {len(expected)} ordered mutations.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--revoke-email")
     parser.add_argument("--emit-execution-notification", action="store_true")
+    parser.add_argument("--assert-admin-audit")
     args = parser.parse_args()
     if args.revoke_email:
         revoke(args.revoke_email)
     elif args.emit_execution_notification:
         emit_execution_notification()
+    elif args.assert_admin_audit:
+        assert_admin_audit(args.assert_admin_audit)
     else:
         bootstrap()
 

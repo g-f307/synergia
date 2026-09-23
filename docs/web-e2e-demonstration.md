@@ -31,6 +31,11 @@ descartável do teste. O script não imprime senha, hash ou token.
    justificativa e consentimento;
 10. processar o canal externo pelo capturador local idempotente;
 11. validar inglês, viewport móvel, teclado e acessibilidade automatizada.
+12. executar o ciclo administrativo completo de usuário, grupo e papel, incluindo
+    edição, bloqueio, desbloqueio, desativação, reativação e conferência da trilha
+    append-only no PostgreSQL;
+13. criar, pré-visualizar e publicar um template, gerar uma ocorrência real,
+    publicar nova revisão e comprovar a imutabilidade da versão anterior.
 
 O relatório navegável fica em `web/reports/e2e-html/index.html`. Vídeos,
 capturas e traces ficam em `web/reports/e2e-results/` e são publicados pela CI
@@ -38,3 +43,11 @@ como o artefato `fluxo-web-e2e`. O mesmo artefato inclui o CSV gerado pelo
 backend, a captura JSONL do provedor local e os resultados Axe. Esses arquivos
 são temporários, contêm apenas identidades `.invalid` e não devem ser
 substituídos por credenciais ou mensagens corporativas.
+
+## Fechamento pré-RPA
+
+A cobertura integrada das jornadas administrativas, operacionais e de templates,
+incluindo os cenários negativos complementares, está indexada em
+[pre-rpa-validation-report.md](pre-rpa-validation-report.md). O relatório separa
+evidência automatizada de aceite humano: a CI não assina em nome do PO nem do
+responsável técnico.
