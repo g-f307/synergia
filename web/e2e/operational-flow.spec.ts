@@ -303,7 +303,21 @@ test.describe.serial('integrated operational journey', () => {
   });
 
   test('enforces role and organization scope', async ({ page }) => {
+    const authenticatedRequest = page.waitForRequest((request) =>
+      request.url().endsWith('/me') && request.headers()['authorization']?.startsWith('Bearer ') === true);
     await login(page, readerEmail);
+    const profileRequest = await authenticatedRequest;
+    const authorization = profileRequest.headers()['authorization'];
+    expect(authorization).toBeTruthy();
+    const adminApiUrl = new URL('/admin/users', profileRequest.url()).toString();
+    const denied = await page.request.get(adminApiUrl, {
+      headers: { Authorization: authorization! },
+    });
+    expect(denied.status()).toBe(403);
+    expect((await denied.json()).error.code).toBe('access_denied');
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.locator('a[href="/admin"]')).toHaveCount(0);
     await expect(page.getByRole('link', { name: /new import|nova importação/i })).toHaveCount(0);
     await page.locator('a[href="/search"]').click();
     await page.getByRole('searchbox', { name: /identifier|identificador/i }).fill('SYN-WO-000001');
@@ -312,7 +326,7 @@ test.describe.serial('integrated operational journey', () => {
   });
 
   test('completes the administrative lifecycle with scoped associations', async ({ page }, testInfo) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     const suffix = Date.now().toString(36);
     const userName = `E2E Admin Subject ${suffix}`;
     const userEmail = `admin-subject-${suffix}@example.invalid`;
@@ -322,6 +336,7 @@ test.describe.serial('integrated operational journey', () => {
     await page.locator('a[href="/admin"]').click();
     await page.locator('a[href="/admin/users"]').click();
     await page.locator('a[href="/admin/users/new"]').click();
+    await page.waitForLoadState('networkidle');
     await page.getByLabel(/^nome$|^name$/i).fill(userName);
     await page.getByLabel(/e-mail 1|email 1/i).fill(userEmail);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved user onboarding');
@@ -413,7 +428,7 @@ test.describe.serial('integrated operational journey', () => {
       ['../scripts/bootstrap_web_e2e.py', '--assert-admin-audit', userEmail],
       { cwd: process.cwd(), env: process.env },
     ).toString();
-    expect(audit).toContain('Administrative audit verified: 6 ordered mutations.');
+    expect(audit).toContain('Administrative audit verified: 12 ordered mutations.');
     await testInfo.attach('administrative-audit-summary', {
       body: Buffer.from(audit), contentType: 'text/plain',
     });

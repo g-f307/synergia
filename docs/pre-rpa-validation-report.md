@@ -27,7 +27,7 @@ a recuperação seguinte volte a consultar a API real.
 
 | Cenário | Evidência automatizada |
 | --- | --- |
-| sem `access.admin` | guard e API em `test_users.py`; papel de consulta no Playwright |
+| sem `access.admin` | Playwright comprova redirecionamento de `/admin` e resposta `403` da API com o token do papel de consulta |
 | organização fora do escopo | `test_authorization_persistence.py`, `test_queries.py` e busca E2E isolada |
 | identificador inexistente | `test_users.py`, `test_queries.py` e `test_notification_templates.py` |
 | mass assignment | contrato `extra="forbid"` e teste HTTP dedicado em `test_users.py` |
