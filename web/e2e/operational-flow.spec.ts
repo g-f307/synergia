@@ -322,8 +322,13 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByLabel(/^nome$|^name$/i).fill(userName);
     await page.getByLabel(/e-mail 1|email 1/i).fill(userEmail);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved user onboarding');
+    const userCreated = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.endsWith('/admin/users') && response.request().method() === 'POST';
+    }, { timeout: 30_000 });
     await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
-    await expect(page).toHaveURL(/\/admin\/users\/[0-9a-f-]+/);
+    expect((await userCreated).status()).toBe(201);
+    await expect(page).toHaveURL(/\/admin\/users\/[0-9a-f-]+/, { timeout: 15_000 });
 
     await page.getByRole('link', { name: /voltar aos usuários|back to users/i }).click();
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
