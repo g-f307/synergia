@@ -150,13 +150,15 @@ class EmailDeliveryRepository:
                 """
                 INSERT INTO synergia.email_deliveries (
                     notification_id, notification_version, recipient_user_id,
-                    locale, template_version, state, provider, correlation_id,
-                    failure_code, available_at
+                    locale, template_version, template_revision_id, state,
+                    provider, correlation_id, failure_code, available_at
                 )
                 SELECT n.id, n.version, n.recipient_user_id,
-                       CASE WHEN u.locale = 'en-US' THEN 'en-US' ELSE 'pt-BR' END,
-                       n.template_version,
+                       COALESCE(n.email_template_locale, 'pt-BR'),
+                       COALESCE(template.version_label, 'unavailable'),
+                       n.email_template_revision_id,
                        CASE
+                         WHEN n.email_template_revision_id IS NULL THEN 'skipped'
                          WHEN u.status <> 'active' THEN 'skipped'
                          WHEN NOT COALESCE(
                            (u.notification_preferences->>'email')::boolean, true
@@ -167,6 +169,8 @@ class EmailDeliveryRepository:
                        %s,
                        event.correlation_id,
                        CASE
+                         WHEN n.email_template_revision_id IS NULL
+                           THEN 'template_unavailable'
                          WHEN u.status <> 'active' THEN 'recipient_inactive'
                          WHEN NOT COALESCE(
                            (u.notification_preferences->>'email')::boolean, true
@@ -177,6 +181,8 @@ class EmailDeliveryRepository:
                        n.last_occurred_at + make_interval(secs => %s)
                 FROM synergia.notifications n
                 JOIN synergia.identity_users u ON u.id = n.recipient_user_id
+                LEFT JOIN synergia.notification_template_revisions template
+                  ON template.id = n.email_template_revision_id
                 LEFT JOIN LATERAL (
                     SELECT normalized_email
                     FROM synergia.user_emails
@@ -210,6 +216,7 @@ class EmailDeliveryRepository:
                     notification_version = EXCLUDED.notification_version,
                     locale = EXCLUDED.locale,
                     template_version = EXCLUDED.template_version,
+                    template_revision_id = EXCLUDED.template_revision_id,
                     state = EXCLUDED.state,
                     failure_code = EXCLUDED.failure_code,
                     available_at = EXCLUDED.available_at,
@@ -290,13 +297,12 @@ class EmailDeliveryRepository:
                 cursor.execute(
                     """
                     SELECT n.notification_type, n.parameters,
-                           e.subject_template, e.body_template,
+                           e.title_template AS subject_template, e.body_template,
                            address.normalized_email AS recipient
                     FROM synergia.notifications n
-                    JOIN synergia.email_notification_templates e
-                      ON e.notification_type = n.notification_type
-                     AND e.template_version = n.template_version
-                     AND e.locale = %s
+                    JOIN synergia.notification_template_revisions e
+                      ON e.id = %s
+                     AND e.channel = 'email'
                     JOIN LATERAL (
                         SELECT normalized_email
                         FROM synergia.user_emails
@@ -313,7 +319,7 @@ class EmailDeliveryRepository:
                       )
                     """,
                     (
-                        delivery["locale"],
+                        delivery["template_revision_id"],
                         delivery["notification_id"],
                         delivery["notification_version"],
                     ),

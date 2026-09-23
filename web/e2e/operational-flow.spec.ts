@@ -322,8 +322,13 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByLabel(/^nome$|^name$/i).fill(userName);
     await page.getByLabel(/e-mail 1|email 1/i).fill(userEmail);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved user onboarding');
+    const userCreated = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.endsWith('/admin/users') && response.request().method() === 'POST';
+    }, { timeout: 30_000 });
     await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
-    await expect(page).toHaveURL(/\/admin\/users\/[0-9a-f-]+/);
+    expect((await userCreated).status()).toBe(201);
+    await expect(page).toHaveURL(/\/admin\/users\/[0-9a-f-]+/, { timeout: 15_000 });
 
     await page.getByRole('link', { name: /voltar aos usuários|back to users/i }).click();
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
@@ -391,5 +396,65 @@ test.describe.serial('integrated operational journey', () => {
     await testInfo.attach('profile-mobile-en', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     });
+  });
+
+  test('governs notification templates without changing historical occurrences', async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    const suffix = Date.now().toString(36);
+    const firstTitle = `E2E conclusão ${suffix}`;
+    const secondTitle = `E2E conclusão revisada ${suffix}`;
+    await login(page, adminEmail);
+    await page.goto('/admin/notification-templates/new');
+    await page.getByLabel(/tipo de evento|event type/i).selectOption('execution.completed');
+    await page.getByLabel(/título|heading/i).fill(firstTitle);
+    await page.getByLabel(/corpo em texto simples|plain text body/i).fill('Execução {execution_id} concluída pelo E2E.');
+    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E initial notification template');
+    await page.getByRole('button', { name: /criar rascunho|create draft/i }).click();
+    await expect(page).toHaveURL(/\/admin\/notification-templates\/[0-9a-f-]+/);
+    const firstRevisionUrl = page.url();
+    await page.getByRole('button', { name: /pré-visualizar|preview/i }).click();
+    await expect(page.getByText('Execução EXEC-SYNTHETIC-001 concluída pelo E2E.')).toBeVisible();
+    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E approved publication');
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /publicar versão|publish version/i }).click();
+    await expect(page.getByText(/publicada e ativa|published and active/i)).toBeVisible();
+    await expectAccessible(page, testInfo, 'notification-template-admin');
+
+    const execution = execFileSync(
+      process.env.E2E_PYTHON ?? 'python',
+      ['../scripts/bootstrap_web_e2e.py', '--emit-execution-notification'],
+      { cwd: process.cwd(), env: process.env },
+    ).toString().trim();
+    expect(execution).toMatch(/^exec-template-e2e-/);
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+    await login(page, operatorEmail);
+    await page.goto('/notifications');
+    await expect(page.getByText(firstTitle)).toBeVisible();
+
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+    await login(page, adminEmail);
+    await page.goto('/admin/notification-templates/new');
+    await page.getByLabel(/tipo de evento|event type/i).selectOption('execution.completed');
+    await page.getByLabel(/título|heading/i).fill('<script>alert(1)</script>');
+    await page.getByLabel(/corpo em texto simples|plain text body/i).fill('Execução {execution_id}.');
+    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E malicious content rejection');
+    await page.getByRole('button', { name: /criar rascunho|create draft/i }).click();
+    await expect(page.getByRole('alert')).toContainText(/não permitidos|not allowed/i);
+
+    await page.getByLabel(/título|heading/i).fill(secondTitle);
+    await page.getByLabel(/corpo em texto simples|plain text body/i).fill('Nova mensagem para {execution_id}.');
+    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E replacement draft');
+    await page.getByRole('button', { name: /criar rascunho|create draft/i }).click();
+    await expect(page).toHaveURL(/\/admin\/notification-templates\/[0-9a-f-]+/);
+    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E replacement publication');
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /publicar versão|publish version/i }).click();
+    await expect(page.getByText(/publicada e ativa|published and active/i)).toBeVisible();
+    await page.goto(firstRevisionUrl);
+    await expect(page.locator('p strong').filter({ hasText: /publicada e inativa|published and inactive/i })).toBeVisible();
+    await expect(page.getByLabel(/título|heading/i)).toHaveValue(firstTitle);
+    await expect(page.getByLabel(/título|heading/i)).toHaveAttribute('readonly', '');
   });
 });

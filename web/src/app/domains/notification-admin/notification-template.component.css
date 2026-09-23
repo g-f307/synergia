@@ -1,0 +1,11 @@
+.delivery-status { padding: .8rem 1rem; border: 1px solid var(--syn-border, #ccc); border-radius: .5rem; }
+.template-list li a { flex: 1 1 18rem; }
+.template-form { max-width: 52rem; }
+.placeholder-list { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; }
+.placeholder-list code { display: inline-block; padding: .25rem .45rem; border: 1px solid var(--syn-border, #ccc); border-radius: .35rem; }
+.template-preview { margin-block: 2rem; padding: 1rem; border: 1px solid var(--syn-border, #ccc); border-radius: .5rem; }
+.preview-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.template-preview dl div { display: grid; grid-template-columns: minmax(8rem, auto) 1fr; gap: 1rem; }
+.template-preview dt { font-weight: 600; }
+.template-preview dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 40rem) { .template-preview dl div { grid-template-columns: 1fr; gap: .25rem; } }

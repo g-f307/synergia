@@ -9,6 +9,7 @@ from app.errors import install_error_handlers
 from app.execution_monitoring import router as monitoring_router
 from app.http_security import HttpSecurityConfig, HttpSecurityMiddleware
 from app.imports import router as imports_router
+from app.notification_templates import router as notification_templates_router
 from app.notifications import router as notifications_router
 from app.observability import configure_logging
 from app.observability.routes import router as observability_router
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     application.include_router(profile_router)
     application.include_router(reports_router)
     application.include_router(notifications_router)
+    application.include_router(notification_templates_router)
     application.include_router(approvals_router)
     application.include_router(observability_router)
 

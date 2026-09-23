@@ -167,7 +167,9 @@ class NotificationRepository:
             "resource_type": row["resource_type"],
             "resource_url": self._resource_url(row),
             "resource_available": row["resource_available"],
-            "template_version": row["template_version"],
+            "template_version": row.get(
+                "resolved_template_version", row["template_version"]
+            ),
             "version": row["version"],
             "first_occurred_at": row["first_occurred_at"],
             "last_occurred_at": row["last_occurred_at"],
@@ -175,11 +177,10 @@ class NotificationRepository:
         }
 
     @staticmethod
-    def _select(
-        locale_expression: str = "COALESCE(NULLIF(u.locale, 'es-ES'), 'pt-BR')",
-    ) -> str:
-        return f"""
-            SELECT n.*, t.title_template, t.body_template,
+    def _select() -> str:
+        return """
+            SELECT n.*, localized.title_template, localized.body_template,
+              stored.version_label AS resolved_template_version,
               CASE n.resource_type
                 WHEN 'execution' THEN EXISTS (
                   SELECT 1 FROM synergia.executions e
@@ -204,10 +205,22 @@ class NotificationRepository:
               END AS resource_available
             FROM synergia.notifications n
             JOIN synergia.identity_users u ON u.id = n.recipient_user_id
-            JOIN synergia.notification_templates t
-              ON t.notification_type = n.notification_type
-             AND t.template_version = n.template_version
-             AND t.locale = {locale_expression}
+            JOIN synergia.notification_template_revisions stored
+              ON stored.id = n.template_revision_id
+            JOIN LATERAL (
+              SELECT candidate.title_template, candidate.body_template
+              FROM synergia.notification_template_revisions candidate
+              WHERE candidate.notification_type = stored.notification_type
+                AND candidate.channel = 'in_app'
+                AND candidate.version_label = stored.version_label
+                AND candidate.published_at IS NOT NULL
+              ORDER BY CASE
+                WHEN candidate.locale = CASE
+                  WHEN u.locale = 'en-US' THEN 'en-US' ELSE 'pt-BR' END THEN 0
+                WHEN candidate.locale = stored.locale THEN 1
+                WHEN candidate.locale = 'pt-BR' THEN 2 ELSE 3 END
+              LIMIT 1
+            ) localized ON true
         """
 
     def list(

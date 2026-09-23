@@ -127,6 +127,14 @@ também dependerá da política de rede da TI.
 | `GET /notifications/unread-count` | `notification.read` | total próprio não lido | `org` | gestor, analista, operador, consulta |
 | `PATCH /notifications/{notification_id}/read` | `notification.read` | leitura de notificação própria | `org` | gestor, analista, operador, consulta |
 | `POST /notifications/read-all` | `notification.read` | leitura em lote das notificações próprias | `org` | gestor, analista, operador, consulta |
+| `GET /admin/notification-templates/policy` | `access.admin` | eventos, placeholders, canais e estado de entrega | `global` | admin |
+| `GET /admin/notification-templates` | `access.admin` | catálogo e histórico de templates | `global` | admin |
+| `POST /admin/notification-templates/drafts` | `access.admin` | nova versão em rascunho | `global` | admin |
+| `GET /admin/notification-templates/{revision_id}` | `access.admin` | revisão imutável ou rascunho | `global` | admin |
+| `PATCH /admin/notification-templates/{revision_id}` | `access.admin` | edição otimista de rascunho | `global` | admin |
+| `POST /admin/notification-templates/{revision_id}/preview` | `access.admin` | prévia com dados sintéticos | `global` | admin |
+| `POST /admin/notification-templates/{revision_id}/publish` | `access.admin` | publicação versionada | `global` | admin |
+| `POST /admin/notification-templates/{revision_id}/deactivate` | `access.admin` | desativação controlada | `global` | admin |
 | `GET /pending-items/{pending_id}/approval` | `approval.read` | solicitação e histórico de decisão | `org` | gestor, analista, operador |
 | `POST /pending-items/{pending_id}/approval` | `approval.submit` | submissão para análise | `org` | gestor, analista, operador |
 | `POST /approvals/{request_id}/assign` | `approval.assign` | atribuição controlada | `org` | gestor |

@@ -29,6 +29,7 @@ interface PermissionNamed { id: string; permission_key: string; }
         <a routerLink="/admin/users">{{ i18n.t('adminUi.users') }}</a>
         <a routerLink="/admin/groups">{{ i18n.t('adminUi.groups') }}</a>
         <a routerLink="/admin/roles">{{ i18n.t('adminUi.roles') }}</a>
+        <a routerLink="/admin/notification-templates">{{ i18n.t('notificationAdmin.title') }}</a>
       </nav>
       @if (resources$ | async; as resources) {
         <p>{{ i18n.t('adminUi.permissionCatalogCount', { count: i18n.formatNumber(resources.permissions.length) }) }}</p>
