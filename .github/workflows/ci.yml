@@ -214,6 +214,8 @@ jobs:
           path: |
             web/reports/e2e-html/
             web/reports/e2e-results/
+            docs/pre-rpa-validation-report.md
+            docs/web-e2e-demonstration.md
           if-no-files-found: error
       - name: Publicar decisão e evidências indexadas da Etapa 5
         if: always()
