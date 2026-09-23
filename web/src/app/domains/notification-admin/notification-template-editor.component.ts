@@ -40,6 +40,8 @@ export class NotificationTemplateEditorComponent {
   readonly policy = signal<NotificationTemplatePolicy | null>(null);
   readonly item = signal<NotificationTemplateRevision | null>(null);
   readonly history = signal<NotificationTemplateRevision[]>([]);
+  readonly historyPage = signal(1);
+  readonly historyPages = signal(0);
   readonly preview = signal<NotificationTemplatePreview | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
   readonly formError = signal<TranslationKey | null>(null);
@@ -138,6 +140,11 @@ export class NotificationTemplateEditorComponent {
   deliveryKey(): TranslationKey {
     return DELIVERY_KEYS[this.policy()?.external_delivery ?? 'unavailable'];
   }
+  changeHistoryPage(page: number): void {
+    const current = this.item();
+    if (!current || page < 1 || page > this.historyPages()) return;
+    this.loadHistory(current, page);
+  }
   failureKey(): TranslationKey {
     if (this.failure()?.kind === 'forbidden') return 'notificationAdmin.forbidden';
     if (this.failure()?.kind === 'conflict') return 'notificationAdmin.conflict';
@@ -167,12 +174,16 @@ export class NotificationTemplateEditorComponent {
     this.item.set(item); this.eventType = item.notification_type; this.channel = item.channel;
     this.locale = item.locale; this.titleTemplate = item.title_template; this.bodyTemplate = item.body_template;
   }
-  private loadHistory(item: NotificationTemplateRevision): void {
+  private loadHistory(item: NotificationTemplateRevision, page = 1): void {
     this.api.list({
       notification_type: item.notification_type, channel: item.channel,
-      locale: item.locale, page_size: 100, sort: 'newest'
+      locale: item.locale, page, page_size: 100, sort: 'newest'
     }).subscribe({
-      next: (page) => this.history.set(page.items),
+      next: (result) => {
+        this.history.set(result.items);
+        this.historyPage.set(result.page);
+        this.historyPages.set(result.pages);
+      },
       error: (failure: ApiFailure) => this.failure.set(failure)
     });
   }

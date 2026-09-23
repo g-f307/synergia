@@ -64,4 +64,22 @@ describe('NotificationTemplateEditorComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('temporariamente indisponível');
   });
+
+  it('makes revisions after the first 100 accessible through history pagination', () => {
+    fixture.destroy();
+    const oldest = { ...item, id: '88888888-8888-4888-8888-888888888888', version_number: 1 };
+    list.and.returnValues(
+      of({ items: [item], page: 1, page_size: 100, total: 101, pages: 2, sort: 'newest' }),
+      of({ items: [oldest], page: 2, page_size: 100, total: 101, pages: 2, sort: 'newest' })
+    );
+    fixture = TestBed.createComponent(NotificationTemplateEditorComponent);
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('.history-pagination button:last-child');
+    next.click(); fixture.detectChanges();
+
+    expect(list.calls.mostRecent().args[0].page).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('2 / 2');
+    expect(fixture.nativeElement.textContent).toContain('v1');
+  });
 });
