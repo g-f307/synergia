@@ -1,4 +1,4 @@
-FROM docker.io/library/python:3.14-slim
+FROM docker.io/library/python:3.14-alpine
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -7,11 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/synergia/backend
 
 COPY backend/requirements.txt requirements.txt
-RUN python -m pip install --no-cache-dir -r requirements.txt
+RUN apk upgrade --no-cache \
+    && python -m pip install --no-cache-dir -r requirements.txt \
+    && python -m pip uninstall --yes setuptools msgpack
 
-RUN groupadd --gid 10001 synergia \
-    && useradd --uid 10001 --gid synergia --no-log-init \
-        --home-dir /opt/synergia --no-create-home synergia \
+RUN addgroup --gid 10001 --system synergia \
+    && adduser --uid 10001 --ingroup synergia --system \
+        --home /opt/synergia --no-create-home synergia \
     && mkdir -p \
         /var/lib/synergia/imports \
         /var/lib/synergia/avatars \
