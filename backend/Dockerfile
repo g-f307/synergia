@@ -9,7 +9,7 @@ WORKDIR /opt/synergia/backend
 COPY backend/requirements.txt requirements.txt
 RUN apk upgrade --no-cache \
     && python -m pip install --no-cache-dir -r requirements.txt \
-    && python -m pip uninstall --yes setuptools msgpack
+    && python -m pip uninstall --yes pip
 
 RUN addgroup --gid 10001 --system synergia \
     && adduser --uid 10001 --ingroup synergia --system \
