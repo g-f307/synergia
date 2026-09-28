@@ -1,14 +1,100 @@
+name: synergia
+
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql://${POSTGRES_USER:-synergia}:${POSTGRES_PASSWORD:-synergia-local-only}@postgres:5432/${POSTGRES_DB:-synergia}
+  IMPORT_STORAGE_DIR: /var/lib/synergia/imports
+  PROFILE_AVATAR_STORAGE_ROOT: /var/lib/synergia/avatars
+  EMAIL_CAPTURE_PATH: /var/lib/synergia/email-capture/messages.jsonl
+  SYNERGIA_ENV: ${SYNERGIA_ENV:-development}
+  SYNERGIA_LOCAL_AUTH_ENABLED: ${SYNERGIA_LOCAL_AUTH_ENABLED:-false}
+  AUTH_JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
+  AUTH_JWT_SIGNING_KEY: ${AUTH_JWT_SIGNING_KEY:-synergia-local-signing-key-change-me-119}
+  AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-synergia-local}
+  AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-synergia-api}
+  AUTH_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
+  AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS:-http://localhost:8080}
+  RATE_LIMIT_KEY_SECRET: ${RATE_LIMIT_KEY_SECRET:-synergia-local-rate-limit-key-change-me}
+  OBSERVABILITY_LOG_LEVEL: ${OBSERVABILITY_LOG_LEVEL:-INFO}
+  MIGRATION_BASELINE_EXISTING: ${MIGRATION_BASELINE_EXISTING:-false}
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     environment:
-      POSTGRES_DB: synergia
-      POSTGRES_USER: synergia
-      POSTGRES_PASSWORD: synergia-local-only
+      POSTGRES_DB: ${POSTGRES_DB:-synergia}
+      POSTGRES_USER: ${POSTGRES_USER:-synergia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-synergia-local-only}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - synergia-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  migrate:
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "scripts/apply_migrations.py"]
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: *backend-environment
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - synergia-application-data:/var/lib/synergia
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  web:
+    image: synergia-web:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: web
+      dockerfile: Dockerfile
+    environment:
+      SYNERGIA_API_ORIGIN: ${SYNERGIA_API_ORIGIN:-http://localhost:8000}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
 
 volumes:
   synergia-postgres:
+  synergia-application-data:
