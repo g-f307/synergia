@@ -21,6 +21,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [roadmap e estado das etapas](docs/roadmap.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);
+- [primeiros passos com a aplicação conteinerizada](docs/getting-started.md);
+- [contrato de implantação em containers](docs/container-deployment.md);
 - [contratos da API](docs/api-contracts.md);
 - [relatórios persistentes, versões e estados](docs/reports.md);
 - [plano de desempenho e confiabilidade pré-RPA](docs/performance-test-plan.md);
@@ -72,7 +74,22 @@ Para reconstruir banco, backend e frontend desde um clone, use o procedimento
 reproduzível em [docs/local-environment.md](docs/local-environment.md). As
 seções abaixo são apenas uma referência rápida.
 
-## PostgreSQL
+## Execução completa em containers
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+python scripts/smoke_containers.py
+```
+
+- aplicação web: <http://localhost:8080>;
+- API: <http://localhost:8000>;
+- OpenAPI: <http://localhost:8000/docs>.
+
+O guia completo, incluindo persistência, logs e limpeza segura, está em
+[`docs/getting-started.md`](docs/getting-started.md).
+
+## PostgreSQL isolado
 
 ```bash
 docker compose up -d postgres

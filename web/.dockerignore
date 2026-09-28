@@ -3,3 +3,5 @@ dist
 coverage
 reports
 .angular
+.git
+.env
