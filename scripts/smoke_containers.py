@@ -1,20 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import time
 import urllib.error
 import urllib.request
-
-TARGETS = (
-    ("API liveness", "http://127.0.0.1:8000/health/live", "application/json"),
-    ("API readiness", "http://127.0.0.1:8000/health/ready", "application/json"),
-    ("Web", "http://127.0.0.1:8080/", "text/html"),
-    (
-        "Web runtime config",
-        "http://127.0.0.1:8080/runtime-config.js",
-        "javascript",
-    ),
-)
 
 
 def wait_for(name: str, url: str, expected_type: str) -> bytes:
@@ -40,18 +31,54 @@ def wait_for(name: str, url: str, expected_type: str) -> bytes:
     raise RuntimeError(f"timeout waiting for {name}: {last_error}")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--backend-url",
+        default=os.environ.get(
+            "SMOKE_BACKEND_URL",
+            f"http://127.0.0.1:{os.environ.get('BACKEND_PORT', '8000')}",
+        ),
+    )
+    parser.add_argument(
+        "--web-url",
+        default=os.environ.get(
+            "SMOKE_WEB_URL",
+            f"http://127.0.0.1:{os.environ.get('WEB_PORT', '8080')}",
+        ),
+    )
+    parser.add_argument(
+        "--expected-api-origin",
+        default=os.environ.get(
+            "SMOKE_EXPECTED_API_ORIGIN",
+            os.environ.get("SYNERGIA_API_ORIGIN", "http://localhost:8000"),
+        ),
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    backend = args.backend_url.rstrip("/")
+    web = args.web_url.rstrip("/")
+    targets = (
+        ("API liveness", f"{backend}/health/live", "application/json"),
+        ("API readiness", f"{backend}/health/ready", "application/json"),
+        ("Web", f"{web}/", "text/html"),
+        ("Web runtime config", f"{web}/runtime-config.js", "javascript"),
+    )
     responses = {
         name: wait_for(name, url, expected_type)
-        for name, url, expected_type in TARGETS
+        for name, url, expected_type in targets
     }
     readiness = json.loads(responses["API readiness"])
     if readiness.get("status") != "ready":
         raise RuntimeError(f"API is not ready: {readiness}")
     runtime = responses["Web runtime config"].decode("utf-8")
-    if "http://localhost:8000" not in runtime:
+    expected = f"apiUrl: '{args.expected_api_origin}'"
+    if expected not in runtime:
         raise RuntimeError(
-            "runtime config does not expose the expected local API origin"
+            f"runtime config does not expose expected API origin: {expected!r}"
         )
 
 

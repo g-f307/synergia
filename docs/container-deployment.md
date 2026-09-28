@@ -50,10 +50,13 @@ Migrations executam como tarefa finita antes da API. Um checksum diferente para
 uma migration aplicada interrompe a implantação. Rollback de aplicação deve
 usar imagens anteriores; rollback de schema exige plano específico e backup.
 
-`MIGRATION_BASELINE_EXISTING=true` existe somente para adotar, após backup e
-conferência, um banco legado que já recebeu todas as migrations mas não possui
-a tabela de histórico. Não habilite essa variável em bancos novos nem como
-configuração permanente.
+`MIGRATION_BASELINE_THROUGH` existe somente para adotar, após backup e
+conferência, um banco legado sem histórico. O valor deve ser o nome exato da
+última migration já presente, por exemplo
+`0025_add_observability_correlation.sql`. O processo valida um objeto mínimo de
+cada migration até esse limite, registra somente esse intervalo e executa as
+posteriores. Schema parcial ou incompatível interrompe a implantação. Não use
+essa variável em bancos novos nem como configuração permanente.
 
 ## Informações ainda necessárias da LG
 

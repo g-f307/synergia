@@ -1,7 +1,11 @@
 name: synergia
 
 x-backend-environment: &backend-environment
-  DATABASE_URL: postgresql://${POSTGRES_USER:-synergia}:${POSTGRES_PASSWORD:-synergia-local-only}@postgres:5432/${POSTGRES_DB:-synergia}
+  PGHOST: postgres
+  PGPORT: "5432"
+  PGDATABASE: ${POSTGRES_DB:-synergia}
+  PGUSER: ${POSTGRES_USER:-synergia}
+  PGPASSWORD: ${POSTGRES_PASSWORD:-synergia-local-only}
   IMPORT_STORAGE_DIR: /var/lib/synergia/imports
   PROFILE_AVATAR_STORAGE_ROOT: /var/lib/synergia/avatars
   EMAIL_CAPTURE_PATH: /var/lib/synergia/email-capture/messages.jsonl
@@ -15,7 +19,7 @@ x-backend-environment: &backend-environment
   AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS:-http://localhost:8080}
   RATE_LIMIT_KEY_SECRET: ${RATE_LIMIT_KEY_SECRET:-synergia-local-rate-limit-key-change-me}
   OBSERVABILITY_LOG_LEVEL: ${OBSERVABILITY_LOG_LEVEL:-INFO}
-  MIGRATION_BASELINE_EXISTING: ${MIGRATION_BASELINE_EXISTING:-false}
+  MIGRATION_BASELINE_THROUGH: ${MIGRATION_BASELINE_THROUGH:-}
 
 services:
   postgres:

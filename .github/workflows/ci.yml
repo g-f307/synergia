@@ -235,6 +235,12 @@ jobs:
   containers:
     name: Containers — build e smoke test
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: "synthetic-p@ss:word/with#chars"
+      POSTGRES_PORT: "15432"
+      BACKEND_PORT: "18000"
+      WEB_PORT: "18080"
+      SYNERGIA_API_ORIGIN: "https://api.homologacao.example.invalid"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

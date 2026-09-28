@@ -46,6 +46,9 @@ Valide o conjunto automaticamente:
 python scripts/smoke_containers.py
 ```
 
+O script respeita `BACKEND_PORT`, `WEB_PORT` e `SYNERGIA_API_ORIGIN`. Também é
+possível informar `--backend-url`, `--web-url` e `--expected-api-origin`.
+
 ## 3. Primeiro acesso e jornada inicial
 
 A autenticação local permanece desabilitada por padrão. Ela só deve ser usada
@@ -78,10 +81,15 @@ docker compose exec backend id
 - `migrate` com erro de checksum: uma migration já publicada foi alterada; não
   edite o histórico, crie uma nova migration.
 - Banco criado pelo Compose antigo, sem histórico de migrations: faça backup,
-  confirme que todas as migrations publicadas já foram aplicadas e execute uma
-  única vez `MIGRATION_BASELINE_EXISTING=true docker compose up -d`. Volte a
-  variável para `false` em seguida. Esse modo registra o estado existente; ele
-  não corrige schema incompleto.
+  identifique a última migration realmente aplicada e execute uma única vez:
+
+  ```bash
+  MIGRATION_BASELINE_THROUGH=0025_add_observability_correlation.sql \
+    docker compose up -d
+  ```
+
+  Depois remova a variável. O processo valida o schema, registra somente até o
+  limite e executa as migrations posteriores.
 - Erro de porta ocupada: ajuste `POSTGRES_PORT`, `BACKEND_PORT` ou `WEB_PORT`.
 
 ## 5. Parar, atualizar e limpar
