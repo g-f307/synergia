@@ -5,7 +5,6 @@ import time
 import urllib.error
 import urllib.request
 
-
 TARGETS = (
     ("API liveness", "http://127.0.0.1:8000/health/live", "application/json"),
     ("API readiness", "http://127.0.0.1:8000/health/ready", "application/json"),
@@ -30,7 +29,8 @@ def wait_for(name: str, url: str, expected_type: str) -> bytes:
                     raise RuntimeError(f"HTTP {response.status}")
                 if expected_type not in content_type:
                     raise RuntimeError(
-                        f"unexpected content type {content_type!r}, expected {expected_type!r}"
+                        f"unexpected content type {content_type!r}, "
+                        f"expected {expected_type!r}"
                     )
                 print(f"ok: {name} ({url})", flush=True)
                 return body
@@ -50,7 +50,9 @@ def main() -> None:
         raise RuntimeError(f"API is not ready: {readiness}")
     runtime = responses["Web runtime config"].decode("utf-8")
     if "http://localhost:8000" not in runtime:
-        raise RuntimeError("runtime config does not expose the expected local API origin")
+        raise RuntimeError(
+            "runtime config does not expose the expected local API origin"
+        )
 
 
 if __name__ == "__main__":

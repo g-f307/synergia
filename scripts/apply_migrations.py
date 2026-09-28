@@ -6,7 +6,6 @@ from pathlib import Path
 
 import psycopg
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
@@ -51,7 +50,9 @@ def main() -> None:
                   AND table_type = 'BASE TABLE'
                 """
             ).fetchone()[0]
-            pending = [migration for migration in files if migration.name not in applied]
+            pending = [
+                migration for migration in files if migration.name not in applied
+            ]
             if pending and existing_tables and enabled("MIGRATION_BASELINE_EXISTING"):
                 print(
                     f"baseline existing schema with {existing_tables} tables; "
