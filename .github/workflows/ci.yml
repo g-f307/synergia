@@ -250,7 +250,6 @@ jobs:
           image-ref: synergia-backend:local
           format: table
           severity: CRITICAL,HIGH
-          ignore-unfixed: true
           exit-code: "1"
       - name: Verificar vulnerabilidades do frontend
         uses: aquasecurity/trivy-action@v0.36.0
@@ -258,7 +257,6 @@ jobs:
           image-ref: synergia-web:local
           format: table
           severity: CRITICAL,HIGH
-          ignore-unfixed: true
           exit-code: "1"
       - name: Iniciar aplicação completa
         run: docker compose up -d
