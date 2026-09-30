@@ -363,8 +363,8 @@ test.describe.serial('integrated operational journey', () => {
     await expect(rolePermissions.locator('ul').getByText('dashboard.read', { exact: true })).toBeVisible();
 
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
-    await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
-    await page.locator('a[href="/admin/groups"]').click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await page.locator('a[href="/admin/groups"]').first().click();
     await page.locator('a[href="/admin/groups/new"]').click();
     await page.getByLabel(/nome do grupo|group name/i).fill(groupName);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved group creation');
