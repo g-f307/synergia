@@ -55,7 +55,7 @@ interface PermissionNamed { id: string; permission_key: string; }
         </div>
       } @else {
         @if (forbidden()) {
-          <p role="alert">{{ i18n.t('admin.forbidden') }}</p>
+          <p role="alert" data-testid="admin-forbidden">{{ i18n.t('admin.forbidden') }}</p>
         } @else {
           <p role="status">{{ i18n.t(failed() ? 'admin.unavailable' : 'admin.loading') }}</p>
         }

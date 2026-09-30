@@ -21,7 +21,8 @@ describe('AdminComponent', () => {
     const fixture = TestBed.createComponent(AdminComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Acesso negado');
+    const forbidden = fixture.nativeElement.querySelector('[data-testid="admin-forbidden"]');
+    expect(forbidden?.textContent).toContain('Acesso negado');
     expect(fixture.nativeElement.textContent).not.toContain('Administração indisponível');
   });
 
