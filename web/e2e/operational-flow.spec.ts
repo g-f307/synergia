@@ -363,7 +363,6 @@ test.describe.serial('integrated operational journey', () => {
     await expect(rolePermissions.locator('ul').getByText('dashboard.read', { exact: true })).toBeVisible();
 
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
-    await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
     await page.locator('a[href="/admin/groups"]').click();
     await page.locator('a[href="/admin/groups/new"]').click();
     await page.getByLabel(/nome do grupo|group name/i).fill(groupName);
