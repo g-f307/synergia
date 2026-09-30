@@ -78,6 +78,8 @@ export class NotificationTemplateListComponent {
     }).then(() => this.load());
   }
 
+  clear(): void { this.event = ""; this.channel = ""; this.locale = ""; this.state = ""; this.apply(new Event("submit")); }
+
   changePage(page: number): void {
     void this.router.navigate([], {
       relativeTo: this.route, queryParams: { page }, queryParamsHandling: 'merge'
