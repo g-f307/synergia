@@ -16,6 +16,8 @@ describe('AdminComponent', () => {
       providers: [provideRouter([]), { provide: HttpClient, useValue: http }]
     });
 
+    TestBed.inject(I18nService).configure('pt-BR');
+
     const fixture = TestBed.createComponent(AdminComponent);
     fixture.detectChanges();
 
