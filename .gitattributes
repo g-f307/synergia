@@ -1,3 +1,4 @@
 data/synthetic/fixtures/**/*.csv text eol=lf
 data/synthetic/fixtures/**/*.json text eol=lf
+data/synthetic/ai-poc-evaluation/**/*.json text eol=lf
 *.sh text eol=lf

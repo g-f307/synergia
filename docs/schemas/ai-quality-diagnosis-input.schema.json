@@ -28,17 +28,17 @@
           "severity": {"enum": ["error", "warning"]},
           "code": {"type": "string", "minLength": 1},
           "reason": {"type": "string", "minLength": 1},
-          "workorder_number": {"type": ["string", "null"]},
-          "sheet_name": {"type": ["string", "null"]},
-          "row_number": {"type": ["integer", "null"], "minimum": 1},
-          "column_name": {"type": ["string", "null"]},
+          "workorder_number": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "sheet_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "row_number": {"anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+          "column_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
           "details": {
             "type": "object", "additionalProperties": false,
             "properties": {
-              "expected_value": {"type": ["string", "number", "integer", "boolean", "null"]},
-              "received_value": {"type": ["string", "number", "integer", "boolean", "null"]},
-              "constraint": {"type": ["string", "null"], "maxLength": 300},
-              "source_name": {"type": ["string", "null"], "maxLength": 160}
+              "expected_value": {"anyOf": [{"type": "string"}, {"type": "number"}, {"type": "boolean"}, {"type": "null"}]},
+              "received_value": {"anyOf": [{"type": "string"}, {"type": "number"}, {"type": "boolean"}, {"type": "null"}]},
+              "constraint": {"anyOf": [{"type": "string", "maxLength": 300}, {"type": "null"}]},
+              "source_name": {"anyOf": [{"type": "string", "maxLength": 160}, {"type": "null"}]}
             }
           }
         }
