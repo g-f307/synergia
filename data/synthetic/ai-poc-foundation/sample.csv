@@ -1,0 +1,3 @@
+record_id,status,amount
+csv-001,valid,10
+csv-002,warning,20

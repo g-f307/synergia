@@ -1,0 +1,1 @@
+Analise os registros sintéticos e retorne somente JSON conforme o schema quality-output-v1. Não invente evidências nem inclua segredos.
