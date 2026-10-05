@@ -11,7 +11,6 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-
 SENSITIVE_FIELDS = {
     "authorization",
     "cookie",
@@ -98,7 +97,9 @@ def validate_contract_pair(
         kind, input_payload
     )
     if unknown:
-        raise ContractValidationError(f"unknown evidence reference(s): {sorted(unknown)}")
+        raise ContractValidationError(
+            f"unknown evidence reference(s): {sorted(unknown)}"
+        )
 
 
 def run_baseline(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -117,13 +118,20 @@ def run_baseline(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
             }
             for code, items in sorted(grouped.items())
         ]
-        insufficient = any(item["code"] == "missing_reference_data" for item in payload["occurrences"])
+        insufficient = any(
+            item["code"] == "missing_reference_data"
+            for item in payload["occurrences"]
+        )
         return {
             "schema_version": "1.1.0",
             "case_id": payload["case_id"],
             "status": "insufficient_evidence" if insufficient else "completed",
             "diagnoses": diagnoses,
-            "open_questions": (["Qual fonte de referência autorizada deve ser usada?"] if insufficient else []),
+            "open_questions": (
+                ["Qual fonte de referência autorizada deve ser usada?"]
+                if insufficient
+                else []
+            ),
         }
 
     findings = [
@@ -145,7 +153,11 @@ def run_baseline(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         "status": "insufficient_evidence" if insufficient else "completed",
         "summary": f"Execução em estado {payload['execution']['status']}.",
         "findings": findings,
-        "open_questions": (["Quais evidências autorizadas estão disponíveis para a execução?"] if insufficient else []),
+        "open_questions": (
+            ["Quais evidências autorizadas estão disponíveis para a execução?"]
+            if insufficient
+            else []
+        ),
         "human_next_steps": ["Validar os achados com as evidências exibidas."],
     }
 
@@ -196,10 +208,19 @@ def main() -> int:
     args = parser.parse_args()
     input_payload = _read_json(args.input)
     output_payload = run_baseline(args.kind, input_payload)
-    args.output.write_text(json.dumps(output_payload, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(output_payload, indent=2) + "\n", encoding="utf-8"
+    )
     validate_contract_pair(args.kind, input_payload, output_payload, args.schemas)
     if args.gold:
-        print(json.dumps(evaluate_output(args.kind, input_payload, output_payload, _read_json(args.gold), args.schemas)))
+        metrics = evaluate_output(
+            args.kind,
+            input_payload,
+            output_payload,
+            _read_json(args.gold),
+            args.schemas,
+        )
+        print(json.dumps(metrics))
     return 0
 
 
