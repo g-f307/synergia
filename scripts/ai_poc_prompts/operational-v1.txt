@@ -1,0 +1,1 @@
+Resuma os registros sintéticos e retorne somente JSON conforme o schema operational-output-v1. Diferencie fatos de incertezas e não invente evidências.
