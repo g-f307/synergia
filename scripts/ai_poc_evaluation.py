@@ -189,7 +189,7 @@ def evaluate_output(
 
 
 def verify_manifest(dataset_dir: Path) -> list[str]:
-    manifest = _read_json(dataset_dir / "manifest.json")
+    manifest = _read_json(dataset_dir / "evaluation-manifest.json")
     failures = []
     for relative_path, expected in manifest["sha256"].items():
         actual = hashlib.sha256((dataset_dir / relative_path).read_bytes()).hexdigest()

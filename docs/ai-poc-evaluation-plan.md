@@ -61,7 +61,7 @@ mesmo que outras médias atinjam a meta.
 
 Os oito casos acima estão congelados em
 `data/synthetic/ai-poc-evaluation/`, com entradas e gabaritos separados. O
-arquivo `manifest.json` registra o SHA-256 de cada artefato.
+arquivo `evaluation-manifest.json` registra o SHA-256 de cada artefato.
 
 O script `scripts/ai_poc_evaluation.py` executa a baseline, valida os schemas,
 rejeita referências a evidências ausentes e calcula precisão, cobertura e F1
