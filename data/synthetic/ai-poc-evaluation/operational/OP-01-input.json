@@ -1,0 +1,1 @@
+{"schema_version":"1.1.0","case_id":"OP-01","execution":{"execution_id":"syn-op-01","status":"completed","lifecycle":"completed","pipeline_version":"synthetic-1","rule_catalog_version":"synthetic-1","counts":{"pending_items":0,"classifications":0,"events":0}},"pending_items":[],"classifications":[],"events":[]}

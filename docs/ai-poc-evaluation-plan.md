@@ -57,6 +57,29 @@ mesmo que outras médias atinjam a meta.
 6. Publicar tabela agregada e resultados por caso, sem dados sensíveis.
 7. Registrar decisão: seguir, ajustar ou descartar, com justificativa.
 
+## Artefatos versionados e execução
+
+Os oito casos acima estão congelados em
+`data/synthetic/ai-poc-evaluation/`, com entradas e gabaritos separados. O
+arquivo `manifest.json` registra o SHA-256 de cada artefato.
+
+O script `scripts/ai_poc_evaluation.py` executa a baseline, valida os schemas,
+rejeita referências a evidências ausentes e calcula precisão, cobertura e F1
+dos identificadores esperados. Exemplo:
+
+```bash
+python scripts/ai_poc_evaluation.py quality \
+  data/synthetic/ai-poc-evaluation/quality/QD-03-input.json \
+  /tmp/QD-03-output.json \
+  --gold data/synthetic/ai-poc-evaluation/quality/QD-03-gold.json
+```
+
+Os testes automatizados verificam também campo sensível, propriedade adicional
+e integridade do manifesto. O relatório em
+`docs/ai-poc-baseline-report.md` registra uma execução real da baseline. Seus
+resultados validam a reprodutibilidade do pipeline sintético; não medem a
+qualidade de um modelo de IA, que permanece trabalho futuro.
+
 ## Critérios de interrupção
 
 - qualquer vazamento de dado não permitido;

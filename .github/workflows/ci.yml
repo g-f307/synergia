@@ -90,6 +90,8 @@ jobs:
         run: ruff check . ../scripts
       - name: Executar testes
         run: pytest -q -m "not integration" --junitxml=reports/pytest.xml
+      - name: Validar contratos e avaliação sintética das PoCs de IA
+        run: pytest -q tests/test_ai_poc_evaluation.py
       - name: Validar matriz e executar regressão de segurança
         run: |
           python ../scripts/validate_access_matrix.py

@@ -91,7 +91,8 @@ prioridades, inferir causas não registradas ou executar ações no sistema.
 
 ### E — Explore
 
-**Usuário:** operador, gestor ou revisor de uma execução.
+**Usuário:** operador no fluxo operacional restrito; gestor ou analista no
+fluxo completo de investigação. A PoC nunca amplia as permissões da sessão.
 
 **Entradas:** execução, pendências, classificações e eventos autorizados. O
 contrato está em
@@ -107,7 +108,26 @@ para validação humana. O contrato está em
 - `list_pending_items(execution_id)`: pendências e evidências públicas;
 - `get_workorder_detail(execution_id, workorder_number)`: classificações,
   avaliações de regras e proveniência;
-- `get_history(execution_id)`: eventos auditáveis da execução.
+- `get_history(execution_id)`: eventos auditáveis da execução, disponível
+  somente para gestor e analista, que possuem `audit.read`.
+
+### Matriz de autorização das ferramentas
+
+O backend continua sendo a autoridade de acesso. Todas as consultas aplicam o
+escopo da organização da sessão e não aceitam uma organização escolhida pelo
+modelo.
+
+| Usuário | Ferramenta | Rota HTTP | Permissão | Escopo |
+|---|---|---|---|---|
+| Operador, gestor ou analista | `get_execution` | `GET /executions/{id}` | `execution.read` | organização da sessão |
+| Operador, gestor ou analista | `list_pending_items` | `GET /pending-items?execution_id={id}` | `pending.read` | organização da sessão |
+| Operador, gestor ou analista | `get_workorder_detail` | `GET /workorders/{number}/consolidated-result?execution_id={id}` | `business.read` | organização da sessão |
+| Gestor ou analista | `get_history` | `GET /history?execution_id={id}` | `audit.read` | organização da sessão |
+
+Para operador, o resumo usa apenas execução, pendências, classificações e
+proveniência retornadas pelas três primeiras ferramentas. Ausência do histórico
+deve ser declarada como limitação; a ferramenta não pode ser chamada nem
+simulada. Gestor e analista podem executar o fluxo completo com histórico.
 
 ### E — Experiment
 
@@ -147,7 +167,7 @@ atenda às metas com execução reproduzível no equipamento disponível.
 |---|---|---|
 | Modelo local e licença compatível | A validar por experimento | equipe técnica |
 | Hardware disponível no Demo Day | A confirmar | equipe/organização |
-| Conjunto sintético de avaliação e gabarito | Planejado | responsáveis pelas PoCs |
+| Conjunto sintético de avaliação e gabarito | Congelado em `data/synthetic/ai-poc-evaluation/` | responsáveis pelas PoCs |
 | Limite de latência e memória | A medir antes de fixar | equipe técnica |
 | Uso futuro de dados corporativos | Fora desta PoC; exige autorização | cliente/PO |
 | Integração com a aplicação | Fora da issue #123 | produto/equipe técnica |
