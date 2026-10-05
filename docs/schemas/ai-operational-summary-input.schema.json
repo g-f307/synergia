@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-operational-summary-input.schema.json",
+  "title": "AI operational summary input",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "case_id", "execution", "pending_items", "classifications", "events"],
+  "properties": {
+    "schema_version": {"const": "1.1.0"},
+    "case_id": {"type": "string", "minLength": 1, "maxLength": 120},
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["execution_id", "status", "lifecycle", "pipeline_version", "rule_catalog_version", "counts"],
+      "properties": {
+        "execution_id": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "lifecycle": {"enum": ["active", "completed", "partial", "failed"]},
+        "pipeline_version": {"type": "string", "minLength": 1},
+        "rule_catalog_version": {"type": "string", "minLength": 1},
+        "counts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["pending_items", "classifications", "events"],
+          "properties": {
+            "pending_items": {"type": "integer", "minimum": 0},
+            "classifications": {"type": "integer", "minimum": 0},
+            "events": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "pending_items": {"type": "array", "items": {"$ref": "#/$defs/pendingItem"}},
+    "classifications": {"type": "array", "items": {"$ref": "#/$defs/classification"}},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}}
+  },
+  "$defs": {
+    "pendingItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "id", "reason", "status", "priority"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "id": {"type": "integer", "minimum": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "priority": {"enum": ["low", "medium", "high", "critical"]},
+        "workorder_number": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "responsible_area": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+      }
+    },
+    "classification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "classification_id", "state", "justification", "rule_id"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "classification_id": {"type": "string", "minLength": 1},
+        "state": {"type": "string", "minLength": 1},
+        "justification": {"type": "string", "minLength": 1},
+        "rule_id": {"type": "string", "minLength": 1},
+        "workorder_number": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+      }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "event_id", "event_type", "occurred_at"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "event_id": {"type": "string", "minLength": 1},
+        "event_type": {"type": "string", "minLength": 1},
+        "occurred_at": {"type": "string", "format": "date-time"},
+        "entity_type": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "entity_id": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+      }
+    }
+  }
+}

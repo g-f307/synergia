@@ -1,0 +1,1 @@
+{"schema_version":"1.1.0","case_id":"OP-03","status":"completed","summary":"Execução em estado failed.","findings":[{"finding_id":"pending:301","title":"Pendência 301","severity":"warning","statement":"Falha sintética registrada para investigação.","evidence_ids":["ev-op03-p1"]}],"open_questions":[],"human_next_steps":["Validar os achados com as evidências exibidas."]}

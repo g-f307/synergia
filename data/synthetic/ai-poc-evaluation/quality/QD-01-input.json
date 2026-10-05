@@ -1,0 +1,1 @@
+{"schema_version":"1.1.0","case_id":"QD-01","execution":{"execution_id":"syn-qd-01","status":"completed","pipeline_version":"synthetic-1","rule_catalog_version":"synthetic-1","counts":{"files":1,"rows_read":10,"errors":0,"warnings":0}},"occurrences":[]}

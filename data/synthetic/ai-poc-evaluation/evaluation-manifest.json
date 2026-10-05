@@ -1,0 +1,22 @@
+{
+  "dataset_version": "1.0.0",
+  "description": "Casos exclusivamente sintéticos e congelados para validar a pipeline de avaliação das PoCs.",
+  "sha256": {
+    "operational/OP-01-gold.json": "fca24b30a6dd38a7e7c7328e56da88b5ed79984bf1403ef0d146e8f4bf7a689a",
+    "operational/OP-01-input.json": "9d2be6ceacad83e47857fdf7f7d297e2690ace96149eadd32759709c2756d6b8",
+    "operational/OP-02-gold.json": "f3f32f368eb6b304f3ef39bfcfdd9692b2ebf443f3780722575353581efab744",
+    "operational/OP-02-input.json": "91a36467c6985aa6499b2aba0bcad224cd5035b1b16af469235013ff866c96ef",
+    "operational/OP-03-gold.json": "f6d9892be376455bfa93d7fa672cd561394e2eeaefc93b46cdb6669bfe6a70c9",
+    "operational/OP-03-input.json": "b8a2e336bef7984991e0d399e4ede7c86e7ab6395ee9b8e8e3600d52c10e7851",
+    "operational/OP-04-gold.json": "65618269c3d1cc05fffa4bf4549c9f495a00c50515ec2edb966e8739988de96c",
+    "operational/OP-04-input.json": "3426dd3c34cc3e17184c9c7f004dd82d7e9e4d90d647e8fc8b0adb3f615ce601",
+    "quality/QD-01-gold.json": "665950ee91c2a2c5ca62b37b19992f1a888e43d67b8de27bc254171c13433973",
+    "quality/QD-01-input.json": "e1de2b723ec533ade968f514782de1579b3a08107b6abdc2b86bd2dbbb804412",
+    "quality/QD-02-gold.json": "5218d971d61224b1f41144626e159b57cf2462b9b6e4fbfd7edf60f4ec17e3d3",
+    "quality/QD-02-input.json": "a45f0152db763ea34be8731e2bc47b4d1fc8f395caf8b99665440b35241705b5",
+    "quality/QD-03-gold.json": "746de6cc0a5052f3f071118c1fb90374906a43c527b5fa7c0628ebfd7f477c8d",
+    "quality/QD-03-input.json": "3c0418e910a9e575ad3f9d3f3ef6350b9b19236638e0f1b9c6350dcebeaa7cfa",
+    "quality/QD-04-gold.json": "882fb29709dda047e1ffe386b43b78b084cef78b2b08fcc0946b38a96bdb3b13",
+    "quality/QD-04-input.json": "c022ec7c5b28bcb4ef02a545c25048fcb71fc0401d997416c7a3e16cd3a36684"
+  }
+}
