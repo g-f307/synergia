@@ -19,6 +19,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
 - [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
 - [roadmap e estado das etapas](docs/roadmap.md);
+- [propostas e contratos das PoCs locais de IA](docs/ai-poc-proposals.md);
+- [plano de avaliação das PoCs locais de IA](docs/ai-poc-evaluation-plan.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [primeiros passos com a aplicação conteinerizada](docs/getting-started.md);

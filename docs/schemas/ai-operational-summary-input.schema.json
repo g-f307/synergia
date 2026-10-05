@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-operational-summary-input.schema.json",
+  "title": "AI operational summary input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "execution", "pending_items", "classifications", "events"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"type": "string", "minLength": 1, "maxLength": 120},
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_id", "status", "lifecycle", "pipeline_version", "rule_catalog_version", "counts"],
+      "properties": {
+        "execution_id": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "lifecycle": {"enum": ["active", "completed", "partial", "failed"]},
+        "pipeline_version": {"type": "string", "minLength": 1},
+        "rule_catalog_version": {"type": "string", "minLength": 1},
+        "counts": {"type": "object"}
+      }
+    },
+    "pending_items": {"type": "array", "items": {"$ref": "#/$defs/evidenceItem"}},
+    "classifications": {"type": "array", "items": {"$ref": "#/$defs/evidenceItem"}},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/evidenceItem"}}
+  },
+  "$defs": {
+    "evidenceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "data"],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1},
+        "data": {"type": "object"}
+      }
+    }
+  }
+}

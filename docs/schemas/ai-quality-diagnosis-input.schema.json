@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-quality-diagnosis-input.schema.json",
+  "title": "AI quality diagnosis input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "execution", "occurrences"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"type": "string", "minLength": 1, "maxLength": 120},
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_id", "status", "pipeline_version", "rule_catalog_version", "counts"],
+      "properties": {
+        "execution_id": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "pipeline_version": {"type": "string", "minLength": 1},
+        "rule_catalog_version": {"type": "string", "minLength": 1},
+        "counts": {"type": "object"}
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "severity", "code", "reason"],
+        "properties": {
+          "evidence_id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["error", "warning"]},
+          "code": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1},
+          "workorder_number": {"type": ["string", "null"]},
+          "sheet_name": {"type": ["string", "null"]},
+          "row_number": {"type": ["integer", "null"], "minimum": 1},
+          "column_name": {"type": ["string", "null"]},
+          "details": {"type": "object"}
+        }
+      }
+    }
+  }
+}

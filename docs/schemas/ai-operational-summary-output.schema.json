@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-operational-summary-output.schema.json",
+  "title": "AI operational summary output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "status", "summary", "findings", "open_questions", "human_next_steps"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["completed", "insufficient_evidence"]},
+    "summary": {"type": "string", "minLength": 1},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "severity", "statement", "evidence_ids"],
+        "properties": {
+          "title": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["info", "warning", "critical"]},
+          "statement": {"type": "string", "minLength": 1},
+          "evidence_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "open_questions": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "human_next_steps": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}
