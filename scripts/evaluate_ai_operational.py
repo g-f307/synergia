@@ -19,6 +19,7 @@ try:
         baseline,
         case_hash,
         collect_agent_attempt,
+        interaction_schema,
         load_case,
         validate_output,
     )
@@ -30,6 +31,7 @@ except ModuleNotFoundError:
         baseline,
         case_hash,
         collect_agent_attempt,
+        interaction_schema,
         load_case,
         validate_output,
     )
@@ -131,6 +133,44 @@ def max_known(values):
     return max(values) if values else None
 
 
+def score_tool_calls(case, required_tools, calls):
+    """Gold is used ONLY after execution; extra, denied and missing calls count."""
+    collections = {
+        "list_pending": "pending_items",
+        "list_events": "events",
+        "list_classifications": "classifications",
+    }
+    expected = {
+        name: {"execution"}
+        if name == "get_execution"
+        else {item["evidence_id"] for item in case[collections[name]]}
+        for name in required_tools
+    }
+    covered = set()
+    correct = 0
+    for call in calls:
+        name = call["name"]
+        if (
+            call["outcome"] == "succeeded"
+            and name in expected
+            and name not in covered
+            and expected[name] <= set(call.get("evidence_ids", []))
+        ):
+            covered.add(name)
+            correct += 1
+    missing = len(expected) - len(covered)
+    return {
+        "correct": correct,
+        "attempted": len(calls),
+        "missing": missing,
+        "incorrect": len(calls) - correct,
+        "denied": sum(c["outcome"] != "succeeded" for c in calls),
+        "accuracy": correct / (len(calls) + missing),
+        "precision": correct / len(calls) if calls else 0.0,
+        "recall": correct / len(expected),
+    }
+
+
 def summarize(records):
     summary = {}
     for mode in sorted({r["mode"] for r in records}):
@@ -175,14 +215,34 @@ def summarize(records):
             model_process_rss_peak_bytes=max_known(
                 [r["model_process_rss_peak_bytes"] for r in group]
             ),
-            # These are application-controlled reads, NOT model-selected tools.
+            # Calls are selected by the model and executed by the read-only registry.
             controlled_query_success_rate=statistics.mean(
                 c["outcome"] == "succeeded" for c in calls
             )
             if calls
             else None,
             controlled_query_count=len(calls),
-            agent_tool_choice_accuracy=None,
+            agent_tool_choice_accuracy=mean_known(
+                [
+                    r["tool_score"]["accuracy"] if r["tool_score"] else None
+                    for r in group
+                ]
+            ),
+            tool_call_precision=mean_known(
+                [
+                    r["tool_score"]["precision"] if r["tool_score"] else None
+                    for r in group
+                ]
+            ),
+            tool_call_recall=mean_known(
+                [r["tool_score"]["recall"] if r["tool_score"] else None for r in group]
+            ),
+            incorrect_tool_calls=sum(
+                r["tool_score"]["incorrect"] for r in group if r["tool_score"]
+            ),
+            missing_tool_calls=sum(
+                r["tool_score"]["missing"] for r in group if r["tool_score"]
+            ),
         )
         summary[mode] = metrics
     return summary
@@ -203,9 +263,7 @@ def main(argv=None):
     root = ROOT / manifest["source"]
     config = replace(LocalModelConfig.from_environment(), timeout_seconds=300)
     runtime = (
-        OllamaRuntime(
-            config, options=OPTIONS, output_schema=json.loads(SCHEMA.read_text())
-        )
+        OllamaRuntime(config, options=OPTIONS, output_schema=interaction_schema())
         if args.mode != "baseline"
         else None
     )
@@ -273,6 +331,11 @@ def main(argv=None):
                         # Accepted synthetic outputs support qualitative auditing.
                         "output": output,
                         "score": score,
+                        "tool_score": score_tool_calls(
+                            case, entry["required_tools"], attempt["tool_calls"]
+                        )
+                        if mode == "agent"
+                        else None,
                         "tokens_per_second": attempt["generated_tokens"]
                         / (attempt["elapsed_ms"] / 1000)
                         if attempt["generated_tokens"] is not None

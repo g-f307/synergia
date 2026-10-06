@@ -30,27 +30,42 @@ CASE = ROOT / "data/synthetic/ai-poc-evaluation/operational/OP-02-input.json"
 
 class FakeRuntime:
     last_prompt = ""
+    step = 0
 
     def generate(self, prompt: str, *, model: str) -> tuple[str, int]:
         self.last_prompt = prompt
+        self.step += 1
+        calls = [
+            ("get_execution", {"execution_id": "syn-op-02"}),
+            ("list_pending", {}),
+            ("list_classifications", {}),
+        ]
+        if self.step <= len(calls):
+            name, arguments = calls[self.step - 1]
+            return json.dumps(
+                {"kind": "tool_call", "name": name, "arguments": arguments}
+            ), 10
         return (
             json.dumps(
                 {
-                    "schema_version": "1.1.0",
-                    "case_id": "OP-02",
-                    "status": "completed",
-                    "summary": "Execução aguardando revisão.",
-                    "findings": [
-                        {
-                            "finding_id": "pending:201",
-                            "title": "Pendência 201",
-                            "severity": "warning",
-                            "statement": "Classificação requer revisão humana.",
-                            "evidence_ids": ["ev-op02-p1"],
-                        }
-                    ],
-                    "open_questions": [],
-                    "human_next_steps": ["Validar os achados."],
+                    "kind": "final",
+                    "output": {
+                        "schema_version": "1.1.0",
+                        "case_id": "OP-02",
+                        "status": "completed",
+                        "summary": "Execução aguardando revisão.",
+                        "findings": [
+                            {
+                                "finding_id": "pending:201",
+                                "title": "Pendência 201",
+                                "severity": "warning",
+                                "statement": "Classificação requer revisão humana.",
+                                "evidence_ids": ["ev-op02-p1"],
+                            }
+                        ],
+                        "open_questions": [],
+                        "human_next_steps": ["Validar os achados."],
+                    },
                 }
             ),
             10,
@@ -61,9 +76,9 @@ def test_tools_are_allowlisted_and_scoped() -> None:
     case = load_case(CASE)
     registry = ToolRegistry(case)
     assert registry.call("list_pending", {"limit": 50}) == case["pending_items"]
-    assert registry.call("list_classifications", {"limit": 50}) == case[
-        "classifications"
-    ]
+    assert (
+        registry.call("list_classifications", {"limit": 50}) == case["classifications"]
+    )
     with pytest.raises(OperationalPoCError, match="não autorizada"):
         registry.call("delete_pending", {})
     with pytest.raises(OperationalPoCError, match="parâmetros"):

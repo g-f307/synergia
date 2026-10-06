@@ -32,18 +32,32 @@ def test_consistency_uses_valid_outputs_not_equal_scores(
         def generate(self, prompt, *, model):
             case_id = prompt.split("CASE_ID: ", 1)[1].splitlines()[0]
             index = attempts.get(case_id, 0)
-            attempts[case_id] = index + 1
             if scenario == "invalid" or (scenario == "mixed" and index == 1):
+                attempts[case_id] = index + 1
                 return "invalid json", 10
             case = evaluation.load_case(
                 ROOT / "data/synthetic/ai-operational-v2" / f"{case_id}-input.json"
             )
+            history = json.loads(prompt.split("HISTORICO:\n", 1)[1])
+            if len(history) < 2:
+                name, arguments = (
+                    (
+                        "get_execution",
+                        {"execution_id": case["execution"]["execution_id"]},
+                    )
+                    if not history
+                    else ("list_pending", {})
+                )
+                return json.dumps(
+                    {"kind": "tool_call", "name": name, "arguments": arguments}
+                ), 10
+            attempts[case_id] = index + 1
             output = evaluation.baseline(case)
             if scenario == "different":
                 output["summary"] = f"Resumo alternativo {index}."
             if scenario == "reordered" and index == 1:
                 output = dict(reversed(list(output.items())))
-            return json.dumps(output), 10
+            return json.dumps({"kind": "final", "output": output}), 10
 
     monkeypatch.setattr(evaluation, "OllamaRuntime", lambda config, **kwargs: Runtime())
     destination = tmp_path / "evaluation.json"

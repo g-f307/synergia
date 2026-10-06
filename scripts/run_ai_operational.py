@@ -10,10 +10,10 @@ from pathlib import Path
 
 from ai_operational_summary import (
     PROMPT,
-    SCHEMA,
     baseline,
     case_hash,
     collect_agent_attempt,
+    interaction_schema,
     load_case,
     validate_output,
 )
@@ -42,9 +42,7 @@ def main(argv=None):
     reports = []
     frozen = fingerprint()
     config = replace(LocalModelConfig.from_environment(), timeout_seconds=300)
-    runtime = OllamaRuntime(
-        config, options=OPTIONS, output_schema=json.loads(SCHEMA.read_text())
-    )
+    runtime = OllamaRuntime(config, options=OPTIONS, output_schema=interaction_schema())
     modes = ("baseline", "agent") if args.mode == "both" else (args.mode,)
     for mode in modes:
         for repetition in range(args.repetitions if mode == "agent" else 1):

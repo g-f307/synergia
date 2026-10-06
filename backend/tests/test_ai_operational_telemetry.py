@@ -50,7 +50,7 @@ def test_rejected_attempt_preserves_available_measurements(kind):
                 return "{}", 123
             output = baseline(case)
             output["findings"][0]["evidence_ids"] = ["absent"]
-            return json.dumps(output), 123
+            return json.dumps({"kind": "final", "output": output}), 123
 
     result = collect_agent_attempt(case, Runtime(), "test")
     assert result["failure"]
@@ -58,11 +58,7 @@ def test_rejected_attempt_preserves_available_measurements(kind):
     assert result["generated_tokens"] == (None if kind == "timeout" else 123)
     assert result["python_peak_memory_bytes"] > 0
     assert result["schema_valid"] == (kind == "evidence")
-    assert len(result["tool_calls"]) == 4
-    for call in result["tool_calls"]:
-        assert call["outcome"] == "succeeded"
-        assert call["arguments"]
-        assert len(call["result_sha256"]) == 64
+    assert result["tool_calls"] == []  # No hidden prefetch.
 
 
 def test_actual_tool_trace_records_denial_without_sensitive_arguments():
