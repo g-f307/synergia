@@ -4,29 +4,72 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import time
 from pathlib import Path
 
-from ai_operational_summary import (
-    baseline,
-    case_hash,
-    load_case,
-    run_agent,
-    validate_output,
-)
-from ai_poc_foundation import LocalModelConfig, OllamaRuntime, PoCFoundationError
+try:
+    from ai_operational_summary import (
+        AgentExecution,
+        baseline,
+        case_hash,
+        execute_agent,
+        load_case,
+        validate_output,
+    )
+    from ai_poc_foundation import LocalModelConfig, OllamaRuntime, PoCFoundationError
+except ModuleNotFoundError:
+    from scripts.ai_operational_summary import (
+        AgentExecution,
+        baseline,
+        case_hash,
+        execute_agent,
+        load_case,
+        validate_output,
+    )
+    from scripts.ai_poc_foundation import (
+        LocalModelConfig,
+        OllamaRuntime,
+        PoCFoundationError,
+    )
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "data/synthetic/ai-operational-v2/manifest.json"
 
 
+def _nearest_rank(values: list[float]) -> float:
+    if not values:
+        raise ValueError("percentil sem observações")
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, math.ceil(len(ordered) * 0.95) - 1))
+    return ordered[index]
+
+
 def _score(output: dict, gold: dict) -> dict[str, float | int | bool]:
-    predicted = {item["finding_id"] for item in output["findings"]}
-    expected = {item["finding_id"] for item in gold["findings"]}
-    tp = len(predicted & expected)
-    precision = tp / len(predicted) if predicted else float(not expected)
-    recall = tp / len(expected) if expected else float(not predicted)
+    predicted = {item["finding_id"]: item for item in output["findings"]}
+    expected = {item["finding_id"]: item for item in gold["findings"]}
+    ids = set(predicted) & set(expected)
+    factual = {
+        finding_id
+        for finding_id in ids
+        if predicted[finding_id]["severity"] == expected[finding_id]["severity"]
+        and predicted[finding_id]["evidence_ids"]
+        == expected[finding_id]["evidence_ids"]
+        and predicted[finding_id]["statement"] == expected[finding_id]["statement"]
+    }
+    precision = len(factual) / len(predicted) if predicted else float(not expected)
+    recall = len(factual) / len(expected) if expected else float(not predicted)
+    field_checks = []
+    for finding_id in ids:
+        field_checks.extend(
+            [
+                predicted[finding_id]["severity"] == expected[finding_id]["severity"],
+                predicted[finding_id]["evidence_ids"]
+                == expected[finding_id]["evidence_ids"],
+                predicted[finding_id]["statement"] == expected[finding_id]["statement"],
+            ]
+        )
     return {
         "schema_valid": True,
         "precision": round(precision, 4),
@@ -35,6 +78,16 @@ def _score(output: dict, gold: dict) -> dict[str, float | int | bool]:
         if precision + recall
         else 0.0,
         "status_correct": output["status"] == gold["status"],
+        "identifier_precision": round(
+            len(ids) / len(predicted) if predicted else float(not expected), 4
+        ),
+        "factual_finding_count": len(factual),
+        "field_accuracy": round(statistics.mean(field_checks), 4)
+        if field_checks
+        else float(not expected and not predicted),
+        "grounded": all(
+            set(item["evidence_ids"]) for item in output["findings"]
+        ),
     }
 
 
@@ -60,12 +113,21 @@ def main(argv: list[str] | None = None) -> int:
         for mode in modes:
             for repetition in range(1 if mode == "baseline" else args.repetitions):
                 started = time.perf_counter()
+                agent_run: AgentExecution | None = None
                 try:
-                    output = (
-                        baseline(case)
-                        if mode == "baseline"
-                        else run_agent(case, runtime, config.model)
-                    )
+                    if mode == "baseline":
+                        output = baseline(case)
+                        elapsed_ms = (time.perf_counter() - started) * 1000
+                        generated_tokens = 0
+                        peak_memory_bytes = 0
+                        tool_calls = ("baseline",)
+                    else:
+                        agent_run = execute_agent(case, runtime, config.model)
+                        output = agent_run.output
+                        elapsed_ms = agent_run.elapsed_ms
+                        generated_tokens = agent_run.generated_tokens
+                        peak_memory_bytes = agent_run.peak_memory_bytes
+                        tool_calls = agent_run.tool_calls
                     validate_output(case, output)
                     score = _score(output, gold)
                     failure = None
@@ -76,23 +138,57 @@ def main(argv: list[str] | None = None) -> int:
                         "recall": 0.0,
                         "f1": 0.0,
                         "status_correct": False,
+                        "identifier_precision": 0.0,
+                        "factual_finding_count": 0,
+                        "field_accuracy": 0.0,
+                        "grounded": False,
                     }
                     failure = type(exc).__name__
+                    elapsed_ms = (time.perf_counter() - started) * 1000
+                    generated_tokens = 0
+                    peak_memory_bytes = 0
+                    tool_calls = ()
                 records.append(
                     {
                         "case_id": case["case_id"],
                         "mode": mode,
                         "repetition": repetition + 1,
                         "input_sha256": case_hash(case),
-                        "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
+                        "elapsed_ms": round(elapsed_ms, 3),
+                        "generated_tokens": generated_tokens,
+                        "tokens_per_second": round(
+                            generated_tokens / (elapsed_ms / 1000), 3
+                        )
+                        if elapsed_ms and generated_tokens
+                        else 0.0,
+                        "peak_memory_bytes": peak_memory_bytes,
                         "score": score,
-                        "tool_call_accuracy": 1.0 if mode == "baseline" else None,
+                        "tool_calls": list(tool_calls),
+                        "tool_call_accuracy": 1.0
+                        if mode == "baseline"
+                        or tool_calls
+                        == (
+                            "get_execution",
+                            "list_pending",
+                            "list_classifications",
+                            "list_events",
+                        )
+                        else None,
                         "failure": failure,
                     }
                 )
     summary = {}
     for mode in {item["mode"] for item in records}:
         items = [item for item in records if item["mode"] == mode]
+        by_case = {}
+        for case_id in {item["case_id"] for item in items}:
+            case_items = [item for item in items if item["case_id"] == case_id]
+            first = json.dumps(case_items[0]["score"], sort_keys=True)
+            by_case[case_id] = statistics.mean(
+                json.dumps(item["score"], sort_keys=True) == first
+                for item in case_items
+            )
+        latencies = [item["elapsed_ms"] for item in items]
         summary[mode] = {
             "attempts": len(items),
             "schema_valid_rate": statistics.mean(
@@ -101,10 +197,16 @@ def main(argv: list[str] | None = None) -> int:
             "precision": statistics.mean(item["score"]["precision"] for item in items),
             "recall": statistics.mean(item["score"]["recall"] for item in items),
             "f1": statistics.mean(item["score"]["f1"] for item in items),
+            "field_accuracy": statistics.mean(
+                item["score"]["field_accuracy"] for item in items
+            ),
+            "consistency_rate": statistics.mean(by_case.values()),
             "mean_latency_ms": statistics.mean(item["elapsed_ms"] for item in items),
-            "p95_latency_ms": sorted(item["elapsed_ms"] for item in items)[
-                max(0, int(len(items) * 0.95) - 1)
-            ],
+            "p95_latency_ms": _nearest_rank(latencies),
+            "mean_tokens_per_second": statistics.mean(
+                item["tokens_per_second"] for item in items
+            ),
+            "peak_memory_bytes": max(item["peak_memory_bytes"] for item in items),
             "tool_call_accuracy": statistics.mean(
                 item["tool_call_accuracy"]
                 for item in items

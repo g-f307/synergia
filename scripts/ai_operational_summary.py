@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
+import tracemalloc
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -41,7 +43,19 @@ TOOL_SPECS = {
     "get_execution": ToolSpec(frozenset({"execution_id"}), frozenset()),
     "list_pending": ToolSpec(frozenset(), frozenset({"status", "priority", "limit"})),
     "list_events": ToolSpec(frozenset(), frozenset({"entity_id", "limit"})),
+    "list_classifications": ToolSpec(
+        frozenset(), frozenset({"state", "rule_id", "limit"})
+    ),
 }
+
+
+@dataclass(frozen=True)
+class AgentExecution:
+    output: dict[str, Any]
+    elapsed_ms: float
+    generated_tokens: int
+    peak_memory_bytes: int
+    tool_calls: tuple[str, ...]
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -108,6 +122,12 @@ class ToolRegistry:
                 if key in arguments:
                     result = [item for item in result if item[key] == arguments[key]]
             return result[:limit]
+        if name == "list_classifications":
+            result = self.case["classifications"]
+            for key in ("state", "rule_id"):
+                if key in arguments:
+                    result = [item for item in result if item[key] == arguments[key]]
+            return result[:limit]
         result = self.case["events"]
         if "entity_id" in arguments:
             result = [
@@ -126,7 +146,7 @@ def tool_context(case: dict[str, Any]) -> dict[str, Any]:
         ),
         "pending_items": registry.call("list_pending", {"limit": 50}),
         "events": registry.call("list_events", {"limit": 50}),
-        "classification_count": len(case["classifications"]),
+        "classifications": registry.call("list_classifications", {"limit": 50}),
     }
 
 
@@ -178,6 +198,16 @@ def validate_output(case: dict[str, Any], output: dict[str, Any]) -> None:
     for finding in output["findings"]:
         if not set(finding["evidence_ids"]) <= available:
             raise OperationalPoCError("evidência não encontrada no caso")
+    context_insufficient = (
+        case["execution"]["lifecycle"] == "partial"
+        and not (
+            case["pending_items"] or case["classifications"] or case["events"]
+        )
+    )
+    if context_insufficient and (
+        output["status"] != "insufficient_evidence" or not output["open_questions"]
+    ):
+        raise OperationalPoCError("contexto insuficiente exige abstencao")
     if output["status"] == "insufficient_evidence" and not output["open_questions"]:
         raise OperationalPoCError("abstenção sem pergunta aberta")
     _reject_sensitive_content(output)
@@ -186,19 +216,45 @@ def validate_output(case: dict[str, Any], output: dict[str, Any]) -> None:
 def run_agent(
     case: dict[str, Any], runtime: ModelRuntime, model: str
 ) -> dict[str, Any]:
+    return execute_agent(case, runtime, model).output
+
+
+def execute_agent(
+    case: dict[str, Any], runtime: ModelRuntime, model: str
+) -> AgentExecution:
     prompt = PROMPT.read_text(encoding="utf-8")
-    raw, _ = runtime.generate(
-        prompt
-        + "\nFERRAMENTAS:\n"
-        + json.dumps(tool_context(case), ensure_ascii=False),
-        model=model,
+    schema = SCHEMA.read_text(encoding="utf-8")
+    request = (
+        f"{prompt}\nCASE_ID: {case['case_id']}\n"
+        "CONTRATO DE SAIDA JSON:\n"
+        f"{schema}\nFERRAMENTAS AUTORIZADAS E RESULTADOS:\n"
+        f"{json.dumps(tool_context(case), ensure_ascii=False)}"
     )
+    tracemalloc.start()
+    started = time.perf_counter()
+    try:
+        raw, generated_tokens = runtime.generate(request, model=model)
+        _, peak_memory = tracemalloc.get_traced_memory()
+    finally:
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        tracemalloc.stop()
     try:
         output = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise OperationalPoCError("agente não produziu JSON") from exc
     validate_output(case, output)
-    return output
+    return AgentExecution(
+        output=output,
+        elapsed_ms=round(elapsed_ms, 3),
+        generated_tokens=generated_tokens,
+        peak_memory_bytes=peak_memory,
+        tool_calls=(
+            "get_execution",
+            "list_pending",
+            "list_classifications",
+            "list_events",
+        ),
+    )
 
 
 def case_hash(case: dict[str, Any]) -> str:
