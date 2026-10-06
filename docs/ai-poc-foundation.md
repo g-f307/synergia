@@ -49,3 +49,11 @@ O baseline e o agente devem receber os mesmos registros normalizados e o mesmo
 prompt versionado. Execute cada caso em uma pasta nova ou mantenha o UUID
 gerado; nunca sobrescreva evidência anterior. Registre manualmente o modelo,
 quantização, memória disponível e versão do commit no relatório da execução.
+
+## Diagnóstico de qualidade específico
+
+A issue #125 usa o executor `scripts/run_ai_quality.py`, com contexto derivado
+das regras reais de validação, contratos 2.0.0 e dataset sintético próprio.
+Consulte [Diagnóstico consultivo de qualidade](ai-quality-diagnosis.md) para
+executar o baseline e consultar os resultados da avaliação real. O exemplo genérico
+deste documento e os contratos/fixtures anteriores continuam preservados.
