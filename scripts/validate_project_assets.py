@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from build_ai_quality_dataset import verify as verify_quality_dataset
 from generate_homologation_fixture import (
     validate_manifest as validate_homologation_manifest,
 )
@@ -59,6 +60,22 @@ def validate_migrations() -> None:
 
 
 def validate_synthetic_data() -> None:
+    # This corpus includes deliberately unreadable files. Validate its frozen
+    # bytes, not the operational fixture contract or generic spreadsheet rules.
+    quality_dataset = SYNTHETIC_DATA / "ai-quality-v2"
+    quality_files = set()
+    if quality_dataset.exists():
+        failures = verify_quality_dataset(quality_dataset)
+        if failures:
+            raise ValueError(f"Dataset de diagnóstico inválido: {failures}")
+        manifest_path = quality_dataset / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        quality_files = {
+            manifest_path,
+            quality_dataset / "scenarios.json",
+            *(quality_dataset / item["file"] for item in manifest["files"]),
+        }
+
     supported = {".csv", ".json", ".xlsx"}
     files = [
         path
@@ -67,6 +84,8 @@ def validate_synthetic_data() -> None:
     ]
 
     for path in files:
+        if path in quality_files:
+            continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))
             if "contains_real_data" in manifest:
