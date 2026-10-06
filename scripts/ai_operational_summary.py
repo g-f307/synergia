@@ -53,9 +53,10 @@ TOOL_SPECS = {
 class AgentExecution:
     output: dict[str, Any]
     elapsed_ms: float
-    generated_tokens: int
-    peak_memory_bytes: int
-    tool_calls: tuple[str, ...]
+    generated_tokens: int | None
+    python_peak_memory_bytes: int
+    tool_calls: tuple[dict, ...]
+    model_process_rss_peak_bytes: int | None = None
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -95,8 +96,36 @@ class ToolRegistry:
 
     def __init__(self, case: dict[str, Any]) -> None:
         self.case = case
+        self.calls: list[dict] = []
 
     def call(
+        self, name: str, arguments: dict[str, Any]
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        try:
+            result = self._call(name, arguments)
+        except OperationalPoCError:
+            self.calls.append(
+                {
+                    "name": name if name in TOOL_SPECS else "unknown",
+                    "arguments": None,
+                    "outcome": "denied",
+                }
+            )
+            raise
+        self.calls.append(
+            {
+                "name": name,
+                "arguments": dict(arguments),
+                "outcome": "succeeded",
+                "result_count": len(result)
+                if isinstance(result, list)
+                else int(bool(result)),
+                "result_sha256": case_hash(result),
+            }
+        )
+        return result
+
+    def _call(
         self, name: str, arguments: dict[str, Any]
     ) -> list[dict[str, Any]] | dict[str, Any]:
         spec = TOOL_SPECS.get(name)
@@ -138,8 +167,10 @@ class ToolRegistry:
         return result[:limit]
 
 
-def tool_context(case: dict[str, Any]) -> dict[str, Any]:
-    registry = ToolRegistry(case)
+def tool_context(
+    case: dict[str, Any], registry: ToolRegistry | None = None
+) -> dict[str, Any]:
+    registry = registry or ToolRegistry(case)
     return {
         "execution": registry.call(
             "get_execution", {"execution_id": case["execution"]["execution_id"]}
@@ -195,14 +226,14 @@ def validate_output(case: dict[str, Any], output: dict[str, Any]) -> None:
         for collection in ("pending_items", "classifications", "events")
         for item in case[collection]
     } | {"execution"}
+    finding_ids = [item["finding_id"] for item in output["findings"]]
+    if len(finding_ids) != len(set(finding_ids)):
+        raise OperationalPoCError("finding_id duplicado")
     for finding in output["findings"]:
         if not set(finding["evidence_ids"]) <= available:
             raise OperationalPoCError("evidência não encontrada no caso")
-    context_insufficient = (
-        case["execution"]["lifecycle"] == "partial"
-        and not (
-            case["pending_items"] or case["classifications"] or case["events"]
-        )
+    context_insufficient = case["execution"]["lifecycle"] == "partial" and not (
+        case["pending_items"] or case["classifications"] or case["events"]
     )
     if context_insufficient and (
         output["status"] != "insufficient_evidence" or not output["open_questions"]
@@ -222,39 +253,71 @@ def run_agent(
 def execute_agent(
     case: dict[str, Any], runtime: ModelRuntime, model: str
 ) -> AgentExecution:
+    attempt = collect_agent_attempt(case, runtime, model)
+    if attempt["failure"]:
+        error = OperationalPoCError(attempt["failure"])
+        error.attempt = attempt
+        raise error
+    return AgentExecution(
+        output=attempt["output"],
+        elapsed_ms=attempt["elapsed_ms"],
+        generated_tokens=attempt["generated_tokens"],
+        python_peak_memory_bytes=attempt["python_peak_memory_bytes"],
+        model_process_rss_peak_bytes=attempt["model_process_rss_peak_bytes"],
+        tool_calls=tuple(attempt["tool_calls"]),
+    )
+
+
+def collect_agent_attempt(case: dict, runtime: ModelRuntime, model: str) -> dict:
+    # Reuse the Linux RSS sampler, separate from Python allocation tracking.
+    try:
+        from evaluate_ai_quality import MemorySampler
+    except ModuleNotFoundError:
+        from scripts.evaluate_ai_quality import MemorySampler
+
+    registry = ToolRegistry(case)
     prompt = PROMPT.read_text(encoding="utf-8")
     schema = SCHEMA.read_text(encoding="utf-8")
     request = (
         f"{prompt}\nCASE_ID: {case['case_id']}\n"
         "CONTRATO DE SAIDA JSON:\n"
         f"{schema}\nFERRAMENTAS AUTORIZADAS E RESULTADOS:\n"
-        f"{json.dumps(tool_context(case), ensure_ascii=False)}"
+        f"{json.dumps(tool_context(case, registry), ensure_ascii=False)}"
     )
+    report = {
+        "output": None,
+        "failure": None,
+        "schema_valid": False,
+        "generated_tokens": None,
+        "tool_calls": registry.calls,
+        "response_sha256": None,
+    }
     tracemalloc.start()
     started = time.perf_counter()
     try:
-        raw, generated_tokens = runtime.generate(request, model=model)
-        _, peak_memory = tracemalloc.get_traced_memory()
-    finally:
-        elapsed_ms = (time.perf_counter() - started) * 1000
-        tracemalloc.stop()
-    try:
+        with MemorySampler() as memory:
+            raw, tokens = runtime.generate(request, model=model)
+        report["generated_tokens"] = tokens
+        report["response_sha256"] = hashlib.sha256(raw.encode()).hexdigest()
         output = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise OperationalPoCError("agente não produziu JSON") from exc
-    validate_output(case, output)
-    return AgentExecution(
-        output=output,
-        elapsed_ms=round(elapsed_ms, 3),
-        generated_tokens=generated_tokens,
-        peak_memory_bytes=peak_memory,
-        tool_calls=(
-            "get_execution",
-            "list_pending",
-            "list_classifications",
-            "list_events",
-        ),
-    )
+        report["schema_valid"] = Draft202012Validator(
+            json.loads(schema), format_checker=FormatChecker()
+        ).is_valid(output)
+        validate_output(case, output)
+        report["output"] = output
+    except json.JSONDecodeError:
+        report["failure"] = "invalid_json"
+    except PoCFoundationError:
+        # Do not persist potentially sensitive exception text or rejected output.
+        report["failure"] = "contract_or_runtime_failure"
+    except TimeoutError:
+        report["failure"] = "runtime_timeout"
+    finally:
+        report["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 3)
+        report["python_peak_memory_bytes"] = tracemalloc.get_traced_memory()[1]
+        report["model_process_rss_peak_bytes"] = memory.peak
+        tracemalloc.stop()
+    return report
 
 
 def case_hash(case: dict[str, Any]) -> str:
