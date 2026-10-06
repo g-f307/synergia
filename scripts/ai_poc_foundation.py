@@ -33,6 +33,10 @@ class PoCFoundationError(Exception):
     """Expected, actionable error in local PoC execution."""
 
 
+class LocalRuntimeTimeout(PoCFoundationError):
+    """The configured local generation deadline elapsed."""
+
+
 SENSITIVE_MARKERS = (
     "password",
     "authorization",
@@ -75,12 +79,27 @@ class LocalModelConfig:
 
 
 class OllamaRuntime:
-    def __init__(self, config: LocalModelConfig) -> None:
+    def __init__(
+        self,
+        config: LocalModelConfig,
+        *,
+        options: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+    ) -> None:
         _validate_loopback_url(config.endpoint)
         self.config = config
+        self.options = dict(options or {})
+        self.output_schema = output_schema
+        self.response_model: str | None = None
+        self.response_metrics: dict[str, int] = {}
 
     def generate(self, prompt: str, *, model: str) -> tuple[str, int]:
-        body = json.dumps({"model": model, "prompt": prompt, "stream": False}).encode()
+        document = {"model": model, "prompt": prompt, "stream": False}
+        if self.options:
+            document["options"] = self.options
+        if self.output_schema is not None:
+            document["format"] = self.output_schema
+        body = json.dumps(document).encode()
         request = urllib.request.Request(
             self.config.endpoint,
             data=body,
@@ -93,11 +112,32 @@ class OllamaRuntime:
                 payload = json.loads(response.read().decode("utf-8"))
         except PoCFoundationError:
             raise
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except TimeoutError as exc:
+            raise LocalRuntimeTimeout("runtime local excedeu o tempo limite") from exc
+        except urllib.error.URLError as exc:
+            if isinstance(exc.reason, TimeoutError):
+                raise LocalRuntimeTimeout(
+                    "runtime local excedeu o tempo limite"
+                ) from exc
+            raise PoCFoundationError("runtime local indisponível") from exc
+        except json.JSONDecodeError as exc:
             raise PoCFoundationError("runtime local indisponível") from exc
         output = payload.get("response")
         if not isinstance(output, str):
             raise PoCFoundationError("runtime local retornou resposta sem JSON textual")
+        self.response_model = payload.get("model")
+        self.response_metrics = {
+            key: payload[key]
+            for key in (
+                "load_duration",
+                "total_duration",
+                "prompt_eval_count",
+                "prompt_eval_duration",
+                "eval_count",
+                "eval_duration",
+            )
+            if isinstance(payload.get(key), int) and payload[key] >= 0
+        }
         return output, int(payload.get("eval_count") or 0)
 
 
