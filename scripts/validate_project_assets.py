@@ -12,16 +12,13 @@ try:
         validate_manifest as validate_homologation_manifest,
     )
     from generate_synthetic_data import validate_manifest
+    from build_ai_quality_dataset import verify as verify_quality_dataset
 except ModuleNotFoundError:
     from scripts.generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
     from scripts.generate_synthetic_data import validate_manifest
-from build_ai_quality_dataset import verify as verify_quality_dataset
-from generate_homologation_fixture import (
-    validate_manifest as validate_homologation_manifest,
-)
-from generate_synthetic_data import validate_manifest
+    from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
