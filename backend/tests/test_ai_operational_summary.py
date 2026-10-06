@@ -20,6 +20,7 @@ from scripts.ai_operational_summary import (  # noqa: E402, I001
     tool_context,
     validate_output,
 )
+from scripts.validate_project_assets import validate_operational_manifest  # noqa: E402
 
 
 CASE = ROOT / "data/synthetic/ai-poc-evaluation/operational/OP-02-input.json"
@@ -68,3 +69,9 @@ def test_missing_evidence_requires_uncertainty() -> None:
     output = baseline(case)
     assert output["status"] == "insufficient_evidence"
     assert output["open_questions"]
+
+
+def test_operational_manifest_is_checked_with_project_assets() -> None:
+    manifest_path = ROOT / "data/synthetic/ai-operational-v2/manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    validate_operational_manifest(manifest_path, manifest)
