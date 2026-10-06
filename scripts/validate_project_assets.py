@@ -8,17 +8,17 @@ import subprocess
 from pathlib import Path
 
 try:
+    from build_ai_quality_dataset import verify as verify_quality_dataset
     from generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
     from generate_synthetic_data import validate_manifest
-    from build_ai_quality_dataset import verify as verify_quality_dataset
 except ModuleNotFoundError:
+    from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
     from scripts.generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
     from scripts.generate_synthetic_data import validate_manifest
-    from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +95,9 @@ def validate_synthetic_data() -> None:
             continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))
-            if "contains_real_data" in manifest:
+            if "cases" in manifest and "dataset_version" in manifest:
+                validate_operational_manifest(path, manifest)
+            elif "contains_real_data" in manifest:
                 validate_homologation_manifest(path)
             else:
                 validate_manifest(path)
