@@ -12,6 +12,8 @@ const schemaDirectory = path.join(root, "docs", "schemas");
 const schemaFiles = [
   "ai-quality-diagnosis-input.schema.json",
   "ai-quality-diagnosis-output.schema.json",
+  "ai-quality-diagnosis-v2-input.schema.json",
+  "ai-quality-diagnosis-v2-output.schema.json",
   "ai-operational-summary-input.schema.json",
   "ai-operational-summary-output.schema.json",
 ];
