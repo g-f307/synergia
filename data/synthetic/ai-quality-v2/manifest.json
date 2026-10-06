@@ -1,0 +1,262 @@
+{
+  "dataset_version": "2.0.0",
+  "scenarios_sha256": "b48bcb1af4058402adb54a2c1f42e1fc781cc1794a3c41c261006b38220b6fd7",
+  "files": [
+    {
+      "case_id": "QD2-D01",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D01.csv",
+      "sha256": "d4d344d6fcb9b5fe51c6882fd191c119869d5823cfaf83d2d10ac8aad75f8a2b"
+    },
+    {
+      "case_id": "QD2-D01",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D01.xlsx",
+      "sha256": "674b175a734b0031ebc9f809d11a15a0ab610ed79740548d436644798fa6ea8d"
+    },
+    {
+      "case_id": "QD2-D02",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D02.csv",
+      "sha256": "67191da87f8b92f22a1ad693635a6ebec3e607d362c5613c2b95b17c9277fd9f"
+    },
+    {
+      "case_id": "QD2-D02",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D02.xlsx",
+      "sha256": "9d8bc8c0b0be6e72c3a2c0138d8b71a7325de2e8931e959a2d46ccd489eef17d"
+    },
+    {
+      "case_id": "QD2-D03",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D03.csv",
+      "sha256": "b61e2fe6662f934650ee637284f1b736b6f79732cb94ef0db4bbefe6e77189ee"
+    },
+    {
+      "case_id": "QD2-D03",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D03.xlsx",
+      "sha256": "16d76a465dbabb78415a7a95edef120593cd1442f2ff2d4a8d816df265d79075"
+    },
+    {
+      "case_id": "QD2-D04",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D04.csv",
+      "sha256": "d2a74bb4ade33dad579d43e85e9f6d2876f88f049254dd4256512de3b8f3fd41"
+    },
+    {
+      "case_id": "QD2-D04",
+      "split": "development",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "development/QD2-D04.xlsx",
+      "sha256": "c08ed90cf236cad0e62d75a257b959467f40bd6993ca3bab8817356c27172952"
+    },
+    {
+      "case_id": "QD2-E01",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E01.csv",
+      "sha256": "2b5d37965eba8169cc2d8ebb43f65c1bd2d0dbf92aaf9df77192405112bc9385"
+    },
+    {
+      "case_id": "QD2-E01",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E01.xlsx",
+      "sha256": "000c3acdfff355cb55d048788cfa8bed2e3d94cfd2840d008cf50b3e3507a9bb"
+    },
+    {
+      "case_id": "QD2-E02",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E02.csv",
+      "sha256": "ef2b45b392ec25c7d8fe7c58fa1d58ee2c76bb051b90f2420b23b3dee4395d9b"
+    },
+    {
+      "case_id": "QD2-E02",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E02.xlsx",
+      "sha256": "1758b09b7cce3d32eba09d57490a2d64b7f65ba03aaefdba32a74b943b9fd76f"
+    },
+    {
+      "case_id": "QD2-E03",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E03.csv",
+      "sha256": "4fcad2faf0a8281d86e662e856e14ca6114234b20230d18db181e2902019241c"
+    },
+    {
+      "case_id": "QD2-E03",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E03.xlsx",
+      "sha256": "19b37251184bedf63450dab2ba52759fdbecd2d0c485a7ccc624a1d8c07bd84d"
+    },
+    {
+      "case_id": "QD2-E04",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E04.csv",
+      "sha256": "cc03da027583aaf85dcae2feb0c2a285d7ae5438f75ca62d588774f9cc03e7d7"
+    },
+    {
+      "case_id": "QD2-E04",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E04.xlsx",
+      "sha256": "16ec5c93cd825af84d600e1d02de65a7f13215904a10e0f377517e077dd23b92"
+    },
+    {
+      "case_id": "QD2-E05",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E05.csv",
+      "sha256": "8c2d5f6848fd534b474429998e3b6832121d2c7edb6fdbb7cfff0263896052df"
+    },
+    {
+      "case_id": "QD2-E05",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E05.xlsx",
+      "sha256": "8e326530fc1e10a1bba512031094f000f0081e5d85129df4795bed27c33bcfdd"
+    },
+    {
+      "case_id": "QD2-E06",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E06.csv",
+      "sha256": "7d9fedacf5d34db5f9204c78c14f294914f1f9439d11832ca765baa5726b97b4"
+    },
+    {
+      "case_id": "QD2-E06",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E06.xlsx",
+      "sha256": "f1c9eb100042ee2f88f304a940bf9c76666bc2da8722ba54568a90e43282d9d4"
+    },
+    {
+      "case_id": "QD2-E07",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E07.csv",
+      "sha256": "cd1d7f501801403a8fee43d83221f53eecb14a918199b58cc118300bf4fee574"
+    },
+    {
+      "case_id": "QD2-E07",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E07.xlsx",
+      "sha256": "76cea59a1e034b8e9aaf07d09360f86d8587d83f14e0234e2264b289e0c0a3f2"
+    },
+    {
+      "case_id": "QD2-E08",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E08.csv",
+      "sha256": "db91b7841cc2e1dc5d88c6152e8ace1301751f76e62c0158771f2de6378055aa"
+    },
+    {
+      "case_id": "QD2-E08",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E08.xlsx",
+      "sha256": "a98138c31f23f42581d9e5fe6e46f5a66d0a2284671ce2567bac9e5ef1a43d86"
+    },
+    {
+      "case_id": "QD2-E09",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": false,
+      "file": "evaluation/QD2-E09.csv",
+      "sha256": "4b22c2789ebad72f30dd68baf735a10fa24b4698bd451d9d838a6a7c8a6cd603"
+    },
+    {
+      "case_id": "QD2-E09",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": false,
+      "file": "evaluation/QD2-E09.xlsx",
+      "sha256": "8d8f50a785d906c61877ba1352af6ff8c51dd84261ca855ed0771ea0168f6281"
+    },
+    {
+      "case_id": "QD2-E10",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E10.csv",
+      "sha256": "1cb42268020da491c423cd82347b55d9d73e0ff1c1653fcb81570132d5e5c29a"
+    },
+    {
+      "case_id": "QD2-E10",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E10.xlsx",
+      "sha256": "e7d831ed316ad3aecd1784153296703f836ead170d25f004e9350d3bd46389a3"
+    },
+    {
+      "case_id": "QD2-E11",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E11.csv",
+      "sha256": "41366781a5c695e8e47a7eaecdac6fd7f8807ab32d650e59607882553c35d812"
+    },
+    {
+      "case_id": "QD2-E11",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E11.xlsx",
+      "sha256": "fbe2cd484d1ea7e515e38c016f8ab0c54fab91413f77eff6b2b8c1ee3bfa7f03"
+    },
+    {
+      "case_id": "QD2-E12",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E12.csv",
+      "sha256": "df4e88c207dd7bb70309994bab6bf43cd3ab14e9b351275135cc24c47cfea787"
+    },
+    {
+      "case_id": "QD2-E12",
+      "split": "evaluation",
+      "source": "N-FP",
+      "references_available": true,
+      "file": "evaluation/QD2-E12.xlsx",
+      "sha256": "def632dce02e8c703fc96a38d11fc810a5c1f78083aebdf9d13a6bd893a87a75"
+    }
+  ]
+}

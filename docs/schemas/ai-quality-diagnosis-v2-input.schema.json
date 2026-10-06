@@ -1,0 +1,179 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "source",
+    "file_sha256",
+    "counts",
+    "occurrences",
+    "normalized_records"
+  ],
+  "properties": {
+    "normalized_records": {
+      "type": "array", "maxItems": 10000,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sheet", "row", "state", "oqc_flag", "quantities"],
+        "properties": {
+          "sheet": {"type": "string", "minLength": 1, "maxLength": 500},
+          "row": {"type": "integer", "minimum": 1},
+          "state": {"anyOf": [
+            {"type": "string", "pattern": "^[a-z_]+$", "maxLength": 80},
+            {"type": "null"}
+          ]},
+          "oqc_flag": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+          "quantities": {
+            "type": "array", "maxItems": 10,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["field", "value"],
+              "properties": {
+                "field": {"enum": ["planned_quantity", "produced_quantity",
+                  "received_quantity", "released_quantity", "pending_quantity",
+                  "retained_quantity", "quantity"]},
+                "value": {"type": "number", "minimum": 0}
+              }
+            }
+          }
+        }
+      }
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,80}$"
+    },
+    "source": {
+      "enum": [
+        "N-FP",
+        "OWM",
+        "GMES/OQC",
+        "TMS"
+      ]
+    },
+    "file_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows_read",
+        "rows_valid",
+        "normalized_records",
+        "errors",
+        "warnings",
+        "read_success",
+        "layout_valid"
+      ],
+      "properties": {
+        "rows_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows_valid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "normalized_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "read_success": {
+          "type": "boolean"
+        },
+        "layout_valid": {
+          "type": "boolean"
+        }
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "code",
+          "severity",
+          "reason",
+          "sheet",
+          "row",
+          "column"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^ev-[0-9]+$"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z_]+$"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "maxItems": 500
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-quality-diagnosis-v2-input.schema.json"
+}
