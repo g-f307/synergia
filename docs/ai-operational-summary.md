@@ -26,6 +26,12 @@ python scripts/evaluate_ai_operational.py --mode baseline --output reports/ai-op
 ```
 
 O avaliador publica precisão, revocação, F1, validade do schema, consistência,
-latência média/P95 e acurácia das chamadas autorizadas. O modo `both` adiciona
+latência média/P95 e sucesso das consultas controladas pelo programa, não
+acurácia de escolha de ferramentas pelo modelo. O modo `both` adiciona
 repetições do runtime local e preserva omissões, alucinações e falhas no
 denominador.
+
+Consulte [protocolo e avaliação real](ai-operational-evaluation.md) para a
+separação entre F1 dos achados, resumo e encaminhamentos, métricas de memória,
+registro das falhas e limitações. Correspondência textual com o gabarito não
+substitui revisão factual da redação. O agente permanece consultivo.
