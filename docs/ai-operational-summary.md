@@ -1,16 +1,21 @@
 # PoC de investigação e resumo operacional
 
-Esta PoC é local, consultiva e isolada do produto. O agente recebe somente
-resultados de ferramentas de leitura allowlisted: execução, pendências e
-eventos. Não há acesso ao banco, escrita, aprovação, reprocessamento ou RPA.
+Esta PoC é local, consultiva e isolada do produto. No protocolo v3, o agente
+recebe apenas os identificadores do caso e da execução, além dos contratos das
+ferramentas. Ele escolhe consultas somente leitura para execução, pendências,
+eventos e classificações e recebe os resultados em um ciclo limitado.
+Não há acesso ao banco, escrita, aprovação, reprocessamento ou RPA.
 
 O baseline é determinístico: conta pendências e cria um finding por pendência.
 O agente e o baseline usam o mesmo caso do manifesto
 `data/synthetic/ai-operational-v2/manifest.json`; o gabarito permanece
-independente do prompt. Cada conclusão precisa citar uma evidência existente.
+independente do prompt. Cada achado precisa citar evidência efetivamente
+recuperada por uma ferramenta; adivinhar um ID existente no caso não basta.
 
 As ferramentas rejeitam nomes desconhecidos, parâmetros extras, IDs fora do
-caso e limites acima de 50. Ausência de evidência exige `insufficient_evidence`
+caso na consulta de execução e limites acima de 50. O ciclo permite seis
+tentativas de ferramenta e sete inferências, incluindo a resposta final.
+Tentativas negadas consomem o limite e são registradas. Ausência de evidência exige `insufficient_evidence`
 e pergunta aberta. Saídas são validadas pelo schema v1.1.0 e conteúdo sensível
 é rejeitado antes do registro.
 
@@ -26,8 +31,9 @@ python scripts/evaluate_ai_operational.py --mode baseline --output reports/ai-op
 ```
 
 O avaliador publica precisão, revocação, F1, validade do schema, consistência,
-latência média/P95 e sucesso das consultas controladas pelo programa, não
-acurácia de escolha de ferramentas pelo modelo. O modo `both` adiciona
+latência média/P95, sucesso das consultas e acurácia da escolha de ferramentas
+contra o gabarito versionado no manifesto. Consultas incorretas, desnecessárias,
+repetidas ou ausentes penalizam a métrica. O modo `both` adiciona
 repetições do runtime local e preserva omissões, alucinações e falhas no
 denominador.
 
