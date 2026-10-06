@@ -1,0 +1,10 @@
+{
+  "dataset_version": "2.1.0",
+  "source": "data/synthetic/ai-operational-v2",
+  "cases": [
+    {"case_id": "OP-01", "input": "OP-01-input.json", "gold": "OP-01-gold.json", "required_tools": ["get_execution"]},
+    {"case_id": "OP-02", "input": "OP-02-input.json", "gold": "OP-02-gold.json", "required_tools": ["get_execution", "list_pending", "list_classifications", "list_events"]},
+    {"case_id": "OP-03", "input": "OP-03-input.json", "gold": "OP-03-gold.json", "required_tools": ["get_execution", "list_pending", "list_events"]},
+    {"case_id": "OP-04", "input": "OP-04-input.json", "gold": "OP-04-gold.json", "required_tools": ["get_execution"]}
+  ]
+}

@@ -1,0 +1,1 @@
+{"schema_version":"1.1.0","case_id":"OP-02","status":"completed","summary":"Execução em estado awaiting_review.","findings":[{"finding_id":"pending:201","title":"Pendência 201","severity":"warning","statement":"Classificação requer revisão humana.","evidence_ids":["ev-op02-p1"]}],"open_questions":[],"human_next_steps":["Validar os achados com as evidências exibidas."]}

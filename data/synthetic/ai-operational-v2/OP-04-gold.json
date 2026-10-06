@@ -1,0 +1,1 @@
+{"schema_version":"1.1.0","case_id":"OP-04","status":"insufficient_evidence","summary":"Execução em estado partial.","findings":[],"open_questions":["Quais evidências autorizadas estão disponíveis para a execução?"],"human_next_steps":["Validar os achados com as evidências exibidas."]}

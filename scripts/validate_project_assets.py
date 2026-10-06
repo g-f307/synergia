@@ -7,11 +7,18 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from build_ai_quality_dataset import verify as verify_quality_dataset
-from generate_homologation_fixture import (
-    validate_manifest as validate_homologation_manifest,
-)
-from generate_synthetic_data import validate_manifest
+try:
+    from build_ai_quality_dataset import verify as verify_quality_dataset
+    from generate_homologation_fixture import (
+        validate_manifest as validate_homologation_manifest,
+    )
+    from generate_synthetic_data import validate_manifest
+except ModuleNotFoundError:
+    from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
+    from scripts.generate_homologation_fixture import (
+        validate_manifest as validate_homologation_manifest,
+    )
+    from scripts.generate_synthetic_data import validate_manifest
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,12 +95,16 @@ def validate_synthetic_data() -> None:
             continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))
-            if "contains_real_data" in manifest:
+            if "cases" in manifest and "dataset_version" in manifest:
+                validate_operational_manifest(path, manifest)
+            elif "contains_real_data" in manifest:
                 validate_homologation_manifest(path)
             else:
                 validate_manifest(path)
         elif path.suffix.lower() == ".json":
-            json.loads(path.read_text(encoding="utf-8"))
+            document = json.loads(path.read_text(encoding="utf-8"))
+            if "cases" in document and "dataset_version" in document:
+                validate_operational_manifest(path, document)
         elif path.suffix.lower() == ".csv":
             with path.open(encoding="utf-8", newline="") as source:
                 header = next(csv.reader(source), None)
@@ -112,6 +123,38 @@ def validate_synthetic_data() -> None:
             finally:
                 workbook.close()
     print(f"Arquivos sintéticos validados: {len(files)}")
+
+
+def validate_operational_manifest(path: Path, manifest: dict) -> None:
+    """Validate the frozen manifest used by the local operational PoC."""
+    cases = manifest.get("cases")
+    if not isinstance(manifest.get("dataset_version"), str) or not cases:
+        raise ValueError(f"Manifesto operacional inválido: {path.name}")
+    if not isinstance(cases, list) or len(
+        {case.get("case_id") for case in cases}
+    ) != len(cases):
+        raise ValueError(f"Manifesto operacional com casos duplicados: {path.name}")
+    listed = set()
+    for case in cases:
+        if not isinstance(case, dict) or not case.get("case_id"):
+            raise ValueError(f"Caso operacional inválido: {path.name}")
+        for field in ("input", "gold"):
+            filename = case.get(field)
+            if not isinstance(filename, str) or Path(filename).name != filename:
+                raise ValueError(f"Arquivo operacional inválido: {filename}")
+            if filename in listed:
+                raise ValueError(f"Arquivo operacional duplicado: {filename}")
+            listed.add(filename)
+            target = path.parent / filename
+            if not target.is_file():
+                raise ValueError(f"Arquivo operacional ausente: {filename}")
+            try:
+                json.loads(target.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ValueError(f"JSON operacional inválido: {filename}") from exc
+    actual = {item.name for item in path.parent.iterdir() if item.is_file()}
+    if actual != listed | {path.name}:
+        raise ValueError(f"Arquivos operacionais divergem do manifesto: {path.name}")
 
 
 if __name__ == "__main__":

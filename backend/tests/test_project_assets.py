@@ -19,6 +19,9 @@ def synthetic_root(tmp_path, monkeypatch):
     shutil.copytree(
         ROOT / "data/synthetic/ai-quality-v2", tmp_path / "ai-quality-v2"
     )
+    shutil.copytree(
+        ROOT / "data/synthetic/ai-operational-v2", tmp_path / "ai-operational-v2"
+    )
     monkeypatch.setattr(assets, "SYNTHETIC_DATA", tmp_path)
     return tmp_path
 
@@ -28,6 +31,12 @@ def test_project_assets_accepts_frozen_quality_corpus(synthetic_root, monkeypatc
         pytest.fail(f"Quality corpus reached operational validator: {path.name}")
 
     monkeypatch.setattr(assets, "validate_manifest", unexpected_validator)
+    assets.validate_synthetic_data()
+
+
+def test_project_assets_dispatches_operational_manifest_with_quality_corpus(
+    synthetic_root,
+):
     assets.validate_synthetic_data()
 
 
