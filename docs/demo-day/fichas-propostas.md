@@ -58,4 +58,3 @@ avaliada pelos usuários.
 - validar evidências e saídas antes de exibi-las;
 - congelar casos e gabaritos antes da comparação;
 - separar avaliação técnica de autorização para integração.
-

@@ -36,4 +36,3 @@
 - [ ] confirmar o hardware disponível para execução local;
 - [ ] acordar limites mínimos de qualidade, tempo e memória;
 - [ ] autorizar ou rejeitar a próxima rodada de avaliação.
-

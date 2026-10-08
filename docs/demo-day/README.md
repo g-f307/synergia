@@ -22,16 +22,31 @@ Dados de KPI, FTE ou ganho não confirmados aparecem como pendentes.
 
 ## Reprodução do PDF
 
-A pasta `Kickoff/` permanece ignorada pelo Git e contém o modelo, a classe e os
-ativos fornecidos pela organização. Na raiz do projeto:
+A pasta `Kickoff/` permanece ignorada pelo Git porque contém o modelo, a classe,
+fontes e imagens fornecidos externamente pela organização. Esses arquivos não
+devem ser copiados de fontes públicas nem adicionados ao repositório.
+
+Para obter os ativos autorizados, solicite ao **PO ou mentor responsável pela
+equipe** o pacote oficial do kickoff usado no início do desafio. Extraia o
+conteúdo na pasta `Kickoff/`, na raiz do repositório. A estrutura mínima esperada
+inclui `Kickoff/synergiakickoff.cls`, `Kickoff/assets/marca/` e
+`Kickoff/assets/fotos/`.
+
+Na raiz do projeto, execute:
 
 ```bash
-cd Kickoff
-lualatex -interaction=nonstopmode -halt-on-error \
-  ../docs/demo-day/demo-day-synergia.tex
-lualatex -interaction=nonstopmode -halt-on-error \
-  ../docs/demo-day/demo-day-synergia.tex
+bash docs/demo-day/build-presentation.sh
 ```
 
-O PDF gerado deve ser comparado visualmente com
-`docs/demo-day/synergia-demo-day.pdf` antes de substituir o artefato entregue.
+O script valida a presença da classe e de todos os ativos usados pelo `.tex`
+antes de iniciar o LuaLaTeX. Para usar um pacote autorizado armazenado em outro
+diretório, informe o caminho explicitamente:
+
+```bash
+KICKOFF_DIR=/caminho/para/Kickoff \
+  bash docs/demo-day/build-presentation.sh
+```
+
+Antes do commit, renderize e inspecione visualmente o PDF gerado em
+`docs/demo-day/synergia-demo-day.pdf` para confirmar legibilidade, margens e
+ausência de sobreposição.
