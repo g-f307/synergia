@@ -1,23 +1,24 @@
-# Demo Day de IA — entrega da issue #127
+# Pitch de integração com IA — issue #127
 
-Esta pasta reúne os artefatos versionáveis da apresentação e dos dois vídeos das
-PoCs locais do SYNERGIA. O conteúdo usa somente resultados medidos nos PRs #130
-e #131. Dados de KPI, FTE ou ganho não confirmados aparecem como pendentes.
+Esta pasta reúne os artefatos versionáveis do pitch de duas propostas de
+integração com IA no SYNERGIA. Os experimentos anteriores permanecem como
+aprendizado técnico, mas seus resultados não fazem parte da apresentação.
+Dados de KPI, FTE ou ganho não confirmados aparecem como pendentes.
 
 ## Artefatos
 
 - `synergia-demo-day.pdf`: apresentação reduzida, baseada no modelo do kickoff;
 - `demo-day-synergia.tex`: fonte da apresentação;
 - `roteiro-apresentacao.md`: fala cronometrada para um único apresentador;
-- `roteiro-videos.md`: roteiro obrigatório e checklist para cada PoC;
-- `revisao-entrega.md`: conferência de privacidade, legibilidade e links.
+- `fichas-propostas.md`: escopo, integração, limites e critérios das propostas;
+- `revisao-entrega.md`: conferência de conteúdo, governança e decisões esperadas.
 
 ## Estado da entrega
 
-- apresentação técnica preparada com os resultados disponíveis em 06/10/2026;
-- duas PoCs implementadas e avaliadas com dados sintéticos;
-- gravação, hospedagem e confirmação de acesso aos vídeos dependem de ação
-  externa e não são declaradas como concluídas neste repositório.
+- apresentação reposicionada como pitch de integração futura;
+- duas propostas descritas com arquitetura, limites e critérios de avaliação;
+- prioridade, usuários da validação, hardware e metas dependem de decisão com o
+  cliente e não são declarados como aprovados neste repositório.
 
 ## Reprodução do PDF
 
@@ -34,4 +35,3 @@ lualatex -interaction=nonstopmode -halt-on-error \
 
 O PDF gerado deve ser comparado visualmente com
 `docs/demo-day/synergia-demo-day.pdf` antes de substituir o artefato entregue.
-

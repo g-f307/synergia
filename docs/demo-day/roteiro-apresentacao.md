@@ -1,65 +1,62 @@
-# Roteiro cronometrado — cinco minutos
+# Roteiro cronometrado do pitch
 
-Tempo-alvo: **4 min 50 s**, com margem de 10 s. Um único apresentador.
+Tempo-alvo: **4 min 40 s**, com margem de 20 s. Um único apresentador.
 
 ## Slide 1 — abertura — 15 s
 
-“Este é o SYNERGIA, plataforma de consolidação de indicadores de Suprimentos.
-Neste Demo Day apresentamos duas provas de conceito locais de IA, avaliadas com
-dados sintéticos e sem alterar decisões ou dados do produto.”
+“O SYNERGIA já organiza o fluxo de indicadores de Suprimentos. Este pitch traz
+duas propostas de IA para ampliar a capacidade de análise sem retirar das
+pessoas o controle sobre as decisões.”
 
-## Slide 2 — equipe — 25 s
+## Slide 2 — equipe — 20 s
 
 “Lucas Costa acompanha o projeto como PO da LG. Gabriel atua como PO e
 fullstack; Rebecca em frontend e design; Marcelo em DevOps e QA; Carlos em RPA;
-e Gustavo em backend. As PoCs reutilizam contratos e dados sintéticos já
-versionados no projeto.”
+e Gustavo em backend.”
 
-## Slide 3 — produto e recorte — 30 s
+## Slide 3 — contexto do projeto — 35 s
 
-“A plataforma pré-RPA em Angular, FastAPI e PostgreSQL já cobre ingestão,
-normalização, consolidação, regras OQC e decisão humana. O levantamento inicial
-citou 44 horas mensais, mas esse número ainda não foi validado por medição. Não
-declaramos FTE. O planejamento vigente chega à Sprint 9, em 31 de dezembro.”
+“Hoje, plano, produção, recebimento e qualidade chegam de fontes distintas. O
+SYNERGIA centraliza ingestão, normalização, consolidação, regras OQC, relatórios
+e decisão humana. O levantamento inicial citou 44 horas mensais, mas ainda não
+tratamos esse número como ganho comprovado nem declaramos FTE.”
 
-## Slide 4 — limites comuns — 30 s
+## Slide 4 — oportunidades — 35 s
 
-“As duas PoCs rodam localmente com o modelo Qwen 2.5 de 3 bilhões de parâmetros,
-quantizado em Q4 K M. O modelo não grava no banco, não aprova pendências e não
-executa RPA. Baseline e agente recebem os mesmos casos. Toda saída passa por
-schema e por validação de evidências.”
+“A primeira proposta explica ocorrências de qualidade já detectadas. A segunda
+reúne fatos de uma execução em um resumo rastreável. As duas trabalham somente
+com leitura, respeitam permissões e mantêm validação humana.”
 
-## Slide 5 — PoC 1 — 60 s
+## Slide 5 — assistente de qualidade — 50 s
 
-“A primeira proposta organiza ocorrências determinísticas de qualidade e sugere
-a próxima verificação. Avaliamos 24 arquivos reservados, em CSV e XLSX, com 72
-tentativas por modo. O schema passou em 100%, mas o agente teve F1 de 67,78%,
-consistência de 29,17% e aceitação completa de 44,44%. O baseline atingiu 100%
-nessas métricas estruturais. Foram observadas evidências sem fundamento,
-perguntas incompatíveis com o estado e certeza indevida. A configuração não deve
-ser promovida.”
+“O assistente de qualidade recebe erros, avisos e divergências selecionados pelo
+backend. Ele explica o impacto e sugere a próxima conferência, sempre citando as
+evidências. A IA não refaz a classificação determinística. O valor esperado é
+tornar o diagnóstico mais claro e reduzir a leitura manual.”
 
-## Slide 6 — PoC 2 — 60 s
+## Slide 6 — integração da proposta 1 — 35 s
 
-“A segunda proposta investiga execuções por ferramentas somente de leitura e
-produz um resumo com evidências. Na versão com contexto pré-carregado, o agente
-teve F1 de 50% e consistência zero. Na versão que escolhe ferramentas, nenhuma
-das 12 tentativas concluiu a resposta: todas atingiram o limite de chamadas. A
-acurácia de escolha foi 15,48%, muito abaixo da meta de 95%. Nenhuma ferramenta
-de escrita foi oferecida ou executada.”
+“O FastAPI prepara um contexto mínimo, remove campos desnecessários e chama um
+modelo local com prompt e schema versionados. Um validador rejeita referências
+inexistentes e contradições. Só avançamos após comparação com baseline,
+avaliação independente e aceite do cliente.”
 
-## Slide 7 — comparação — 45 s
+## Slide 7 — assistente de investigação — 50 s
 
-“As duas PoCs comprovam ingestão de CSV e XLSX, execução local, contratos
-estruturados, telemetria e avaliação reproduzível. Também mostram que schema
-válido não garante utilidade. A baseline determinística permaneceu superior. O
-resultado correto desta rodada é preservar as regras atuais e não integrar os
-agentes ao produto.”
+“O segundo assistente reúne execução, pendências e Workorders dentro do escopo
+da sessão. Ele organiza achados, perguntas em aberto e próximos passos humanos.
+Cada afirmação leva a uma evidência consultável. O objetivo é reduzir a
+navegação entre telas sem autorizar ações automáticas.”
 
-## Slide 8 — encerramento — 25 s
+## Slide 8 — integração da proposta 2 — 35 s
 
-“O próximo experimento precisa de novos casos reservados, sem retunar esta
-avaliação. Também depende de validar licença, hardware e limites aceitáveis com
-o cliente. Até lá, as PoCs ficam isoladas e consultivas. Os vídeos mostram o
-pipeline completo, os resultados negativos e as limitações sem omissões.”
+“A integração começa com o backend entregando o contexto pronto. Somente depois
+avaliamos seleção restrita de ferramentas de leitura. Cada consulta reaplica
+RBAC e organização, possui limites de chamadas e deixa uma trilha sanitizada.”
 
+## Slide 9 — encerramento — 25 s
+
+“O próximo passo é escolher a proposta prioritária, definir usuários da
+validação e confirmar o hardware local. Em seguida, congelamos novos casos,
+comparamos modelos e medimos qualidade, latência e memória antes de qualquer
+integração ao produto.”

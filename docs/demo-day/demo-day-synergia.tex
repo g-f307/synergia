@@ -1,14 +1,13 @@
 % !TEX program = lualatex
 \documentclass[rodape]{synergiakickoff}
-\dxiprojeto{SYNERGIA · Demo Day de IA · Equipe 2}
+\dxiprojeto{SYNERGIA · Integração de IA · Equipe 2}
 
 \begin{document}
 
 \dxicapa
   {IFAM · INOVA}
-  {\includegraphics[width=15.2cm]{marca/synergia-horizontal-branca.png}}
-  {Duas provas de conceito locais para apoiar a análise de indicadores de
-   Suprimentos, avaliadas com dados sintéticos e decisão humana preservada.}
+  {\includegraphics[width=13.2cm]{marca/synergia-horizontal-branca.png}}
+  {IA para ampliar a análise de indicadores de Suprimentos.}
 
 \dxiequipe[Equipe e papéis]{%
   \dximembro[fotos/card-lucas]{P.O. LG}{Lucas Costa}
@@ -19,193 +18,202 @@
   \dximembro[fotos/card-gustavo]{Backend}{Gustavo Nunes}
 }
 
-\begin{dxiconteudo}{PRODUTO E RECORTE DO DEMO DAY}
-\vspace{-0.35cm}
-\dxicol{13.6}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Produto atual}
+\begin{dxiconteudo}{CONTEXTO DO PROJETO}
+\vspace{-0.40cm}
+\dxicol{13.7}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}O desafio}
 
   \vspace{0.35em}
-  Aplicação pré-RPA em \textbf{Angular, FastAPI e PostgreSQL}, com ingestão,
-  validação, normalização, consolidação, regras OQC, rastreabilidade e decisão
-  humana.
+  Informações de plano, produção, recebimento e qualidade chegam de fontes
+  distintas. A equipe precisa cruzar Workorders, lotes e seriais para localizar
+  divergências e preparar o acompanhamento operacional.
 
   \vspace{0.65em}
-  {\dximont\bfseries\color{dxinavy}Planejamento}\par
-  Sprint 9 até \textbf{31/12/2026}. O prazo e o total de sprints seguem o
-  planejamento vigente da equipe.
-
-  \vspace{0.65em}
-  {\dximont\bfseries\color{dxinavy}Indicador inicial}\par
-  44 horas por mês, com 70\% em consolidação e 30\% em decisão, valor declarado
-  no levantamento e \textbf{ainda pendente de medição}. Nenhum FTE é declarado.
-}%
-\dxicol{13.2}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Novo MVP de IA}
-
-  \vspace{0.35em}
-  \begin{dxilista}[hanaroverde]
-    \item Duas PoCs locais e isoladas do produto.
-    \item Ingestão de CSV e XLSX sintéticos.
-    \item Baseline e agente nos mesmos casos.
-    \item Saídas JSON validadas e métricas reproduzíveis.
-  \end{dxilista}
-
-  \vspace{0.55em}
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{dxired}Fora do MVP}
-
-  \vspace{0.25em}
-  \begin{dxilista}[dxired]
-    \item Integração com o produto e uso de dados reais.
-    \item Escrita no banco, aprovação, notificação ou RPA.
-    \item Decisão autônoma e promoção sem nova avaliação.
-  \end{dxilista}
-}
-\end{dxiconteudo}
-
-\begin{dxiconteudo}{ARQUITETURA E LIMITES COMUNS}
-\vspace{-0.4cm}
-\dxicol{13.7}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Execução local}
-
-  \vspace{0.3em}
-  \begin{dxilista}[dxired]
-    \item Modelo \textbf{Qwen 2.5 3B Instruct}, quantização Q4 K M.
-    \item Ollama 0.35.1 em CPU, sem GPU, nuvem ou dados do cliente.
-    \item Prompt, schemas, casos e gabaritos versionados.
-    \item CSV e XLSX passam pela mesma normalização.
-  \end{dxilista}
+  O levantamento inicial citou \textbf{44 horas por mês}, mas esse indicador
+  ainda depende de medição e validação do cliente. Nenhum ganho de FTE é
+  declarado nesta proposta.
 }%
 \dxicol{13.1}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Controles}
-
-  \vspace{0.3em}
-  \begin{dxilista}[hanaroverde]
-    \item Baseline independente e comparação nas mesmas métricas.
-    \item Validação de schema, evidências e abstenção.
-    \item Ferramentas somente de leitura e escopo autorizado.
-    \item Nenhuma saída altera regras ou decisões humanas.
-  \end{dxilista}
-
-  \vspace{0.55em}
-  {\dxiCorpoP\color{dxinavy!85}Meta comum: schema 100\%, F1 e consistência
-  de pelo menos 95\%, com referências válidas em 100\%.}
-}
-\end{dxiconteudo}
-
-\begin{dxiconteudo}{POC 1 · DIAGNÓSTICO DE QUALIDADE}
-\vspace{-0.55cm}
-\dxicol{12.8}{%
-  {\dximont\bfseries\color{lgred}D.E.E.P AI}\par
-  \begin{dxilista}[dxired]
-    \item \textbf{Define:} organizar ocorrências determinísticas e orientar a conferência.
-    \item \textbf{Explore:} execução, validações, divergências e proveniência autorizada.
-    \item \textbf{Experiment:} 12 cenários reservados em CSV e XLSX, três repetições.
-    \item \textbf{Productionize:} somente após superar baseline, metas e revisão humana.
-  \end{dxilista}
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}O SYNERGIA hoje}
 
   \vspace{0.35em}
-  {\dxiCorpoP\color{dxinavy!85}24 arquivos reservados, 72 tentativas do baseline
-  e 72 do agente. Pico RSS do runtime: 2,165 GiB.}
-}%
-\dxicol{14.0}{%
-  {\dximont\bfseries\color{hanaroverde}Resultados medidos}\par
-  \begin{tabular}{@{}lrr@{}}
-    \textbf{Métrica} & \textbf{Baseline} & \textbf{Agente}\\[0.2em]
-    Schema válido & 100\% & 100\%\\
-    Aceitação completa & 100\% & 44,44\%\\
-    F1 micro & 100\% & 67,78\%\\
-    Consistência & 100\% & 29,17\%\\
-    Latência média & 0,043 s & 55,865 s\\
-  \end{tabular}
-
-  \vspace{0.6em}
-  {\dximont\bfseries\color{dxired}Decisão: não promover.}\par
-  Evidências sem fundamento, perguntas incompatíveis com o estado e certeza
-  indevida mantiveram o agente abaixo das metas.
-}
-\end{dxiconteudo}
-
-\begin{dxiconteudo}{POC 2 · INVESTIGAÇÃO OPERACIONAL}
-\vspace{-0.55cm}
-\dxicol{12.8}{%
-  {\dximont\bfseries\color{lgred}D.E.E.P AI}\par
-  \begin{dxilista}[dxired]
-    \item \textbf{Define:} reunir fatos de execução em um resumo rastreável.
-    \item \textbf{Explore:} execução, pendências, Workorders e histórico autorizado.
-    \item \textbf{Experiment:} quatro casos sintéticos, baseline e três repetições.
-    \item \textbf{Productionize:} integrar apenas após qualidade e escolha segura de ferramentas.
-  \end{dxilista}
-
-  \vspace{0.35em}
-  {\dxiCorpoP\color{dxinavy!85}Ferramentas somente de leitura, seis tentativas
-  por rodada e nenhuma ação operacional. Pico RSS v3: 2.460.499.968 bytes.}
-}%
-\dxicol{14.0}{%
-  {\dximont\bfseries\color{hanaroverde}Resultados v3}\par
-  \begin{tabular}{@{}lr@{}}
-    \textbf{Métrica do agente} & \textbf{Resultado}\\[0.2em]
-    Resposta final aceita & 0/12 · 0\%\\
-    F1 dos achados & 0\%\\
-    Acurácia de ferramentas & 15,48\%\\
-    Latência média & 96,779 s\\
-    Latência P95 & 140,486 s\\
-  \end{tabular}
-
-  \vspace{0.6em}
-  {\dximont\bfseries\color{dxired}Decisão: não promover.}\par
-  As 12 tentativas atingiram o limite de chamadas. O agente repetiu consultas,
-  aplicou filtros incorretos e não concluiu o resumo.
-}
-\end{dxiconteudo}
-
-\begin{dxiconteudo}{COMPARAÇÃO E APRENDIZADOS}
-\vspace{-0.35cm}
-\begin{center}
-\begin{tabular}{p{7.2cm}p{7.2cm}p{10.5cm}}
-\textbf{Aspecto} & \textbf{Comprovado} & \textbf{Limite observado}\\[0.35em]
-Ingestão & CSV e XLSX sintéticos & Corpus pequeno e sem dados corporativos\\[0.45em]
-Execução & Modelo local quantizado & Latência alta em CPU\\[0.45em]
-Rastreabilidade & Schemas, hashes e evidências & Schema válido não garante utilidade\\[0.45em]
-Qualidade & Baseline reproduzível & Agentes ficaram abaixo das metas\\[0.45em]
-Segurança & Sem escrita, RPA ou decisão autônoma & Nova avaliação é obrigatória antes da integração\\
-\end{tabular}
-\end{center}
-
-\vspace{0.65cm}
-{\dximont\bfseries\fontsize{18}{24}\selectfont\color{dxinavy}
-As regras determinísticas permanecem como referência. Os resultados negativos
-são evidência do experimento, não falha a ser ocultada.\par}
-\end{dxiconteudo}
-
-\begin{dxiconteudo}{DECISÃO E PRÓXIMOS PASSOS}
-\vspace{-0.2cm}
-\dxicol{13.7}{%
-  {\dximont\bfseries\fontsize{17}{23}\selectfont\color{dxired}Decisão atual}
-
-  \vspace{0.4em}
-  Não integrar as configurações avaliadas ao produto. Manter as PoCs isoladas,
-  consultivas e sem acesso de escrita.
-
-  \vspace{0.75em}
-  {\dximont\bfseries\fontsize{17}{23}\selectfont\color{dxinavy}Pendências de negócio}
-
-  \vspace{0.25em}
-  Validar KPI, FTE, licença, hardware e limites aceitáveis com o cliente.
-}%
-\dxicol{13.1}{%
-  {\dximont\bfseries\fontsize{17}{23}\selectfont\color{hanaroverde}Nova iteração}
-
-  \vspace{0.4em}
   \begin{dxilista}[hanaroverde]
-    \item Revisar hipótese e estratégia sem usar os casos reservados para ajuste.
-    \item Congelar novos casos e gabaritos independentes.
-    \item Repetir baseline, agente, telemetria e revisão humana.
-    \item Promover somente se as metas forem atingidas.
+    \item Aplicação em Angular, FastAPI e PostgreSQL.
+    \item Ingestão manual de CSV e XLSX enquanto conectores não estão disponíveis.
+    \item Validação, normalização, consolidação e regras OQC determinísticas.
+    \item Dashboard, relatórios, auditoria e decisão humana.
   \end{dxilista}
 
   \vspace{0.45em}
-  {\dxiCorpoP\color{dxinavy!85}Vídeos finais devem mostrar resultados, falhas,
-  distância até as metas e próximos passos sem dados sensíveis.}
+  {\dxiCorpoP\color{dxinavy!85}A IA entra como apoio à interpretação. As regras
+  e a decisão continuam sob controle do sistema e das pessoas.}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{DUAS OPORTUNIDADES DE IA}
+\vspace{-0.35cm}
+\dxicol{13.4}{%
+  {\dximont\bfseries\fontsize{18}{24}\selectfont\color{lgred}1. Qualidade dos dados}
+
+  \vspace{0.4em}
+  Transformar erros, avisos e divergências já detectados em uma explicação
+  objetiva, com impacto, evidências e próxima verificação sugerida.
+
+  \vspace{0.8em}
+  {\dximont\bfseries\fontsize{18}{24}\selectfont\color{lgred}2. Investigação operacional}
+
+  \vspace{0.4em}
+  Reunir o contexto de uma execução e produzir um resumo rastreável para apoiar
+  a análise de pendências e Workorders.
+}%
+\dxicol{13.4}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Princípios de integração}
+
+  \vspace{0.35em}
+  \begin{dxilista}[hanaroverde]
+    \item Modelo executado localmente, sem envio de dados a serviços externos.
+    \item Ferramentas de leitura com permissões e escopo organizacional existentes.
+    \item Saída estruturada, com evidências e indicação de informação insuficiente.
+    \item Nenhuma escrita, aprovação, notificação ou RPA comandada pelo modelo.
+    \item Validação humana antes de qualquer ação posterior.
+  \end{dxilista}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{PROPOSTA 1 · ASSISTENTE DE QUALIDADE}
+\vspace{-0.50cm}
+\dxicol{12.9}{%
+  {\dximont\bfseries\color{lgred}D.E.E.P AI}\par
+  \begin{dxilista}[dxired]
+    \item \textbf{Define:} reduzir o tempo de leitura das ocorrências de qualidade.
+    \item \textbf{Explore:} usar validações, divergências e proveniência autorizada.
+    \item \textbf{Experiment:} comparar explicações com uma baseline determinística.
+    \item \textbf{Productionize:} integrar somente após avaliação e aceite do negócio.
+  \end{dxilista}
+}%
+\dxicol{13.9}{%
+  {\dximont\bfseries\color{hanaroverde}Experiência proposta}\par
+  \begin{dxilista}[hanaroverde]
+    \item O operador abre uma execução com erro ou advertência.
+    \item O backend monta um contexto mínimo com IDs de evidência válidos.
+    \item A IA explica a ocorrência e sugere a próxima conferência.
+    \item A interface exibe fonte, limitação e necessidade de revisão humana.
+  \end{dxilista}
+
+  \vspace{0.45em}
+  {\dxiCorpoP\color{dxinavy!85}Valor esperado: tornar o diagnóstico mais claro
+  sem refazer a classificação já produzida pelas regras do SYNERGIA.}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{INTEGRAÇÃO · ASSISTENTE DE QUALIDADE}
+\vspace{-0.40cm}
+\dxicol{13.6}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Fluxo técnico}
+
+  \vspace{0.3em}
+  \begin{dxilista}[dxired]
+    \item FastAPI seleciona somente ocorrências autorizadas.
+    \item Adaptador remove campos livres e dados desnecessários.
+    \item Runtime local recebe contexto, prompt e schema versionados.
+    \item Validador rejeita evidência inexistente, campo extra ou contradição.
+    \item Angular apresenta a resposta ao lado do dado determinístico.
+  \end{dxilista}
+}%
+\dxicol{13.2}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Critérios para avançar}
+
+  \vspace{0.3em}
+  \begin{dxilista}[hanaroverde]
+    \item Conjunto sintético e gabarito revisados por pessoa independente.
+    \item Comparação com baseline nos mesmos casos.
+    \item Evidências válidas e abstenção quando faltar contexto.
+    \item Latência e memória compatíveis com o ambiente definido.
+    \item Aprovação técnica, de segurança e do cliente.
+  \end{dxilista}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{PROPOSTA 2 · ASSISTENTE DE INVESTIGAÇÃO}
+\vspace{-0.50cm}
+\dxicol{12.9}{%
+  {\dximont\bfseries\color{lgred}D.E.E.P AI}\par
+  \begin{dxilista}[dxired]
+    \item \textbf{Define:} reduzir consultas dispersas durante uma investigação.
+    \item \textbf{Explore:} consultar execução, pendências e Workorders autorizados.
+    \item \textbf{Experiment:} avaliar resumo, evidências e seleção de ferramentas.
+    \item \textbf{Productionize:} liberar por etapas, começando com contexto pronto.
+  \end{dxilista}
+}%
+\dxicol{13.9}{%
+  {\dximont\bfseries\color{hanaroverde}Experiência proposta}\par
+  \begin{dxilista}[hanaroverde]
+    \item O usuário escolhe uma execução dentro de sua organização.
+    \item O sistema recupera fatos pelas permissões da sessão.
+    \item A IA organiza achados, perguntas em aberto e próximos passos humanos.
+    \item Cada afirmação aponta para uma evidência consultável na interface.
+  \end{dxilista}
+
+  \vspace{0.45em}
+  {\dxiCorpoP\color{dxinavy!85}Valor esperado: reduzir a navegação entre telas
+  e preparar uma síntese verificável sem executar ações operacionais.}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{INTEGRAÇÃO · ASSISTENTE DE INVESTIGAÇÃO}
+\vspace{-0.40cm}
+\dxicol{13.6}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Evolução controlada}
+
+  \vspace{0.3em}
+  \begin{dxilista}[dxired]
+    \item Fase 1: backend entrega contexto pronto e a IA apenas resume.
+    \item Fase 2: seleção restrita entre ferramentas de leitura autorizadas.
+    \item Fase 3: piloto com usuários e revisão de utilidade operacional.
+    \item Escrita e decisão automática permanecem fora do escopo.
+  \end{dxilista}
+}%
+\dxicol{13.2}{%
+  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Controles necessários}
+
+  \vspace{0.3em}
+  \begin{dxilista}[hanaroverde]
+    \item Lista permitida de ferramentas, argumentos e limites de chamadas.
+    \item RBAC e organização verificados novamente em cada consulta.
+    \item Tempo máximo, telemetria e interrupção segura.
+    \item Saída validada antes de chegar à interface.
+    \item Histórico de consultas sem conteúdo sensível.
+  \end{dxilista}
+}
+\end{dxiconteudo}
+
+\begin{dxiconteudo}{PLANO PARA VALIDAR AS PROPOSTAS}
+\vspace{-0.35cm}
+\dxicol{13.8}{%
+  {\dximont\bfseries\fontsize{17}{23}\selectfont\color{lgred}Próxima rodada}
+
+  \vspace{0.35em}
+  \begin{dxilista}[dxired]
+    \item Definir hardware e testar modelos locais mais capazes.
+    \item Congelar novos casos sintéticos e gabaritos independentes.
+    \item Medir qualidade, evidências, consistência, latência e memória.
+    \item Comparar custo e benefício das duas propostas com a baseline.
+  \end{dxilista}
+}%
+\dxicol{13.0}{%
+  {\dximont\bfseries\fontsize{17}{23}\selectfont\color{hanaroverde}Decisões solicitadas}
+
+  \vspace{0.35em}
+  \begin{dxilista}[hanaroverde]
+    \item Qual proposta traz mais valor ao processo do cliente?
+    \item Qual perfil participará da validação?
+    \item Qual infraestrutura estará disponível para execução local?
+    \item Quais limites de tempo e qualidade definem um piloto aceitável?
+  \end{dxilista}
+
+  \vspace{0.45em}
+  {\dxiCorpoP\color{dxinavy!85}Objetivo do pitch: escolher a prioridade e
+  autorizar uma avaliação controlada, sem prometer integração antecipada.}
 }
 \end{dxiconteudo}
 
