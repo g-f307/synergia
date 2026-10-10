@@ -21,42 +21,45 @@ SYNERGIA centraliza ingestão, normalização, consolidação, regras OQC, relat
 e decisão humana. O levantamento inicial citou 44 horas mensais, mas ainda não
 tratamos esse número como ganho comprovado nem declaramos FTE.”
 
-## Slide 4 — oportunidades — 35 s
+## Slide 4 — arquitetura proposta — 35 s
 
-“A primeira proposta explica ocorrências de qualidade já detectadas. A segunda
-reúne fatos de uma execução em um resumo rastreável. As duas trabalham somente
-com leitura, respeitam permissões e mantêm validação humana.”
+“A nova camada de IA fica ao lado da API, sem substituir os módulos existentes.
+O FastAPI continua aplicando permissões e escopo organizacional, consulta
+execuções, qualidade, pendências e auditoria, e envia somente o contexto
+autorizado ao modelo local. Toda resposta volta por um validador antes de chegar
+à interface.”
 
 ## Slide 5 — assistente de qualidade — 50 s
 
 “O assistente de qualidade recebe erros, avisos e divergências selecionados pelo
 backend. Ele explica o impacto e sugere a próxima conferência, sempre citando as
-evidências. A IA não refaz a classificação determinística. O valor esperado é
-tornar o diagnóstico mais claro e reduzir a leitura manual.”
+evidências. Trata-se de um assistente de fluxo fixo: o backend escolhe os dados e
+a IA apenas explica. As regras OQC continuam responsáveis pela classificação.”
 
 ## Slide 6 — integração da proposta 1 — 35 s
 
-“O FastAPI prepara um contexto mínimo, remove campos desnecessários e chama um
-modelo local com prompt e schema versionados. Um validador rejeita referências
-inexistentes e contradições. Só avançamos após comparação com baseline,
-avaliação independente e aceite do cliente.”
+“O fluxo começa no operador, passa pela interface e chega ao FastAPI. O backend
+monta o contexto mínimo, o modelo produz a explicação e o validador confere
+schema e evidências. O modelo não escolhe ferramentas e não acessa o banco
+diretamente.”
 
 ## Slide 7 — assistente de investigação — 50 s
 
-“O segundo assistente reúne execução, pendências e Workorders dentro do escopo
-da sessão. Ele organiza achados, perguntas em aberto e próximos passos humanos.
-Cada afirmação leva a uma evidência consultável. O objetivo é reduzir a
-navegação entre telas sem autorizar ações automáticas.”
+“A segunda proposta começa como assistente, com o contexto preparado pelo
+backend. Na fase seguinte, ela passa a ser um agente consultivo porque o modelo
+escolhe ferramentas de leitura para investigar uma execução. Cada afirmação
+continua ligada a uma evidência e nenhuma ação operacional é autorizada.”
 
 ## Slide 8 — integração da proposta 2 — 35 s
 
-“A integração começa com o backend entregando o contexto pronto. Somente depois
-avaliamos seleção restrita de ferramentas de leitura. Cada consulta reaplica
-RBAC e organização, possui limites de chamadas e deixa uma trilha sanitizada.”
+“A PoC deve responder à principal incerteza técnica: se o modelo local consegue
+selecionar a ferramenta correta, usar argumentos válidos, evitar ciclos e
+respeitar limites de chamadas. O gateway reaplica RBAC e organização em cada
+consulta e mantém apenas ferramentas de leitura na lista permitida.”
 
 ## Slide 9 — encerramento — 25 s
 
-“O próximo passo é escolher a proposta prioritária, definir usuários da
-validação e confirmar o hardware local. Em seguida, congelamos novos casos,
-comparamos modelos e medimos qualidade, latência e memória antes de qualquer
-integração ao produto.”
+“O próximo passo é escolher a proposta prioritária, confirmar o hardware local
+e autorizar uma PoC controlada. Para o agente, mediremos especialmente a
+acurácia de seleção de ferramentas, os ciclos, as evidências, a latência e a
+memória antes de considerar integração ao produto.”

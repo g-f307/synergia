@@ -1,6 +1,16 @@
 % !TEX program = lualatex
 \documentclass[rodape]{synergiakickoff}
 \dxiprojeto{SYNERGIA · Integração de IA · Equipe 2}
+\tikzset{
+  arqbase/.style={draw=dxinavy!28, line width=0.8pt, rounded corners=5pt,
+    fill=white, align=center, inner sep=6pt,
+    font=\dxiurb\fontsize{11}{14}\selectfont, text=dxinavy},
+  arqatual/.style={arqbase, draw=lgred!60, fill=lgred!5},
+  arqia/.style={arqbase, draw=hanaroverde!75, fill=hanaroverde!7},
+  arqcontrole/.style={arqbase, draw=dxinavy!45, fill=dxinavy!4},
+  arqseta/.style={->, >=stealth, line width=1.15pt, draw=dxinavy!72},
+  arqsetaia/.style={->, >=stealth, line width=1.25pt, draw=hanaroverde!90!black}
+}
 
 \begin{document}
 
@@ -50,34 +60,45 @@
 }
 \end{dxiconteudo}
 
-\begin{dxiconteudo}{DUAS OPORTUNIDADES DE IA}
-\vspace{-0.35cm}
-\dxicol{13.4}{%
-  {\dximont\bfseries\fontsize{18}{24}\selectfont\color{lgred}1. Qualidade dos dados}
+\begin{dxiconteudo}{ARQUITETURA PROPOSTA COM IA}
+\vspace{-0.55cm}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[arqatual, text width=2.3cm] (usuario) at (1.6,4.4) {Usuário};
+  \node[arqatual, text width=3.0cm] (angular) at (5.5,4.4) {Angular\\Jornadas web};
+  \node[arqatual, text width=3.4cm] (api) at (11.0,4.4) {FastAPI\\RBAC e organização};
 
-  \vspace{0.4em}
-  Transformar erros, avisos e divergências já detectados em uma explicação
-  objetiva, com impacto, evidências e próxima verificação sugerida.
+  \node[arqatual, text width=2.8cm] (exec) at (2.2,1.3) {Execuções};
+  \node[arqatual, text width=2.8cm] (qualidade) at (6.2,1.3) {Qualidade\\e regras OQC};
+  \node[arqatual, text width=2.8cm] (pendencias) at (10.2,1.3) {Pendências\\e Workorders};
+  \node[arqatual, text width=2.8cm] (auditoria) at (14.2,1.3) {Auditoria};
+  \node[arqatual, text width=3.2cm] (postgres) at (8.2,-1.8) {PostgreSQL\\Fonte de verdade};
 
-  \vspace{0.8em}
-  {\dximont\bfseries\fontsize{18}{24}\selectfont\color{lgred}2. Investigação operacional}
+  \node[arqia, text width=4.4cm] (camada) at (21.0,3.7) {Camada de integração com IA\\Contexto, ferramentas e validação};
+  \node[arqia, text width=3.6cm] (modelo) at (25.0,0.3) {Modelo local\\Sem acesso direto aos módulos};
 
-  \vspace{0.4em}
-  Reunir o contexto de uma execução e produzir um resumo rastreável para apoiar
-  a análise de pendências e Workorders.
-}%
-\dxicol{13.4}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Princípios de integração}
+  \draw[arqseta] (usuario) -- (angular);
+  \draw[arqseta] (angular) -- (api);
+  \draw[arqseta] (api.south) -- ++(0,-0.55) -| (exec.north);
+  \draw[arqseta] (api.south) -- ++(0,-0.55) -| (qualidade.north);
+  \draw[arqseta] (api.south) -- ++(0,-0.55) -| (pendencias.north);
+  \draw[arqseta] (api.south) -- ++(0,-0.55) -| (auditoria.north);
+  \draw[arqseta] (exec.south) |- (postgres.west);
+  \draw[arqseta] (qualidade.south) -- (postgres.north west);
+  \draw[arqseta] (pendencias.south) -- (postgres.north east);
+  \draw[arqseta] (auditoria.south) |- (postgres.east);
 
-  \vspace{0.35em}
-  \begin{dxilista}[hanaroverde]
-    \item Modelo executado localmente, sem envio de dados a serviços externos.
-    \item Ferramentas de leitura com permissões e escopo organizacional existentes.
-    \item Saída estruturada, com evidências e indicação de informação insuficiente.
-    \item Nenhuma escrita, aprovação, notificação ou RPA comandada pelo modelo.
-    \item Validação humana antes de qualquer ação posterior.
-  \end{dxilista}
-}
+  \draw[<->, >=stealth, line width=1.25pt, draw=hanaroverde!90!black]
+    (api.east) -- node[above,font=\dxiurb\fontsize{9}{11}\selectfont] {contexto autorizado}
+    node[below,font=\dxiurb\fontsize{9}{11}\selectfont] {saída validada} (camada.west);
+  \draw[<->, >=stealth, line width=1.25pt, draw=hanaroverde!90!black]
+    (camada.south east) -- node[right,font=\dxiurb\fontsize{9}{11}\selectfont] {prompt e JSON} (modelo.north west);
+
+  \node[font=\dxiurb\fontsize{10}{13}\selectfont, text=lgred] at (5.7,-3.2)
+    {Módulos existentes e regras determinísticas};
+  \node[font=\dxiurb\bfseries\fontsize{10}{13}\selectfont, text=hanaroverde!90!black] at (23.0,-2.0)
+    {Nova camada proposta};
+\end{tikzpicture}
 \end{dxiconteudo}
 
 \begin{dxiconteudo}{PROPOSTA 1 · ASSISTENTE DE QUALIDADE}
@@ -101,40 +122,43 @@
   \end{dxilista}
 
   \vspace{0.45em}
-  {\dxiCorpoP\color{dxinavy!85}Valor esperado: tornar o diagnóstico mais claro
-  sem refazer a classificação já produzida pelas regras do SYNERGIA.}
+  {\dxiCorpoP\color{dxinavy!85}\textbf{Classificação: assistente de fluxo fixo.}
+  O backend define o contexto e a IA apenas explica o resultado.}
 }
 \end{dxiconteudo}
 
-\begin{dxiconteudo}{INTEGRAÇÃO · ASSISTENTE DE QUALIDADE}
-\vspace{-0.40cm}
-\dxicol{13.6}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Fluxo técnico}
+\begin{dxiconteudo}{PROPOSTA 1 · FLUXO FIXO DO ASSISTENTE}
+\vspace{-0.25cm}
+\centering
+{\dximont\bfseries\fontsize{15}{20}\selectfont\color{lgred}
+Classificação: assistente sem autonomia de ferramentas}
 
-  \vspace{0.3em}
-  \begin{dxilista}[dxired]
-    \item FastAPI seleciona somente ocorrências autorizadas.
-    \item Adaptador remove campos livres e dados desnecessários.
-    \item Runtime local recebe contexto, prompt e schema versionados.
-    \item Validador rejeita evidência inexistente, campo extra ou contradição.
-    \item Angular apresenta a resposta ao lado do dado determinístico.
-  \end{dxilista}
-}%
-\dxicol{13.2}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Critérios para avançar}
+\vspace{0.55cm}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[arqatual, text width=3.0cm] (operador) at (1.8,2.4) {Operador\\abre a ocorrência};
+  \node[arqatual, text width=3.2cm] (front) at (6.2,2.4) {Angular\\envia o ID};
+  \node[arqatual, text width=4.0cm] (back) at (11.5,2.4) {FastAPI\\monta contexto mínimo};
+  \node[arqia, text width=3.4cm] (llm) at (17.0,2.4) {Modelo local\\gera explicação};
+  \node[arqcontrole, text width=3.5cm] (valid) at (22.0,2.4) {Validador\\confere evidências};
+  \node[arqatual, text width=3.4cm] (tela) at (26.8,2.4) {Angular\\exibe ao usuário};
 
-  \vspace{0.3em}
-  \begin{dxilista}[hanaroverde]
-    \item Conjunto sintético e gabarito revisados por pessoa independente.
-    \item Comparação com baseline nos mesmos casos.
-    \item Evidências válidas e abstenção quando faltar contexto.
-    \item Latência e memória compatíveis com o ambiente definido.
-    \item Aprovação técnica, de segurança e do cliente.
-  \end{dxilista}
-}
+  \draw[arqseta] (operador) -- (front);
+  \draw[arqseta] (front) -- (back);
+  \draw[arqsetaia] (back) -- node[above,font=\dxiurb\fontsize{9}{11}\selectfont] {contexto pronto} (llm);
+  \draw[arqsetaia] (llm) -- (valid);
+  \draw[arqseta] (valid) -- (tela);
+
+  \node[arqcontrole, text width=14.0cm, font=\dxiurb\fontsize{11}{15}\selectfont]
+    at (14.4,-0.5) {As regras OQC continuam classificando a ocorrência. O assistente
+    apenas explica os fatos selecionados pelo backend e pode se abster quando faltar contexto.};
+\end{tikzpicture}
+
+\vspace{0.45cm}
+{\dxiCorpoP\color{dxinavy!85}Critérios: evidências válidas, comparação com baseline,
+latência compatível e revisão humana independente.}
 \end{dxiconteudo}
 
-\begin{dxiconteudo}{PROPOSTA 2 · ASSISTENTE DE INVESTIGAÇÃO}
+\begin{dxiconteudo}{PROPOSTA 2 · INVESTIGAÇÃO EM DUAS FASES}
 \vspace{-0.50cm}
 \dxicol{12.9}{%
   {\dximont\bfseries\color{lgred}D.E.E.P AI}\par
@@ -155,36 +179,42 @@
   \end{dxilista}
 
   \vspace{0.45em}
-  {\dxiCorpoP\color{dxinavy!85}Valor esperado: reduzir a navegação entre telas
-  e preparar uma síntese verificável sem executar ações operacionais.}
+  {\dxiCorpoP\color{dxinavy!85}\textbf{Fase 1: assistente. Fase 2: agente consultivo.}
+  A autonomia surge somente quando o modelo escolhe ferramentas de leitura.}
 }
 \end{dxiconteudo}
 
-\begin{dxiconteudo}{INTEGRAÇÃO · ASSISTENTE DE INVESTIGAÇÃO}
-\vspace{-0.40cm}
-\dxicol{13.6}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{lgred}Evolução controlada}
+\begin{dxiconteudo}{PROPOSTA 2 · EVOLUÇÃO PARA AGENTE}
+\vspace{-0.45cm}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[font=\dximont\bfseries\fontsize{14}{18}\selectfont,text=lgred,anchor=west]
+    at (0.3,4.1) {FASE 1 · ASSISTENTE};
+  \node[arqatual, text width=3.4cm] (f1api) at (5.0,2.9) {FastAPI\\prepara o contexto};
+  \node[arqia, text width=3.4cm] (f1llm) at (11.0,2.9) {Modelo local\\resume os fatos};
+  \node[arqcontrole, text width=3.4cm] (f1out) at (17.0,2.9) {Validação\\e revisão humana};
+  \draw[arqsetaia] (f1api) -- node[above,font=\dxiurb\fontsize{9}{11}\selectfont] {contexto pronto} (f1llm);
+  \draw[arqseta] (f1llm) -- (f1out);
 
-  \vspace{0.3em}
-  \begin{dxilista}[dxired]
-    \item Fase 1: backend entrega contexto pronto e a IA apenas resume.
-    \item Fase 2: seleção restrita entre ferramentas de leitura autorizadas.
-    \item Fase 3: piloto com usuários e revisão de utilidade operacional.
-    \item Escrita e decisão automática permanecem fora do escopo.
-  \end{dxilista}
-}%
-\dxicol{13.2}{%
-  {\dximont\bfseries\fontsize{16}{21}\selectfont\color{hanaroverde}Controles necessários}
+  \node[font=\dximont\bfseries\fontsize{14}{18}\selectfont,text=hanaroverde!90!black,anchor=west]
+    at (0.3,0.4) {FASE 2 · AGENTE CONSULTIVO};
+  \node[arqia, text width=3.4cm] (agent) at (5.0,-1.0) {Modelo local\\escolhe a ferramenta};
+  \node[arqcontrole, text width=3.2cm] (gateway) at (10.7,-1.0) {Gateway\\allowlist e limites};
+  \node[arqatual, text width=3.1cm] (tools) at (16.2,-1.0) {Ferramentas de leitura\\execuções e pendências};
+  \node[arqcontrole, text width=3.2cm] (answer) at (21.6,-1.0) {Resposta com evidências\\e revisão humana};
+  \draw[arqsetaia] (agent) -- (gateway);
+  \draw[arqsetaia] (gateway) -- (tools);
+  \draw[arqseta] (tools) -- (answer);
+  \draw[arqseta] (tools.south) -- ++(0,-0.55) -| (agent.south);
 
-  \vspace{0.3em}
-  \begin{dxilista}[hanaroverde]
-    \item Lista permitida de ferramentas, argumentos e limites de chamadas.
-    \item RBAC e organização verificados novamente em cada consulta.
-    \item Tempo máximo, telemetria e interrupção segura.
-    \item Saída validada antes de chegar à interface.
-    \item Histórico de consultas sem conteúdo sensível.
-  \end{dxilista}
-}
+  \node[arqia, text width=6.3cm, font=\dxiurb\bfseries\fontsize{11}{15}\selectfont]
+    at (25.1,2.7) {Hipótese da PoC\\O modelo local consegue escolher a ferramenta correta,
+    evitar ciclos e respeitar os limites?};
+  \draw[arqsetaia] (25.1,1.55) -- (25.1,-0.1) -| (21.6,-0.1);
+\end{tikzpicture}
+
+\vspace{0.15cm}
+{\dxiCorpoP\color{dxinavy!85}A escrita e a decisão automática permanecem fora do escopo em todas as fases.}
 \end{dxiconteudo}
 
 \begin{dxiconteudo}{PLANO PARA VALIDAR AS PROPOSTAS}
@@ -196,7 +226,7 @@
   \begin{dxilista}[dxired]
     \item Definir hardware e testar modelos locais mais capazes.
     \item Congelar novos casos sintéticos e gabaritos independentes.
-    \item Medir qualidade, evidências, consistência, latência e memória.
+    \item Medir qualidade, evidências, seleção de ferramentas, latência e memória.
     \item Comparar custo e benefício das duas propostas com a baseline.
   \end{dxilista}
 }%
@@ -208,7 +238,7 @@
     \item Qual proposta traz mais valor ao processo do cliente?
     \item Qual perfil participará da validação?
     \item Qual infraestrutura estará disponível para execução local?
-    \item Quais limites de tempo e qualidade definem um piloto aceitável?
+    \item Qual acurácia de seleção de ferramentas torna o agente viável?
   \end{dxilista}
 
   \vspace{0.45em}

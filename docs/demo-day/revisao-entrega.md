@@ -6,6 +6,10 @@
 - [x] contexto inicial do desafio e do produto atual;
 - [x] integrantes e papéis da equipe;
 - [x] exatamente duas propostas de integração com IA;
+- [x] arquitetura após a inserção da camada de IA e comunicação com os módulos;
+- [x] proposta 1 identificada como assistente de fluxo fixo;
+- [x] proposta 2 identificada como agente apenas na fase de seleção de ferramentas;
+- [x] hipótese da PoC explicita a incerteza sobre o modelo local;
 - [x] propostas organizadas pelo D.E.E.P AI;
 - [x] experiência, arquitetura, controles e critérios para avançar;
 - [x] nenhum resultado experimental exibido;
