@@ -26,6 +26,9 @@ export class AdminAccessListComponent {
   readonly loading = signal(true);
   readonly result = signal<AdminPage<AdminGroup | AdminRole> | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
+  readonly groupNameFilter = signal('');
+  readonly groupReferenceFilter = signal('');
+  readonly groupStatusFilter = signal<'all' | 'active' | 'inactive'>('all');
 
   constructor() {
     this.route.queryParamMap.pipe(
@@ -48,6 +51,22 @@ export class AdminAccessListComponent {
   title(): string { return this.i18n.t(this.kind === 'groups' ? 'adminUi.groups' : 'adminUi.roles'); }
   newTitle(): string { return this.i18n.t(this.kind === 'groups' ? 'adminUi.newGroup' : 'adminUi.newRole'); }
   name(item: AdminGroup | AdminRole): string { return 'group_name' in item ? item.group_name : item.role_key; }
+  visibleGroups(page: AdminPage<AdminGroup | AdminRole>): AdminGroup[] {
+    if (this.kind !== 'groups') return [];
+    const name = this.groupNameFilter().trim().toLocaleLowerCase();
+    const reference = this.groupReferenceFilter().trim().toLocaleLowerCase();
+    const status = this.groupStatusFilter();
+    return (page.items as AdminGroup[]).filter((group) =>
+      (!name || group.group_name.toLocaleLowerCase().includes(name)) &&
+      (!reference || (group.external_reference ?? '').toLocaleLowerCase().includes(reference)) &&
+      (status === 'all' || (status === 'active') === group.is_active)
+    );
+  }
+  activeGroupCount(page: AdminPage<AdminGroup | AdminRole>): number {
+    return this.kind === 'groups' ? (page.items as AdminGroup[]).filter((group) => group.is_active).length : 0;
+  }
+  visibleRoles(page: AdminPage<AdminGroup | AdminRole>): AdminRole[] { return this.kind === 'roles' ? page.items as AdminRole[] : []; }
+  clearGroupFilters(): void { this.groupNameFilter.set(''); this.groupReferenceFilter.set(''); this.groupStatusFilter.set('all'); }
   failureKey(): TranslationKey { return adminFailureKey(this.failure()); }
   retry(): void { this.refreshRequested.next(); }
   changePage(page: number): void {
