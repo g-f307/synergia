@@ -35,6 +35,11 @@ async function openPending(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(new RegExp(`/pending-items/${pendingId}`));
 }
 
+function approvalState(page: import('@playwright/test').Page) {
+  return page.getByRole('region', { name: /decisão humana|human decision/i })
+    .locator('.approval-metadata .status-pill').first();
+}
+
 async function expectAccessible(
   page: import('@playwright/test').Page,
   testInfo: import('@playwright/test').TestInfo,
@@ -61,8 +66,10 @@ test.describe.serial('integrated operational journey', () => {
       await expect(secondPage).toHaveURL(/\/profile/);
       await page.getByRole('button', { name: /atualizar|refresh sessions/i }).click();
       await expect(page.locator('.session-list li')).toHaveCount(2);
-      page.once('dialog', (dialog) => dialog.accept());
       await page.getByRole('button', { name: /encerrar outras|end other sessions/i }).click();
+      const confirmation = page.getByRole('dialog');
+      await expect(confirmation).toBeVisible();
+      await confirmation.getByRole('button', { name: /confirmar|confirm/i }).click();
       await expect(page.locator('.session-list li')).toHaveCount(1);
       await secondPage.reload();
       await expect(secondPage).toHaveURL(/\/login/);
@@ -85,12 +92,15 @@ test.describe.serial('integrated operational journey', () => {
     await login(page);
     await expectAccessible(page, testInfo, 'profile-desktop');
     await page.locator('a[href="/imports/new"]').click();
-    await page.getByLabel(/arquivo|file/i).setInputFiles(fixture);
+    const fileInput = page.locator('#import-file');
+    await expect(fileInput).toBeEnabled();
+    await fileInput.setInputFiles(fixture);
     await page.getByRole('button', { name: /enviar|upload/i }).click();
     await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
     executionId = page.url().split('/').pop() ?? '';
     await expect(page.getByText(executionId).first()).toBeVisible();
     await page.locator('a[href="/executions"]').first().click();
+    await page.locator('details.catalog-filters > summary').click();
     await page.getByLabel(/identificador da execução|execution identifier/i).fill(executionId);
     await page.getByLabel(/início do período|period start/i).fill('2026-09-01T08:30');
     const filteredCatalogRequest = page.waitForRequest((request) => {
@@ -112,7 +122,9 @@ test.describe.serial('integrated operational journey', () => {
 
     await page.locator('a[href="/imports/new"]').click();
     await page.getByLabel(/fonte|source/i).selectOption('GMES/OQC');
-    await page.getByLabel(/arquivo|file/i).setInputFiles(qualityFixture);
+    const qualityFileInput = page.locator('#import-file');
+    await expect(qualityFileInput).toBeEnabled();
+    await qualityFileInput.setInputFiles(qualityFixture);
     await page.getByRole('button', { name: /enviar|upload/i }).click();
     await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
     const observableOutput = `${exposed.join('\n')}\n${(await Promise.all(responseBodies)).join('\n')}`;
@@ -190,13 +202,15 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByRole('button', { name: /buscar|pesquisar|search/i }).click();
     await expect(page.getByText('SYN-WO-000001').first()).toBeVisible();
     await page.locator('a[href="/pending-items"]').click();
-    await expect(page.locator('tbody tr').first()).toBeVisible();
-    await page.locator('tbody tr a').first().click();
+    await expect(page).toHaveURL(/\/pending-items(?:\?|$)/);
+    const pendingRow = page.locator('a.pending-row[href^="/pending-items/"]').first();
+    await expect(pendingRow).toBeVisible();
+    await pendingRow.click();
     await expect(page).toHaveURL(/\/pending-items\/\d+/);
     pendingId = page.url().match(/pending-items\/(\d+)/)?.[1] ?? '';
     await page.getByLabel(/justificativa|justification/i).fill('E2E: submit for human decision.');
     await page.getByRole('button', { name: /enviar para|submit for review/i }).click();
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/enviada|submitted/i);
+    await expect(approvalState(page)).toContainText(/enviada|submitted/i);
     await expectAccessible(page, testInfo, 'pending-detail-desktop');
     await testInfo.attach('pending-detail-desktop', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
@@ -206,37 +220,37 @@ test.describe.serial('integrated operational journey', () => {
   test('assigns, returns, resubmits and approves with segregation of duties', async ({ page }, testInfo) => {
     await login(page, managerEmail);
     await openPending(page);
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/submitted/i);
+    await expect(approvalState(page)).toContainText(/submitted/i);
     await page.getByLabel(/assignee/i).fill(managerId);
     await page.getByLabel(/justification/i).fill('E2E: assignment to authorized manager.');
     await page.getByRole('button', { name: /assign review/i }).click();
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/in review/i);
+    await expect(approvalState(page)).toContainText(/in review/i);
     await page.getByLabel(/justification/i).last().fill('E2E: return for additional evidence.');
     await page.getByRole('button', { name: /return for correction/i }).click();
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/returned/i);
+    await expect(approvalState(page)).toContainText(/returned/i);
 
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
     await login(page, operatorEmail);
     await openPending(page);
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/devolvida|returned/i);
+    await expect(approvalState(page)).toContainText(/devolvida|returned/i);
     await page.getByLabel(/justificativa|justification/i).last().fill('E2E: additional evidence supplied.');
     const resubmitted = page.waitForResponse((response) =>
       response.url().includes('/approvals/') && response.url().endsWith('/resubmit'),
     );
     await page.getByRole('button', { name: /reenviar para|resubmit for review/i }).click();
     expect((await resubmitted).status()).toBe(200);
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/enviada|submitted/i);
+    await expect(approvalState(page)).toContainText(/enviada|submitted/i);
 
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
     await login(page, managerEmail);
     await openPending(page);
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/submitted/i);
+    await expect(approvalState(page)).toContainText(/submitted/i);
     await page.getByLabel(/assignee/i).fill(managerId);
     await page.getByLabel(/justification/i).fill('E2E: reassignment after correction.');
     await page.getByRole('button', { name: /assign review/i }).click();
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/in review/i);
+    await expect(approvalState(page)).toContainText(/in review/i);
     await page.getByLabel(/justification/i).last().fill('E2E: evidence verified and approved.');
     await page.getByLabel(/confirmo conscientemente|consciously confirm/i).check();
     const approved = page.waitForResponse((response) =>
@@ -244,7 +258,7 @@ test.describe.serial('integrated operational journey', () => {
     );
     await page.getByRole('button', { name: /^aprovar$|^approve$/i }).click();
     expect((await approved).status()).toBe(200);
-    await expect(page.locator('.approval dl .badge').first()).toContainText(/approved/i);
+    await expect(approvalState(page)).toContainText(/approved/i);
     await expect(page.locator('ol.timeline li')).toHaveCount(6);
     await expectAccessible(page, testInfo, 'approval-history-desktop');
     await testInfo.attach('approval-history-desktop', {
@@ -279,7 +293,9 @@ test.describe.serial('integrated operational journey', () => {
   test('covers rejected upload and temporary API recovery', async ({ page }) => {
     await login(page);
     await page.locator('a[href="/imports/new"]').click();
-    await page.getByLabel(/arquivo|file/i).setInputFiles({ name: 'invalid.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('not an xlsx') });
+    const fileInput = page.locator('#import-file');
+    await expect(fileInput).toBeEnabled();
+    await fileInput.setInputFiles({ name: 'invalid.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('not an xlsx') });
     await page.getByRole('button', { name: /enviar|upload/i }).click();
     await expect(page.getByRole('status')).toContainText(/rejeitado|rejected/i);
 
@@ -292,7 +308,8 @@ test.describe.serial('integrated operational journey', () => {
     await expect(page.getByText(/indisponível|unavailable/i).first()).toBeVisible();
     await page.locator('a[href="/profile"]').first().click();
     await page.locator('a[href="/pending-items"]').click();
-    await expect(page.locator('section.results')).toBeVisible();
+    await expect(page).toHaveURL(/\/pending-items(?:\?|$)/);
+    await expect(page.locator('.pending-results')).toBeVisible();
   });
 
   test('expires a persisted session and redirects without leaking the resource', async ({ page }) => {
@@ -334,7 +351,7 @@ test.describe.serial('integrated operational journey', () => {
     const groupName = `E2E Group ${suffix}`;
     await login(page, adminEmail);
     await page.locator('a[href="/admin"]').click();
-    await page.locator('a[href="/admin/users"]').click();
+    await page.locator('a[href="/admin/users"]').first().click();
     await page.locator('a[href="/admin/users/new"]').click();
     await page.waitForLoadState('networkidle');
     await page.getByLabel(/^nome$|^name$/i).fill(userName);
@@ -350,13 +367,15 @@ test.describe.serial('integrated operational journey', () => {
 
     await page.getByRole('link', { name: /voltar aos usuários|back to users/i }).click();
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
-    await page.locator('a[href="/admin/roles"]').click();
+    await page.locator('a[href="/admin/roles"]').first().click();
     await page.locator('a[href="/admin/roles/new"]').click();
     await page.getByLabel(/chave do papel|role key/i).fill(roleKey);
     await page.getByLabel(/descrição|description/i).fill('E2E scoped administrative role');
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved role creation');
     await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
-    const rolePermissions = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /permissões do papel|role permissions/i }) });
+    await page.locator('[data-section="associations"]').click();
+    const rolePermissions = page.getByRole('region', { name: /permissões do papel|role permissions/i });
+    await rolePermissions.locator('summary').click();
     await rolePermissions.getByLabel(/destino|target/i).selectOption({ label: 'dashboard.read' });
     await rolePermissions.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved role permission');
     await rolePermissions.getByRole('button', { name: /conceder associação|grant association/i }).click();
@@ -364,19 +383,22 @@ test.describe.serial('integrated operational journey', () => {
 
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
     await page.getByRole('link', { name: /voltar à administração|back to administration/i }).click();
-    await page.locator('a[href="/admin/groups"]').click();
+    await page.locator('a[href="/admin/groups"]').first().click();
     await page.locator('a[href="/admin/groups/new"]').click();
     await page.getByLabel(/nome do grupo|group name/i).fill(groupName);
     await page.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved group creation');
     await page.getByRole('button', { name: /^salvar$|^save$/i }).click();
-    const members = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /membros do grupo|group members/i }) });
+    await page.locator('[data-section="associations"]').click();
+    const members = page.getByRole('region', { name: /membros do grupo|group members/i });
+    await members.locator('summary').click();
     await members.getByLabel(/buscar usuário|search user/i).fill(userName);
     await members.getByRole('button', { name: /^buscar$|^search$/i }).click();
     await members.getByLabel(/destino|target/i).selectOption({ label: userName });
     await members.getByLabel(/motivo da ação|reason for this action/i).fill('E2E approved membership');
     await members.getByRole('button', { name: /conceder associação|grant association/i }).click();
     await expect(members.getByRole('link', { name: userName })).toBeVisible();
-    const roles = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /papéis associados|assigned roles/i }) });
+    const roles = page.getByRole('region', { name: /papéis associados|assigned roles/i });
+    await roles.locator('summary').click();
     await roles.getByLabel(/destino|target/i).selectOption({ label: roleKey });
     await roles.getByLabel(/escopo|scope/i).selectOption('organization');
     await roles.locator('select[name="organization"]').selectOption({ index: 1 });
@@ -385,11 +407,14 @@ test.describe.serial('integrated operational journey', () => {
     await expect(roles.getByRole('link', { name: roleKey })).toBeVisible();
 
     await members.getByRole('link', { name: userName }).click();
-    const effective = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /permissões efetivas|effective permissions/i }) });
+    await page.locator('[data-section="associations"]').click();
+    const effective = page.getByRole('region', { name: /permissões efetivas|effective permissions/i });
+    await effective.locator('summary').click();
     await expect(effective.getByText('dashboard.read')).toBeVisible();
     await expect(effective.getByText(/via grupo|via group/i)).toBeVisible();
     await expectAccessible(page, testInfo, 'admin-detail-desktop');
 
+    await page.locator('[data-section="details"]').click();
     const userForm = page.locator('form.admin-form');
     const userReason = userForm.locator('textarea[name="reason"]').first();
     const updatedName = `${userName} Updated`;
@@ -402,11 +427,13 @@ test.describe.serial('integrated operational journey', () => {
     await expect(userForm.getByLabel(/^nome$|^name$/i)).toHaveValue(updatedName);
 
     const changeStatus = async (action: 'block' | 'unblock' | 'deactivate' | 'reactivate', label: RegExp) => {
-      await userReason.fill(`E2E ${action} lifecycle`);
-      if (action === 'block' || action === 'deactivate') page.once('dialog', (dialog) => dialog.accept());
+      await page.getByRole('button', { name: label }).first().click();
+      const dialog = page.locator('.admin-lifecycle-dialog');
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel(/motivo da ação|reason for this action/i).fill(`E2E ${action} lifecycle`);
       const changed = page.waitForResponse((response) =>
         response.url().endsWith(`/${action}`) && response.request().method() === 'POST');
-      await page.getByRole('button', { name: label }).first().click();
+      await dialog.getByRole('button', { name: label }).click();
       expect((await changed).status()).toBe(200);
     };
     await changeStatus('block', /bloquear|block/i);
@@ -418,10 +445,14 @@ test.describe.serial('integrated operational journey', () => {
     await changeStatus('reactivate', /reativar|reactivate/i);
     await expect(page.getByText(/ativo|active/i).first()).toBeVisible();
 
-    const userGroups = page.locator('section.admin-links').filter({ has: page.getByRole('heading', { name: /grupos do usuário|user groups/i }) });
-    page.once('dialog', (dialog) => dialog.accept());
-    await userGroups.getByLabel(/motivo da ação|reason for this action/i).fill('E2E membership removal');
+    await page.locator('[data-section="associations"]').click();
+    const userGroups = page.getByRole('region', { name: /grupos do usuário|user groups/i });
+    await userGroups.locator('summary').click();
     await userGroups.getByRole('button', { name: /revogar|revoke/i }).click();
+    const revokeDialog = page.locator('.admin-lifecycle-dialog');
+    await expect(revokeDialog).toBeVisible();
+    await revokeDialog.getByLabel(/motivo da ação|reason for this action/i).fill('E2E membership removal');
+    await revokeDialog.getByRole('button', { name: /revogar|revoke/i }).click();
     await expect(effective.getByText('dashboard.read')).toHaveCount(0);
     const audit = execFileSync(
       process.env.E2E_PYTHON ?? 'python',
@@ -469,9 +500,11 @@ test.describe.serial('integrated operational journey', () => {
     const firstRevisionUrl = page.url();
     await page.getByRole('button', { name: /pré-visualizar|preview/i }).click();
     await expect(page.getByText('Execução EXEC-SYNTHETIC-001 concluída pelo E2E.')).toBeVisible();
-    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E approved publication');
-    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: /publicar versão|publish version/i }).click();
+    const firstPublishDialog = page.locator('.admin-lifecycle-dialog');
+    await expect(firstPublishDialog).toBeVisible();
+    await firstPublishDialog.getByLabel(/motivo da alteração|reason for change/i).fill('E2E approved publication');
+    await firstPublishDialog.getByRole('button', { name: /publicar versão|publish version/i }).click();
     await expect(page.getByText(/publicada e ativa|published and active/i)).toBeVisible();
     await expectAccessible(page, testInfo, 'notification-template-admin');
     await testInfo.attach('notification-template-published-desktop', {
@@ -506,13 +539,25 @@ test.describe.serial('integrated operational journey', () => {
     await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E replacement draft');
     await page.getByRole('button', { name: /criar rascunho|create draft/i }).click();
     await expect(page).toHaveURL(/\/admin\/notification-templates\/[0-9a-f-]+/);
-    await page.getByLabel(/motivo da alteração|reason for change/i).fill('E2E replacement publication');
-    page.once('dialog', (dialog) => dialog.accept());
+    const secondRevisionUrl = page.url();
     await page.getByRole('button', { name: /publicar versão|publish version/i }).click();
+    const secondPublishDialog = page.locator('.admin-lifecycle-dialog');
+    await expect(secondPublishDialog).toBeVisible();
+    await secondPublishDialog.getByLabel(/motivo da alteração|reason for change/i).fill('E2E replacement publication');
+    await secondPublishDialog.getByRole('button', { name: /publicar versão|publish version/i }).click();
     await expect(page.getByText(/publicada e ativa|published and active/i)).toBeVisible();
     await page.goto(firstRevisionUrl);
-    await expect(page.locator('p strong').filter({ hasText: /publicada e inativa|published and inactive/i })).toBeVisible();
+    const firstRevisionConfiguration = page.getByRole('region', { name: /configuração|configuration/i });
+    await expect(firstRevisionConfiguration.getByText(/publicada e inativa|published and inactive/i)).toBeVisible();
     await expect(page.getByLabel(/título|heading/i)).toHaveValue(firstTitle);
     await expect(page.getByLabel(/título|heading/i)).toHaveAttribute('readonly', '');
+
+    await page.goto(secondRevisionUrl);
+    await page.getByRole('button', { name: /desativar versão|deactivate version/i }).click();
+    const deactivateDialog = page.locator('.admin-lifecycle-dialog');
+    await expect(deactivateDialog).toBeVisible();
+    await deactivateDialog.getByLabel(/motivo da alteração|reason for change/i).fill('E2E approved deactivation');
+    await deactivateDialog.getByRole('button', { name: /desativar versão|deactivate version/i }).click();
+    await expect(page.getByText(/publicada e inativa|published and inactive/i).first()).toBeVisible();
   });
 });

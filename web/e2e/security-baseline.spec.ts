@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const webOrigin = `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '4200'}`;
-const apiOrigin = 'http://127.0.0.1:8000';
+const apiOrigin = `http://127.0.0.1:${process.env.E2E_API_PORT ?? '8000'}`;
 
 test('published build runs under its definitive CSP and security headers', async ({ page }) => {
   const policyViolations: string[] = [];

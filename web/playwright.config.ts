@@ -5,7 +5,9 @@ const databaseUrl = process.env.DATABASE_URL ??
 const browserChannel = process.env.E2E_BROWSER_CHANNEL;
 const browserExecutablePath = process.env.E2E_BROWSER_EXECUTABLE_PATH;
 const recordVideo = process.env.E2E_RECORD_VIDEO !== 'false';
+const apiPort = process.env.E2E_API_PORT ?? '8000';
 const webPort = process.env.E2E_WEB_PORT ?? '4200';
+const apiOrigin = `http://127.0.0.1:${apiPort}`;
 const webOrigin = `http://127.0.0.1:${webPort}`;
 
 export default defineConfig({
@@ -24,9 +26,9 @@ export default defineConfig({
   webServer: [
     {
       command: process.env.E2E_API_COMMAND ??
-        'python -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
+        `python -m uvicorn app.main:app --host 127.0.0.1 --port ${apiPort}`,
       cwd: '../backend',
-      url: 'http://127.0.0.1:8000/health',
+      url: `${apiOrigin}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
@@ -52,7 +54,7 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         ...process.env,
-        SYNERGIA_API_ORIGIN: 'http://127.0.0.1:8000',
+        SYNERGIA_API_ORIGIN: apiOrigin,
       },
     },
   ],
