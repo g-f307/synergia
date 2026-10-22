@@ -54,6 +54,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [roteiro operacional reproduzível da Etapa 5](docs/stage-5-demonstration.md);
 - [auditoria de paridade entre FastAPI e Angular](docs/web-api-parity.md);
 - [design system, ativos e fundação web](docs/web-design-system.md);
+- [norma obrigatória de implementação visual do frontend](docs/frontend-implementation-standard.md);
 - [administração de grupos, papéis, permissões e associações](docs/access-control-administration.md);
 - [modelo persistente de identidade e acesso](docs/identity-data-model.md);
 - [autenticação JWT, refresh, logout e revogação](docs/authentication.md);

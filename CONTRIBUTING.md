@@ -10,6 +10,13 @@ Leia a [arquitetura vigente](docs/architecture.md), as
 [matriz de rastreabilidade](docs/traceability-matrix.md). Para preparar a
 máquina, siga [local-environment.md](docs/local-environment.md).
 
+Mudanças no frontend devem seguir obrigatoriamente a
+[norma de implementação visual](docs/frontend-implementation-standard.md), o
+[design system](docs/web-design-system.md) e os contratos de
+[internacionalização e acessibilidade](docs/web-internationalization-accessibility.md).
+Uma exceção visual precisa ser justificada na issue e no PR e aprovada na
+revisão; não deve surgir apenas como variação local de uma tela.
+
 Não inclua credenciais, `.env`, dados pessoais ou dados reais. Use somente as
 massas controladas de `data/synthetic/` em testes e evidências.
 
@@ -74,6 +81,10 @@ O PR deve conter:
 - atualização da matriz quando uma capacidade ou estado mudar;
 - checklist de ausência de segredos, dados reais, caches e temporários.
 
+Quando houver alteração visual, o PR também deve informar a tela equivalente
+usada como referência e preencher o checklist da
+[norma visual](docs/frontend-implementation-standard.md#checklist-de-aceite-do-pull-request).
+
 Não faça merge antes da revisão e dos quatro jobs da CI aprovados. O autor não
 deve ser o único aprovador quando houver outra pessoa disponível.
 
@@ -92,6 +103,8 @@ Uma issue pode ser encerrada quando todos os itens aplicáveis forem verdadeiros
 - nenhum cache, ambiente virtual, relatório local ou temporário versionado;
 - PR revisado e conversas bloqueantes resolvidas;
 - critérios de aceite comprovados no PR;
+- norma visual atendida ou desvios explicitamente justificados e aprovados,
+  quando houver mudança no frontend;
 - matriz de rastreabilidade atualizada;
 - merge realizado por squash e issue encerrada pelo PR;
 - ambiente local sincronizado e branches obsoletas limpas após o merge.

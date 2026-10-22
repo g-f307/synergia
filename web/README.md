@@ -10,6 +10,13 @@ permanece somente em memória e o backend continua sendo a autoridade de acesso.
 
 ## Desenvolvimento
 
+Antes de criar ou alterar uma tela, leia a
+[norma obrigatória de implementação visual](../docs/frontend-implementation-standard.md).
+Ela define shell, hierarquia, scroll, filtros, listas, formulários, modais,
+acessibilidade e o checklist exigido na revisão. O
+[design system](../docs/web-design-system.md) continua sendo a referência para
+tokens, ativos e componentes compartilhados.
+
 Instale exatamente as versões do lockfile e inicie o servidor:
 
 ```bash
@@ -30,18 +37,18 @@ A aplicação fica em <http://localhost:4200>. O endereço da API está em
 npm run lint
 npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 npm run build
+npm run e2e
 ```
 
 O build de produção é gerado em `dist/synergia-web/`. A CI usa a versão de
-Node.js declarada em `.nvmrc` e executa os três comandos acima em todo PR para
+Node.js declarada em `.nvmrc` e executa os comandos aplicáveis em todo PR para
 `main`.
 
 ## Limites atuais
 
-Não há framework end-to-end configurado nesta etapa. Playwright/RPA está
-planejado e sua adoção exige issue e configuração próprias. O protótipo
-estático publicado em `prototype-pages` é uma referência separada e não faz
-parte deste diretório.
+O protótipo estático publicado em `prototype-pages` é uma referência separada
+e não faz parte deste diretório. Ele não substitui a norma visual nem deve ser
+copiado como dependência de execução.
 
 Consulte a [arquitetura](../docs/architecture.md) e a
 [reconstrução do ambiente](../docs/local-environment.md) para o contexto

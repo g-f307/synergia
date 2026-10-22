@@ -57,9 +57,9 @@ def validate() -> None:
         raise ValueError(f"Tokens visuais ausentes: {missing}")
     for asset in (
         "logo-horizontal.png",
-        "logo-negativa-horizontal.png",
+        "logo-dark-horizontal.svg",
+        "synergia-logo-vertical.svg",
         "simbolo.png",
-        "simbolo-negativo.png",
         "lgeitextttf-regular.ttf",
     ):
         if asset not in css + shell:
