@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { ApiFailure } from '../../shared/api/api-error';
 import { Indicators } from '../../shared/api/operational.models';
 import { I18nService } from '../../shared/i18n/i18n.service';
+import { TranslationKey } from '../../shared/i18n/i18n.models';
 import { StateComponent } from '../../shared/ui/ui-kit';
 import { SessionService } from '../../core/session.service';
 import { DashboardService } from './dashboard.service';
@@ -19,99 +20,77 @@ type QuantityKey = keyof Indicators['quantities'];
     <section class="dashboard" aria-labelledby="dashboard-title" [attr.aria-busy]="state() === 'loading'">
       <header class="page-header">
         <div>
-          <p class="eyebrow">{{ i18n.t('dashboard.eyebrow') }}</p>
-          <h1 id="dashboard-title">{{ i18n.t('dashboard.title') }}</h1>
-          <p class="page-subtitle">{{ i18n.t('dashboard.subtitle') }}</p>
+          <h1 id="dashboard-title" class="sr-only">{{ i18n.t('navigation.dashboard') }}</h1>
+          <form class="dashboard-search" role="search" (submit)="submitQuickSearch($event)">
+            <img src="/assets/icons/search.svg" alt="" aria-hidden="true">
+            <input type="search" [value]="quickSearchQuery()" (input)="quickSearchQuery.set($any($event.target).value)" [attr.aria-label]="i18n.t('dashboard.quickSearchPlaceholder')" [placeholder]="i18n.t('dashboard.quickSearchPlaceholder')">
+            <select [value]="quickSearchType()" (change)="quickSearchType.set($any($event.target).value)" [attr.aria-label]="i18n.t('dashboard.quickSearchType')">
+              <option value="workorder">Workorder</option><option value="lot">{{ i18n.t('queries.lot') }}</option><option value="serial">Serial</option>
+            </select>
+            <button class="sr-only" type="submit">{{ i18n.t('dashboard.quickSearchAction') }}</button>
+          </form>
+          @if (data()?.generated_at) { <p class="updated">{{ i18n.t('dashboard.updatedAt') }} {{ i18n.formatDate(data()!.generated_at, { dateStyle: 'short', timeStyle: 'short' }) }}</p> }
         </div>
-        <button type="button" class="secondary refresh" (click)="load()" [disabled]="state() === 'loading'">
-          <img src="/assets/icons/refresh.svg" alt="" aria-hidden="true">
-          {{ i18n.t('dashboard.refresh') }}
-        </button>
+        <button type="button" class="secondary refresh" (click)="load()" [disabled]="state() === 'loading'"><img src="/assets/icons/refresh.svg" alt="" aria-hidden="true">{{ i18n.t('dashboard.refresh') }}</button>
       </header>
 
-      <form class="filters dashboard-filters" aria-labelledby="dashboard-filters-title" (submit)="applyFilters($event)">
-        <h2 id="dashboard-filters-title">{{ i18n.t('dashboard.filters') }}</h2>
-        <label>{{ i18n.t('dashboard.organization') }}
-          <select [value]="organizationId()" (change)="organizationId.set($any($event.target).value)">
-            <option value="">{{ i18n.t('dashboard.allOrganizations') }}</option>
-            @for (organization of data()?.organizations ?? []; track organization.id) {
-              <option [value]="organization.id">{{ organization.name }} — {{ organization.code }}</option>
-            }
-          </select>
-        </label>
-        <label>{{ i18n.t('dashboard.dateFrom') }}<input type="date" [value]="dateFrom()" (input)="dateFrom.set($any($event.target).value)"></label>
-        <label>{{ i18n.t('dashboard.dateTo') }}<input type="date" [value]="dateTo()" (input)="dateTo.set($any($event.target).value)"></label>
-        <div class="filter-actions"><button type="submit">{{ i18n.t('dashboard.applyFilters') }}</button><button type="button" class="secondary" (click)="clearFilters()">{{ i18n.t('dashboard.clearFilters') }}</button></div>
-        @if (filterError()) { <p class="error filter-error" role="alert">{{ filterError() }}</p> }
-      </form>
+      <div class="dashboard-surface">
+        <details class="dashboard-filters">
+          <summary>{{ i18n.t('dashboard.filters') }}</summary>
+          <form (submit)="applyFilters($event)">
+            <label>{{ i18n.t('dashboard.organization') }}<select [value]="organizationId()" (change)="organizationId.set($any($event.target).value)"><option value="">{{ i18n.t('dashboard.allOrganizations') }}</option>@for (organization of data()?.organizations ?? []; track organization.id) {<option [value]="organization.id">{{ organization.name }} — {{ organization.code }}</option>}</select></label>
+            <label>{{ i18n.t('dashboard.dateFrom') }}<input type="date" [value]="dateFrom()" (input)="dateFrom.set($any($event.target).value)"></label>
+            <label>{{ i18n.t('dashboard.dateTo') }}<input type="date" [value]="dateTo()" (input)="dateTo.set($any($event.target).value)"></label>
+            <div class="filter-actions"><button type="submit">{{ i18n.t('dashboard.applyFilters') }}</button><button type="button" class="secondary" (click)="clearFilters()">{{ i18n.t('dashboard.clearFilters') }}</button></div>
+            @if (filterError()) { <p class="error filter-error" role="alert">{{ filterError() }}</p> }
+          </form>
+        </details>
 
-      <section class="context" aria-labelledby="dashboard-context-title">
-        <div>
-          <h2 id="dashboard-context-title">{{ i18n.t('dashboard.context') }}</h2>
-          <p>{{ scopeDescription() }}</p>
-        </div>
-        <dl>
-          <div><dt>{{ i18n.t('dashboard.source') }}</dt><dd class="technical">{{ data()?.source ?? 'GET /indicators' }}</dd></div>
-          <div><dt>{{ i18n.t('dashboard.updatedAt') }}</dt><dd>{{ data()?.generated_at ? i18n.formatDate(data()!.generated_at, { dateStyle: 'short', timeStyle: 'medium' }) : i18n.t('common.notAvailable') }}</dd></div>
-          <div><dt>{{ i18n.t('dashboard.receivedAt') }}</dt><dd>{{ receivedAt() ? i18n.formatDate(receivedAt()!, { dateStyle: 'short', timeStyle: 'medium' }) : i18n.t('common.notAvailable') }}</dd></div>
-        </dl>
-        <p class="limitation"><strong>{{ i18n.t('dashboard.limitationTitle') }}</strong> {{ i18n.t('dashboard.limitation') }}</p>
-      </section>
+        @if (state() === 'loading') { <syn-state state="loading" [title]="i18n.t('dashboard.loadingTitle')" [message]="i18n.t('dashboard.loading')" /> }
+        @else if (state() === 'forbidden') { <syn-state state="forbidden" [title]="i18n.t('dashboard.forbiddenTitle')" [message]="i18n.t('dashboard.forbidden')" /> }
+        @else if (state() === 'unavailable') { <syn-state state="unavailable" [title]="i18n.t('dashboard.unavailableTitle')" [message]="i18n.t('dashboard.unavailable')"><button type="button" (click)="load()">{{ i18n.t('dashboard.tryAgain') }}</button></syn-state> }
+        @else if (state() === 'error') { <syn-state state="error" [title]="i18n.t('dashboard.errorTitle')" [message]="i18n.t('dashboard.error')" /> }
+        @else {
+          @if (isEmpty()) { <syn-state state="success" [title]="i18n.t('dashboard.emptyTitle')" [message]="i18n.t('dashboard.empty')" /> }
 
-      @if (state() === 'loading') {
-        <syn-state state="loading" [title]="i18n.t('dashboard.loadingTitle')" [message]="i18n.t('dashboard.loading')" />
-      } @else if (state() === 'forbidden') {
-        <syn-state state="forbidden" [title]="i18n.t('dashboard.forbiddenTitle')" [message]="i18n.t('dashboard.forbidden')" />
-      } @else if (state() === 'unavailable') {
-        <syn-state state="unavailable" [title]="i18n.t('dashboard.unavailableTitle')" [message]="i18n.t('dashboard.unavailable')"><button type="button" (click)="load()">{{ i18n.t('dashboard.tryAgain') }}</button></syn-state>
-      } @else if (state() === 'error') {
-        <syn-state state="error" [title]="i18n.t('dashboard.errorTitle')" [message]="i18n.t('dashboard.error')" />
-      } @else {
-        @if (state() === 'partial') {
-          <syn-state state="partial" [title]="i18n.t('dashboard.partialTitle')" [message]="i18n.t('dashboard.partial')" />
-        }
-        @if (isEmpty()) {
-          <syn-state state="success" [title]="i18n.t('dashboard.emptyTitle')" [message]="i18n.t('dashboard.empty')" />
-        }
-        <div class="indicator-grid" aria-label="Indicadores operacionais">
-          <article class="indicator-card">
-            <div class="indicator-heading"><img src="/assets/icons/processing.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.executions') }}</h2></div>
-            <p class="indicator-value">{{ display(totalExecutions()) }}</p>
-            <p class="indicator-detail">{{ i18n.t('dashboard.executionsDetail') }}</p>
-            <a routerLink="/dashboard/related/executions" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewExecutions') }} <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="indicator-card">
-            <div class="indicator-heading"><img src="/assets/icons/production.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.workorders') }}</h2></div>
-            <p class="indicator-value">{{ display(data()?.workorders?.total) }}</p>
-            <p class="indicator-detail">{{ i18n.t('dashboard.partialReleases') }}: {{ display(data()?.workorders?.partially_released) }}</p>
-            <a routerLink="/dashboard/related/workorders" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewWorkorders') }} <span aria-hidden="true">→</span></a>
-          </article>
-          <article class="indicator-card">
-            <div class="indicator-heading"><img src="/assets/icons/queue.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('dashboard.pending') }}</h2></div>
-            <p class="indicator-value">{{ display(totalPending()) }}</p>
-            <p class="indicator-detail">{{ i18n.t('dashboard.pendingDetail') }}</p>
-            <a routerLink="/dashboard/related/pending-items" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewPending') }} <span aria-hidden="true">→</span></a>
-          </article>
-        </div>
-
-        <section class="card quantities" aria-labelledby="quantities-title">
-          <h2 id="quantities-title">{{ i18n.t('dashboard.quantities') }}</h2>
-          <div class="quantity-list">
-            @for (item of quantityItems; track item.key) {
-              <div><span>{{ i18n.t(item.label) }}</span><strong>{{ display(data()?.quantities?.[item.key]) }}</strong></div>
-            }
+          <div class="metric-grid" aria-label="Indicadores operacionais">
+            <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/run.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.executions') }}</span></div><strong class="indicator-value">{{ display(totalExecutions()) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.completedCount') }}: {{ display(completedExecutions()) }}</small><a routerLink="/executions" [queryParams]="executionNavigationContext()">{{ i18n.t('dashboard.viewExecutions') }}</a></article>
+            <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/production.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.workorders') }}</span></div><strong class="indicator-value">{{ display(data()?.workorders?.total) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.partialReleases') }}: {{ display(data()?.workorders?.partially_released) }}</small><a routerLink="/dashboard/related/workorders" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewWorkorders') }}</a></article>
+            <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/queue.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.pending') }}</span></div><strong class="indicator-value">{{ display(totalPending()) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.openCount') }}: {{ display(openPending()) }}</small><a routerLink="/pending-items" [queryParams]="{ status: 'open' }">{{ i18n.t('dashboard.viewPending') }}</a></article>
           </div>
-          <p class="aggregate-note">{{ i18n.t('dashboard.auditNote') }}</p>
-        </section>
-      }
+
+          <div class="chart-grid">
+            <section class="chart-card quantities-chart" aria-labelledby="quantities-title">
+              <header><h2 id="quantities-title">{{ i18n.t('dashboard.quantities') }}</h2></header>
+              <div class="quantity-bars">
+                @for (item of quantityItems; track item.key) {
+                  <div class="quantity-bar"><div class="bar-label"><span>{{ i18n.t(item.label) }}</span><strong>{{ display(data()?.quantities?.[item.key]) }}</strong></div><div class="bar-track"><span [style.width.%]="quantityWidth(data()?.quantities?.[item.key])" [style.background-color]="item.color"></span></div></div>
+                }
+              </div>
+            </section>
+
+            <section class="chart-card execution-chart" aria-labelledby="execution-chart-title">
+              <header><h2 id="execution-chart-title">{{ i18n.t('dashboard.executionStatus') }}</h2></header>
+              <div class="status-chart-layout">
+                <div class="status-donut" role="img" [attr.aria-label]="i18n.t('dashboard.executionStatus') + ': ' + display(totalExecutions())" [style.background]="executionDonutBackground()"><span><strong>{{ display(totalExecutions()) }}</strong><small>{{ i18n.t('dashboard.executions') }}</small></span></div>
+                <div class="status-legend">
+                  @for (entry of executionEntries(); track entry[0]) { <div class="status-row"><i [style.background-color]="statusColor(entry[0])" aria-hidden="true"></i><span>{{ statusLabel(entry[0]) }}</span><strong>{{ entry[1] }}</strong></div> }
+                </div>
+              </div>
+            </section>
+          </div>
+        }
+      </div>
     </section>
   `,
   styles: [`
-    .dashboard{display:grid;gap:var(--syn-space-5)}.page-header{border-bottom:1px solid var(--syn-border);margin:0;padding-bottom:var(--syn-space-4)}
-    .refresh{gap:8px}.refresh img,.indicator-heading img{height:20px;width:20px}.dashboard-filters{align-items:end;display:grid;gap:12px;grid-template-columns:minmax(12rem,1.5fr) repeat(2,minmax(10rem,1fr)) auto}.dashboard-filters h2{font-size:1rem;grid-column:1/-1;margin:0}.filter-actions{display:flex;gap:8px}.filter-error{grid-column:1/-1;margin:0}.context{align-items:start;background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:var(--syn-radius);display:grid;gap:16px;grid-template-columns:minmax(15rem,1fr) auto;padding:16px 20px}.context h2{font-size:1rem;margin-bottom:4px}.context p{color:var(--syn-text-secondary);margin:0}.context dl{display:flex;gap:24px;margin:0}.context dl div{display:grid;gap:3px}.context dt{color:var(--syn-text-secondary);font-size:.75rem}.context dd{font-size:.8125rem;margin:0}.context .limitation{border-top:1px solid var(--syn-border);grid-column:1/-1;padding-top:12px}
-    .indicator-grid{display:grid;gap:var(--syn-space-4);grid-template-columns:repeat(3,minmax(0,1fr))}.indicator-card{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:var(--syn-radius);box-shadow:var(--syn-shadow);display:flex;flex-direction:column;min-height:210px;padding:20px}.indicator-heading{align-items:center;display:flex;gap:10px}.indicator-heading img{background:var(--syn-primary-light);border-radius:var(--syn-radius-sm);box-sizing:content-box;padding:8px}.indicator-heading h2{font-size:1rem;margin:0}.indicator-value{font-family:LGEIHeadline,sans-serif;font-size:clamp(2rem,4vw,2.75rem);font-weight:600;line-height:1;margin:24px 0 8px}.indicator-detail,.query-unavailable{color:var(--syn-text-secondary);font-size:.8125rem}.indicator-card a{font-weight:600;margin-top:auto;text-decoration:none}.query-unavailable{margin-top:auto}.quantities{margin-top:4px}.quantity-list{display:grid;gap:0;grid-template-columns:repeat(4,1fr)}.quantity-list div{border-right:1px solid var(--syn-border);display:grid;gap:8px;padding:8px 20px}.quantity-list div:first-child{padding-left:0}.quantity-list div:last-child{border:0}.quantity-list span{color:var(--syn-text-secondary);font-size:.8125rem}.quantity-list strong{font-family:JetBrainsMono,monospace;font-size:1.375rem}.aggregate-note{border-top:1px solid var(--syn-border);color:var(--syn-text-secondary);font-size:.8125rem;margin:18px 0 0;padding-top:14px}
-    @media(max-width:1100px){.dashboard-filters{grid-template-columns:1fr 1fr}.filter-actions{align-self:end}.indicator-grid{grid-template-columns:1fr 1fr}.indicator-card:last-child{grid-column:1/-1}.context{grid-template-columns:1fr}.context .limitation{grid-column:auto}.context dl{border-top:1px solid var(--syn-border);padding-top:12px}.quantity-list{grid-template-columns:1fr 1fr}.quantity-list div{border-bottom:1px solid var(--syn-border)}.quantity-list div:nth-child(2){border-right:0}.quantity-list div:nth-child(3){padding-left:0}.quantity-list div:nth-child(n+3){border-bottom:0;padding-top:16px}}
-    @media(max-width:600px){.dashboard-filters{grid-template-columns:1fr}.filter-actions{display:grid;grid-template-columns:1fr 1fr}.indicator-grid{grid-template-columns:1fr}.indicator-card:last-child{grid-column:auto}.context dl{display:grid;gap:12px}.page-header{align-items:stretch}.page-header button{width:100%}.quantity-list{grid-template-columns:1fr}.quantity-list div,.quantity-list div:nth-child(3){border-bottom:1px solid var(--syn-border);border-right:0;padding:14px 0}.quantity-list div:last-child{border-bottom:0}}
+    :host{display:block;height:100%;min-height:0}.dashboard{--line:color-mix(in srgb,var(--syn-text) 9%,transparent);background:var(--syn-bg-card);border:1px solid var(--line);border-radius:28px;display:grid;gap:20px;grid-template-rows:auto minmax(0,1fr);height:100%;overflow:hidden;padding:clamp(20px,2.5vw,34px)}.sr-only{height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;clip:rect(0,0,0,0);white-space:nowrap}.page-header{align-items:center;margin:0}.updated{color:var(--syn-text-secondary);font-size:.78rem;margin:0}.refresh{background:var(--syn-bg-card);border-radius:999px;color:var(--syn-text);gap:8px}.refresh img{height:18px;width:18px}.dashboard-surface{display:grid;gap:18px;min-height:0;overflow-x:hidden;overflow-y:auto;padding-right:4px;scrollbar-gutter:stable}.dashboard-filters{background:var(--syn-bg);border:1px solid var(--line);border-radius:14px;padding:0 16px}.dashboard-filters summary{cursor:pointer;font-size:.875rem;font-weight:600;padding:13px 0}.dashboard-filters form{align-items:end;border-top:1px solid var(--line);display:grid;gap:12px;grid-template-columns:1.5fr 1fr 1fr auto;padding:16px 0}.filter-actions{display:flex;gap:8px}.filter-actions button{border-radius:999px}.filter-error{grid-column:1/-1;margin:0}.metric-grid{border:1px solid var(--line);border-radius:18px;display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden}.metric{display:grid;gap:7px;min-height:154px;padding:20px 24px}.metric+.metric{border-left:1px solid var(--line)}.metric-heading{align-items:center;color:var(--syn-text-secondary);display:flex;font-size:.82rem;gap:10px}.metric-badge{align-items:center;background:var(--syn-primary-light);border:1px solid color-mix(in srgb,var(--syn-primary) 16%,transparent);border-radius:11px;display:inline-flex;height:36px;justify-content:center;width:36px}.metric-badge img{filter:none;height:18px;width:18px}.metric small{color:var(--syn-text-secondary);font-size:.82rem}.metric strong{font-family:LGEIHeadline,sans-serif;font-size:2.3rem;line-height:1}.metric a{color:var(--syn-primary);font-size:.82rem;font-weight:600;margin-top:auto;text-decoration:none}.chart-grid{display:grid;gap:18px;grid-template-columns:1.25fr 1fr}.chart-card{border:1px solid var(--line);border-radius:18px;padding:22px}.chart-card h2{font-size:1rem;margin:0}.chart-card header{margin-bottom:24px}.quantity-bars{display:grid;gap:17px}.quantity-bar{display:grid;gap:7px}.bar-label{display:flex;justify-content:space-between}.bar-label span,.status-row>span{color:var(--syn-text-secondary);font-size:.8rem}.bar-track{background:var(--syn-bg);border-radius:999px;height:10px;overflow:hidden}.bar-track span{border-radius:inherit;display:block;height:100%;min-width:2px}.status-chart-layout{align-items:center;display:grid;gap:26px;grid-template-columns:148px minmax(0,1fr)}.status-donut{align-items:center;aspect-ratio:1;border-radius:50%;display:flex;justify-content:center;position:relative;width:148px}.status-donut::after{background:var(--syn-bg-card);border-radius:50%;content:"";inset:22px;position:absolute}.status-donut>span{display:grid;position:relative;text-align:center;z-index:1}.status-donut strong{font-family:LGEIHeadline,sans-serif;font-size:1.8rem;line-height:1}.status-donut small{color:var(--syn-text-secondary);font-size:.72rem;margin-top:5px}.status-legend{display:grid;gap:12px}.status-row{align-items:center;display:grid;gap:9px;grid-template-columns:10px minmax(80px,1fr) 30px}.status-row i{border-radius:50%;height:9px;width:9px}.status-row strong{text-align:right}.partial{margin:0}
+    .page-header{align-items:flex-start}.refresh{min-height:42px}
+    .page-header>div{display:grid;gap:8px;min-width:min(100%,380px)}.dashboard-search{align-items:center;background:var(--syn-bg);border:1px solid transparent;border-radius:999px;display:grid;grid-template-columns:20px minmax(0,1fr) auto;max-width:380px;min-height:42px;padding:4px 8px 4px 14px;transition:border-color var(--syn-transition),box-shadow var(--syn-transition)}.dashboard-search:focus-within{border-color:color-mix(in srgb,var(--syn-primary) 38%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--syn-primary) 10%,transparent)}.dashboard-search>img{height:17px;width:17px}.dashboard-search input,.dashboard-search select{background:transparent;border:0;color:var(--syn-text);min-height:32px;outline:0}.dashboard-search input{min-width:0;padding:0 6px}.dashboard-search input::-webkit-search-cancel-button{cursor:pointer}.dashboard-search select{border-left:1px solid var(--line);border-radius:0;font-size:.72rem;padding:0 5px 0 9px}.dashboard-search input::placeholder{color:var(--syn-text-secondary)}
+    .dashboard-surface{align-content:start;grid-auto-rows:max-content}
+    @media(max-width:900px){.dashboard-filters form{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}}
+    @media(max-width:440px){.status-chart-layout{grid-template-columns:1fr}.status-donut{margin-inline:auto}}
+    @media(max-width:600px){.dashboard{border-radius:20px;padding:18px}.page-header{align-items:stretch}.page-header button{width:100%}.metric-grid{grid-template-columns:1fr}.metric+.metric{border-left:0;border-top:1px solid var(--line)}.dashboard-filters form{grid-template-columns:1fr}.filter-actions{display:grid;grid-template-columns:1fr 1fr}.chart-card{padding:18px}}
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -127,18 +106,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly dateFrom = signal(this.route.snapshot.queryParamMap.get('dateFrom') ?? '');
   readonly dateTo = signal(this.route.snapshot.queryParamMap.get('dateTo') ?? '');
   readonly filterError = signal('');
+  readonly quickSearchQuery = signal('');
+  readonly quickSearchType = signal<'workorder' | 'lot' | 'serial'>('workorder');
   private request?: Subscription;
   readonly navigationContext = computed(() => ({
     organization: this.organizationId() || null,
     dateFrom: this.dateFrom() || null,
     dateTo: this.dateTo() || null
   }));
-  readonly quantityItems: Array<{ key: QuantityKey; label: 'dashboard.planned' | 'dashboard.produced' | 'dashboard.received' | 'dashboard.released' }> = [
-    { key: 'planned', label: 'dashboard.planned' }, { key: 'produced', label: 'dashboard.produced' },
-    { key: 'received', label: 'dashboard.received' }, { key: 'released', label: 'dashboard.released' }
+  readonly executionNavigationContext = computed(() => ({
+    organization_id: this.organizationId() || null,
+    date_from: this.dateFrom() || null,
+    date_to: this.dateTo() || null,
+    page: 1,
+    sort: 'newest'
+  }));
+  readonly quantityItems: Array<{ key: QuantityKey; label: 'dashboard.planned' | 'dashboard.produced' | 'dashboard.received' | 'dashboard.released'; color: string }> = [
+    { key: 'planned', label: 'dashboard.planned', color: '#5577b8' }, { key: 'produced', label: 'dashboard.produced', color: '#567f9f' },
+    { key: 'received', label: 'dashboard.received', color: '#2e8c87' }, { key: 'released', label: 'dashboard.released', color: '#39805f' }
   ];
   readonly totalExecutions = computed(() => this.sum(this.data()?.executions));
+  readonly completedExecutions = computed(() => {
+    const executions = this.data()?.executions;
+    return executions ? (executions['completed'] ?? 0) + (executions['completed_with_errors'] ?? 0) : undefined;
+  });
   readonly totalPending = computed(() => this.sum(this.data()?.pending_items));
+  readonly openPending = computed(() => {
+    const pendingItems = this.data()?.pending_items;
+    return pendingItems ? (pendingItems['open'] ?? 0) : undefined;
+  });
+  readonly executionEntries = computed(() => Object.entries(this.data()?.executions ?? {}).sort((a, b) => b[1] - a[1]));
+  readonly executionDonutBackground = computed(() => {
+    const entries = this.executionEntries();
+    const total = entries.reduce((sum, entry) => sum + entry[1], 0);
+    if (total === 0) return 'conic-gradient(#d7d9de 0 100%)';
+    let start = 0;
+    const segments = entries.map(([status, count]) => {
+      const end = start + (count / total) * 100;
+      const segment = `${this.statusColor(status)} ${start}% ${end}%`;
+      start = end;
+      return segment;
+    });
+    return `conic-gradient(${segments.join(', ')})`;
+  });
   readonly isEmpty = computed(() => this.state() === 'ready' && [this.totalExecutions(), this.totalPending(), this.data()?.workorders?.total].every((value) => value === 0));
   readonly scopeDescription = computed(() => {
     const permission = this.session.profile()?.permissions.find((item) => item.key === 'dashboard.read');
@@ -149,6 +159,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void { this.load(); }
   ngOnDestroy(): void { this.request?.unsubscribe(); }
+  submitQuickSearch(event: Event): void {
+    event.preventDefault();
+    const query = this.quickSearchQuery().trim();
+    if (!query) return;
+    void this.router.navigate(['/search'], {
+      queryParams: { type: this.quickSearchType(), query, page: 1, pageSize: 25, sort: 'updated_desc' }
+    });
+  }
   applyFilters(event: Event): void {
     event.preventDefault();
     if (this.dateFrom() && this.dateTo() && this.dateFrom() > this.dateTo()) {
@@ -165,6 +183,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
   clearFilters(): void {
     this.organizationId.set(''); this.dateFrom.set(''); this.dateTo.set(''); this.filterError.set('');
     void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }).then(() => this.load());
+  }
+  quantityWidth(value: number | null | undefined): number {
+    if (value === null || value === undefined) return 0;
+    const values = Object.values(this.data()?.quantities ?? {}).filter((item): item is number => typeof item === 'number');
+    const maximum = Math.max(...values, 0);
+    return maximum > 0 ? (value / maximum) * 100 : 0;
+  }
+  distributionWidth(value: number, entries: Array<[string, number]>): number {
+    const maximum = Math.max(...entries.map((entry) => entry[1]), 0);
+    return maximum > 0 ? (value / maximum) * 100 : 0;
+  }
+  statusLabel(value: string): string {
+    const labels: Record<string, TranslationKey> = {
+      completed: 'dashboard.status.completed',
+      completed_with_errors: 'dashboard.status.completedWithErrors',
+      consolidating: 'dashboard.status.consolidating',
+      failed: 'dashboard.status.failed',
+      pending: 'dashboard.status.pending',
+      validating: 'dashboard.status.validating',
+      validation_failed: 'dashboard.status.validationFailed'
+    };
+    if (labels[value]) return this.i18n.t(labels[value]);
+    return value.replaceAll('_', ' ').replace(/^./, (character) => character.toUpperCase());
+  }
+  statusColor(value: string): string {
+    const colors: Record<string, string> = {
+      completed: '#39805f',
+      completed_with_errors: '#d49327',
+      consolidating: '#5577b8',
+      failed: '#c33f52',
+      pending: '#8a8f98',
+      validating: '#6b63a8',
+      validation_failed: '#b4513d'
+    };
+    return colors[value] ?? '#68758a';
   }
   load(): void {
     this.request?.unsubscribe();

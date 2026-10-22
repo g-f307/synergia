@@ -21,6 +21,47 @@ describe('NotificationCenterComponent', () => {
     fixture = TestBed.createComponent(NotificationCenterComponent); fixture.detectChanges();
   });
   it('renders unread, consolidated and inaccessible resources safely', () => { response.next(notificationPage([notification({ occurrence_count: 3 }), notification({ id: '88888888-8888-4888-8888-888888888888', resource_url: null, resource_available: false })])); fixture.detectChanges(); const text = fixture.nativeElement.textContent as string; expect(text).toContain('Não lida'); expect(text).toContain('3 ocorrências'); expect(text).toContain('Recurso removido ou inacessível'); expect(fixture.nativeElement.querySelectorAll('.notification-list a').length).toBe(1); });
+  it('uses the shared operator frame with a compact scrolling notification surface', () => {
+    response.next(notificationPage([notification()]));
+    fixture.detectChanges();
+    const page = fixture.nativeElement.querySelector('.notifications-page') as HTMLElement;
+    const surface = fixture.nativeElement.querySelector('.notifications-surface') as HTMLElement;
+
+    expect(fixture.nativeElement.querySelector('h1.sr-only')?.textContent).toContain('Notificações');
+    expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
+    expect(fixture.nativeElement.querySelector('details.notification-filters')).not.toBeNull();
+    expect(getComputedStyle(page).overflow).toBe('hidden');
+    expect(getComputedStyle(surface).overflowY).toBe('auto');
+  });
+  it('presents the inbox summary before filters without a decorative unread badge', () => {
+    response.next(notificationPage([notification()]));
+    fixture.detectChanges();
+    const surface = fixture.nativeElement.querySelector('.notifications-surface') as HTMLElement;
+    const heading = surface.querySelector('.feed-heading') as HTMLElement;
+    const filters = surface.querySelector('.notification-filters') as HTMLElement;
+
+    expect(heading.textContent).toContain('Sua caixa de notificações');
+    expect(heading.textContent).toContain('Acompanhe eventos operacionais respeitando seu acesso atual.');
+    expect(heading.textContent).toContain('1 resultado(s)');
+    expect(heading.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.toolbar-icon')).toBeNull();
+    expect(filters.querySelector('.filter-toggle-icon')?.textContent).toContain('▶');
+    expect(filters.querySelector('.filter-toggle-icon')?.getAttribute('aria-hidden')).toBe('true');
+  });
+  it('identifies notification resources with accessible decorative icons', () => {
+    response.next(notificationPage([
+      notification(),
+      notification({ id: '88888888-8888-4888-8888-888888888888', resource_type: 'pending' }),
+      notification({ id: '99999999-9999-4999-8999-999999999999', resource_type: 'report' })
+    ]));
+    fixture.detectChanges();
+    const icons = [...fixture.nativeElement.querySelectorAll('.notification-icon img')] as HTMLImageElement[];
+
+    expect(icons.map((icon) => icon.getAttribute('src'))).toEqual([
+      '/assets/icons/run.svg', '/assets/icons/queue.svg', '/assets/icons/report.svg'
+    ]);
+    expect(icons.every((icon) => icon.alt === '' && icon.getAttribute('aria-hidden') === 'true')).toBeTrue();
+  });
   it('scales computed notification metadata outside the profile journey', () => { response.next(notificationPage([notification()])); fixture.detectChanges(); const metadata = fixture.nativeElement.querySelector('.notification-copy time') as HTMLElement; const badge = fixture.nativeElement.querySelector('.unread-label') as HTMLElement; const normalMetadata = Number.parseFloat(getComputedStyle(metadata).fontSize); const normalBadge = Number.parseFloat(getComputedStyle(badge).fontSize); document.documentElement.dataset['fontScale'] = 'large'; expect(Number.parseFloat(getComputedStyle(metadata).fontSize)).toBeGreaterThan(normalMetadata); expect(Number.parseFloat(getComputedStyle(badge).fontSize)).toBeGreaterThan(normalBadge); });
   it('marks one and all notifications through persistent actions', () => { const item = notification(); response.next(notificationPage([item])); fixture.detectChanges(); fixture.componentInstance.markAllRead(); expect(markAllRead).toHaveBeenCalled(); response.next(notificationPage([item])); fixture.componentInstance.markRead(item); expect(markRead).toHaveBeenCalledWith(item); });
   it('preserves filters and ordering in the URL', () => { fixture.componentInstance.changePage(3); expect(router.navigate).toHaveBeenCalledWith([], { relativeTo: jasmine.anything(), queryParams: { filter: 'unread', sort: 'oldest', page: 3, pageSize: 10 } }); });

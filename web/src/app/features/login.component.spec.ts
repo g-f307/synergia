@@ -43,7 +43,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     const logo = fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement;
-    expect(logo.getAttribute('src')).toBe('/assets/logos/logo-negativa-horizontal.png');
+    expect(logo.getAttribute('src')).toBe('/assets/logos/synergia-logo-vertical.svg');
   });
 
   it('allows an anonymous user to display and use login in English', () => {
@@ -75,21 +75,47 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     const logo = fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement;
-    expect(logo.getAttribute('src')).toBe('/assets/logos/logo-horizontal.png');
+    expect(logo.getAttribute('src')).toBe('/assets/logos/synergia-logo-vertical.svg');
     expect(logo.getAttribute('alt')).toBe('SYNERGIA');
     expect(fixture.nativeElement.querySelector('.login-visual')).toBeNull();
     expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Acesso seguro');
   });
 
-  it('anchors the locale selector to the login form on desktop', () => {
+  it('uses a single framed surface with a dedicated brand area', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
 
-    const form = fixture.nativeElement.querySelector('.login-form') as HTMLElement;
-    const locale = fixture.nativeElement.querySelector('.login-locale') as HTMLElement;
-    expect(getComputedStyle(form).position).toBe('relative');
-    expect(getComputedStyle(locale).position).toBe('absolute');
-    expect(locale.offsetParent).toBe(form);
+    expect(fixture.nativeElement.querySelectorAll('.login-shell').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.login-brand')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.card')).toBeNull();
+  });
+
+  it('groups language and theme controls in the login utility area', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const utility = fixture.nativeElement.querySelector('.login-utility') as HTMLElement;
+    const locale = utility.querySelector('#login-locale') as HTMLSelectElement;
+    const localeControl = utility.querySelector('.locale-select') as HTMLElement;
+    const localeName = utility.querySelector('.locale-name') as HTMLElement;
+    const localeBadge = utility.querySelector('.locale-badge') as HTMLElement;
+    const theme = utility.querySelector('.login-theme') as HTMLButtonElement;
+
+    expect(locale).not.toBeNull();
+    expect(localeControl).not.toBeNull();
+    expect(localeName.textContent?.trim()).toBe('Idioma');
+    expect(localeBadge.querySelector('svg')).not.toBeNull();
+    expect(getComputedStyle(localeBadge).borderStyle).toBe('none');
+    expect(getComputedStyle(locale).appearance).toBe('none');
+    expect(Number.parseInt(getComputedStyle(locale).fontWeight, 10)).toBeGreaterThanOrEqual(700);
+    expect(theme.getAttribute('aria-label')).toBe('Alternar tema');
+
+    theme.click();
+    fixture.detectChanges();
+
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect((fixture.nativeElement.querySelector('.login-logo') as HTMLImageElement).getAttribute('src'))
+      .toBe('/assets/logos/synergia-logo-vertical.svg');
   });
 });

@@ -32,42 +32,31 @@ type AuxiliaryState = 'loading' | 'ready' | 'missing' | 'forbidden' | 'unavailab
 @Component({
   imports: [RouterLink],
   template: `
-    <section class="detail" aria-labelledby="import-detail-title">
-      <p class="eyebrow">{{ i18n.t('imports.eyebrow') }}</p>
-      <h1 id="import-detail-title">{{ i18n.t('imports.detailTitle') }}</h1>
-      @if (loading()) { <p role="status">{{ i18n.t('imports.detailLoading') }}</p> }
-      @if (failure()) { <div class="card error" role="alert"><h2>{{ i18n.t('imports.detailError') }}</h2><p>{{ failure()?.message }}</p>@if(failure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ failure()?.correlationId }}</p>}</div> }
-      @if (item(); as current) {
-        @if (partial()) { <div class="partial" role="status"><strong>{{ i18n.t('imports.partialTitle') }}</strong><p>{{ i18n.t('imports.partialMessage') }}</p></div> }
-        <div class="grid">
-          <section class="card"><h2>{{ i18n.t('imports.result') }}</h2><dl>
-            <div><dt>{{ i18n.t('imports.execution') }}</dt><dd class="technical">{{ current.execution_id }}</dd></div>
-            <div><dt>{{ i18n.t('imports.status') }}</dt><dd>{{ statusLabel(current.status) }}</dd></div>
-            <div><dt>{{ i18n.t('imports.source') }}</dt><dd>{{ current.source }}</dd></div>
-            <div><dt>{{ i18n.t('imports.file') }}</dt><dd>{{ current.file_name || i18n.t('common.notAvailable') }}</dd></div>
-            <div><dt>{{ i18n.t('imports.startedAt') }}</dt><dd>{{ i18n.formatDate(current.started_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</dd></div>
-          </dl></section>
-          <section class="card"><h2>{{ i18n.t('imports.inspectionTitle') }}</h2>
-            @switch (inspectionState()) {
-              @case ('loading') { <p role="status">{{ i18n.t('imports.inspectionLoading') }}</p> }
-              @case ('ready') {
-                @if (!inspections().length) { <p>{{ i18n.t('imports.noInspection') }}</p> }
-                @for (inspection of inspections(); track inspection.inspection_id) {
-                  <article><strong>{{ inspection.original_file_name }}</strong><p>{{ decisionLabel(inspection) }}</p><p>{{ reasonLabel(inspection.reason_code) }}</p>
-                    @if (isQuarantined(inspection)) { <p class="error">{{ i18n.t('imports.quarantinedUntil', { date: i18n.formatDate(inspection.retained_until!, { dateStyle: 'medium', timeStyle: 'short' }) }) }}</p> }
-                    @if (inspection.discarded_at) { <p>{{ i18n.t('imports.quarantineDiscarded') }}</p> }
-                  </article>
-                }
-              }
-              @case ('missing') { <p>{{ i18n.t('imports.inspectionPending') }}</p> }
-              @case ('forbidden') { <p class="error" role="alert">{{ i18n.t('imports.inspectionForbidden') }}</p> }
-              @case ('unavailable') { <p class="error" role="alert">{{ i18n.t('imports.inspectionUnavailable') }}</p> }
-              @case ('error') { <p class="error" role="alert">{{ i18n.t('imports.inspectionError') }}</p> }
-            }
-            @if (inspectionFailure()?.correlationId) { <p class="technical">{{ i18n.t('imports.correlation') }}: {{ inspectionFailure()?.correlationId }}</p> }
+    <section class="import-detail" aria-labelledby="import-detail-title">
+      <header class="detail-toolbar">
+        <a class="back-link" routerLink="/imports/new"><span aria-hidden="true">←</span>{{ i18n.t('imports.newAnother') }}</a>
+        <h1 id="import-detail-title">{{ i18n.t('imports.detailTitle') }}</h1>
+      </header>
+
+      <div class="detail-scroll">
+        @if (loading()) { <p class="state-copy" role="status">{{ i18n.t('imports.detailLoading') }}</p> }
+        @if (failure()) { <section class="failure-state" role="alert"><h2>{{ i18n.t('imports.detailError') }}</h2><p>{{ failure()?.message }}</p>@if(failure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ failure()?.correlationId }}</p>}</section> }
+        @if (item(); as current) {
+          <section class="overview" [attr.aria-label]="i18n.t('imports.result')">
+            <div class="status-summary">
+              <div><small>{{ i18n.t('imports.status') }}</small><strong class="status-pill" [attr.data-status]="current.status">{{ statusLabel(current.status) }}</strong></div>
+            </div>
+            <dl class="metadata">
+              <div><dt>{{ i18n.t('imports.execution') }}</dt><dd><a data-testid="related-execution" class="technical metadata-link" [routerLink]="['/executions',current.execution_id]" [queryParams]="{from:'/imports/'+current.execution_id}">{{ current.execution_id }}<span aria-hidden="true">›</span></a></dd></div>
+              <div><dt>{{ i18n.t('imports.source') }}</dt><dd>{{ current.source }}</dd></div>
+              <div><dt>{{ i18n.t('imports.file') }}</dt><dd>{{ current.file_name || i18n.t('common.notAvailable') }}</dd></div>
+              <div><dt>{{ i18n.t('imports.startedAt') }}</dt><dd>{{ i18n.formatDate(current.started_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</dd></div>
+            </dl>
           </section>
-        </div>
-        <section class="card"><h2>{{ i18n.t('imports.summaryTitle') }}</h2>
+
+          @if (partial()) { <div class="partial-notice" role="status"><strong>{{ i18n.t('imports.partialTitle') }}</strong><span>{{ i18n.t('imports.partialMessage') }}</span></div> }
+
+          <section class="detail-section summary-section"><header><h2>{{ i18n.t('imports.summaryTitle') }}</h2></header>
           @switch (summaryState()) {
             @case ('loading') { <p role="status">{{ i18n.t('imports.summaryLoading') }}</p> }
             @case ('ready') { @if (summary(); as totals) { <dl class="summary"><div><dt>{{ i18n.t('imports.rowsRead') }}</dt><dd>{{ i18n.formatNumber(totals.rows_read) }}</dd></div><div><dt>{{ i18n.t('imports.validRecords') }}</dt><dd>{{ i18n.formatNumber(totals.valid_records) }}</dd></div><div><dt>{{ i18n.t('imports.rejectedRecords') }}</dt><dd>{{ i18n.formatNumber(totals.rejected_records) }}</dd></div><div><dt>{{ i18n.t('imports.warnings') }}</dt><dd>{{ i18n.formatNumber(totals.warnings) }}</dd></div></dl> } }
@@ -77,12 +66,36 @@ type AuxiliaryState = 'loading' | 'ready' | 'missing' | 'forbidden' | 'unavailab
             @case ('error') { <p class="error" role="alert">{{ i18n.t('imports.summaryError') }}</p> }
           }
           @if (summaryFailure()?.correlationId) { <p class="technical">{{ i18n.t('imports.correlation') }}: {{ summaryFailure()?.correlationId }}</p> }
-        </section>
-        <nav class="actions"><a routerLink="/imports/new">{{ i18n.t('imports.newAnother') }}</a></nav>
-      }
+          </section>
+
+          <section class="detail-section inspection-section"><header><h2>{{ i18n.t('imports.inspectionTitle') }}</h2></header>
+            @switch (inspectionState()) {
+              @case ('loading') { <p role="status">{{ i18n.t('imports.inspectionLoading') }}</p> }
+              @case ('ready') {
+                @if (!inspections().length) { <p class="empty-copy">{{ i18n.t('imports.noInspection') }}</p> }
+                <div class="inspection-list">@for (inspection of inspections(); track inspection.inspection_id) {
+                  <article>
+                    <div><strong>{{ inspection.original_file_name }}</strong><p>{{ reasonLabel(inspection.reason_code) }}</p></div>
+                    <span class="decision-pill" [attr.data-decision]="inspection.decision">{{ decisionLabel(inspection) }}</span>
+                    @if (isQuarantined(inspection)) { <p class="inspection-alert">{{ i18n.t('imports.quarantinedUntil', { date: i18n.formatDate(inspection.retained_until!, { dateStyle: 'medium', timeStyle: 'short' }) }) }}</p> }
+                    @if (inspection.discarded_at) { <p class="inspection-alert">{{ i18n.t('imports.quarantineDiscarded') }}</p> }
+                  </article>
+                }</div>
+              }
+              @case ('missing') { <p class="empty-copy">{{ i18n.t('imports.inspectionPending') }}</p> }
+              @case ('forbidden') { <p class="error" role="alert">{{ i18n.t('imports.inspectionForbidden') }}</p> }
+              @case ('unavailable') { <p class="error" role="alert">{{ i18n.t('imports.inspectionUnavailable') }}</p> }
+              @case ('error') { <p class="error" role="alert">{{ i18n.t('imports.inspectionError') }}</p> }
+            }
+            @if (inspectionFailure()?.correlationId) { <p class="technical correlation">{{ i18n.t('imports.correlation') }}: {{ inspectionFailure()?.correlationId }}</p> }
+          </section>
+
+          <nav class="actions" [attr.aria-label]="i18n.t('imports.newAnother')"><a routerLink="/imports/new">{{ i18n.t('imports.newAnother') }}<span aria-hidden="true">→</span></a></nav>
+        }
+      </div>
     </section>
   `,
-  styles: [`.detail{display:grid;gap:var(--space-5);max-width:70rem}.partial{border-left:.3rem solid var(--color-partial);padding:var(--space-4)}.partial p{margin-bottom:0}dl{display:grid;gap:var(--space-3);margin:0}dl div{display:grid;gap:var(--space-1)}dt{color:var(--color-muted);font-weight:600}dd{margin:0;overflow-wrap:anywhere}.summary{grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))}article+article{border-top:1px solid var(--color-border);margin-top:var(--space-3);padding-top:var(--space-3)}article p{margin:.25rem 0}.actions{display:flex;flex-wrap:wrap;gap:var(--space-5);font-weight:700}`]
+  styleUrl: './import-detail.component.css'
 })
 export class ImportDetailComponent implements OnInit {
   readonly i18n = inject(I18nService);

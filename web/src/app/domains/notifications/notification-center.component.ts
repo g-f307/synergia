@@ -71,6 +71,16 @@ export class NotificationCenterComponent {
   }
   failureTitle(): string { return this.i18n.t(this.failure()?.kind === 'forbidden' ? 'notifications.forbiddenTitle' : this.failure()?.kind === 'unavailable' ? 'notifications.unavailableTitle' : 'notifications.errorTitle'); }
   failureMessage(): string { return this.i18n.t(this.failure()?.kind === 'forbidden' ? 'notifications.forbidden' : this.failure()?.kind === 'unavailable' ? 'notifications.unavailable' : 'notifications.error'); }
+  activeFilterLabel(): string {
+    const filterKey = this.filter() === 'unread' ? 'notifications.filter.unread' : this.filter() === 'read' ? 'notifications.filter.read' : 'notifications.filter.all';
+    const sortKey = this.sort() === 'oldest' ? 'notifications.sort.oldest' : 'notifications.sort.newest';
+    return `${this.i18n.t(filterKey)} · ${this.i18n.t(sortKey)}`;
+  }
+  resourceIcon(item: NotificationItem): string {
+    if (item.resource_type === 'pending') return '/assets/icons/queue.svg';
+    if (item.resource_type === 'report') return '/assets/icons/report.svg';
+    return '/assets/icons/run.svg';
+  }
   private readParams(params: ParamMap): void {
     const filter = params.get('filter'); const sort = params.get('sort');
     this.filter.set(filter === 'unread' || filter === 'read' ? filter : 'all');

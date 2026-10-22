@@ -29,6 +29,9 @@ describe('ImportDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Arquivo aceito');
     expect(fixture.nativeElement.textContent).toContain('Registros rejeitados');
     expect(fixture.nativeElement.textContent).not.toContain('/secret');
+    const executionLink = fixture.nativeElement.querySelector('[data-testid="related-execution"]') as HTMLAnchorElement;
+    expect(executionLink.getAttribute('href')).toContain('/executions/exec-1');
+    expect(executionLink.getAttribute('href')).toContain('from=%2Fimports%2Fexec-1');
   });
 
   it('localizes the result in English', () => {
@@ -65,6 +68,20 @@ describe('ImportDetailComponent', () => {
     expect(text).toContain('inspeção ainda não está disponível');
     expect(text).toContain('resumo ainda não está disponível');
     expect(text).not.toContain('temporariamente indisponível');
+  });
+
+  it('uses one consistent surface with a visible title and internally scrolling content', () => {
+    const fixture = TestBed.createComponent(ImportDetailComponent);
+    fixture.detectChanges();
+    const page = fixture.nativeElement.querySelector('.import-detail') as HTMLElement;
+    const body = fixture.nativeElement.querySelector('.detail-scroll') as HTMLElement;
+    expect(getComputedStyle(page).overflow).toBe('hidden');
+    expect(getComputedStyle(body).overflowY).toBe('auto');
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Detalhes da importação');
+    expect(fixture.nativeElement.querySelectorAll('.card').length).toBe(0);
+    expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.inspection-icon')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.status-icon')).toBeNull();
   });
 
   function failure(kind: ApiFailure['kind'], status: number, correlationId: string | null = null): ApiFailure {

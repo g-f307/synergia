@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { SessionService } from '../../core/session.service';
@@ -39,12 +39,88 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
 
-    expect(text).toContain('Visão geral operacional');
-    expect(text).toContain('synergia.operational');
-    expect(text).toContain('Liberações parciais: 1');
+    expect(text).not.toContain('Visão geral operacional');
+    expect(fixture.nativeElement.querySelector('h1.sr-only')?.textContent).toContain('Visão geral');
+    expect(text).toContain('Liberações parciais');
+    expect(text).toContain('Concluídas: 2');
+    expect(text).toContain('Em aberto: 2');
     expect(text).toContain('Planejada');
-    expect(fixture.nativeElement.querySelectorAll('.indicator-card').length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('.metric').length).toBe(3);
+    const badges = [...fixture.nativeElement.querySelectorAll('.metric-badge img')] as HTMLImageElement[];
+    expect(badges.map((badge) => badge.getAttribute('src'))).toEqual([
+      '/assets/icons/run.svg',
+      '/assets/icons/production.svg',
+      '/assets/icons/queue.svg'
+    ]);
+    expect(badges.every((badge) => badge.getAttribute('aria-hidden') === 'true')).toBeTrue();
+    const badgeContainers = [...fixture.nativeElement.querySelectorAll('.metric-badge')] as HTMLElement[];
+    expect(new Set(badgeContainers.map((badge) => getComputedStyle(badge).backgroundColor)).size).toBe(1);
+    expect(badges.every((badge) => getComputedStyle(badge).filter === 'none')).toBeTrue();
     expect(fixture.nativeElement.querySelector('syn-state')).toBeNull();
+  });
+
+  it('renders compact filters and charts from persisted aggregates', () => {
+    response.next(completeIndicators());
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('details.dashboard-filters')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.execution-chart')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.quantity-bar').length).toBe(4);
+    expect(fixture.nativeElement.querySelector('.status-donut')).not.toBeNull();
+    expect((fixture.nativeElement.querySelector('.status-donut') as HTMLElement).style.background).toContain('conic-gradient');
+    const quantityColors = [...fixture.nativeElement.querySelectorAll('.quantity-bar .bar-track span')]
+      .map((element) => (element as HTMLElement).style.backgroundColor);
+    expect(new Set(quantityColors).size).toBe(4);
+    expect(fixture.nativeElement.querySelector('.context')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
+  });
+
+  it('offers an accessible quick search above the calculation timestamp', () => {
+    response.next(completeIndicators());
+    fixture.detectChanges();
+
+    const header = fixture.nativeElement.querySelector('.page-header') as HTMLElement;
+    const search = header.querySelector('form.dashboard-search') as HTMLFormElement;
+    const input = search?.querySelector('input') as HTMLInputElement;
+    const type = search?.querySelector('select') as HTMLSelectElement;
+    const updated = header.querySelector('.updated') as HTMLElement;
+
+    expect(search).not.toBeNull();
+    expect(input?.placeholder).toContain('lote');
+    expect(input?.getAttribute('aria-label')).toContain('lote');
+    expect([...type.options].map((option) => option.value)).toEqual(['workorder', 'lot', 'serial']);
+    expect(search.compareDocumentPosition(updated) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getComputedStyle(header).alignItems).toBe('flex-start');
+  });
+
+  it('opens the operational search with the selected type and trimmed term', () => {
+    response.next(completeIndicators());
+    fixture.detectChanges();
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    const form = fixture.nativeElement.querySelector('form.dashboard-search') as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    const type = form.querySelector('select') as HTMLSelectElement;
+
+    input.value = '  LOT-2026-42  ';
+    input.dispatchEvent(new Event('input'));
+    type.value = 'lot';
+    type.dispatchEvent(new Event('change'));
+    form.dispatchEvent(new Event('submit'));
+
+    expect(navigate).toHaveBeenCalledWith(['/search'], {
+      queryParams: { type: 'lot', query: 'LOT-2026-42', page: 1, pageSize: 25, sort: 'updated_desc' }
+    });
+  });
+
+  it('keeps the dashboard frame fixed and scrolls only its data surface', () => {
+    response.next(completeIndicators());
+    fixture.detectChanges();
+    const dashboard = fixture.nativeElement.querySelector('.dashboard') as HTMLElement;
+    const surface = fixture.nativeElement.querySelector('.dashboard-surface') as HTMLElement;
+
+    expect(getComputedStyle(dashboard).overflow).toBe('hidden');
+    expect(getComputedStyle(surface).overflowY).toBe('auto');
   });
 
   it('scales computed indicator and support text sizes with the large preference', () => {
@@ -75,7 +151,8 @@ describe('DashboardComponent', () => {
     response.next(partial);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Resultado parcial');
+    expect(fixture.nativeElement.textContent).not.toContain('Resultado parcial');
+    expect(fixture.nativeElement.querySelector('.partial-note')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Ausente');
   });
 
@@ -86,7 +163,8 @@ describe('DashboardComponent', () => {
     response.next(partial);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Resultado parcial');
+    expect(fixture.nativeElement.textContent).not.toContain('Resultado parcial');
+    expect(fixture.nativeElement.querySelector('.partial-note')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Ausente');
     expect(fixture.nativeElement.textContent).toContain('Produzida');
   });
@@ -107,16 +185,15 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.querySelector('syn-state button')).not.toBeNull();
   });
 
-  it('describes global scope without relying on color', () => {
+  it('keeps organization and period filters accessible for a global profile', () => {
     profile.set({ permissions: [{ key: 'dashboard.read', organizations: null }] });
     response.next(completeIndicators());
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Escopo global autorizado');
     expect(fixture.nativeElement.querySelector('[aria-labelledby="dashboard-title"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('label').length).toBe(3);
   });
 
-  it('applies filters and preserves them in related navigation', async () => {
+  it('routes each dashboard metric to its canonical destination with compatible filters', async () => {
     response.next(completeIndicators());
     fixture.componentInstance.organizationId.set('org-synthetic');
     fixture.componentInstance.dateFrom.set('2026-08-01');
@@ -127,9 +204,18 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
 
     expect(requestedFilters.at(-1)).toEqual({ organizationId: 'org-synthetic', dateFrom: '2026-08-01', dateTo: '2026-08-31' });
-    const href = (fixture.nativeElement.querySelector('.indicator-card a') as HTMLAnchorElement).getAttribute('href') ?? '';
-    expect(href).toContain('organization=org-synthetic');
-    expect(href).toContain('dateFrom=2026-08-01');
+    const hrefs = [...fixture.nativeElement.querySelectorAll('.metric a')]
+      .map((link) => (link as HTMLAnchorElement).getAttribute('href') ?? '');
+    expect(hrefs[0]).toContain('/executions');
+    expect(hrefs[0]).toContain('organization_id=org-synthetic');
+    expect(hrefs[0]).toContain('date_from=2026-08-01');
+    expect(hrefs[0]).toContain('date_to=2026-08-31');
+    expect(hrefs[1]).toContain('/dashboard/related/workorders');
+    expect(hrefs[1]).toContain('organization=org-synthetic');
+    expect(hrefs[2]).toContain('/pending-items');
+    expect(hrefs[2]).toContain('status=open');
+    expect(hrefs.every((href) => !href.includes('/dashboard/related/executions'))).toBeTrue();
+    expect(hrefs.every((href) => !href.includes('/dashboard/related/pending-items'))).toBeTrue();
   });
 
   it('rejects an inverted period before requesting data', () => {
