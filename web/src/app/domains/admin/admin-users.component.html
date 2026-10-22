@@ -1,25 +1,56 @@
 <section class="admin-page" aria-labelledby="admin-users-title">
-  <a routerLink="/admin">{{ i18n.t('adminUi.back') }}</a>
-  <div class="admin-heading"><h1 id="admin-users-title">{{ i18n.t('adminUi.users') }}</h1><a class="button" routerLink="/admin/users/new">{{ i18n.t('adminUi.newUser') }}</a></div>
-  <form class="admin-filters" (submit)="apply($event)">
-    <label>{{ i18n.t('adminUi.name') }}<input name="name" [(ngModel)]="filters.name"></label>
-    <label>{{ i18n.t('adminUi.email') }}<input name="email" type="email" [(ngModel)]="filters.email"></label>
-    <label>{{ i18n.t('adminUi.status') }}<select name="status" [(ngModel)]="filters.status"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></label>
-    <label>{{ i18n.t('adminUi.group') }}<input name="group" [(ngModel)]="filters.group"></label>
-    <label>{{ i18n.t('adminUi.role') }}<input name="role" [(ngModel)]="filters.role"></label>
-    <label>{{ i18n.t('adminUi.organizationCode') }}<input name="organization" [(ngModel)]="filters.organization"></label>
-    <button type="submit">{{ i18n.t('adminUi.filter') }}</button>
-  </form>
-  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
-  @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="retry()">{{ i18n.t('adminUi.retry') }}</button></div> }
+  <header class="admin-catalog-heading">
+    <div class="admin-title-row">
+      <a class="admin-back" routerLink="/admin" [attr.aria-label]="i18n.t('adminUi.back')">←</a>
+      <div><h1 id="admin-users-title">{{ i18n.t('adminUi.users') }}</h1><p>{{ i18n.t('adminUi.usersDescription') }}</p></div>
+    </div>
+    <a class="button admin-primary-action" routerLink="/admin/users/new"><span aria-hidden="true">＋</span>{{ i18n.t('adminUi.newUser') }}</a>
+  </header>
+  <details class="admin-filter-panel">
+    <summary><span class="admin-filter-summary"><span class="admin-filter-toggle" aria-hidden="true">▶</span>{{ i18n.t('adminUi.filters') }}</span></summary>
+    <form class="admin-filters" (submit)="apply($event)">
+      <label>{{ i18n.t('adminUi.name') }}<input name="name" autocomplete="off" [(ngModel)]="filters.name"></label>
+      <label>{{ i18n.t('adminUi.email') }}<input name="email" type="email" autocomplete="off" [(ngModel)]="filters.email"></label>
+      <label>{{ i18n.t('adminUi.status') }}<select name="status" [(ngModel)]="filters.status"><option value="">{{ i18n.t('adminUi.all') }}</option>@for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select></label>
+      <label>{{ i18n.t('adminUi.group') }}<input name="group" autocomplete="off" [(ngModel)]="filters.group"></label>
+      <label>{{ i18n.t('adminUi.role') }}<input name="role" autocomplete="off" [(ngModel)]="filters.role"></label>
+      <label>{{ i18n.t('adminUi.organizationCode') }}<input name="organization" autocomplete="off" [(ngModel)]="filters.organization"></label>
+      <div class="admin-filter-actions"><button type="button" class="secondary" (click)="clear()">{{ i18n.t('executions.clear') }}</button><button type="submit">{{ i18n.t('adminUi.filter') }}</button></div>
+    </form>
+  </details>
+  @if (loading()) { <p class="admin-state" role="status">{{ i18n.t('admin.loading') }}</p> }
+  @else if (failure()) { <div class="admin-state" role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="retry()">{{ i18n.t('adminUi.retry') }}</button></div> }
   @else if (result(); as page) {
-    @if (!page.items.length) { <p role="status">{{ i18n.t('adminUi.empty') }}</p> }
+    <div class="admin-results-heading"><div><h2>{{ i18n.t('adminUi.registeredUsers') }}</h2><p>{{ i18n.t('adminUi.total', { count: i18n.formatNumber(page.total) }) }}</p></div></div>
+    @if (!page.items.length) { <p class="admin-state" role="status">{{ i18n.t('adminUi.empty') }}</p> }
     @else {
-      <p>{{ i18n.t('adminUi.total', { count: i18n.formatNumber(page.total) }) }}</p>
-      <ul class="admin-list">@for (user of page.items; track user.id) {
-        <li><a [routerLink]="['/admin/users', user.id]">{{ user.display_name }}</a><span>{{ user.emails[0]?.email }}</span><span>{{ statusLabel(user.status) }}</span><span>v{{ user.version }}</span></li>
+      <ul class="admin-catalog-list">@for (user of page.items; track user.id) {
+        <li class="admin-catalog-row">
+          <span class="admin-avatar" aria-hidden="true">{{ user.display_name.charAt(0).toUpperCase() }}</span>
+          <div class="admin-record-main"><strong>{{ user.display_name }}</strong><span>{{ user.emails[0]?.email || '—' }}</span></div>
+          <span class="admin-status" [class.is-inactive]="user.status === 'inactive' || user.status === 'blocked'">{{ statusLabel(user.status) }}</span>
+          <div class="admin-record-meta"><small>{{ i18n.t('adminUi.updatedAt') }}</small><span>{{ formatDate(user.updated_at) }}</span><small>{{ i18n.t('adminUi.version') }} {{ user.version }}</small></div>
+          <div class="admin-row-actions"><a class="admin-icon-action" [routerLink]="['/admin/users', user.id]" [attr.aria-label]="i18n.t('adminUi.edit') + ': ' + user.display_name" [attr.title]="i18n.t('adminUi.edit')"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h4.2L19 9.2 14.8 5 4 15.8V20Z"/><path d="m12.9 6.9 4.2 4.2"/></svg></a><button type="button" class="admin-icon-action danger" [attr.aria-label]="i18n.t(user.status === 'inactive' ? 'adminUi.reactivate' : 'adminUi.deactivate') + ': ' + user.display_name" [attr.title]="i18n.t(user.status === 'inactive' ? 'adminUi.reactivate' : 'adminUi.deactivate')" [attr.data-action]="user.status === 'inactive' ? 'reactivate-user' : 'deactivate-user'" (click)="openLifecycle(user)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div>
+        </li>
       }</ul>
     }
     <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages || 1 }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav>
   }
 </section>
+@if (lifecycleTarget(); as target) {
+  <div class="admin-modal-backdrop">
+    <button type="button" class="admin-modal-dismiss" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeLifecycle()"></button>
+    <section class="admin-modal admin-lifecycle-dialog" [class.is-destructive]="target.status !== 'inactive'" [class.is-restorative]="target.status === 'inactive'" role="dialog" aria-modal="true" aria-labelledby="user-lifecycle-title" aria-describedby="user-lifecycle-description">
+      <header>
+        <div class="admin-modal-heading"><span class="admin-modal-action-icon" aria-hidden="true">{{ target.status === 'inactive' ? '↻' : '!' }}</span><div><h2 id="user-lifecycle-title">{{ i18n.t(target.status === 'inactive' ? 'adminUi.reactivateUser' : 'adminUi.deactivateUser') }}</h2><p id="user-lifecycle-description">{{ i18n.t(target.status === 'inactive' ? 'adminUi.activateImpact' : 'adminUi.deactivateImpact') }}</p></div></div>
+        <button type="button" class="admin-icon-button" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeLifecycle()">×</button>
+      </header>
+      <div class="admin-modal-subject"><span>{{ i18n.t('adminUi.lifecycleUser') }}</span><strong>{{ target.display_name }}</strong><small>{{ target.emails[0]?.email || '—' }}</small></div>
+      <form class="lifecycle-form" (submit)="submitLifecycle($event)">
+        <label><span>{{ i18n.t('adminUi.reason') }}</span><small>{{ i18n.t('adminUi.reasonHint') }}</small><textarea name="lifecycleReason" required minlength="3" maxlength="500" [value]="lifecycleReason" (input)="lifecycleReason = $any($event.target).value"></textarea></label>
+        @if (lifecycleError()) { <p role="alert">{{ i18n.t(lifecycleError()!) }}</p> }
+        <div class="admin-modal-actions"><button type="button" class="secondary" (click)="closeLifecycle()">{{ i18n.t('adminUi.cancel') }}</button><button type="submit" [class.danger]="target.status !== 'inactive'" [disabled]="lifecycleBusy()">{{ i18n.t(target.status === 'inactive' ? 'adminUi.reactivate' : 'adminUi.deactivate') }}</button></div>
+      </form>
+    </section>
+  </div>
+}

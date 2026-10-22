@@ -16,17 +16,12 @@ const CHANNEL_KEYS: Record<NotificationTemplateChannel, TranslationKey> = {
   in_app: 'notificationAdmin.channel.inApp',
   email: 'notificationAdmin.channel.email'
 };
-const DELIVERY_KEYS: Record<NotificationTemplatePolicy['external_delivery'], TranslationKey> = {
-  disabled: 'notificationAdmin.delivery.disabled',
-  local_capture: 'notificationAdmin.delivery.localCapture',
-  unavailable: 'notificationAdmin.delivery.unavailable'
-};
-
 @Component({
   selector: 'syn-notification-template-list',
   imports: [FormsModule, RouterLink],
   templateUrl: './notification-template-list.component.html',
-  styleUrls: ['../admin/admin.component.css', './notification-template.component.css']
+  styleUrls: ['../admin/admin.component.css', './notification-template.component.css'],
+  host: { class: 'admin-route' }
 })
 export class NotificationTemplateListComponent {
   readonly i18n = inject(I18nService);
@@ -78,6 +73,17 @@ export class NotificationTemplateListComponent {
     }).then(() => this.load());
   }
 
+  clear(): void {
+    this.event = '';
+    this.channel = '';
+    this.locale = '';
+    this.state = '';
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { event: null, channel: null, locale: null, state: null, page: null }
+    }).then(() => this.load());
+  }
+
   changePage(page: number): void {
     void this.router.navigate([], {
       relativeTo: this.route, queryParams: { page }, queryParamsHandling: 'merge'
@@ -95,7 +101,7 @@ export class NotificationTemplateListComponent {
   channelKey(channel: NotificationTemplateChannel): TranslationKey {
     return CHANNEL_KEYS[channel];
   }
-  deliveryKey(): TranslationKey {
-    return DELIVERY_KEYS[this.policy()?.external_delivery ?? 'unavailable'];
+  formatDate(value: string): string {
+    return this.i18n.formatDate(value);
   }
 }

@@ -41,13 +41,31 @@ describe('AdminAssociationPanelComponent', () => {
     expect(api.grant).toHaveBeenCalledWith('user_role', 'user-1', 'role-1', 'approved assignment', 'org-1');
   });
 
-  it('uses null scope for global grants and the exact stored scope for revocation', () => {
+  it('uses null scope for global grants', () => {
     const { api, component } = setup([link]);
     component.selectedTarget = 'role-1'; component.reason = 'global assignment';
     component.grant(new Event('submit'));
     expect(api.grant).toHaveBeenCalledWith('user_role', 'user-1', 'role-1', 'global assignment', undefined);
-    spyOn(window, 'confirm').and.returnValue(true);
-    component.reason = 'remove old scope'; component.revoke(link);
+  });
+
+  it('collects the revocation reason in the shared confirmation dialog', () => {
+    const { api, fixture } = setup([link]);
+    const root = fixture.nativeElement as HTMLElement;
+    const revokeButton = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent?.includes('Revogar'))!;
+
+    revokeButton.click(); fixture.detectChanges();
+
+    const dialog = root.querySelector<HTMLElement>('.admin-lifecycle-dialog')!;
+    expect(dialog).not.toBeNull();
+    expect(dialog.textContent).toContain('gestor');
+    expect(api.revoke).not.toHaveBeenCalled();
+
+    const reason = dialog.querySelector<HTMLTextAreaElement>('textarea[name="revokeReason"]')!;
+    reason.value = 'remove old scope';
+    reason.dispatchEvent(new Event('input'));
+    dialog.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
     expect(api.revoke).toHaveBeenCalledWith('user_role', 'user-1', 'role-1', 'remove old scope', 'org-1');
   });
 
@@ -61,5 +79,32 @@ describe('AdminAssociationPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão');
     component.grant(new Event('submit'));
     expect(api.grant).not.toHaveBeenCalled();
+  });
+
+  it('keeps each relationship editor collapsed until the administrator opens it', () => {
+    const { fixture } = setup([link]);
+    const disclosure = fixture.nativeElement.querySelector('details.admin-association-disclosure') as HTMLDetailsElement;
+
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.open).toBeFalse();
+    expect(disclosure.querySelector('summary')?.textContent).toContain('Papéis do usuário');
+
+    disclosure.querySelector<HTMLElement>('summary')?.click();
+    fixture.detectChanges();
+
+    expect(disclosure.open).toBeTrue();
+  });
+
+  it('uses one list boundary per relationship editor without nested decorative dividers', () => {
+    const { fixture } = setup([link]);
+    const root = fixture.nativeElement as HTMLElement;
+    const section = root.querySelector('.admin-links') as HTMLElement;
+    const content = root.querySelector('.admin-association-content') as HTMLElement;
+    const form = root.querySelector('.admin-association-form') as HTMLElement;
+
+    expect(getComputedStyle(section).borderTopWidth).toBe('0px');
+    expect(getComputedStyle(section).borderBottomWidth).toBe('1px');
+    expect(getComputedStyle(content).borderTopWidth).toBe('0px');
+    expect(getComputedStyle(form).borderTopWidth).toBe('0px');
   });
 });

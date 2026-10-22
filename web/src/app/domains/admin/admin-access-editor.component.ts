@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -15,7 +15,8 @@ import { AdminAssociationPanelComponent } from './admin-association-panel.compon
   selector: 'syn-admin-access-editor',
   imports: [AdminAssociationPanelComponent, FormsModule, RouterLink],
   templateUrl: './admin-access-editor.component.html',
-  styleUrl: './admin.component.css'
+  styleUrl: './admin.component.css',
+  host: { class: 'admin-route' }
 })
 export class AdminAccessEditorComponent {
   readonly i18n = inject(I18nService);
@@ -29,9 +30,13 @@ export class AdminAccessEditorComponent {
   readonly item = signal<AdminGroup | AdminRole | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
   readonly formError = signal<TranslationKey | null>(null);
+  readonly activeSection = signal<'details' | 'associations'>('details');
+  readonly lifecycleOpen = signal(false);
+  readonly lifecycleError = signal<TranslationKey | null>(null);
   name = '';
   detail = '';
   reason = '';
+  lifecycleReason = '';
 
   constructor() { if (this.id) this.reload(); }
 
@@ -73,15 +78,40 @@ export class AdminAccessEditorComponent {
     this.formError.set(null); this.failure.set(null);
     if (this.reason.trim().length < 3) { this.formError.set('adminUi.reasonRequired'); return; }
     const action = this.item()!.is_active ? 'deactivate' : 'activate';
-    if (action === 'deactivate' && !window.confirm(this.i18n.t('adminUi.confirmStatus'))) return;
     this.busy.set(true);
     const request: Observable<AdminGroup | AdminRole> = this.kind === 'groups'
       ? this.api.changeGroupStatus(this.id, action, this.item()!.version, this.reason.trim())
       : this.api.changeRoleStatus(this.id, action, this.item()!.version, this.reason.trim());
-    request.subscribe({ next: (item) => this.saved(item), error: (failure: ApiFailure) => this.failed(failure) });
+    request.subscribe({ next: (item) => { this.saved(item); this.closeLifecycle(); }, error: (failure: ApiFailure) => this.failed(failure) });
   }
 
+  openLifecycle(): void {
+    this.lifecycleOpen.set(true);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+  closeLifecycle(): void {
+    if (this.busy()) return;
+    this.lifecycleOpen.set(false);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+  submitLifecycle(event: Event): void {
+    event.preventDefault();
+    if (!this.lifecycleOpen() || this.busy()) return;
+    if (this.lifecycleReason.trim().length < 3) {
+      this.lifecycleError.set('adminUi.reasonRequired');
+      return;
+    }
+    this.reason = this.lifecycleReason.trim();
+    this.changeStatus();
+  }
+
+  @HostListener('document:keydown.escape')
+  closeLifecycleOnEscape(): void { this.closeLifecycle(); }
+
   title(): string { return this.i18n.t(this.kind === 'groups' ? (this.id ? 'adminUi.groupDetail' : 'adminUi.newGroup') : (this.id ? 'adminUi.roleDetail' : 'adminUi.newRole')); }
+  dataTitle(): string { return this.i18n.t(this.kind === 'groups' ? 'adminUi.groupData' : 'adminUi.roleData'); }
   nameLabel(): string { return this.i18n.t(this.kind === 'groups' ? 'adminUi.groupName' : 'adminUi.roleKey'); }
   detailLabel(): string { return this.i18n.t(this.kind === 'groups' ? 'adminUi.externalReference' : 'adminUi.description'); }
   failureKey(): TranslationKey { return adminFailureKey(this.failure()); }

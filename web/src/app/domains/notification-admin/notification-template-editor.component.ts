@@ -1,5 +1,5 @@
 import { KeyValuePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -17,17 +17,12 @@ const CHANNEL_KEYS: Record<NotificationTemplateChannel, TranslationKey> = {
   in_app: 'notificationAdmin.channel.inApp',
   email: 'notificationAdmin.channel.email'
 };
-const DELIVERY_KEYS: Record<NotificationTemplatePolicy['external_delivery'], TranslationKey> = {
-  disabled: 'notificationAdmin.delivery.disabled',
-  local_capture: 'notificationAdmin.delivery.localCapture',
-  unavailable: 'notificationAdmin.delivery.unavailable'
-};
-
 @Component({
   selector: 'syn-notification-template-editor',
   imports: [FormsModule, KeyValuePipe, RouterLink],
   templateUrl: './notification-template-editor.component.html',
-  styleUrls: ['../admin/admin.component.css', './notification-template.component.css']
+  styleUrls: ['../admin/admin.component.css', './notification-template.component.css'],
+  host: { class: 'admin-route' }
 })
 export class NotificationTemplateEditorComponent {
   readonly i18n = inject(I18nService);
@@ -45,12 +40,15 @@ export class NotificationTemplateEditorComponent {
   readonly preview = signal<NotificationTemplatePreview | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
   readonly formError = signal<TranslationKey | null>(null);
+  readonly transitionAction = signal<'publish' | 'deactivate' | null>(null);
+  readonly transitionError = signal<TranslationKey | null>(null);
   eventType = '';
   channel: NotificationTemplateChannel = 'in_app';
   locale: NotificationTemplateLocale = 'pt-BR';
   titleTemplate = '';
   bodyTemplate = '';
   reason = '';
+  transitionReason = '';
 
   constructor() { this.reload(); }
 
@@ -113,17 +111,34 @@ export class NotificationTemplateEditorComponent {
 
   publish(): void {
     const current = this.item();
-    if (!current || current.state !== 'draft' || !this.validReason()) return;
-    if (!window.confirm(this.i18n.t('notificationAdmin.confirmPublish'))) return;
-    this.transition('publish');
+    if (!current || current.state !== 'draft') return;
+    this.openTransition('publish');
   }
 
   deactivate(): void {
     const current = this.item();
-    if (!current || current.state !== 'active' || !this.validReason()) return;
-    if (!window.confirm(this.i18n.t('notificationAdmin.confirmDeactivate'))) return;
-    this.transition('deactivate');
+    if (!current || current.state !== 'active') return;
+    this.openTransition('deactivate');
   }
+
+  openTransition(action: 'publish' | 'deactivate'): void {
+    this.transitionAction.set(action); this.transitionReason = this.reason; this.transitionError.set(null); this.failure.set(null);
+  }
+  closeTransition(): void {
+    if (this.busy()) return;
+    this.transitionAction.set(null); this.transitionReason = ''; this.transitionError.set(null);
+  }
+  confirmTransition(event: Event): void {
+    event.preventDefault();
+    const action = this.transitionAction();
+    if (!action) return;
+    this.transitionError.set(null);
+    if (this.transitionReason.trim().length < 3) { this.transitionError.set('notificationAdmin.reasonRequired'); return; }
+    this.reason = this.transitionReason;
+    this.transition(action);
+  }
+  @HostListener('document:keydown.escape')
+  closeTransitionOnEscape(): void { if (this.transitionAction()) this.closeTransition(); }
 
   selectedPlaceholders(): string[] {
     return this.item()?.allowed_placeholders
@@ -136,9 +151,6 @@ export class NotificationTemplateEditorComponent {
   }
   channelKey(channel: NotificationTemplateChannel): TranslationKey {
     return CHANNEL_KEYS[channel];
-  }
-  deliveryKey(): TranslationKey {
-    return DELIVERY_KEYS[this.policy()?.external_delivery ?? 'unavailable'];
   }
   changeHistoryPage(page: number): void {
     const current = this.item();
@@ -161,14 +173,9 @@ export class NotificationTemplateEditorComponent {
       ? this.api.publish(current.id, current.row_version, this.reason.trim())
       : this.api.deactivate(current.id, current.row_version, this.reason.trim());
     request.subscribe({
-      next: (item) => { this.busy.set(false); this.reason = ''; this.accept(item); this.loadHistory(item); },
+      next: (item) => { this.busy.set(false); this.reason = ''; this.closeTransition(); this.accept(item); this.loadHistory(item); },
       error: (failure: ApiFailure) => this.failedMutation(failure)
     });
-  }
-  private validReason(): boolean {
-    this.formError.set(null);
-    if (this.reason.trim().length >= 3) return true;
-    this.formError.set('notificationAdmin.reasonRequired'); return false;
   }
   private accept(item: NotificationTemplateRevision): void {
     this.item.set(item); this.eventType = item.notification_type; this.channel = item.channel;

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -15,7 +15,8 @@ import { adminFailureKey, positivePage } from './admin-ui';
   selector: 'syn-admin-users',
   imports: [FormsModule, RouterLink],
   templateUrl: './admin-users.component.html',
-  styleUrl: './admin.component.css'
+  styleUrl: './admin.component.css',
+  host: { class: 'admin-route' }
 })
 export class AdminUsersComponent {
   readonly i18n = inject(I18nService);
@@ -26,7 +27,11 @@ export class AdminUsersComponent {
   readonly loading = signal(true);
   readonly result = signal<AdminPage<AdminUser> | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
+  readonly lifecycleTarget = signal<AdminUser | null>(null);
+  readonly lifecycleError = signal<TranslationKey | null>(null);
+  readonly lifecycleBusy = signal(false);
   filters: UserFilters = {};
+  lifecycleReason = '';
   readonly statuses: UserStatus[] = ['pending', 'active', 'blocked', 'inactive'];
 
   constructor() {
@@ -56,10 +61,57 @@ export class AdminUsersComponent {
   }
 
   apply(event: Event): void { event.preventDefault(); this.navigate(1); }
+  clear(): void {
+    this.filters = { name: '', email: '', status: undefined, group: '', role: '', organization: '' };
+    this.navigate(1);
+  }
   changePage(number: number): void { this.navigate(number); }
   retry(): void { this.refreshRequested.next(); }
   statusLabel(status: UserStatus): string { return this.i18n.t(`userStatus.${status}`); }
   failureKey(): TranslationKey { return adminFailureKey(this.failure()); }
+  formatDate(value: string): string { return this.i18n.formatDate(value); }
+
+  openLifecycle(user: AdminUser): void {
+    this.lifecycleTarget.set(user);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+
+  closeLifecycle(): void {
+    if (this.lifecycleBusy()) return;
+    this.lifecycleTarget.set(null);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+
+  submitLifecycle(event: Event): void {
+    event.preventDefault();
+    const user = this.lifecycleTarget();
+    if (!user || this.lifecycleBusy()) return;
+    const reason = this.lifecycleReason.trim();
+    if (reason.length < 3) {
+      this.lifecycleError.set('adminUi.reasonRequired');
+      return;
+    }
+    const action = user.status === 'inactive' ? 'reactivate' : 'deactivate';
+    this.lifecycleError.set(null);
+    this.lifecycleBusy.set(true);
+    this.api.changeUserStatus(user.id, action, user.version, reason).subscribe({
+      next: () => {
+        this.lifecycleBusy.set(false);
+        this.closeLifecycle();
+        this.refreshRequested.next();
+      },
+      error: (failure: ApiFailure) => {
+        this.lifecycleBusy.set(false);
+        this.failure.set(failure);
+        this.lifecycleTarget.set(null);
+      }
+    });
+  }
+
+  @HostListener('document:keydown.escape')
+  closeOnEscape(): void { this.closeLifecycle(); }
 
   private navigate(page: number): void {
     void this.router.navigate([], {
