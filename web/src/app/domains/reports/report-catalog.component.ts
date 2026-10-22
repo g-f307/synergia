@@ -6,16 +6,16 @@ import { combineLatest, catchError, map, of, startWith, Subject, switchMap, tap 
 import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
-import { BadgeComponent, ModalComponent, PaginationComponent, ResponsiveTableComponent, StateComponent, UiState } from '../../shared/ui/ui-kit';
+import { BadgeComponent, ModalComponent, PaginationComponent, StateComponent, UiState } from '../../shared/ui/ui-kit';
 import { REPORT_COMPLETENESS_KEYS, REPORT_DATA_STATE_KEYS, REPORT_STATE_KEYS, REPORT_TYPE_KEYS } from './report-labels';
 import { CreateReportPayload, ReportCatalogQuery, ReportCompleteness, ReportExportFormat, ReportPage, ReportPolicy, ReportSort, ReportState, ReportType, ReportVersion } from './report.models';
 import { ReportService } from './report.service';
 
 @Component({
   selector: 'syn-report-catalog',
-  imports: [BadgeComponent, ModalComponent, PaginationComponent, ResponsiveTableComponent, RouterLink, StateComponent],
+  imports: [BadgeComponent, ModalComponent, PaginationComponent, RouterLink, StateComponent],
   templateUrl: './report-catalog.component.html',
-  styleUrl: './report-catalog.component.css'
+  styleUrls: ['./report-catalog.component.css', './report-catalog-templates.component.css', './report-catalog-modal.component.css']
 })
 export class ReportCatalogComponent {
   readonly i18n = inject(I18nService);
@@ -55,7 +55,6 @@ export class ReportCatalogComponent {
 
   readonly canGenerate = computed(() => this.session.hasPermission('report.generate'));
   readonly canExport = computed(() => this.session.hasPermission('report.export') && (this.policy()?.export_formats.includes('csv') ?? false));
-  readonly hasPartial = computed(() => this.result()?.items.some((item) => item.completeness === 'partial') ?? false);
   readonly hasStale = computed(() => this.result()?.items.some((item) => this.isStale(item)) ?? false);
   readonly failureState = computed<UiState | null>(() => this.toState(this.failure()));
   readonly policyFailureState = computed<UiState>(() => this.policyFailure()?.kind === 'forbidden' ? 'forbidden' : 'unavailable');
@@ -91,6 +90,11 @@ export class ReportCatalogComponent {
   }
   refresh(): void { this.refreshRequested.next(); }
   openGeneration(): void { this.generationFailure.set(null); this.generationError.set(''); this.generationOpen.set(true); }
+  selectTemplate(type: ReportType): void {
+    this.generationType.set(type);
+    this.dataState.set('');
+    this.openGeneration();
+  }
   closeGeneration(): void { if (!this.generationBusy()) this.generationOpen.set(false); }
   allowedGenerationStates(): string[] {
     return this.policy()?.report_types.find((item) => item.report_type === this.generationType())?.allowed_states ?? [];
