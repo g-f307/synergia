@@ -17,14 +17,17 @@ export class ThemeService {
   }
 
   brandLogo(compact = false): string {
-    if (compact) {
-      return this.active() === 'dark'
-        ? '/assets/logos/simbolo-negativo.png'
-        : '/assets/logos/simbolo.png';
+    if (this.active() === 'dark') {
+      return '/assets/logos/logo-dark-horizontal.svg';
     }
-    return this.active() === 'dark'
-      ? '/assets/logos/logo-negativa-horizontal.png'
-      : '/assets/logos/logo-horizontal.png';
+    if (compact) {
+      return '/assets/logos/simbolo.png';
+    }
+    return '/assets/logos/logo-horizontal.png';
+  }
+
+  verticalBrandLogo(): string {
+    return '/assets/logos/synergia-logo-vertical.svg';
   }
 
   private apply(theme: Theme): void {

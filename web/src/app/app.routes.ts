@@ -8,7 +8,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login.component').then((value) => value.LoginComponent)
   },
   {
-    path: 'dashboard/related/:entity',
+    path: 'dashboard/related/executions',
+    redirectTo: 'executions',
+    pathMatch: 'full'
+  },
+  {
+    path: 'dashboard/related/pending-items',
+    redirectTo: 'pending-items',
+    pathMatch: 'full'
+  },
+  {
+    path: 'dashboard/related/workorders',
     canActivate: [authenticatedGuard, permissionGuard('dashboard.read')],
     loadComponent: () => import('./domains/dashboard/dashboard-related.component').then((value) => value.DashboardRelatedComponent)
   },

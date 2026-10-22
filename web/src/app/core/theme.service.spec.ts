@@ -13,11 +13,13 @@ describe('ThemeService', () => {
 
     expect(service.brandLogo()).toBe('/assets/logos/logo-horizontal.png');
     expect(service.brandLogo(true)).toBe('/assets/logos/simbolo.png');
+    expect(service.verticalBrandLogo()).toBe('/assets/logos/synergia-logo-vertical.svg');
 
     service.toggle();
 
     expect(document.documentElement.dataset['theme']).toBe('dark');
-    expect(service.brandLogo()).toBe('/assets/logos/logo-negativa-horizontal.png');
-    expect(service.brandLogo(true)).toBe('/assets/logos/simbolo-negativo.png');
+    expect(service.brandLogo()).toBe('/assets/logos/logo-dark-horizontal.svg');
+    expect(service.brandLogo(true)).toBe('/assets/logos/logo-dark-horizontal.svg');
+    expect(service.verticalBrandLogo()).toBe('/assets/logos/synergia-logo-vertical.svg');
   });
 });

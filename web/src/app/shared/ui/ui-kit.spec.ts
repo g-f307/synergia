@@ -68,7 +68,7 @@ describe('shared controls', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const dialog = fixture.nativeElement.querySelector('[role=dialog]') as HTMLElement;
-    const close = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const close = fixture.nativeElement.querySelector('[role=dialog] button') as HTMLButtonElement;
     close.focus();
     close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
 
@@ -83,10 +83,29 @@ describe('shared controls', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const dialog = fixture.nativeElement.querySelector('[role=dialog]') as HTMLElement;
-    const close = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const close = fixture.nativeElement.querySelector('[role=dialog] button') as HTMLButtonElement;
     dialog.focus();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
 
     expect(document.activeElement).toBe(close);
+  });
+
+  it('dismisses from the backdrop without dismissing from the dialog', async () => {
+    await TestBed.configureTestingModule({ imports: [ModalComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ModalComponent);
+    fixture.componentRef.setInput('title', 'Modal sintético');
+    let dismissals = 0;
+    fixture.componentInstance.dismissed.subscribe(() => { dismissals += 1; });
+    fixture.detectChanges();
+    const backdrop = fixture.nativeElement.querySelector('.backdrop-dismiss') as HTMLButtonElement;
+    const dialog = fixture.nativeElement.querySelector('[role=dialog]') as HTMLElement;
+
+    expect(backdrop.tabIndex).toBe(-1);
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+
+    dialog.click();
+    expect(dismissals).toBe(0);
+    backdrop.click();
+    expect(dismissals).toBe(1);
   });
 });

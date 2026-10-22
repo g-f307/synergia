@@ -10,8 +10,8 @@ interface Crumb { label: TranslationKey | string; translated: boolean; route?: s
 @Component({
   selector: 'syn-breadcrumbs',
   imports: [RouterLink],
-  template: `<nav [attr.aria-label]="i18n.t('accessibility.breadcrumb')"><ol><li><a routerLink="/profile">{{ i18n.t('navigation.home') }}</a></li>@for (crumb of crumbs(); track crumb.label) {<li>@if (crumb.route) {<a [routerLink]="crumb.route">{{ label(crumb) }}</a>} @else {<span aria-current="page">{{ label(crumb) }}</span>}</li>}</ol></nav>`,
-  styles: ['ol{display:flex;flex-wrap:wrap;gap:var(--syn-space-2);list-style:none;margin:0 0 var(--syn-space-5);padding:0}li{color:var(--syn-text-secondary);font-size:13px}a{color:inherit;text-decoration:none}a:hover{color:var(--syn-primary);text-decoration:underline}li+li::before{color:var(--syn-text-secondary);content:"›";margin-right:var(--syn-space-2)}']
+  template: `@if (crumbs().length > 1) {<nav [attr.aria-label]="i18n.t('accessibility.breadcrumb')"><ol><li><a routerLink="/profile">{{ i18n.t('navigation.home') }}</a></li>@for (crumb of crumbs(); track crumb.label) {<li>@if (crumb.route) {<a [routerLink]="crumb.route">{{ label(crumb) }}</a>} @else {<span aria-current="page">{{ label(crumb) }}</span>}</li>}</ol></nav>}`,
+  styles: [':host{display:block}ol{display:flex;flex-wrap:wrap;gap:var(--syn-space-2);list-style:none;margin:0;padding:0}li{color:var(--syn-text-secondary);font-size:13px}a{color:inherit;text-decoration:none}a:hover{color:var(--syn-primary);text-decoration:underline}li+li::before{color:var(--syn-text-secondary);content:"›";margin-right:var(--syn-space-2)}']
 })
 export class BreadcrumbsComponent {
   readonly i18n = inject(I18nService);
@@ -20,6 +20,7 @@ export class BreadcrumbsComponent {
   constructor() { this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event) => this.crumbs.set(this.fromUrl(event.urlAfterRedirects))); }
   label(crumb: Crumb): string { return crumb.translated ? this.i18n.t(crumb.label as TranslationKey) : crumb.label; }
   private fromUrl(url: string): Crumb[] {
+    if (url.split('?')[0] === '/imports/new') return [];
     const labels: Record<string, TranslationKey> = { profile: 'navigation.profile', admin: 'navigation.admin', dashboard: 'navigation.dashboard', imports: 'navigation.imports', executions: 'navigation.executions', search: 'navigation.search', workorders: 'navigation.workorders', lots: 'navigation.lots', serials: 'navigation.serials', 'pending-items': 'navigation.pending', reports: 'navigation.reports', notifications: 'navigation.notifications', 'notification-templates': 'notificationAdmin.title' };
     const parts = url.split('?')[0].split('/').filter(Boolean);
     return parts.map((part, index) => ({ label: labels[part] ?? part, translated: part in labels, route: index < parts.length - 1 ? `/${parts.slice(0, index + 1).join('/')}` : undefined }));

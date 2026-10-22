@@ -1,24 +1,34 @@
 <a class="skip-link" href="#main-content">{{ i18n.t('accessibility.skipContent') }}</a>
 @if (session.isAuthenticated()) {
-  <div class="shell">
+  <div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
     <aside class="sidebar" [class.open]="menuOpen()" [attr.inert]="isMobile() && !menuOpen() ? '' : null" [attr.aria-hidden]="isMobile() && !menuOpen() ? true : null">
-      <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')">
-        <img class="brand-full" [src]="theme.brandLogo()" alt="">
-        <img class="brand-compact" [src]="theme.brandLogo(true)" alt="">
-      </a>
+      <div class="sidebar-header">
+        <a class="brand" routerLink="/profile" [attr.aria-label]="i18n.t('accessibility.home')">
+          <img class="brand-full" [src]="theme.brandLogo()" alt="">
+          <img class="brand-compact" [src]="theme.brandLogo(true)" alt="">
+        </a>
+        <button class="sidebar-collapse" type="button" (click)="toggleSidebar()" [attr.aria-expanded]="!sidebarCollapsed()" aria-label="Recolher ou expandir barra lateral"><span aria-hidden="true">{{ sidebarCollapsed() ? '›' : '‹' }}</span></button>
+      </div>
       <nav id="main-navigation" [attr.aria-label]="i18n.t('accessibility.mainNavigation')">
         @for (item of visibleItems(); track item.route) { <a [routerLink]="item.route" routerLinkActive="active" [attr.aria-label]="i18n.t(item.label)"><img [src]="'/assets/icons/' + item.icon" alt="" aria-hidden="true"><span>{{ i18n.t(item.label) }}</span></a> }
         <a routerLink="/profile" routerLinkActive="active" [attr.aria-label]="i18n.t('navigation.profile')"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true"><span>{{ i18n.t('navigation.profile') }}</span></a>
         @if (session.isAdministrator()) { <a routerLink="/admin" routerLinkActive="active" [attr.aria-label]="i18n.t('navigation.admin')"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true"><span>{{ i18n.t('navigation.admin') }}</span></a> }
       </nav>
+      <a class="sidebar-account" routerLink="/profile" [attr.aria-label]="i18n.t('navigation.profile')">
+        <span class="account-avatar" aria-hidden="true">{{ session.profile()?.display_name?.charAt(0) || 'S' }}</span>
+        <span class="account-copy"><strong>{{ session.profile()?.display_name }}</strong><small>{{ i18n.t('navigation.profile') }}</small></span>
+        <span class="account-chevron" aria-hidden="true">›</span>
+      </a>
     </aside>
     @if (menuOpen()) { <button class="sidebar-overlay" type="button" (click)="closeMenu()" [attr.aria-label]="i18n.t('accessibility.closeMenu')"></button> }
-    <div class="main-wrapper">
+    <div class="main-wrapper workspace">
       <header class="topbar">
         <button #menuButton class="menu-button" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-controls="main-navigation" [attr.aria-label]="i18n.t(menuOpen() ? 'accessibility.closeMenu' : 'accessibility.openMenu')"><span aria-hidden="true">☰</span></button>
-        <div class="account"><span class="user-name">{{ session.profile()?.display_name }}</span>@if(session.hasPermission('notification.read')){<a class="notification-button" routerLink="/notifications" [attr.aria-label]="i18n.t('notifications.open',{count:notifications.unreadCount()})"><img src="/assets/icons/notification.svg" alt="" aria-hidden="true">@if(notifications.unreadCount()>0){<span class="notification-badge" aria-hidden="true">{{ notifications.unreadCount()>99?'99+':notifications.unreadCount() }}</span>}</a>}<button type="button" class="icon-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button><button type="button" class="link-button" (click)="logout()">{{ i18n.t('account.logout') }}</button></div>
+        <div class="topbar-context"><img [src]="'/assets/icons/' + currentNavigation().icon" alt="" aria-hidden="true"><strong>{{ i18n.t(currentNavigation().label) }}@if(navigationDetail();as detail){ <span class="context-detail">/ {{ detail }}</span>}</strong></div>
+        @if (!navigationDetail() && !currentNavigation().hideBreadcrumbs) { <syn-breadcrumbs /> }
+        <div class="account"><span class="user-name">{{ session.profile()?.display_name }}</span>@if(session.hasPermission('notification.read')){<a class="topbar-action notification-button" routerLink="/notifications" [attr.aria-label]="i18n.t('notifications.open',{count:notifications.unreadCount()})"><img src="/assets/icons/notification.svg" alt="" aria-hidden="true">@if(notifications.unreadCount()>0){<span class="notification-badge" aria-hidden="true">{{ notifications.unreadCount()>99?'99+':notifications.unreadCount() }}</span>}</a>}<button type="button" class="topbar-action theme-button" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button><button type="button" class="topbar-action logout-button" (click)="logout()" [attr.aria-label]="i18n.t('account.logout')"><img src="/assets/icons/logout.svg" alt="" aria-hidden="true"></button></div>
       </header>
-      <main id="main-content" class="content" tabindex="-1"><syn-breadcrumbs /><router-outlet /></main>
+      <main id="main-content" class="content" tabindex="-1"><router-outlet /></main>
     </div>
   </div>
 } @else { <main id="main-content" class="anonymous-shell" tabindex="-1"><router-outlet /></main> }
