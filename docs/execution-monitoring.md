@@ -9,6 +9,9 @@ Todos os contratos usam o PostgreSQL como fonte de verdade e erros seguem o enve
 - `GET /executions`: catálogo paginado no escopo autorizado, com filtros por
   organização, estado persistido e público, origem, tipo de arquivo, período e
   identificador. A ordem usa `started_at` e `id` como desempate determinístico.
+  A resposta inclui `generated_at`, instante UTC com fuso horário que registra
+  quando o servidor calculou o catálogo; o campo informa a referência temporal
+  da consulta e não substitui `started_at` ou `finished_at` dos itens.
 - `GET /executions/{id}`: estado atual, ciclo (`active`, `completed`, `partial` ou
   `failed`), versões, datas, relação de reprocessamento, histórico e contagens.
 - `GET /executions/{id}/divergences`: erros e avisos paginados. Aceita `source`,
@@ -42,6 +45,17 @@ uma chave de armazenamento segura e o arquivo está fisicamente disponível.
 
 O Swagger em `/docs` e o OpenAPI em `/openapi.json` são a referência executável dos
 parâmetros e modelos.
+
+Exemplo resumido do catálogo:
+
+```json
+{
+  "items": [],
+  "pagination": {"page": 1, "page_size": 20, "total": 0, "pages": 0},
+  "sort": "newest",
+  "generated_at": "2026-10-22T20:00:00Z"
+}
+```
 
 ## Demonstração sintética
 
