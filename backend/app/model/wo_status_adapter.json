@@ -1,0 +1,307 @@
+{
+  "adapter_id": "wo_status",
+  "adapter_version": "1.0.0",
+  "contract_version": "1.1.0-draft",
+  "source": "WO Status",
+  "sheets": {
+    "NFP": {
+      "logical_source": "N-FP",
+      "header_row": 3,
+      "data_start_row": 4,
+      "window": {
+        "mode": "all"
+      },
+      "identity": {
+        "any": [
+          "demand_id",
+          "workorder_number"
+        ]
+      },
+      "columns": [
+        {
+          "letter": "U",
+          "header": "Plant",
+          "field": "plant",
+          "kind": "text",
+          "contract_target": "plant_organization_scope_pending"
+        },
+        {
+          "letter": "W",
+          "header": "Line",
+          "field": "production_line",
+          "kind": "text",
+          "contract_target": "production_line"
+        },
+        {
+          "letter": "Y",
+          "header": "Demand ID",
+          "field": "demand_id",
+          "kind": "id",
+          "contract_target": "demand_id"
+        },
+        {
+          "letter": "AA",
+          "header": "Model",
+          "field": "model",
+          "kind": "text",
+          "contract_target": "model"
+        },
+        {
+          "letter": "AB",
+          "header": "Suffix",
+          "field": "model_suffix",
+          "kind": "text",
+          "contract_target": "model_suffix"
+        },
+        {
+          "letter": "AM",
+          "header": "Lot Qty",
+          "field": "lot_quantity",
+          "kind": "qty",
+          "contract_target": "lot_quantity"
+        },
+        {
+          "letter": "HY",
+          "header": "W/O Status",
+          "field": "status",
+          "kind": "status",
+          "contract_target": "status_pending_catalog"
+        },
+        {
+          "letter": "IE",
+          "header": "W/O",
+          "field": "workorder_number",
+          "kind": "id",
+          "contract_target": "workorder_number"
+        },
+        {
+          "letter": "JV",
+          "header": "OQC Pass",
+          "field": "oqc_pass",
+          "kind": "text",
+          "contract_target": "oqc_pass_semantics_pending"
+        }
+      ]
+    },
+    "OWM SN": {
+      "logical_source": "OWM",
+      "header_row": 2,
+      "data_start_row": 3,
+      "window": {
+        "mode": "last_literal",
+        "field": "serial_number"
+      },
+      "identity": {
+        "all": [
+          "serial_number",
+          "workorder_number"
+        ]
+      },
+      "columns": [
+        {
+          "letter": "L",
+          "header": "Model",
+          "field": "model",
+          "kind": "text",
+          "contract_target": "model"
+        },
+        {
+          "letter": "M",
+          "header": "Pallet Qty",
+          "field": "pallet_quantity",
+          "kind": "qty_int",
+          "contract_target": "pallet_quantity"
+        },
+        {
+          "letter": "N",
+          "header": "Pallet No",
+          "field": "pallet_number",
+          "kind": "id",
+          "contract_target": "pallet_number"
+        },
+        {
+          "letter": "O",
+          "header": "Serial Number",
+          "field": "serial_number",
+          "kind": "id",
+          "contract_target": "serial_number"
+        },
+        {
+          "letter": "Q",
+          "header": "W/O",
+          "field": "workorder_number",
+          "kind": "id",
+          "contract_target": "workorder_number"
+        },
+        {
+          "letter": "R",
+          "header": "OQC Lot",
+          "field": "lot_number",
+          "kind": "id",
+          "contract_target": "lot_number"
+        },
+        {
+          "letter": "U",
+          "header": "Locator",
+          "field": "locator",
+          "kind": "text",
+          "contract_target": "locator"
+        },
+        {
+          "letter": "V",
+          "header": "Status",
+          "field": "status",
+          "kind": "status",
+          "contract_target": "status"
+        },
+        {
+          "letter": "W",
+          "header": "OQC Pass",
+          "field": "oqc_flag",
+          "kind": "flag",
+          "contract_target": "oqc_flag_pending_domain"
+        },
+        {
+          "letter": "Y",
+          "header": "OQC Hold Flag",
+          "field": "hold_flag",
+          "kind": "flag",
+          "contract_target": "hold_flag_pending_domain"
+        }
+      ]
+    },
+    "LOT PENDING_OQC": {
+      "logical_source": "GMES/OQC",
+      "header_row": 3,
+      "data_start_row": 4,
+      "window": {
+        "mode": "substantive",
+        "field": "status"
+      },
+      "identity": {},
+      "blocked": "literal_workorder_source_unconfirmed",
+      "columns": [
+        {
+          "letter": "G",
+          "header": "Hold Group Code",
+          "field": "hold_group_code",
+          "kind": "text",
+          "contract_target": "hold_group_code"
+        },
+        {
+          "letter": "H",
+          "header": "Status",
+          "field": "status",
+          "kind": "status",
+          "contract_target": "status_pending_catalog"
+        },
+        {
+          "letter": "I",
+          "header": "Status Change Date",
+          "field": "status_changed_at",
+          "kind": "datetime",
+          "contract_target": "status_changed_at"
+        },
+        {
+          "letter": "J",
+          "header": "Request User",
+          "field": "request_user",
+          "kind": "text",
+          "contract_target": "request_user_restricted"
+        },
+        {
+          "letter": "O",
+          "header": "Hold Qty",
+          "field": "hold_quantity",
+          "kind": "qty",
+          "contract_target": "hold_quantity"
+        },
+        {
+          "letter": "P",
+          "header": "Release Qty",
+          "field": "released_quantity",
+          "kind": "qty",
+          "contract_target": "released_quantity"
+        }
+      ]
+    },
+    "CTNR STATUS": {
+      "logical_source": "TMS",
+      "header_row": 1,
+      "data_start_row": 2,
+      "window": {
+        "mode": "all"
+      },
+      "identity": {
+        "all": [
+          "container_number"
+        ]
+      },
+      "columns": [
+        {
+          "letter": "C",
+          "header": "CTNR No",
+          "field": "container_number",
+          "kind": "id",
+          "contract_target": "container_number"
+        },
+        {
+          "letter": "D",
+          "header": "CTNR Status",
+          "field": "container_status",
+          "kind": "text",
+          "contract_target": "container_status"
+        },
+        {
+          "letter": "I",
+          "header": "Model",
+          "field": "model",
+          "kind": "text",
+          "contract_target": "model"
+        },
+        {
+          "letter": "J",
+          "header": "Load Plan Qty",
+          "field": "load_planned_quantity",
+          "kind": "qty",
+          "contract_target": "load_planned_quantity"
+        },
+        {
+          "letter": "K",
+          "header": "Load Qty",
+          "field": "load_quantity",
+          "kind": "qty",
+          "contract_target": "load_quantity"
+        },
+        {
+          "letter": "P",
+          "header": "Rmn Qty",
+          "field": "load_remaining_quantity",
+          "kind": "qty",
+          "contract_target": "load_remaining_quantity"
+        },
+        {
+          "letter": "AH",
+          "header": "Load Plan Date",
+          "field": "load_plan_date",
+          "kind": "date",
+          "contract_target": "load_plan_date"
+        },
+        {
+          "letter": "AK",
+          "header": "Loading Date",
+          "field": "loading_date",
+          "kind": "date",
+          "contract_target": "loading_date"
+        },
+        {
+          "letter": "AL",
+          "header": "Load Confirm Date",
+          "field": "load_confirmed_at",
+          "kind": "datetime",
+          "contract_target": "load_confirmed_at"
+        }
+      ]
+    }
+  }
+}
