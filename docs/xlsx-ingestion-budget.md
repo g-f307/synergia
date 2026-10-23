@@ -79,6 +79,13 @@ Se nenhuma aba do arquivo constar da lista, a rejeição também é
 [real-workbook-contracts.md](real-workbook-contracts.md); os adapters que o
 aplicam são entregues em issues próprias.
 
+### Fontes compostas
+
+Para a fonte `WO Status`, a lista de abas padrão é a do contrato do adapter
+(`INGESTION_ALLOWED_SHEETS_WO_STATUS` a restringe) e os orçamentos de células,
+fórmulas e memória contam somente as colunas que o adapter mantém, não a largura
+da aba. Veja [wo-status-adapters.md](wo-status-adapters.md#limites-da-fonte).
+
 ### Dimensão declarada
 
 O openpyxl completa com linhas vazias tudo o que a tag `<dimension>` declara.
