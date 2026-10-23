@@ -174,3 +174,16 @@ def test_composite_source_allowlist_can_be_narrowed_but_not_widened_by_default(
 
     assert budget.authorizes("NFP")
     assert not budget.authorizes("CTNR STATUS")
+
+
+def test_composite_source_never_authorizes_sheets_outside_the_contract(
+    monkeypatch,
+) -> None:
+    from app.wo_status_spec import load_spec
+
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS", "*")
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS_WO_STATUS", raising=False)
+    assert budget_for("WO Status").allowed_sheets == load_spec().authorized_names()
+
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS_WO_STATUS", "NFP|Sales")
+    assert budget_for("WO Status").allowed_sheets == frozenset({"nfp"})

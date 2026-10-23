@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
-from app.wo_status_spec import COMPOSITE_SOURCE, load_spec
+from app.wo_status_spec import COMPOSITE_SOURCE, MAX_SECONDS, load_spec
 
 DEFAULT_MAX_SHEETS = 64
 DEFAULT_MAX_ROWS = 1_048_576
@@ -243,9 +243,11 @@ def _allowed_sheets(source_key: str, source: str = "") -> frozenset[str] | None:
     names = frozenset(
         part.strip().casefold() for part in raw.split("|") if part.strip()
     )
-    if not names and source == COMPOSITE_SOURCE:
-        # The adapter's versioned contract already names the authorized sheets.
-        return load_spec().authorized_names()
+    if source == COMPOSITE_SOURCE:
+        # The adapter's versioned contract names the sheets it can ingest: an
+        # empty list or ``*`` means all of them, and a narrower list restricts.
+        contract = load_spec().authorized_names()
+        return contract if not names or "*" in names else names & contract
     return None if "*" in names else names
 
 
@@ -270,7 +272,10 @@ def budget_for(source: str) -> IngestionBudget:
             "INGESTION_MAX_OPEN_BYTES", key, DEFAULT_MAX_OPEN_BYTES
         ),
         max_seconds=_positive(
-            "INGESTION_MAX_SECONDS", key, DEFAULT_MAX_SECONDS, cast=float
+            "INGESTION_MAX_SECONDS",
+            key,
+            MAX_SECONDS if source == COMPOSITE_SOURCE else DEFAULT_MAX_SECONDS,
+            cast=float,
         ),
         max_issues=_positive("INGESTION_MAX_ISSUES", key, DEFAULT_MAX_ISSUES),
         progress_interval=_positive(

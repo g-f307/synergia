@@ -8,6 +8,12 @@ from typing import Any
 
 SPEC_PATH = Path(__file__).with_name("model") / "wo_status_adapter.json"
 COMPOSITE_SOURCE = "WO Status"
+# Measured on the representative workbook (41.5 MB, 471 MB uncompressed): see
+# docs/wo-status-adapters.md. Global upload limits are tuned for generic files
+# and do not apply to this source; UPLOAD_*_WO_STATUS variables override these.
+UPLOAD_MAX_BYTES = 64 * 1024 * 1024
+ARCHIVE_UNCOMPRESSED_BYTES = 640 * 1024 * 1024
+MAX_SECONDS = 900.0
 KINDS = frozenset(
     {"id", "text", "status", "flag", "qty", "qty_int", "date", "datetime"}
 )

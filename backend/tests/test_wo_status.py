@@ -185,6 +185,9 @@ def test_quantities_dates_and_unknown_states_stay_explicit(tmp_path, edge) -> No
     serial = ctnr["CTNR-EDGE-SERIAL"]["values"]
     assert serial["load_plan_date"] == from_excel(46000).date().isoformat()
     assert serial["loading_date"] == "2026-12-25"
+    named = ctnr["CTNR-EDGE-TEXT-DATE"]["values"]
+    assert named["load_plan_date"] == "2026-10-05T10:30:00"
+    assert named["loading_date"] == "2026-10-06"
     assert "CTNR-EDGE-QTY" not in ctnr
     warning = _issues(result, "unparsed_date", "CTNR STATUS")[0]
     assert warning["severity"] == "warning"

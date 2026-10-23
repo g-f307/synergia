@@ -31,6 +31,18 @@ TEXT_DATE_FORMATS = (
     "%Y-%m-%dT%H:%M:%S",
     "%d/%m/%Y %H:%M:%S",
 )
+MONTHS = {
+    name: index
+    for index, name in enumerate(
+        "jan feb mar apr may jun jul aug sep oct nov dec".split(), start=1
+    )
+}
+# Dates written as ``05/Oct/2026 10:30:00`` by the source system (English month
+# abbreviations, independent of the process locale).
+NAMED_MONTH_DATE = re.compile(
+    r"(?P<day>\d{1,2})/(?P<month>[A-Za-z]{3})/(?P<year>\d{4})"
+    r"(?: (?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2}))?"
+)
 BLOCKED_REASON = "Aba bloqueada pelo contrato: a chave literal não foi confirmada"
 
 
@@ -114,6 +126,18 @@ def _temporal(value: Any, letter: str, kind: str) -> tuple[Any, list[dict]]:
             return from_excel(value), []
         return None, [_error("invalid_date", "Data inválida", letter)]
     text = str(value).strip()
+    named = NAMED_MONTH_DATE.fullmatch(text)
+    if named and named["month"].casefold() in MONTHS:
+        day, month, year = (
+            int(named["day"]),
+            MONTHS[named["month"].casefold()],
+            int(named["year"]),
+        )
+        hour, minute, second = (int(named[k] or 0) for k in ("h", "m", "s"))
+        try:
+            return datetime(year, month, day, hour, minute, second), []
+        except ValueError:
+            return None, [_error("invalid_date", "Data inválida", letter)]
     for date_format in TEXT_DATE_FORMATS:
         try:
             return datetime.strptime(text, date_format), []

@@ -295,8 +295,12 @@ def _ctnr(book: Workbook, rows: int, edge: bool) -> dict[str, int]:
         row += 1
         _put(sheet, "C", row, "CTNR-EDGE-QTY")
         _put(sheet, "J", row, "abc")  # invalid quantity
-        counts["scanned"] += 2
-        counts["emitted"] += 2
+        row += 1
+        _put(sheet, "C", row, "CTNR-EDGE-TEXT-DATE")
+        _put(sheet, "AH", row, "05/Oct/2026 10:30:00")  # month-name text dates
+        _put(sheet, "AK", row, "06/Oct/2026")
+        counts["scanned"] += 3
+        counts["emitted"] += 3
         counts["rejected_adapter"] += 1
     return counts
 
