@@ -588,3 +588,145 @@ def test_estimate_switches_to_the_cheap_regime_at_the_threshold(
 
     assert result["summary"]["rows_read"] == 40
     assert result["processing"]["classifications"]["rule_details_deferred"] is True
+
+
+@pytest.mark.parametrize("order", [("N-FP", "OWM"), ("OWM", "N-FP")])
+def test_issue_budget_of_an_execution_does_not_depend_on_file_order(
+    tmp_path, monkeypatch, order
+) -> None:
+    from app.ingestion_budget import IngestionLimitError
+
+    monkeypatch.setenv("INGESTION_MAX_ISSUES_N_FP", "2")
+    inputs = []
+    for position, source in enumerate(order, start=1):
+        path = tmp_path / f"sujo-{position}.xlsx"
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.append(["workorder", "status"])
+        worksheet.append([None, "open"])
+        worksheet.append([None, "closed"])
+        workbook.save(path)
+        workbook.close()
+        tables, read_issues = read_source(path, ".xlsx", source)
+        inputs.append(
+            {
+                "file_name": path.name,
+                "source": source,
+                "source_file_id": position,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        )
+
+    with pytest.raises(IngestionLimitError) as excinfo:
+        run_pipeline_batch(
+            execution_id="exec-issues",
+            inputs=inputs,
+            repository=RecordingRepository(),
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert excinfo.value.code == "ingestion_issue_limit"
+    assert excinfo.value.limit == 2
+    assert excinfo.value.observed == 4
+
+
+def _one_workorder(records: int) -> list[dict]:
+    from app.normalization import normalize_tables
+
+    rows = [["WO-UNICO", f"SN-{index:06d}", "open"] for index in range(records)]
+    normalized = normalize_tables(
+        [("S", ["workorder", "serial", "status"], rows)], "OWM"
+    )["records"]
+    return [{**item, "execution_id": "e", "source_file_id": 1} for item in normalized]
+
+
+def test_a_single_workorder_with_many_records_consults_the_clock_inside_its_passes(
+    monkeypatch,
+) -> None:
+    from app import consolidation, processing
+
+    records = _one_workorder(5_000)
+    state = {"calls": 0, "inside_consolidation": 0, "inside_classification": 0}
+
+    def checkpoint() -> None:
+        state["calls"] += 1
+
+    def counting(name, function):
+        def wrapper(*args, **kwargs):
+            before = state["calls"]
+            result = function(*args, **kwargs)
+            state[name] += state["calls"] - before
+            return result
+
+        return wrapper
+
+    monkeypatch.setattr(
+        consolidation,
+        "_consolidate_workorder",
+        counting("inside_consolidation", consolidation._consolidate_workorder),
+    )
+    monkeypatch.setattr(
+        processing, "classify", counting("inside_classification", processing.classify)
+    )
+
+    result = processing.process_normalized_records(
+        records,
+        execution_id="e",
+        classified_at="2026-08-28T12:00:00+00:00",
+        checkpoint=checkpoint,
+    )
+
+    assert result["summary"]["consolidated_workorders"] == 1
+    # Each pass over the 5,000 records of the only Workorder polls the clock.
+    assert state["inside_consolidation"] >= 5
+    assert state["inside_classification"] >= 5
+
+
+def test_an_expired_clock_stops_a_single_huge_workorder_midway(monkeypatch) -> None:
+    from app import consolidation
+    from app.processing import process_normalized_records
+
+    class Expired(Exception):
+        pass
+
+    state = {"inside": False, "polls_inside": 0}
+    original = consolidation._consolidate_workorder
+
+    def tracking(*args, **kwargs):
+        state["inside"] = True
+        try:
+            return original(*args, **kwargs)
+        finally:
+            state["inside"] = False
+
+    def checkpoint() -> None:
+        if state["inside"]:
+            state["polls_inside"] += 1
+            if state["polls_inside"] == 2:
+                raise Expired
+
+    monkeypatch.setattr(consolidation, "_consolidate_workorder", tracking)
+
+    with pytest.raises(Expired):
+        process_normalized_records(
+            _one_workorder(5_000),
+            execution_id="e",
+            classified_at="2026-08-28T12:00:00+00:00",
+            checkpoint=checkpoint,
+        )
+
+    assert state["polls_inside"] == 2
+
+
+def test_paced_sequence_polls_while_iterating_and_keeps_sequence_behaviour() -> None:
+    from app.pacing import CHECK_EVERY, paced
+
+    calls = []
+    sequence = paced(list(range(CHECK_EVERY * 3 + 1)), lambda: calls.append(1))
+
+    assert len(sequence) == CHECK_EVERY * 3 + 1
+    assert sequence[5] == 5
+    assert sum(1 for _ in sequence) == CHECK_EVERY * 3 + 1
+    assert len(calls) == 4
+    assert paced([1], None) == [1]

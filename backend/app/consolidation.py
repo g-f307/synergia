@@ -5,6 +5,8 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from app.pacing import paced
+
 SOURCE_ORDER = ("N-FP", "GMES/OQC", "OWM", "TMS")
 IDENTIFIER_FIELDS = (
     "demand_id",
@@ -477,6 +479,9 @@ def consolidate(
                 "row": record.get("row"),
             }
         )
+    # Index building, relationship resolution and per-Workorder passes all loop
+    # over every record; pacing keeps the deadline enforced inside them.
+    ordered = paced(ordered, checkpoint)
     indexes: dict[str, dict[str, str]] = {}
     ambiguous: dict[str, set[str]] = {}
     candidates: dict[str, dict[str, set[str]]] = {}
@@ -535,7 +540,7 @@ def consolidate(
         workorder_records = grouped.pop(workorder)
         try:
             consolidated, workorder_issues = _consolidate_workorder(
-                workorder, workorder_records
+                workorder, paced(workorder_records, checkpoint)
             )
         except ConsolidationError as exc:
             if not isolate_failures:

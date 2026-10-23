@@ -1023,6 +1023,7 @@ def test_request_is_rejected_before_processing_when_it_has_too_many_files(
         ("file", (f"f{index}.xlsx", _workbook_with_rows(3), XLSX_TYPE))
         for index in range(3)
     ]
+    rejected_before = _outcome_count("rejected")
 
     response = client.post(
         "/imports", data={"source": ["N-FP", "OWM", "TMS"]}, files=files
@@ -1034,6 +1035,7 @@ def test_request_is_rejected_before_processing_when_it_has_too_many_files(
     assert error["details"]["limit"] == 2
     assert error["details"]["observed"] == 3
     assert error["details"]["guidance"]
+    assert _outcome_count("rejected") == rejected_before + 1
     assert repository.executions == {}
     assert not [path for path in storage.glob("**/*") if path.is_file()]
 
@@ -1123,3 +1125,27 @@ def test_unexpected_pipeline_failure_counts_as_failed_once(api, monkeypatch) -> 
     assert response.status_code == 500
     assert response.json()["error"]["code"] == "pipeline_error"
     assert _outcome_count("failed") == before + 1
+
+
+def test_unreadable_csv_reaching_the_value_error_path_counts_as_rejected(
+    api, monkeypatch
+) -> None:
+    client, _, storage = api
+
+    class BrokenImporter:
+        def read(self, path, extension, source):
+            raise ValueError("arquivo CSV inválido")
+
+    monkeypatch.setitem(pipeline.IMPORTERS, "N-FP", BrokenImporter())
+    before = _outcome_count("rejected")
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("entrada.csv", b"workorder,status\nWO-1,open\n", "text/csv")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_file"
+    assert _outcome_count("rejected") == before + 1
+    assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]

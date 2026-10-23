@@ -57,15 +57,15 @@ def process_normalized_records(
     deferred_rule_counts: Counter[str] = Counter()
     deferred_classification_count = 0
     deferred_active_count = 0
+    # Group once: filtering the whole list per Workorder was quadratic.
+    issues_by_workorder: dict[Any, list[dict[str, Any]]] = {}
+    for issue in consolidation["issues"]:
+        issues_by_workorder.setdefault(issue.get("workorder_number"), []).append(issue)
     for position, workorder in enumerate(consolidation["workorders"]):
         if checkpoint is not None and position % 256 == 0:
             checkpoint()
         workorder_number = workorder["workorder_number"]
-        workorder_issues = [
-            issue
-            for issue in consolidation["issues"]
-            if issue.get("workorder_number") == workorder_number
-        ]
+        workorder_issues = list(issues_by_workorder.get(workorder_number, ()))
         try:
             workorder_classifications = classify(
                 {"workorders": [workorder], "issues": workorder_issues},

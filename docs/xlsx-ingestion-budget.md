@@ -26,7 +26,7 @@ continuam descritos em [upload-security.md](upload-security.md).
 | Leitura (`spreadsheet_reader.LazySheetRows`) | reabre o arquivo a cada passagem em modo somente leitura e entrega as linhas uma a uma, reaplicando linhas, colunas, células e tempo | uma linha |
 | Validação | percorre as linhas guardando só um digest de 16 bytes por linha para detectar duplicidade e interrompe ao exceder o orçamento de ocorrências | proporcional ao número de linhas, não às células |
 | Normalização | gera os registros normalizados (ver "Memória dos registros") | proporcional às linhas e células aceitas |
-| Consolidação e regras (`processing`) | valida registros, consolida, classifica e agrega; consulta o relógio nos laços de validação (a cada 1.024 registros), consolidação e classificação (a cada 256 Workorders) | ver "Memória dos registros" |
+| Consolidação e regras (`processing`) | valida registros, consolida, classifica e agrega; consulta o relógio nos laços de validação de registros, de indexação, resolução e consolidação (a cada 1.024 registros, inclusive dentro de um único Workorder) e de classificação (a cada 256 Workorders e a cada 1.024 fatos de um Workorder) | ver "Memória dos registros" |
 
 Cada arquivo é lido em três passagens (validação, registros importados e
 normalização). O relógio de processamento reinicia por arquivo, antes da
@@ -156,9 +156,12 @@ Métricas Prometheus:
   processo (`ru_maxrss`), registrado ao final de cada ingestão. É uma marca
   d'água do processo, não o consumo isolado do arquivo.
 
-Todo caminho terminal registra um resultado: rejeição na admissão, rejeição ou
-falha durante o processamento (inclusive limite de tempo na consolidação),
-falha inesperada (`failed`) e conclusão. Em uma execução com vários arquivos,
+Todo caminho terminal de uma ingestão registra um resultado: limite de arquivos
+por requisição, rejeição na admissão, arquivo ilegível (`invalid_file`),
+rejeição durante o processamento (inclusive limite de tempo na consolidação),
+falha de armazenamento ou inesperada (`failed`) e conclusão. Validações de
+requisição anteriores à ingestão (fontes ausentes, nomes duplicados, permissão)
+e duplicidades por hash não são resultados de ingestão. Em uma execução com vários arquivos,
 cada arquivo registra a duração capturada ao fim da própria fase, sem somar os
 arquivos seguintes nem a consolidação, e o resultado terminal da execução; o
 motivo da rejeição é contado uma vez por execução. As rejeições da admissão
@@ -210,7 +213,7 @@ A verificação ocorre em três momentos:
 
 Quando uma execução reúne fontes com limites diferentes (sufixos `_N_FP`, `_OWM`,
 `_GMES_OQC`, `_TMS`), valem em conjunto os **menores** limites de memória, tempo
-e ocorrências entre as fontes participantes, de modo que o resultado não depende
+e ocorrências (`INGESTION_MAX_ISSUES`, comparado ao total acumulado) entre as fontes participantes, de modo que o resultado não depende
 da ordem dos arquivos no `multipart`.
 
 Com três colunas, o limite padrão (1 GiB) admite cerca de 47 mil registros no
@@ -244,18 +247,17 @@ status):
 
 | Linhas | Workorders | Tempo | RSS acima da base | Por linha | Estimativa do orçamento |
 | --- | --- | --- | --- | --- | --- |
-| 10.000 | 10.000 | 49 s | 201 MB | 20,1 KB | 230 MB |
+| 10.000 | 10.000 | 27 s | 203 MB | 20,3 KB | 230 MB |
 | 10.000 | 500 | 3,9 s | 148 MB | 14,8 KB | 230 MB |
-| 30.000 | 1.000 | 12,4 s | 439 MB | 14,6 KB | 689 MB |
+| 30.000 | 1.000 | 12,5 s | 440 MB | 14,7 KB | 689 MB |
 | 60.000 | 2.000 | 16,5 s | 228 MB | 3,8 KB | 328 MB |
 | 100.000 | 5.000 | 31,8 s | 380 MB | 3,8 KB | 546 MB |
 
 Com duas colunas (`N-FP`), 10.000 linhas de Workorders distintos: 188 MB, abaixo
-da estimativa de 226 MB. O caso mais caro é o de muitos Workorders distintos,
-que também é o mais lento: o laço de classificação filtra as ocorrências por
-Workorder, o que cresce de forma quadrática. Esse custo é anterior a esta
-entrega e não foi alterado; o relógio da consolidação garante apenas que ele
-seja interrompido pelo orçamento de tempo.
+da estimativa de 226 MB. O caso mais caro é o de muitos Workorders distintos, que
+também é o mais lento. A busca de ocorrências por Workorder era quadrática e
+passou a usar um agrupamento único (49 s para 27 s neste caso); o tempo restante
+cresce com os Workorders distintos e é limitado pelo relógio da consolidação.
 
 ### Workbook representativo (`WO Status`)
 
@@ -299,8 +301,8 @@ reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`
   limitados, mas o consumo não é constante.
 - A estimativa é calibrada no ambiente descrito abaixo e em formas de dados
   medidas; planilhas com formato muito diferente exigem nova medição.
-- O tempo da consolidação cresce de forma quadrática com o número de
-  Workorders distintos; o orçamento de tempo apenas o interrompe.
+- O tempo da consolidação ainda cresce mais que linearmente com o número de
+  Workorders distintos; o orçamento de tempo o interrompe.
 - O cabeçalho é procurado nas primeiras 200 linhas de cada aba.
 - O openpyxl carrega estilos e strings compartilhadas inteiros na abertura; o
   orçamento de metadados limita esse custo, mas ele continua proporcional ao tamanho

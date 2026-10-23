@@ -8,6 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from app.pacing import paced
+
 RULES_PATH = Path(__file__).with_name("model") / "business_rules.json"
 REQUIRED_RULES = {
     "oqc_pass",
@@ -590,6 +592,7 @@ def classify(
                 int(fact.get("row", 0)),
             ),
         )
+        facts = paced(facts, checkpoint)
         release_dates = [
             parsed
             for fact in facts

@@ -43,7 +43,7 @@ from app.execution import (
     validate_transition,
 )
 from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError, max_files
-from app.observability.metrics import observe_ingestion, record_ingestion_rejection
+from app.observability.metrics import observe_ingestion
 from app.observability.telemetry import (
     bind_execution_id,
     current_correlation_id,
@@ -946,7 +946,7 @@ def _observe_terminal(
         duration_seconds=time.monotonic() - started,
         rows_processed=0,
         rows_rejected=0,
-        reason=reason,
+        reason=reason if outcome == "rejected" else None,
         allowed_reasons=frozenset(LIMIT_GUIDANCE),
     )
     safe_log(
@@ -1020,7 +1020,7 @@ async def upload_import(
         error = IngestionLimitError(
             "ingestion_file_limit", limit=max_files(), observed=len(file)
         )
-        record_ingestion_rejection(error.code, frozenset(LIMIT_GUIDANCE))
+        _observe_terminal("rejected", started, error.code)
         raise HTTPException(
             status_code=413,
             detail={"code": error.code, "message": error.message, **error.details()},
@@ -1137,6 +1137,7 @@ async def upload_import(
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 repository.abort_claim(execution_id, "storage_error")
+                _observe_terminal("failed", started, "storage_error")
                 safe_log(
                     logging.ERROR,
                     "import.storage.failed",
@@ -1300,6 +1301,7 @@ async def upload_import(
             destination.unlink(missing_ok=True)
         if pipeline_inputs:
             repository.abort_claim(execution_id, "invalid_file")
+        _observe_terminal("rejected", started, "invalid_file")
         _error(repository, execution_id, 422, "invalid_file", str(exc))
     except Exception as exc:
         for destination in destinations:

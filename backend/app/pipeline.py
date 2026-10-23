@@ -146,6 +146,13 @@ def _record_execution(
         )
 
 
+def _check_issue_total(budget: IngestionBudget, issues: list[dict[str, Any]]) -> None:
+    if len(issues) > budget.max_issues:
+        raise IngestionLimitError(
+            "ingestion_issue_limit", limit=budget.max_issues, observed=len(issues)
+        )
+
+
 def _check_execution_memory(
     budget: IngestionBudget, rows: int, cells: int, *, final: bool
 ) -> None:
@@ -362,12 +369,10 @@ def _run_pipeline_batch(
                 else "file"
             )
             issues.append(issue)
-        if run is not None and len(issues) > run.budget.max_issues:
-            raise IngestionLimitError(
-                "ingestion_issue_limit",
-                limit=run.budget.max_issues,
-                observed=len(issues),
-            )
+        if lazy_budgets:
+            # Issues accumulate across files, so the limit is the most restrictive
+            # one among the sources seen so far (and again over all of them below).
+            _check_issue_total(IngestionBudget.most_restrictive(lazy_budgets), issues)
         imported_records.extend(imported)
         valid_records += len(eligible_rows)
         file_rejected = len(imported) if structural_blocked else len(rejected_rows)
@@ -396,6 +401,7 @@ def _run_pipeline_batch(
     # does not depend on the order of the files.
     aggregate = IngestionBudget.most_restrictive(lazy_budgets) if lazy_budgets else None
     if aggregate is not None:
+        _check_issue_total(aggregate, issues)
         # ``defer_rule_details`` below depends on the normalized count of the
         # whole execution, which is only known now; the estimate uses that same
         # cardinality and covers every file accumulated in the execution.
