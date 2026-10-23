@@ -52,7 +52,10 @@ remova `blocked` da configuração.
 
 - Cada coluna é identificada por **letra e cabeçalho esperado**. Se qualquer
   cabeçalho divergir, a aba inteira é descartada com `contract_drift` (erro
-  estrutural, com a coluna e a linha do cabeçalho) e as outras abas seguem.
+  estrutural, com a coluna e a linha do cabeçalho). O bloqueio é **por aba**: o
+  resultado lista `blocked_sheets`, os registros das demais abas seguem normalizados
+  e persistidos como válidos e a execução termina como `completed_with_errors`. Só
+  quando nenhuma aba é aproveitável a execução é `validation_failed`.
 - Só as colunas mapeadas são lidas (`max_col`); colunas homônimas calculadas
   (`G`, `I`, `L` e `M` de `NFP`) e colunas calculadas (`Org` e `REASON` de
   `OWM SN`) nunca entram.
@@ -139,8 +142,11 @@ desequilíbrio ou divergência.
 
 ## Limites da fonte
 
-A fonte `WO Status` usa os orçamentos de [xlsx-ingestion-budget.md](xlsx-ingestion-budget.md)
-contando apenas as colunas que o adapter mantém. As abas autorizadas são, por
+A fonte `WO Status` aceita **somente XLSX**, qualquer que seja `UPLOAD_ALLOWED_EXTENSIONS`
+ou `UPLOAD_ALLOWED_EXTENSIONS_WO_STATUS`. Usa os orçamentos de
+[xlsx-ingestion-budget.md](xlsx-ingestion-budget.md) contando apenas as colunas que
+o adapter mantém; todas as abas e a consolidação compartilham **uma única janela de
+tempo** por upload. As abas autorizadas são, por
 padrão, as do contrato; `INGESTION_ALLOWED_SHEETS_WO_STATUS` pode restringi-las.
 
 ### Medição no workbook representativo
@@ -181,12 +187,14 @@ sobrescrito pelo sufixo `_WO_STATUS`):
 | --- | --- | --- |
 | `UPLOAD_MAX_BYTES` | 64 MiB | 41,5 MB |
 | `UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES` | 640 MiB | 471 MB |
-| `INGESTION_MAX_SECONDS` | 900 s | 190 s de adapters e pipeline (relógio por arquivo) |
+| `INGESTION_MAX_SECONDS_WO_STATUS` | 900 s | 190 s de adapters e pipeline, abas e consolidação juntas |
 | `INGESTION_MAX_CELLS` | 2.000.000 | ~1,1 milhão de células mapeadas |
 | `INGESTION_MAX_MEMORY_BYTES` | 1 GiB | 68.776 registros normalizados, estimativa abaixo de 1 GiB |
 
-Os limites globais de upload, pensados para arquivos genéricos, não se aplicam a
-esta fonte.
+Os limites globais de upload e de tempo (`UPLOAD_MAX_BYTES`,
+`UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES`, `INGESTION_MAX_SECONDS`), pensados para
+arquivos genéricos, não substituem estes padrões: só as variáveis com sufixo
+`_WO_STATUS` os alteram.
 
 ## Limitações e pendências
 

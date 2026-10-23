@@ -144,7 +144,9 @@ def _record_execution(
             outcome=outcome,
             rows_processed=stat["rows"],
             rows_rejected=stat["rejected"],
-            duration=meter.clock.elapsed if duration is None else duration,
+            duration=(
+                meter.clock.elapsed - stat["offset"] if duration is None else duration
+            ),
             reason=reason if position == 0 else None,
         )
 
@@ -302,11 +304,21 @@ def _run_pipeline_batch(
     normalized_records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
     blocked_files: set[int] = set()
+    # A composite upload isolates a structural failure to its sheet.
+    blocked_sheets: set[tuple[int, str | None]] = set()
     valid_records = 0
     rejected_records = 0
     lazy_budgets: list[IngestionBudget] = []
     held_rows = 0
     held_cells = 0
+    # One time window for the whole execution, shared by every sheet and by the
+    # consolidation, bounded by the most restrictive source.
+    runs = [run for item in inputs if (run := _run_of(item["tables"])) is not None]
+    execution_clock = (
+        IngestionBudget.most_restrictive([run.budget for run in runs]).start()
+        if runs
+        else None
+    )
 
     for item in inputs:
         source = str(item["source"])
@@ -321,13 +333,15 @@ def _run_pipeline_batch(
             "rows": 0,
             "rejected": 0,
             "duration": None,
+            "offset": 0.0,
         }
         stats.append(stat)
         if run is not None:
             lazy_budgets.append(run.budget)
         max_issues = run.budget.max_issues if run is not None else None
-        if run is not None:
-            run.restart()
+        if run is not None and execution_clock is not None:
+            run.attach(execution_clock)
+            stat["offset"] = execution_clock.elapsed
             run.begin("validating")
         validation = validate_tables(
             tables,
@@ -353,7 +367,9 @@ def _run_pipeline_batch(
             issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
             for issue in file_issues
         )
-        if structural_blocked:
+        if structural_blocked and item.get("schema") is not None:
+            blocked_sheets.add((source_file_id, tables[0][0] if tables else None))
+        elif structural_blocked:
             blocked_files.add(source_file_id)
         rejected_rows = {
             (issue["sheet"], issue["row"])
@@ -400,7 +416,7 @@ def _run_pipeline_batch(
         rejected_records += file_rejected
         stat["rows"] = len(imported)
         stat["rejected"] = file_rejected
-        stat["duration"] = meter.clock.elapsed
+        stat["duration"] = meter.clock.elapsed - stat["offset"]
         # Every file of the execution accumulates in the same lists, so the
         # budget is also checked on the running totals; only the cheapest
         # regime is known to apply until the normalized count is final.
@@ -433,9 +449,9 @@ def _run_pipeline_batch(
             final=True,
         )
 
-    # Consolidation and rules get their own time window under the same budget.
-    checkpoint = aggregate.start().check if aggregate is not None else None
-    if blocked_files and not normalized_records:
+    checkpoint = execution_clock.check if execution_clock is not None else None
+    nothing_usable = bool(blocked_files or blocked_sheets) and not normalized_records
+    if nothing_usable:
         processing = process_normalized_records(
             normalized_records,
             execution_id=execution_id,
@@ -477,7 +493,7 @@ def _run_pipeline_batch(
     }
     status = (
         "validation_failed"
-        if blocked_files and not normalized_records
+        if nothing_usable
         else "completed_with_errors"
         if error_count or processing["summary"]["failed_workorders"]
         else "completed"
@@ -491,8 +507,12 @@ def _run_pipeline_batch(
         "file_name": file_names[0],
         "file_names": file_names,
         "status": status,
-        "blocking": bool(blocked_files),
+        "blocking": bool(blocked_files) or nothing_usable,
         "blocked_source_file_ids": sorted(blocked_files),
+        "blocked_sheets": [
+            {"source_file_id": file_id, "sheet": sheet}
+            for file_id, sheet in sorted(blocked_sheets, key=str)
+        ],
         "summary": summary,
         "imported_records": imported_records,
         "issues": issues,

@@ -1233,3 +1233,25 @@ def test_upload_policy_lists_the_composite_source_as_xlsx_only(api) -> None:
 
     policy = next(p for p in response.json()["policies"] if p["source"] == "WO Status")
     assert policy["allowed_extensions"] == ["xlsx"]
+
+
+def test_composite_policy_and_upload_ignore_the_global_csv_json_setting(
+    api, monkeypatch
+) -> None:
+    client, _, _ = api
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx")
+
+    policy = next(
+        p
+        for p in client.get("/imports/policy").json()["policies"]
+        if p["source"] == "WO Status"
+    )
+    response = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo.csv", b"workorder\nWO-1\n", "text/csv")},
+    )
+
+    assert policy["allowed_extensions"] == ["xlsx"]
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "unsupported_extension"

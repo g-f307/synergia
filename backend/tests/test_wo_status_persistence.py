@@ -187,3 +187,35 @@ def test_reconciliation_report_matches_the_persisted_execution(seeded) -> None:
     assert comparison["matches"] is False
     assert comparison["differences"][0]["sheet"] == "NFP"
     assert comparison["differences"][0]["kind"] == "normalized"
+
+
+def test_drift_in_one_sheet_does_not_reject_the_records_of_the_others(
+    seeded,
+) -> None:
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    database_url, execution_id, source_file_id, path, _ = seeded
+    book = load_workbook(BytesIO(path.read_bytes()))
+    book["NFP"]["Y3"] = "Outro cabeçalho"
+    output = BytesIO()
+    book.save(output)
+    path.write_bytes(output.getvalue())
+
+    repository, result = _run(seeded)
+
+    assert result["blocking"] is False
+    with psycopg.connect(database_url) as connection:
+        statuses = dict(
+            connection.execute(
+                "SELECT sheet_name || ':' || processing_status, count(*) "
+                "FROM synergia.imported_records WHERE execution_id = %s "
+                "GROUP BY 1",
+                (execution_id,),
+            ).fetchall()
+        )
+    assert statuses.get("OWM SN:valid", 0) > 0
+    assert statuses.get("CTNR STATUS:valid", 0) > 0
+    assert not any(key.startswith("NFP:") for key in statuses)
+    assert repository.get(execution_id)["status"] == "completed_with_errors"

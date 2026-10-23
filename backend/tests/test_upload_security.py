@@ -234,3 +234,31 @@ def test_composite_source_has_its_own_measured_upload_limits(monkeypatch) -> Non
         5000,
         7000,
     )
+
+
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [
+        ("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx"),
+        ("UPLOAD_ALLOWED_EXTENSIONS_WO_STATUS", "csv,json,xlsx"),
+    ],
+)
+def test_composite_source_is_xlsx_only_whatever_the_configuration(
+    monkeypatch, variable, value
+) -> None:
+    monkeypatch.setenv(variable, value)
+
+    assert policy_for("WO Status").allowed_extensions == frozenset({".xlsx"})
+
+
+def test_global_time_setting_does_not_replace_the_composite_default(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("INGESTION_MAX_SECONDS", "300")
+    monkeypatch.delenv("INGESTION_MAX_SECONDS_WO_STATUS", raising=False)
+
+    assert policy_for("WO Status").budget.max_seconds == 900
+    assert policy_for("N-FP").budget.max_seconds == 300
+
+    monkeypatch.setenv("INGESTION_MAX_SECONDS_WO_STATUS", "1200")
+    assert policy_for("WO Status").budget.max_seconds == 1200

@@ -120,6 +120,9 @@ def policy_for(source: str) -> UploadPolicy:
         for value in allowed_value.split(",")
         if value.strip()
     )
+    if source == COMPOSITE_SOURCE:
+        # No configuration can widen the composite source beyond XLSX.
+        allowed = allowed & {".xlsx"}
     unsupported = allowed.difference(MEDIA_TYPES)
     if unsupported:
         extensions = ", ".join(sorted(unsupported))

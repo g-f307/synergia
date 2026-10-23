@@ -251,7 +251,62 @@ def test_header_drift_blocks_only_the_drifted_sheet(tmp_path, clean) -> None:
     assert [(i["sheet"], i["column"], i["row"]) for i in drift] == [("NFP", "Y", 3)]
     assert _records(result, "NFP") == []
     assert len(_records(result, "OWM SN")) > 0
+    # The failure is scoped to its sheet: nothing else is blocked or rejected.
+    assert result["blocking"] is False
+    assert result["blocked_source_file_ids"] == []
+    assert result["blocked_sheets"] == [{"source_file_id": 7, "sheet": "NFP"}]
+    assert result["status"] == "completed_with_errors"
+
+
+def test_drift_in_every_sheet_fails_the_validation(tmp_path, clean) -> None:
+    content, _ = clean
+    drifted = _edit(
+        content,
+        {
+            ("NFP", "Y3"): "x",
+            ("OWM SN", "O2"): "x",
+            ("LOT PENDING_OQC", "H3"): "x",
+            ("CTNR STATUS", "C1"): "x",
+        },
+    )
+
+    _, result = _process(tmp_path, drifted)
+
+    assert result["normalized_records"] == []
     assert result["blocking"] is True
+    assert result["status"] == "validation_failed"
+    assert len(result["blocked_sheets"]) == 4
+
+
+def test_the_time_window_is_shared_by_every_sheet_of_the_workbook(
+    tmp_path, clean, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
+    from app.ingestion_budget import IngestionLimitError
+
+    content, _ = clean
+    monkeypatch.setenv("INGESTION_MAX_SECONDS_WO_STATUS", "100")
+    now = {"value": 1000.0}
+    monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: now["value"])
+    real = pipeline.normalize_tables
+
+    def slow(*args, **kwargs):
+        now["value"] += 60.0
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline, "normalize_tables", slow)
+    monkeypatch.setattr(
+        pipeline,
+        "process_normalized_records",
+        lambda *args, **kwargs: pytest.fail("the window must expire before this"),
+    )
+
+    # Each sheet alone takes 60 s, well inside 100 s; together they do not.
+    with pytest.raises(IngestionLimitError) as excinfo:
+        _process(tmp_path, content)
+
+    assert excinfo.value.code == "ingestion_time_limit"
+    assert excinfo.value.limit == 100
 
 
 def test_authorized_sheets_follow_the_environment_when_configured(

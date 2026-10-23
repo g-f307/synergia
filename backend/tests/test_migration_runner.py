@@ -115,6 +115,45 @@ def test_adoption_notices_a_missing_source_constraint_widening(
     assert migration_count(migration_database) == 0
 
 
+@pytest.mark.parametrize(
+    "widened",
+    [
+        ("file_inspections",),
+        ("executions",),
+        ("source_files",),
+        ("executions", "source_files"),
+        ("source_files", "file_inspections"),
+    ],
+)
+def test_adoption_requires_every_source_constraint_to_be_widened(
+    migration_database: str, widened: tuple[str, ...]
+) -> None:
+    index = next(i for i, m in enumerate(MIGRATIONS) if m.name.startswith("0031"))
+    apply_legacy_schema(migration_database, index)
+    with psycopg.connect("", dbname=migration_database) as connection:
+        for table in widened:
+            name = f"{table}_source_check"
+            connection.execute(
+                f"ALTER TABLE synergia.{table} DROP CONSTRAINT {name}, "
+                f"ADD CONSTRAINT {name} CHECK (source IN "
+                "('N-FP', 'OWM', 'GMES/OQC', 'TMS', 'WO Status'))"
+            )
+        connection.commit()
+
+    result = run_migrations(migration_database, MIGRATIONS[index].name, check=False)
+
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+
+
+def test_adoption_accepts_a_fully_widened_database(migration_database: str) -> None:
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+
+    run_migrations(migration_database, MIGRATIONS[-1].name)
+
+    assert migration_count(migration_database) == len(MIGRATIONS)
+
+
 def test_rejects_checksum_divergence(migration_database: str) -> None:
     run_migrations(migration_database)
     with psycopg.connect("", dbname=migration_database) as connection:

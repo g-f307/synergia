@@ -10,7 +10,12 @@ from typing import Any
 
 from openpyxl import load_workbook
 
-from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.ingestion_budget import (
+    IngestionBudget,
+    IngestionClock,
+    IngestionLimitError,
+    budget_for,
+)
 from app.observability.telemetry import safe_log
 from app.xlsx_package import check_open_parts
 
@@ -92,9 +97,9 @@ class IngestionRun:
         self.phase = "reading"
         self.rows_by_phase: dict[str, int] = {}
 
-    def restart(self) -> None:
-        """Start the processing window once the file is about to be consumed."""
-        self.clock = self.budget.start()
+    def attach(self, clock: IngestionClock) -> None:
+        """Share the execution clock: one time window for every sheet of a file."""
+        self.clock = clock
         self.rows_by_phase = {}
 
     def begin(self, phase: str) -> None:

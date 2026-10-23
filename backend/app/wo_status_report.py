@@ -137,7 +137,7 @@ def build_report(workbook: Path, *, execution_id: str = "validacao-sem-persisten
             "sha256": digest,
         },
         "status": result["status"],
-        "blocking": result["blocking"],
+        "blocking": result["blocking"] or bool(result["blocked_sheets"]),
         "summary": result["summary"],
         "sheets": sheets,
         "ignored_sheets": ignored_sheets,

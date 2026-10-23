@@ -215,9 +215,16 @@ def _source_key(source: str) -> str:
     return re.sub(r"[^A-Z0-9]+", "_", source.upper()).strip("_")
 
 
-def _positive(name: str, source_key: str, default: int | float, cast=int):
+def _positive(
+    name: str,
+    source_key: str,
+    default: int | float,
+    cast=int,
+    *,
+    use_global: bool = True,
+):
     raw = os.getenv(f"{name}_{source_key}") if source_key else None
-    if raw is None:
+    if raw is None and use_global:
         raw = os.getenv(name)
     if raw is None or not raw.strip():
         return default
@@ -276,6 +283,9 @@ def budget_for(source: str) -> IngestionBudget:
             key,
             MAX_SECONDS if source == COMPOSITE_SOURCE else DEFAULT_MAX_SECONDS,
             cast=float,
+            # The composite source has a measured default that a generic global
+            # setting (tuned for small files) must not silently replace.
+            use_global=source != COMPOSITE_SOURCE,
         ),
         max_issues=_positive("INGESTION_MAX_ISSUES", key, DEFAULT_MAX_ISSUES),
         progress_interval=_positive(
