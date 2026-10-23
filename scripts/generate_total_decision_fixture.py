@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -25,6 +26,8 @@ def build_workbook(rows: int = 4, *, edge: bool = False) -> bytes:
         raise ValueError("rows deve ser positivo")
     spec = load_spec()
     book = Workbook()
+    book.properties.created = datetime(2026, 1, 1)
+    book.properties.modified = datetime(2026, 1, 1)
     sheet = book.active
     sheet.title = spec.sheet.name
     for column in spec.sheet.columns:

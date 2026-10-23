@@ -31,6 +31,12 @@ def test_spec_matches_contract_and_minimizes_restricted_fields():
 
 def test_synthetic_workbook_is_reproducible():
     assert build_workbook(edge=True) == build_workbook(edge=True)
+    # Also compare with bytes generated in another process/session, so wall-clock
+    # metadata cannot silently invalidate hashes across machines or CI runs.
+    assert (
+        build_workbook()
+        == (ROOT / "data/synthetic/total-decision_minimal.xlsx").read_bytes()
+    )
 
 
 def test_invalid_spec_is_rejected(tmp_path, monkeypatch):

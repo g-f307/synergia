@@ -10,8 +10,11 @@ from uuid import uuid4
 import psycopg
 import pytest
 
+from app.business_rules import RULE_CATALOG
+from app.execution import PIPELINE_VERSION
 from app.imports import PostgresImportRepository
 from app.pipeline import read_source, run_pipeline_batch
+from app.queries import PostgresQueryRepository
 from app.total_decision_report import build_report, compare_persisted
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -132,6 +135,47 @@ def test_persistence_reconciles_and_preserves_logical_source_and_minimization(
     with pytest.raises(RuntimeError, match="não está apta"):
         repository.commit_pipeline(execution_id, result)
     assert persisted_counts(database, execution_id, path) == counts
+    queries = PostgresQueryRepository(database)
+    retry_id = execution_id + "-retry"
+    try:
+        first = queries.request_reprocessing(
+            execution_id,
+            retry_id,
+            "synthetic",
+            "same-request",
+            PIPELINE_VERSION,
+            RULE_CATALOG["version"],
+        )
+        replay = queries.request_reprocessing(
+            execution_id,
+            retry_id + "-other",
+            "synthetic",
+            "same-request",
+            PIPELINE_VERSION,
+            RULE_CATALOG["version"],
+        )
+        assert first["execution_id"] == replay["execution_id"] == retry_id
+        assert first["idempotent_replay"] is False
+        assert replay["idempotent_replay"] is True
+        assert persisted_counts(database, execution_id, path) == counts
+        with psycopg.connect(database) as conn:
+            assert conn.execute(
+                "SELECT source, reprocessed_from_id FROM synergia.executions "
+                "WHERE id = %s",
+                (retry_id,),
+            ).fetchone() == ("Total Decision", execution_id)
+    finally:
+        with psycopg.connect(database) as conn:
+            for table in (
+                "audit_events",
+                "execution_idempotency",
+                "execution_state_transitions",
+                "executions",
+            ):
+                key = "id" if table == "executions" else "execution_id"
+                conn.execute(
+                    f"DELETE FROM synergia.{table} WHERE {key} = %s", (retry_id,)
+                )
     with pytest.raises(ValueError, match="incompatível"):
         persisted_counts(database, "wrong-execution", path)
     path.write_bytes(build_workbook(rows=2))
