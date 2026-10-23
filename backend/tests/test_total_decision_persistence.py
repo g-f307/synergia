@@ -24,6 +24,7 @@ from scripts.generate_total_decision_fixture import (  # noqa: E402
     build_workbook,
 )
 from scripts.validate_total_decision import persisted_counts  # noqa: E402
+from test_total_decision import nonfinite_workbook  # noqa: E402
 
 pytestmark = pytest.mark.integration
 
@@ -88,9 +89,7 @@ def execution(tmp_path):
         )
 
 
-def test_persistence_reconciles_and_preserves_logical_source_and_minimization(
-    execution,
-):
+def process_execution(execution):
     database, execution_id, file_id, path = execution
     repository = PostgresImportRepository(database)
     tables, issues = read_source(path, ".xlsx", "Total Decision")
@@ -108,6 +107,14 @@ def test_persistence_reconciles_and_preserves_logical_source_and_minimization(
         repository=repository,
         classified_at="2026-01-10T00:00:00+00:00",
     )
+    return repository, result
+
+
+def test_persistence_reconciles_and_preserves_logical_source_and_minimization(
+    execution,
+):
+    database, execution_id, file_id, path = execution
+    repository, result = process_execution(execution)
     assert result["status"] == "completed_with_errors"
     report = build_report(path)
     counts = persisted_counts(database, execution_id, path)
@@ -181,3 +188,29 @@ def test_persistence_reconciles_and_preserves_logical_source_and_minimization(
     path.write_bytes(build_workbook(rows=2))
     with pytest.raises(ValueError, match="incompatível"):
         persisted_counts(database, execution_id, path)
+
+
+def test_nonfinite_numeric_error_does_not_prevent_partial_persistence(execution):
+    database, execution_id, _, path = execution
+    content = nonfinite_workbook("AX")
+    path.write_bytes(content)
+    with psycopg.connect(database) as conn:
+        conn.execute(
+            "UPDATE synergia.source_files SET content_hash = %s, size_bytes = %s "
+            "WHERE execution_id = %s",
+            (hashlib.sha256(content).hexdigest(), len(content), execution_id),
+        )
+    _, result = process_execution(execution)
+    assert result["status"] == "completed_with_errors"
+    assert persisted_counts(database, execution_id, path)["Sheet1"] == {
+        "imported": 4,
+        "normalized": 3,
+    }
+    with psycopg.connect(database) as conn:
+        original, state = conn.execute(
+            "SELECT original_values, processing_status "
+            "FROM synergia.imported_records WHERE execution_id = %s AND row_number = 4",
+            (execution_id,),
+        ).fetchone()
+        assert state == "rejected"
+        assert original["hold_quantity"] == "inf"

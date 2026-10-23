@@ -256,16 +256,16 @@
             "empty_approval_block": 551
           },
           "adapter_policy": {
-          "source": "Total Decision",
-          "logical_source": "GMES/OQC",
-          "negative_quantities": "reject_row",
-          "organization": "preserve_source_code_without_IAM_mapping",
-          "unknown_states": "preserve_and_warn",
-          "unparsed_dates": "preserve_and_warn",
-          "restricted_values": "presence_only_before_pipeline",
-          "identity_aliases": "never_equate_distinct_identifiers"
-        },
-        "columns": {
+            "source": "Total Decision",
+            "logical_source": "GMES/OQC",
+            "negative_quantities": "reject_row",
+            "organization": "preserve_source_code_without_IAM_mapping",
+            "unknown_states": "preserve_and_warn",
+            "unparsed_dates": "preserve_and_warn",
+            "restricted_values": "presence_only_before_pipeline",
+            "identity_aliases": "never_equate_distinct_identifiers"
+          },
+          "columns": {
             "A": {"header_path": ["Prod Date"], "target": "production_date", "cell_policy": "literal_only"},
             "B": {"header_path": ["Inspection Date"], "target": "inspection_date", "cell_policy": "literal_only"},
             "C": {"header_path": ["OQC ID"], "target": "oqc_id_pending_key_validation", "cell_policy": "literal_only"},

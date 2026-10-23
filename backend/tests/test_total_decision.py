@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from app.execution import validate_transition
 from app.ingestion_budget import IngestionLimitError, budget_for
@@ -201,3 +204,61 @@ def test_restricted_only_row_is_rejected_and_blank_row_is_ignored(workbook):
     assert len(result["normalized_records"]) == 4
     assert len(result["imported_records"]) == 5
     assert SENSITIVE_SENTINEL not in json.dumps(result, default=str)
+
+
+@pytest.mark.parametrize("rows", [0, 1, 2])
+def test_truncated_header_is_reported_as_contract_drift(tmp_path, rows):
+    path = tmp_path / "truncated.xlsx"
+    book = Workbook()
+    book.active.title = "Sheet1"
+    if rows:
+        book.active["A1"] = "Prod Date"
+    if rows == 2:
+        book.active["A2"] = "truncated"
+    book.save(path)
+    result = run(path)
+    assert result["status"] == "validation_failed"
+    assert "contract_drift" in {issue["code"] for issue in result["issues"]}
+    assert not result["imported_records"]
+
+
+def nonfinite_workbook(column: str) -> bytes:
+    output = BytesIO()
+    with (
+        ZipFile(BytesIO(build_workbook())) as source,
+        ZipFile(output, "w", ZIP_DEFLATED) as target,
+    ):
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                # A numeric XML value too large for a float becomes infinity
+                # in openpyxl. Workbook.save would otherwise turn it into null.
+                data, count = re.subn(
+                    rb'<c r="' + column.encode() + rb'4"[^>]*>.*?</c>',
+                    b'<c r="' + column.encode() + b'4" t="n"><v>1e999</v></c>',
+                    data,
+                )
+                assert count == 1
+            target.writestr(item, data)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize("column", ["AX", "BE", "A", "AK", "F"])
+def test_nonfinite_numeric_cells_are_rejected_without_invalid_json(tmp_path, column):
+    path = tmp_path / "nonfinite.xlsx"
+    path.write_bytes(nonfinite_workbook(column))
+    result = run(path)
+    assert result["status"] == "completed_with_errors"
+    assert len(result["normalized_records"]) == 3
+    assert sum(issue["severity"] == "error" for issue in result["issues"]) >= 1
+    json.dumps(result, allow_nan=False, default=str)
+
+
+def test_unlisted_column_without_header_is_not_silently_discarded(workbook):
+    mutate(workbook, lambda sheet: setattr(sheet["BW4"], "value", DENIED_SENTINEL))
+    result = run(workbook)
+    assert any(
+        issue["code"] == "column_ignored" and issue["column"] == "BW"
+        for issue in result["issues"]
+    )
+    assert DENIED_SENTINEL not in json.dumps(result, default=str)

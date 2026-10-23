@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from openpyxl.utils import get_column_letter
+
 from app.normalization import normalize_state
 from app.spreadsheet_reader import IngestionRun, open_workbook
 from app.total_decision_spec import SOURCE, load_spec
@@ -51,22 +53,28 @@ class TotalDecisionRows(AdapterRows):
                         )
                     )
             else:
-                if column.kind == "id" and (
-                    isinstance(raw, bool)
-                    or isinstance(raw, float)
-                    and not math.isfinite(raw)
-                ):
+                non_finite = isinstance(raw, float) and not math.isfinite(raw)
+                if non_finite or column.kind == "id" and isinstance(raw, bool):
                     value = None
+                    code = {
+                        "id": "invalid_identifier",
+                        "qty": "invalid_quantity",
+                        "date": "invalid_date",
+                        "datetime": "invalid_date",
+                    }.get(column.kind, "invalid_number")
                     cell_issues = [
                         _issue(
-                            "invalid_identifier",
-                            "Identificador inválido",
+                            code,
+                            "Valor numérico incompatível com o contrato",
                             column=column.letter,
                         )
                     ]
                 else:
                     value, cell_issues = convert(column, raw)
-                original = raw
+                # PostgreSQL JSONB and strict JSON cannot represent NaN/Infinity.
+                # Keep a textual rendering in the rejected record; exact source
+                # bytes remain in the accepted workbook, linked by hash and row.
+                original = str(raw) if non_finite else raw
                 if column.kind == "status" and exists and not cell_issues:
                     value, known = normalize_state(value)
                     if not known:
@@ -148,14 +156,16 @@ class TotalDecisionImporter:
                     continue
                 allowed = {c.index for c in spec.sheet.columns}
                 for index in range(1, worksheet.max_column + 1):
-                    if index not in allowed and any(row[index - 1] for row in headers):
+                    # A field may have data but no header. Audit every declared
+                    # column outside the allowlist, without reading its values.
+                    if index not in allowed:
                         issues.append(
                             _issue(
                                 "column_ignored",
                                 "Coluna fora da allowlist não ingerida",
                                 severity="warning",
                                 sheet=name,
-                                column=str(index),
+                                column=get_column_letter(index),
                             )
                         )
                 rows = TotalDecisionRows(path, spec.sheet, spec.label, run)
@@ -174,6 +184,8 @@ class TotalDecisionImporter:
     def _header_drift(headers: list[tuple]) -> list[dict]:
         spec = load_spec()
         issues = []
+        # openpyxl may stop before max_row when the worksheet itself is short.
+        headers = (headers + [(), ()])[:2]
         for column in spec.sheet.columns:
             index = column.index - 1
             top, bottom = (row[index] if index < len(row) else None for row in headers)
@@ -192,7 +204,7 @@ class TotalDecisionImporter:
                 )
                 # Fill only the group's declared interval; never propagate an
                 # arbitrary header across unrelated or repeated columns.
-                parent = headers[0][anchor]
+                parent = headers[0][anchor] if anchor < len(headers[0]) else None
                 group_valid = all(
                     not value or _header_text(value) == expected[0]
                     for value in headers[0][anchor : index + 1]

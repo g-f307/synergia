@@ -46,6 +46,9 @@ segue o aviso do pipeline; identidade de negócio não é deduplicada por regra
 inventada enquanto a precedência estiver pendente.
 
 Valores originais não restritos são preservados separadamente das conversões.
+Números não finitos são rejeitados nos campos não restritos e representados como texto
+no registro rejeitado, pois JSON estrito e PostgreSQL JSONB não aceitam esses
+números. A representação exata permanece no arquivo original controlado.
 Campo, coluna, caminho do cabeçalho e versão do adapter aparecem nas
 transformações; arquivo/hash, aba, linha e execução completam a proveniência.
 Textos de usuário e observações não aparecem em `original_values`,
@@ -114,9 +117,9 @@ O corpus amplo, concorrência e volume integrado seguem na #141.
 
 Na máquina de desenvolvimento Ubuntu 24.04, Python 3.12 e PostgreSQL 16:
 
-- suíte não integrada: 712 testes aprovados;
-- integração completa em banco novo, com as 32 migrations: 608 aprovados;
-- jornadas Playwright existentes: 14 aprovadas;
+- suíte não integrada após a revisão: 721 testes aprovados;
+- integração completa após a revisão em banco novo, com as 32 migrations: 609 aprovados;
+- jornadas Playwright existentes na validação anterior: 14 aprovadas;
 - Ruff, compilação Python, 93 massas sintéticas e validadores de acesso, jornadas, ameaças, decisão de release e HTTP aprovados;
 - imagem backend construída, migrations locais e smoke de saúde aprovados;
 - upload autenticado da fixture sintética e leitura do artefato minimizado validados no container.
@@ -124,6 +127,34 @@ Na máquina de desenvolvimento Ubuntu 24.04, Python 3.12 e PostgreSQL 16:
 Uma rodada anterior no banco de testes reutilizado falhou em dois testes preexistentes por estado persistido de políticas e fila de e-mail. A repetição em banco novo, conforme a CI, aprovou toda a suíte. O teste específico de persistência também passou após adequar sua limpeza à desativação lógica obrigatória de organizações IAM.
 
 O gerador fixa metadados e timestamps do ZIP; um teste compara a saída à fixture versionada, além de comparar gerações na mesma sessão. A verificação específica de reprocessamento confirma replay do pedido, família Total Decision e preservação dos resultados originais.
+
+### Revisão de continuidade da #140
+
+A revisão adicionou regressões para três casos: cabeçalho ausente ou truncado
+agora produz `contract_drift` antes da importação; números não finitos rejeitam
+somente sua linha, sem inviabilizar JSONB e a persistência das linhas válidas;
+colunas adicionais sem título também geram `column_ignored`, sem copiar valores.
+
+| Critério | Evidência local |
+| --- | --- |
+| Cabeçalhos em dois níveis e exclusão de totais | contrato versionado; testes de grupos, deriva e linhas físicas 4 em diante |
+| IDs textuais, datas, ausência e estados | testes sintéticos de zeros, nulos, datas e resultados desconhecidos |
+| Dados restritos e campos adicionais | sentinelas ausentes dos artefatos; auditoria de colunas e abas ignoradas |
+| Proveniência e persistência GMES/OQC | testes de arquivo, hash, aba, linha, versão, originais minimizados e reconciliação PostgreSQL |
+| Validação sem persistência | relatório de contagens equilibradas; comparação vinculada ao arquivo e à execução |
+| Repetibilidade e reprocessamento | fixture determinística; duplicidade de upload; replay e preservação do histórico |
+| Contrato, API e matriz | testes de sincronização da especificação, OpenAPI e documentação atualizada |
+
+A amostra real foi novamente validada sem persistência e manteve os mesmos
+agregados. O formulário Angular continua fora deste incremento; a fonte está
+disponível pela API. Semântica corporativa pendente e homologação da #141 não
+são concluídas por esta revisão.
+
+Na revisão, uma execução iniciada antes das migrations no banco novo foi
+interrompida e descartada. A suíte não integrada também foi repetida sem o
+`.env` de desenvolvimento: sua configuração de cookie local conflita com um
+teste preexistente de configuração produtiva. Os totais acima correspondem às
+execuções corretas, com o esquema aplicado e o isolamento de ambiente da CI.
 
 Comandos principais, usando um banco novo e isolado para integração:
 
