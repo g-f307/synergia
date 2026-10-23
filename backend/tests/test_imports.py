@@ -1162,6 +1162,53 @@ def _wo_status_bytes(edge: bool = False) -> bytes:
     return build_workbook(edge=edge)[0]
 
 
+def test_total_decision_upload_and_policy_preserve_logical_source(api):
+    from scripts.generate_total_decision_fixture import (
+        SENSITIVE_SENTINEL,
+        build_workbook,
+    )
+
+    client, repository, _ = api
+    policy = next(
+        p
+        for p in client.get("/imports/policy").json()["policies"]
+        if p["source"] == "Total Decision"
+    )
+    assert policy["allowed_extensions"] == ["xlsx"]
+    content = build_workbook()
+    response = client.post(
+        "/imports",
+        data={"source": "Total Decision"},
+        files={"file": ("synthetic.xlsx", content, XLSX_TYPE)},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["source"] == "Total Decision"
+    assert body["status"] == "completed"
+    execution_id = body["execution_id"]
+    normalized = client.get(f"/imports/{execution_id}/normalized-data")
+    assert normalized.status_code == 200
+    assert SENSITIVE_SENTINEL not in normalized.text
+    assert repository.normalized_records[execution_id][0]["source"] == "GMES/OQC"
+    duplicate = client.post(
+        "/imports",
+        data={"source": "Total Decision"},
+        files={"file": ("synthetic.xlsx", content, XLSX_TYPE)},
+    )
+    assert duplicate.status_code == 409
+
+
+def test_total_decision_upload_is_always_xlsx_only(api, monkeypatch):
+    client, _, _ = api
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx")
+    response = client.post(
+        "/imports",
+        data={"source": "Total Decision"},
+        files={"file": ("synthetic.csv", b"workorder_number\nSYN-1\n", "text/csv")},
+    )
+    assert response.status_code == 415
+
+
 @pytest.mark.parametrize("allowlist", ["*", None])
 def test_wo_status_upload_routes_each_sheet_to_its_logical_source(
     api, monkeypatch, allowlist

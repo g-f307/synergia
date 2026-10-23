@@ -71,9 +71,7 @@ IDENTIFIER_FIELDS = frozenset(NORMALIZATION_RULES["identifier_fields"])
 DATE_FIELDS = frozenset(NORMALIZATION_RULES["date_fields"])
 STATE_MAP: dict[str, str] = NORMALIZATION_RULES["state_map"]
 OQC_FLAG_MAP: dict[str, bool] = NORMALIZATION_RULES["oqc_flag_map"]
-BOOLEAN_FIELDS = frozenset(
-    {"active", "hold_flag", "rework_flag", "ship_block_flag"}
-)
+BOOLEAN_FIELDS = frozenset({"active", "hold_flag", "rework_flag", "ship_block_flag"})
 
 
 def _without_accents(value: str) -> str:
@@ -255,8 +253,13 @@ def normalize_tables(
             originals: dict[str, Any] = {}
             transformations: list[dict[str, Any]] = []
             for index, field in enumerate(headers):
-                original = row[index] if index < len(row) else None
-                normalized, operation, issue_code = _normalize_value(field, original)
+                current = row[index] if index < len(row) else None
+                original = (
+                    getattr(row, "original_values", row)[index]
+                    if index < len(row)
+                    else None
+                )
+                normalized, operation, issue_code = _normalize_value(field, current)
                 source_column = str(raw_headers[index])
                 values[field] = normalized
                 originals[field] = _json_value(original)
