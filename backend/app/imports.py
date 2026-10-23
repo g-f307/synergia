@@ -40,6 +40,7 @@ from app.execution import (
     import_fingerprint,
     validate_transition,
 )
+from app.ingestion_budget import LIMIT_GUIDANCE
 from app.observability.telemetry import (
     bind_execution_id,
     current_correlation_id,
@@ -876,6 +877,7 @@ def _error(
     http_status: int,
     code: str,
     message: str,
+    details: dict | None = None,
 ) -> None:
     current = repository.get(execution_id)
     if current is not None and current["status"] != "failed":
@@ -889,7 +891,12 @@ def _error(
     )
     raise HTTPException(
         status_code=http_status,
-        detail={"code": code, "message": message, "execution_id": execution_id},
+        detail={
+            "code": code,
+            "message": message,
+            "execution_id": execution_id,
+            **(details or {}),
+        },
     )
 
 
@@ -914,11 +921,20 @@ INSPECTION_MESSAGES = {
     "archive_compression_ratio": "Razão de compressão abusiva",
     "archive_path_traversal": "Caminho inseguro dentro do arquivo compactado",
     "encrypted_archive": "Arquivo compactado criptografado não permitido",
+    **{code: message for code, (message, _) in LIMIT_GUIDANCE.items()},
 }
 
 
+def _rejection_details(inspection) -> dict | None:
+    details = dict(inspection.reason_details or {})
+    guidance = LIMIT_GUIDANCE.get(inspection.reason_code)
+    if guidance and "guidance" not in details:
+        details["guidance"] = guidance[1]
+    return details or None
+
+
 def _inspection_http_status(reason_code: str) -> int:
-    if reason_code == "file_too_large":
+    if reason_code == "file_too_large" or reason_code.startswith("workbook_"):
         return status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
     if reason_code in {
         "unsupported_extension",
@@ -1062,6 +1078,7 @@ async def upload_import(
                     INSPECTION_MESSAGES.get(
                         inspection.reason_code, "Arquivo rejeitado pela inspeção"
                     ),
+                    _rejection_details(inspection),
                 )
             try:
                 destination = release_to_accepted(
