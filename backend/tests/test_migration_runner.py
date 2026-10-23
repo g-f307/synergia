@@ -62,9 +62,7 @@ def apply_legacy_schema(database: str, through: int) -> None:
     with psycopg.connect("", dbname=database, autocommit=True) as connection:
         for migration in MIGRATIONS[:through]:
             with connection.transaction():
-                connection.execute(
-                    migration.read_text(encoding="utf-8"), prepare=False
-                )
+                connection.execute(migration.read_text(encoding="utf-8"), prepare=False)
 
 
 def migration_count(database: str) -> int:
@@ -86,9 +84,7 @@ def test_runs_migrations_after_partial_baseline(migration_database: str) -> None
     baseline_count = 25
     apply_legacy_schema(migration_database, baseline_count)
 
-    result = run_migrations(
-        migration_database, MIGRATIONS[baseline_count - 1].name
-    )
+    result = run_migrations(migration_database, MIGRATIONS[baseline_count - 1].name)
 
     assert f"apply {MIGRATIONS[baseline_count].name}" in result.stdout
     assert migration_count(migration_database) == len(MIGRATIONS)
@@ -97,9 +93,22 @@ def test_runs_migrations_after_partial_baseline(migration_database: str) -> None
 def test_rejects_incompatible_partial_baseline(migration_database: str) -> None:
     apply_legacy_schema(migration_database, 24)
 
-    result = run_migrations(
-        migration_database, MIGRATIONS[24].name, check=False
-    )
+    result = run_migrations(migration_database, MIGRATIONS[24].name, check=False)
+
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert migration_count(migration_database) == 0
+
+
+def test_adoption_notices_a_missing_source_constraint_widening(
+    migration_database: str,
+) -> None:
+    # 0031 only widens a CHECK, so adopting a database that stopped at 0030 as if
+    # it had 0031 must be refused by the baseline probe.
+    index = next(i for i, m in enumerate(MIGRATIONS) if m.name.startswith("0031"))
+    apply_legacy_schema(migration_database, index)
+
+    result = run_migrations(migration_database, MIGRATIONS[index].name, check=False)
 
     assert result.returncode != 0
     assert "partial or incompatible" in result.stderr

@@ -45,6 +45,12 @@ BASELINE_PROBES = {
     "0028": ("column", "identity_users", "font_scale"),
     "0029": ("column", "identity_sessions", "device_label"),
     "0030": ("table", "synergia", "notification_template_revisions"),
+    # Widening a CHECK leaves no new object, so the probe reads its definition.
+    "0031": (
+        "check_contains",
+        "file_inspections",
+        "file_inspections_source_check:WO Status",
+    ),
 }
 
 
@@ -98,6 +104,23 @@ def object_exists(
                     LIKE '%%validation_failed%%'
             """,
             (parent, name),
+        ).fetchone()
+    elif kind == "check_contains":
+        constraint, _, fragment = name.partition(":")
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM pg_constraint constraint_record
+            JOIN pg_class table_record
+              ON table_record.oid = constraint_record.conrelid
+            JOIN pg_namespace schema_record
+              ON schema_record.oid = table_record.relnamespace
+            WHERE schema_record.nspname = 'synergia'
+              AND table_record.relname = %s
+              AND constraint_record.conname = %s
+              AND strpos(pg_get_constraintdef(constraint_record.oid), %s) > 0
+            """,
+            (parent, constraint, fragment),
         ).fetchone()
     elif kind == "index":
         row = connection.execute(
