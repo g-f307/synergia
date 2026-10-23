@@ -188,7 +188,11 @@ def _imported_records(
         fields = [normalize_column_name(header) for header in headers]
         for row_number, row in enumerate(rows, 2):
             row_number = getattr(row, "row_number", row_number)
-            if not any(value not in (None, "") for value in row):
+            # An adapter rejects some rows without values (a blocked sheet, a gap
+            # in the active region); they still count as read, with their row.
+            if not getattr(row, "adapter_issues", None) and not any(
+                value not in (None, "") for value in row
+            ):
                 continue
             records.append(
                 {

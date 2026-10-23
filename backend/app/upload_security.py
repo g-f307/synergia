@@ -18,6 +18,7 @@ from urllib.parse import unquote
 from fastapi import UploadFile
 
 from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.wo_status_spec import COMPOSITE_SOURCE
 from app.xlsx_package import PackageViolation, scan_package
 
 DEFAULT_MAX_BYTES = 25 * 1024 * 1024
@@ -104,7 +105,11 @@ def policy_for(source: str) -> UploadPolicy:
     source_key = _source_env_key(source)
     allowed_value = os.getenv(
         f"UPLOAD_ALLOWED_EXTENSIONS_{source_key}",
-        os.getenv("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx"),
+        os.getenv(
+            "UPLOAD_ALLOWED_EXTENSIONS",
+            # The composite WO Status workbook is only meaningful as XLSX.
+            "xlsx" if source == COMPOSITE_SOURCE else "csv,json,xlsx",
+        ),
     )
     allowed = frozenset(
         f".{value.strip().lower().lstrip('.')}"
