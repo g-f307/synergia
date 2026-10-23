@@ -250,6 +250,8 @@ def verify_manifest(directory=CORPUS):
             content = (directory / name).read_bytes()
             if digest(content) != case[key + "_sha256"]:
                 raise ValueError("Hash de fixture divergente")
-    if {p.name for p in directory.iterdir() if p.is_file()} != listed:
+    if {
+        p.relative_to(directory).as_posix() for p in directory.rglob("*") if p.is_file()
+    } != listed:
         raise ValueError("Inventário do corpus divergente")
     return manifest

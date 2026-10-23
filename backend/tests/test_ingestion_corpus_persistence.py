@@ -17,10 +17,12 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.ingestion_corpus import (  # noqa: E402
     CORPUS,
+    decision,
     digest,
     execute,
     golden,
     verify_manifest,
+    workorder,
 )
 
 from app.authorization import ActorContext, get_actor_context  # noqa: E402
@@ -79,7 +81,11 @@ class CorpusDatabase:
         return identifier
 
     def attach(self, identifier, name):
-        case = next(c for c in CASES if c["id"] == name)
+        case = (
+            name
+            if isinstance(name, dict)
+            else next(c for c in CASES if c["id"] == name)
+        )
         path = CORPUS / case["input"]
         file_id, duplicate = self.repository.claim_file(
             identifier,
@@ -95,7 +101,11 @@ class CorpusDatabase:
         return identifier, file_id, case
 
     def seed(self, name, org=None):
-        case = next(c for c in CASES if c["id"] == name)
+        case = (
+            name
+            if isinstance(name, dict)
+            else next(c for c in CASES if c["id"] == name)
+        )
         identifier = "corpus-" + uuid4().hex
         self.repository.start(
             identifier,
@@ -303,6 +313,43 @@ def test_concurrent_reprocess_replay_then_actual_processing_preserves_original(
     corpus_db.reconcile(seeded, report)
     assert corpus_db.snapshot(original[0]) == snapshot
     assert corpus_db.snapshot(retry) == snapshot
+
+
+def test_generated_batches_run_concurrently_with_complete_persistence(
+    corpus_db, tmp_path
+):
+    barrier = Barrier(2)
+    seeds = []
+    for source, content in (
+        ("WO Status", workorder(rows=120, tail=8)[0]),
+        ("Total Decision", decision(rows=160)),
+    ):
+        path = tmp_path / ("wo.xlsx" if source == "WO Status" else "td.xlsx")
+        path.write_bytes(content)
+        case = {"source": source, "input": str(path), "input_sha256": digest(content)}
+        seeds.append(corpus_db.seed(case))
+
+    def attempt(seeded):
+        barrier.wait(timeout=15)
+        assert (
+            corpus_db.repository.claim_processing(
+                seeded[0], [seeded[2]["input_sha256"]]
+            )
+            is None
+        )
+        report, _ = corpus_db.run(seeded)
+        corpus_db.reconcile(seeded, report)
+        assert sum(s["normalized"] for s in report["sheets"]) == (
+            300 if seeded[2]["source"] == "WO Status" else 160
+        )
+        assert sum(s["rejected"] for s in report["sheets"]) == (
+            6 if seeded[2]["source"] == "WO Status" else 0
+        )
+        return report["balanced"]
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(attempt, seeded) for seeded in seeds]
+        assert all(f.result(timeout=60) for f in futures)
 
 
 @pytest.mark.parametrize("name", ["wo-nfp", "td-clean"])

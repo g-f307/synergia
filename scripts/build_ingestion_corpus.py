@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import tempfile
 from pathlib import Path
 
-from ingestion_corpus import (
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from scripts.ingestion_corpus import (  # noqa: E402
     CORPUS,
     VERSION,
     canonical,

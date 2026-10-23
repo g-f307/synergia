@@ -279,8 +279,8 @@ def _ctnr(book: Workbook, rows: int, edge: bool) -> dict[str, int]:
         _put(sheet, "D", row, "Loading")
         _put(sheet, "I", row, f"MODEL-{index % 5}")
         _put(sheet, "J", row, 100)
-        _put(sheet, "K", row, 40 + index)
-        _put(sheet, "P", row, 60 - index)
+        _put(sheet, "K", row, 40 + index % 61)
+        _put(sheet, "P", row, 60 - index % 61)
         _put(sheet, "AH", row, datetime(2026, 2, 1 + index % 20))
         if index % 3:
             _put(sheet, "AK", row, datetime(2026, 2, 2 + index % 20))
