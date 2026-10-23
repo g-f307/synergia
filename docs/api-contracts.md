@@ -205,3 +205,21 @@ inclusive a preservação da execução anterior. O arquivo
 - Indicadores agregados não substituem o histórico auditável.
 - Notificações, integrações RPA e a aplicação geral de autorização permanecem
   fora desta etapa; autenticação e sessões seguem o ADR e a matriz de acesso.
+
+## Total Decision — API 0.8.0
+
+`POST /imports` aceita `source=Total Decision` com XLSX e organização IAM autorizada. `GET /imports/policy` anuncia apenas `xlsx` para essa fonte, mesmo quando a configuração global permite CSV/JSON. O arquivo e a execução guardam `Total Decision`; os registros entregues ao pipeline são GMES/OQC. A migration `0032` amplia apenas as três restrições de fonte.
+
+O adapter valida os dois níveis de cabeçalho, exclui a linha de totais e preserva proveniência. Conteúdo de usuário e observação vira apenas presença antes de qualquer registro importado, transformação ou artefato normalizado. `ORG_ID` da origem não autoriza acesso nem se torna organização IAM. Campos ambíguos não criam decisões humanas ou equivalências entre IDs.
+
+Exemplo (token e organização obtidos pelo fluxo autenticado existente):
+
+```bash
+curl -X POST http://localhost:8000/imports \
+  -H 'Authorization: Bearer <access-token>' \
+  -F 'source=Total Decision' \
+  -F 'organization_id=<organizacao-autorizada>' \
+  -F 'file=@data/synthetic/total-decision_minimal.xlsx'
+```
+
+A seleção da fonte pela interface Angular fica para issue própria; este incremento é de backend. Consulte [o contrato do adapter](total-decision-adapter.md).

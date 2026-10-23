@@ -158,14 +158,14 @@
       "id": "R-06", "journey": "J-02", "category": "denial-of-service", "threat": "Large or repeated uploads exhaust CPU, memory or storage.",
       "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
       "controls": ["Per-source size limits", "Shared upload rate limit", "Rejected content quarantine policy", "No automatic frontend retry"],
-      "evidence": ["backend/tests/test_upload_security.py", "backend/tests/test_rate_limiting_persistence.py", "web/src/app/domains/imports/import-create.component.spec.ts"],
+      "evidence": ["backend/tests/test_upload_security.py", "backend/tests/test_rate_limiting_persistence.py", "web/src/app/domains/imports/import-create.component.spec.ts", "backend/tests/test_total_decision.py"],
       "owner": "security", "treatment_issue": 91
     },
     {
       "id": "R-07", "journey": "J-03", "category": "elevation-of-privilege", "threat": "An identifier or filter accesses a resource outside the effective organization scope.",
       "likelihood": "likely", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
-      "controls": ["Server-side RBAC", "Organization scope before pagination", "404 for absent and out-of-scope resources", "Filters only narrow scope"],
-      "evidence": ["backend/tests/test_authorization_persistence.py", "backend/tests/test_security_matrix_persistence.py", "web/e2e/operational-flow.spec.ts"],
+      "controls": ["Server-side RBAC", "Organization scope before pagination", "404 for absent and out-of-scope resources", "Filters only narrow scope", "Total Decision source ORG_ID stays separate from IAM authorization scope"],
+      "evidence": ["backend/tests/test_authorization_persistence.py", "backend/tests/test_security_matrix_persistence.py", "web/e2e/operational-flow.spec.ts", "backend/tests/test_total_decision.py"],
       "owner": "authorization", "treatment_issue": 92
     },
     {
@@ -262,8 +262,8 @@
     {
       "id": "R-21", "journey": "J-03", "category": "information-disclosure", "threat": "Logs, metrics, errors or CI artifacts expose tokens, hashes, paths or operational content.",
       "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
-      "controls": ["Safe error envelope", "Allowlisted structured logs", "Bounded metric labels", "Correlation ID", "No raw access URL or absolute storage path"],
-      "evidence": ["backend/tests/test_observability.py", "backend/tests/test_security_regression.py", "docs/observability.md"],
+      "controls": ["Safe error envelope", "Allowlisted structured logs", "Bounded metric labels", "Correlation ID", "No raw access URL or absolute storage path", "Total Decision minimizes user and remark values to presence before pipeline artifacts; dry-run reports contain only counts"],
+      "evidence": ["backend/tests/test_observability.py", "backend/tests/test_security_regression.py", "docs/observability.md", "backend/tests/test_total_decision.py", "backend/tests/test_total_decision_report.py", "backend/tests/test_total_decision_persistence.py", "docs/total-decision-adapter.md"],
       "owner": "observability", "treatment_issue": 93
     },
     {

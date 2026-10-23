@@ -129,3 +129,9 @@ Use `--scenario valid` para comprovar o fluxo completo sem rejeições e
 `--scenario comprehensive` para a massa com erros e divergências intencionais.
 Uma seed igual produz o mesmo conjunto lógico e os mesmos bytes; seeds distintas
 preservam a estrutura e alteram valores gerados.
+
+## Total Decision (#140)
+
+`total-decision_minimal.xlsx` é inteiramente sintético: duas linhas de cabeçalhos mesclados, linha de totais, quatro registros válidos e sentinelas inventadas em campos restritos e negados. Os totais e sentinelas nunca devem aparecer nos registros normalizados.
+
+Regeneração determinística: `python scripts/generate_total_decision_fixture.py data/synthetic/total-decision_minimal.xlsx`. Use `--edge` para gerar separadamente casos de data não interpretável, estado desconhecido, quantidade negativa, identidade ausente e fórmula. Nenhum valor foi copiado dos arquivos reais. Corpus, manifestos e testes amplos de volume pertencem à #141.

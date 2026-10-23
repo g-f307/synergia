@@ -1,7 +1,7 @@
 # Adapters da planilha WO Status
 
 Os adapters implementam o contrato [real-workbook-contracts.md](real-workbook-contracts.md)
-(`1.1.0-draft`) para as abas autorizadas da família `WO Status`. Eles não decidem
+(`1.2.0-draft`) para as abas autorizadas da família `WO Status`. Eles não decidem
 semântica de negócio: o que o cliente ainda não confirmou é preservado e marcado,
 nunca inferido.
 

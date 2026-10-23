@@ -4,7 +4,7 @@
 
 Este documento registra o contrato estrutural proposto para as famílias de
 workbooks `WO Status` e `Total Decision`. A versão inicial é
-`1.1.0-draft`, está vinculada à issue
+`1.2.0-draft`, está vinculada à issue
 [#137](https://github.com/g-f307/synergia/issues/137) e ainda depende das
 confirmações listadas ao final.
 
@@ -202,7 +202,7 @@ inventa nomes únicos para cabeçalhos repetidos que não estejam autorizados.
 | --- | --- | --- |
 | C / `OQC ID`, BE / `OQC_LOT_ID` | identificadores OQC | literais; definir relação e precedência |
 | J / `WO Name`, BF / `WO_ID` | identificadores de Workorder | literais; definir diferença e precedência |
-| BM / `ORG_ID` | `organization_code` | preenchido em 551 linhas; confirmar se representa o escopo organizacional |
+| BM / `ORG_ID` | `source_organization_code` | preservado sem efeito sobre IAM; confirmar equivalência organizacional |
 | `MODEL`, `Suffix`, `Line` | `model`, `model_suffix`, `production_line` | inferido |
 | `Prod Date`, `Inspection Date` | `production_date`, `inspection_date` | inferido |
 | `Total Decision / Result`, `Judge Date`, `Remark` | decisão, instante e justificativa | inferido; catálogo pendente |
@@ -261,6 +261,8 @@ sintéticas ou sanitizadas e possuir manifesto próprio.
 
 ## Histórico do contrato
 
+- `1.2.0-draft` (#140): política executável de Total Decision: quantidades negativas rejeitam a linha; estados e datas desconhecidos são preservados com aviso; usuários e observações viram apenas indicadores de presença antes do pipeline; identificadores permanecem distintos e `ORG_ID` não concede escopo IAM. Cabeçalhos de negócio e o catálogo de decisões continuam pendentes de confirmação.
+
 - `1.1.0-draft` (#139): `Plant` deixa de ser mapeada como `organization_code`
   (campo `plant`) e as quantidades de contêiner de `CTNR STATUS` recebem nomes
   próprios (`load_planned_quantity`, `load_quantity`, `load_remaining_quantity`),
@@ -276,3 +278,5 @@ As issues de adapters e testes devem usar este contrato como entrada. Qualquer
 resposta do cliente que altere uma chave, interpretação ou precedência exige
 nova versão do contrato, atualização dos testes e registro na matriz de
 rastreabilidade antes da liberação da ingestão real.
+
+O adapter de Total Decision e as políticas conservadoras aprovadas para sua implementação estão em [total-decision-adapter.md](total-decision-adapter.md). Elas não equivalem a aceite corporativo de semântica ou alçada.

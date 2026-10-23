@@ -38,9 +38,7 @@
           "name": "NFP",
           "decision": "candidate_source_mixed",
           "target": "N-FP",
-          "header_rows": [
-            3
-          ],
+          "header_rows": [3],
           "data_start_row": 4,
           "rationale": "mixed planning source with identifiers, formulas and formula errors",
           "formula_policy": "deny_formula_and_error_cells",
@@ -49,17 +47,8 @@
             "strategy": "column_letter_with_header_assertion",
             "on_mismatch": "reject_contract_drift"
           },
-          "identity": {
-            "required_any": [
-              "demand_id",
-              "workorder_number"
-            ]
-          },
-          "types": {
-            "identifiers": "string",
-            "quantities": "decimal_non_negative",
-            "dates": "local_date_pending_timezone"
-          },
+          "identity": {"required_any": ["demand_id", "workorder_number"]},
+          "types": {"identifiers": "string", "quantities": "decimal_non_negative", "dates": "local_date_pending_timezone"},
           "observed_coverage": {
             "rows_in_window": 8309,
             "literal_demand_id": 8309,
@@ -69,83 +58,28 @@
             "literal_oqc_pass": 4672
           },
           "columns": {
-            "U": {
-              "header": "Plant",
-              "target": "plant_organization_scope_pending",
-              "cell_policy": "literal_only"
-            },
-            "W": {
-              "header": "Line",
-              "target": "production_line",
-              "cell_policy": "literal_only"
-            },
-            "Y": {
-              "header": "Demand ID",
-              "target": "demand_id",
-              "cell_policy": "literal_only"
-            },
-            "AA": {
-              "header": "Model",
-              "target": "model",
-              "cell_policy": "literal_only"
-            },
-            "AB": {
-              "header": "Suffix",
-              "target": "model_suffix",
-              "cell_policy": "literal_only"
-            },
-            "AM": {
-              "header": "Lot Qty",
-              "target": "lot_quantity",
-              "cell_policy": "literal_only"
-            },
-            "HY": {
-              "header": "W/O Status",
-              "target": "status_pending_catalog",
-              "cell_policy": "literal_only"
-            },
-            "IE": {
-              "header": "W/O",
-              "target": "workorder_number",
-              "cell_policy": "literal_only",
-              "required": false
-            },
-            "JV": {
-              "header": "OQC Pass",
-              "target": "oqc_pass_semantics_pending",
-              "cell_policy": "literal_only"
-            }
+            "U": {"header": "Plant", "target": "plant_organization_scope_pending", "cell_policy": "literal_only"},
+            "W": {"header": "Line", "target": "production_line", "cell_policy": "literal_only"},
+            "Y": {"header": "Demand ID", "target": "demand_id", "cell_policy": "literal_only"},
+            "AA": {"header": "Model", "target": "model", "cell_policy": "literal_only"},
+            "AB": {"header": "Suffix", "target": "model_suffix", "cell_policy": "literal_only"},
+            "AM": {"header": "Lot Qty", "target": "lot_quantity", "cell_policy": "literal_only"},
+            "HY": {"header": "W/O Status", "target": "status_pending_catalog", "cell_policy": "literal_only"},
+            "IE": {"header": "W/O", "target": "workorder_number", "cell_policy": "literal_only", "required": false},
+            "JV": {"header": "OQC Pass", "target": "oqc_pass_semantics_pending", "cell_policy": "literal_only"}
           },
           "denied_columns": [
-            {
-              "column": "G",
-              "effective_header": "Plant",
-              "reason": "formula mirror of U"
-            },
-            {
-              "column": "I",
-              "effective_header": "Demand ID",
-              "reason": "formula mirror of Y"
-            },
-            {
-              "column": "L",
-              "effective_header": "Lot Qty",
-              "reason": "formula mirror of AM"
-            },
-            {
-              "column": "M",
-              "effective_header": "OQC Pass",
-              "reason": "calculated formula column with the same header; not a direct mirror of JV"
-            }
+            {"column": "G", "effective_header": "Plant", "reason": "formula mirror of U"},
+            {"column": "I", "effective_header": "Demand ID", "reason": "formula mirror of Y"},
+            {"column": "L", "effective_header": "Lot Qty", "reason": "formula mirror of AM"},
+            {"column": "M", "effective_header": "OQC Pass", "reason": "calculated formula column with the same header; not a direct mirror of JV"}
           ]
         },
         {
           "name": "OWM SN",
           "decision": "candidate_source_mixed",
           "target": "OWM",
-          "header_rows": [
-            2
-          ],
+          "header_rows": [2],
           "data_start_row": 3,
           "rationale": "candidate relationship source with a formula-only organization field and formula-only trailing rows",
           "formula_policy": "deny",
@@ -154,23 +88,14 @@
             "strategy": "column_letter_with_header_assertion",
             "on_mismatch": "reject_contract_drift"
           },
-          "identity": {
-            "required_all": [
-              "serial_number",
-              "workorder_number"
-            ]
-          },
+          "identity": {"required_all": ["serial_number", "workorder_number"]},
           "organization_source": "authorized_execution_context_pending_client_confirmation",
           "row_window": {
             "last_row": "last_non_empty_literal_serial_number",
             "formula_only_trailing_rows": "ignore",
             "missing_identity_inside_active_window": "reject"
           },
-          "types": {
-            "identifiers": "string",
-            "quantities": "integer_non_negative",
-            "flags": "pending_domain_catalog"
-          },
+          "types": {"identifiers": "string", "quantities": "integer_non_negative", "flags": "pending_domain_catalog"},
           "observed_coverage": {
             "physical_rows": 93495,
             "literal_serial_number": 60070,
@@ -180,77 +105,27 @@
             "sheet_error_cells_approx": 223000
           },
           "columns": {
-            "L": {
-              "header": "Model",
-              "target": "model",
-              "cell_policy": "literal_only"
-            },
-            "M": {
-              "header": "Pallet Qty",
-              "target": "pallet_quantity",
-              "cell_policy": "literal_only"
-            },
-            "N": {
-              "header": "Pallet No",
-              "target": "pallet_number",
-              "cell_policy": "literal_only"
-            },
-            "O": {
-              "header": "Serial Number",
-              "target": "serial_number",
-              "cell_policy": "literal_only"
-            },
-            "Q": {
-              "header": "W/O",
-              "target": "workorder_number",
-              "cell_policy": "literal_only"
-            },
-            "R": {
-              "header": "OQC Lot",
-              "target": "lot_number",
-              "cell_policy": "literal_only"
-            },
-            "U": {
-              "header": "Locator",
-              "target": "locator",
-              "cell_policy": "literal_only"
-            },
-            "V": {
-              "header": "Status",
-              "target": "status",
-              "cell_policy": "literal_only"
-            },
-            "W": {
-              "header": "OQC Pass",
-              "target": "oqc_flag_pending_domain",
-              "cell_policy": "literal_only"
-            },
-            "Y": {
-              "header": "OQC Hold Flag",
-              "target": "hold_flag_pending_domain",
-              "cell_policy": "literal_only"
-            }
+            "L": {"header": "Model", "target": "model", "cell_policy": "literal_only"},
+            "M": {"header": "Pallet Qty", "target": "pallet_quantity", "cell_policy": "literal_only"},
+            "N": {"header": "Pallet No", "target": "pallet_number", "cell_policy": "literal_only"},
+            "O": {"header": "Serial Number", "target": "serial_number", "cell_policy": "literal_only"},
+            "Q": {"header": "W/O", "target": "workorder_number", "cell_policy": "literal_only"},
+            "R": {"header": "OQC Lot", "target": "lot_number", "cell_policy": "literal_only"},
+            "U": {"header": "Locator", "target": "locator", "cell_policy": "literal_only"},
+            "V": {"header": "Status", "target": "status", "cell_policy": "literal_only"},
+            "W": {"header": "OQC Pass", "target": "oqc_flag_pending_domain", "cell_policy": "literal_only"},
+            "Y": {"header": "OQC Hold Flag", "target": "hold_flag_pending_domain", "cell_policy": "literal_only"}
           },
           "denied_columns": [
-            {
-              "column": "A",
-              "header": "Org",
-              "reason": "formula-only; organization must come from authorized execution context"
-            },
-            {
-              "column": "D",
-              "header": "REASON",
-              "reason": "formula-only; no literal operational evidence"
-            }
+            {"column": "A", "header": "Org", "reason": "formula-only; organization must come from authorized execution context"},
+            {"column": "D", "header": "REASON", "reason": "formula-only; no literal operational evidence"}
           ]
         },
         {
           "name": "LOT PENDING_OQC",
           "decision": "candidate_source_mixed_blocked",
           "target": "GMES/OQC",
-          "header_rows": [
-            3
-          ],
+          "header_rows": [3],
           "data_start_row": 4,
           "rationale": "only 18 substantive rows are observed and their workorder and reason depend on formulas",
           "formula_policy": "deny",
@@ -259,18 +134,12 @@
             "strategy": "column_letter_with_header_assertion",
             "on_mismatch": "reject_contract_drift"
           },
-          "identity": {
-            "status": "blocked_pending_literal_workorder_source"
-          },
+          "identity": {"status": "blocked_pending_literal_workorder_source"},
           "row_window": {
             "substantive_row": "non_empty_literal_status",
             "prefilled_non_substantive_rows": "ignore"
           },
-          "types": {
-            "identifiers": "string",
-            "quantities": "decimal_non_negative",
-            "dates": "local_datetime_pending_timezone"
-          },
+          "types": {"identifiers": "string", "quantities": "decimal_non_negative", "dates": "local_datetime_pending_timezone"},
           "observed_coverage": {
             "physical_interval_rows": 130,
             "materialized_rows": 91,
@@ -281,77 +150,27 @@
             "empty_target_date": 130
           },
           "columns": {
-            "G": {
-              "header": "Hold Group Code",
-              "target": "hold_group_code",
-              "cell_policy": "literal_only"
-            },
-            "H": {
-              "header": "Status",
-              "target": "status_pending_catalog",
-              "cell_policy": "literal_only"
-            },
-            "I": {
-              "header": "Status Change Date",
-              "target": "status_changed_at",
-              "cell_policy": "literal_only"
-            },
-            "J": {
-              "header": "Request User",
-              "target": "request_user_restricted",
-              "cell_policy": "literal_only"
-            },
-            "O": {
-              "header": "Hold Qty",
-              "target": "hold_quantity",
-              "cell_policy": "literal_only"
-            },
-            "P": {
-              "header": "Release Qty",
-              "target": "released_quantity",
-              "cell_policy": "literal_only"
-            }
+            "G": {"header": "Hold Group Code", "target": "hold_group_code", "cell_policy": "literal_only"},
+            "H": {"header": "Status", "target": "status_pending_catalog", "cell_policy": "literal_only"},
+            "I": {"header": "Status Change Date", "target": "status_changed_at", "cell_policy": "literal_only"},
+            "J": {"header": "Request User", "target": "request_user_restricted", "cell_policy": "literal_only"},
+            "O": {"header": "Hold Qty", "target": "hold_quantity", "cell_policy": "literal_only"},
+            "P": {"header": "Release Qty", "target": "released_quantity", "cell_policy": "literal_only"}
           },
           "denied_columns": [
-            {
-              "column": "D",
-              "header": "Prod Date",
-              "reason": "formula-only in observed populated range"
-            },
-            {
-              "column": "E",
-              "header": "WO",
-              "reason": "substantive rows depend on formula; literal source not confirmed"
-            },
-            {
-              "column": "F",
-              "header": "Reason",
-              "reason": "substantive rows depend on formula; literal source not confirmed"
-            },
-            {
-              "column": "K",
-              "header": "Cause Dept.",
-              "reason": "no evidence in sample"
-            },
-            {
-              "column": "N",
-              "header": "Change User",
-              "reason": "no evidence in sample"
-            },
-            {
-              "column": "R",
-              "header": "Target Date",
-              "reason": "no evidence in sample"
-            }
+            {"column": "D", "header": "Prod Date", "reason": "formula-only in observed populated range"},
+            {"column": "E", "header": "WO", "reason": "substantive rows depend on formula; literal source not confirmed"},
+            {"column": "F", "header": "Reason", "reason": "substantive rows depend on formula; literal source not confirmed"},
+            {"column": "K", "header": "Cause Dept.", "reason": "no evidence in sample"},
+            {"column": "N", "header": "Change User", "reason": "no evidence in sample"},
+            {"column": "R", "header": "Target Date", "reason": "no evidence in sample"}
           ]
         },
         {
           "name": "CTNR STATUS",
           "decision": "candidate_source",
           "target": "TMS",
-          "header_rows": [
-            1
-          ],
+          "header_rows": [1],
           "data_start_row": 2,
           "rationale": "candidate logistics source for containers, models, quantities and dates; workorder and inspection fields have no observed values",
           "formula_policy": "deny",
@@ -360,16 +179,8 @@
             "strategy": "column_letter_with_header_assertion",
             "on_mismatch": "reject_contract_drift"
           },
-          "identity": {
-            "required_all": [
-              "container_number"
-            ]
-          },
-          "types": {
-            "identifiers": "string",
-            "quantities": "decimal",
-            "dates": "local_datetime_pending_timezone"
-          },
+          "identity": {"required_all": ["container_number"]},
+          "types": {"identifiers": "string", "quantities": "decimal", "dates": "local_datetime_pending_timezone"},
           "observed_coverage": {
             "rows": 398,
             "literal_container_number": 398,
@@ -379,148 +190,35 @@
             "empty_inspection_status": 398
           },
           "columns": {
-            "C": {
-              "header": "CTNR No",
-              "target": "container_number",
-              "cell_policy": "literal_only"
-            },
-            "D": {
-              "header": "CTNR Status",
-              "target": "container_status",
-              "cell_policy": "literal_only"
-            },
-            "I": {
-              "header": "Model",
-              "target": "model",
-              "cell_policy": "literal_only"
-            },
-            "J": {
-              "header": "Load Plan Qty",
-              "target": "load_planned_quantity",
-              "cell_policy": "literal_only"
-            },
-            "K": {
-              "header": "Load Qty",
-              "target": "load_quantity",
-              "cell_policy": "literal_only"
-            },
-            "P": {
-              "header": "Rmn Qty",
-              "target": "load_remaining_quantity",
-              "cell_policy": "literal_only"
-            },
-            "AH": {
-              "header": "Load Plan Date",
-              "target": "load_plan_date",
-              "cell_policy": "literal_only"
-            },
-            "AK": {
-              "header": "Loading Date",
-              "target": "loading_date",
-              "cell_policy": "literal_only"
-            },
-            "AL": {
-              "header": "Load Confirm Date",
-              "target": "load_confirmed_at",
-              "cell_policy": "literal_only"
-            }
+            "C": {"header": "CTNR No", "target": "container_number", "cell_policy": "literal_only"},
+            "D": {"header": "CTNR Status", "target": "container_status", "cell_policy": "literal_only"},
+            "I": {"header": "Model", "target": "model", "cell_policy": "literal_only"},
+            "J": {"header": "Load Plan Qty", "target": "load_planned_quantity", "cell_policy": "literal_only"},
+            "K": {"header": "Load Qty", "target": "load_quantity", "cell_policy": "literal_only"},
+            "P": {"header": "Rmn Qty", "target": "load_remaining_quantity", "cell_policy": "literal_only"},
+            "AH": {"header": "Load Plan Date", "target": "load_plan_date", "cell_policy": "literal_only"},
+            "AK": {"header": "Loading Date", "target": "loading_date", "cell_policy": "literal_only"},
+            "AL": {"header": "Load Confirm Date", "target": "load_confirmed_at", "cell_policy": "literal_only"}
           },
           "denied_columns": [
-            {
-              "column": "BE",
-              "header": "W/O",
-              "reason": "no evidence in 398 observed rows"
-            },
-            {
-              "column": "AW",
-              "header": "Inspection No",
-              "reason": "no evidence in 398 observed rows"
-            },
-            {
-              "column": "AX",
-              "header": "Inspection Status",
-              "reason": "no evidence in 398 observed rows"
-            }
+            {"column": "BE", "header": "W/O", "reason": "no evidence in 398 observed rows"},
+            {"column": "AW", "header": "Inspection No", "reason": "no evidence in 398 observed rows"},
+            {"column": "AX", "header": "Inspection Status", "reason": "no evidence in 398 observed rows"}
           ]
         },
-        {
-          "name": "Mercosul",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "hidden auxiliary sheet without confirmed ownership or semantics"
-        },
-        {
-          "name": "Analysis 2",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "derived analytical view"
-        },
-        {
-          "name": "Analysis NPI",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "derived analytical view"
-        },
-        {
-          "name": "Planilha2",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "intermediate structure without a confirmed contract"
-        },
-        {
-          "name": "OWMS Hold",
-          "decision": "exclude_pending_precedence",
-          "target": null,
-          "rationale": "overlaps hold data from candidate sources and precedence is unknown"
-        },
-        {
-          "name": "RWOK LOCATOR",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "rework locator lookup without confirmed key or precedence"
-        },
-        {
-          "name": "RWOK LOCATOR (2)",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "second locator lookup variant without confirmed key or precedence"
-        },
-        {
-          "name": "VESSEL DEAD LINE",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "logistics schedule without confirmed authority or grain"
-        },
-        {
-          "name": "ICMS",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "fiscal or analytical view outside the initial operational contract"
-        },
-        {
-          "name": "Analysis QTY",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "hidden derived analytical view"
-        },
-        {
-          "name": "OTD1",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "derived analytical view"
-        },
-        {
-          "name": "Sales",
-          "decision": "exclude_derived",
-          "target": null,
-          "rationale": "commercial derived view outside the initial operational contract"
-        },
-        {
-          "name": "Master",
-          "decision": "auxiliary_pending_validation",
-          "target": null,
-          "rationale": "possible lookup without confirmed owner or precedence"
-        }
+        {"name": "Mercosul", "decision": "auxiliary_pending_validation", "target": null, "rationale": "hidden auxiliary sheet without confirmed ownership or semantics"},
+        {"name": "Analysis 2", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Analysis NPI", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Planilha2", "decision": "auxiliary_pending_validation", "target": null, "rationale": "intermediate structure without a confirmed contract"},
+        {"name": "OWMS Hold", "decision": "exclude_pending_precedence", "target": null, "rationale": "overlaps hold data from candidate sources and precedence is unknown"},
+        {"name": "RWOK LOCATOR", "decision": "auxiliary_pending_validation", "target": null, "rationale": "rework locator lookup without confirmed key or precedence"},
+        {"name": "RWOK LOCATOR (2)", "decision": "auxiliary_pending_validation", "target": null, "rationale": "second locator lookup variant without confirmed key or precedence"},
+        {"name": "VESSEL DEAD LINE", "decision": "auxiliary_pending_validation", "target": null, "rationale": "logistics schedule without confirmed authority or grain"},
+        {"name": "ICMS", "decision": "exclude_derived", "target": null, "rationale": "fiscal or analytical view outside the initial operational contract"},
+        {"name": "Analysis QTY", "decision": "exclude_derived", "target": null, "rationale": "hidden derived analytical view"},
+        {"name": "OTD1", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Sales", "decision": "exclude_derived", "target": null, "rationale": "commercial derived view outside the initial operational contract"},
+        {"name": "Master", "decision": "auxiliary_pending_validation", "target": null, "rationale": "possible lookup without confirmed owner or precedence"}
       ]
     },
     {
@@ -530,13 +228,8 @@
           "name": "Sheet1",
           "decision": "candidate_source",
           "target": "GMES/OQC",
-          "header_rows": [
-            1,
-            2
-          ],
-          "summary_rows": [
-            3
-          ],
+          "header_rows": [1, 2],
+          "summary_rows": [3],
           "data_start_row": 4,
           "rationale": "literal inspection, decision and quantity records with a two-row header; the approval block has no observed values",
           "formula_policy": "deny",
@@ -547,19 +240,10 @@
             "repeated_unlisted_headers": "deny_without_explicit_column_selector"
           },
           "identity": {
-            "required_all": [
-              "oqc_lot_id_pending_relation"
-            ],
-            "required_any_workorder": [
-              "workorder_number_pending_precedence",
-              "workorder_id_pending_precedence"
-            ]
+            "required_all": ["oqc_lot_id_pending_relation"],
+            "required_any_workorder": ["workorder_number_pending_precedence", "workorder_id_pending_precedence"]
           },
-          "types": {
-            "identifiers": "string",
-            "quantities": "decimal",
-            "dates": "local_datetime_pending_timezone"
-          },
+          "types": {"identifiers": "string", "quantities": "decimal", "dates": "local_datetime_pending_timezone"},
           "observed_coverage": {
             "rows": 551,
             "literal_oqc_id": 260,
@@ -571,242 +255,51 @@
             "empty_legacy_workorder_id": 551,
             "empty_approval_block": 551
           },
-          "columns": {
-            "A": {
-              "header_path": [
-                "Prod Date"
-              ],
-              "target": "production_date",
-              "cell_policy": "literal_only"
-            },
-            "B": {
-              "header_path": [
-                "Inspection Date"
-              ],
-              "target": "inspection_date",
-              "cell_policy": "literal_only"
-            },
-            "C": {
-              "header_path": [
-                "OQC ID"
-              ],
-              "target": "oqc_id_pending_key_validation",
-              "cell_policy": "literal_only"
-            },
-            "D": {
-              "header_path": [
-                "Line"
-              ],
-              "target": "production_line",
-              "cell_policy": "literal_only"
-            },
-            "F": {
-              "header_path": [
-                "MODEL"
-              ],
-              "target": "model",
-              "cell_policy": "literal_only"
-            },
-            "G": {
-              "header_path": [
-                "Suffix"
-              ],
-              "target": "model_suffix",
-              "cell_policy": "literal_only"
-            },
-            "J": {
-              "header_path": [
-                "WO Name"
-              ],
-              "target": "workorder_number_pending_precedence",
-              "cell_policy": "literal_only"
-            },
-            "AK": {
-              "header_path": [
-                "Total Decision",
-                "Result"
-              ],
-              "target": "total_decision_result",
-              "cell_policy": "literal_only"
-            },
-            "AL": {
-              "header_path": [
-                "Total Decision",
-                "Judge Date"
-              ],
-              "target": "total_decision_at",
-              "cell_policy": "literal_only"
-            },
-            "AM": {
-              "header_path": [
-                "Total Decision",
-                "User"
-              ],
-              "target": "total_decision_user_restricted",
-              "cell_policy": "literal_only"
-            },
-            "AN": {
-              "header_path": [
-                "Total Decision",
-                "Total Decision Remark"
-              ],
-              "target": "total_decision_remark_restricted",
-              "cell_policy": "literal_only"
-            },
-            "AP": {
-              "header_path": [
-                "ERP Upload",
-                "Result"
-              ],
-              "target": "erp_upload_result",
-              "cell_policy": "literal_only"
-            },
-            "AQ": {
-              "header_path": [
-                "ERP Upload",
-                "Upload Date"
-              ],
-              "target": "erp_upload_at",
-              "cell_policy": "literal_only"
-            },
-            "AR": {
-              "header_path": [
-                "ERP Upload",
-                "Upload User"
-              ],
-              "target": "erp_upload_user_restricted",
-              "cell_policy": "literal_only"
-            },
-            "AX": {
-              "header_path": [
-                "Hold Qty"
-              ],
-              "target": "hold_quantity",
-              "cell_policy": "literal_only"
-            },
-            "AY": {
-              "header_path": [
-                "Up. Qty"
-              ],
-              "target": "uploaded_quantity",
-              "cell_policy": "literal_only"
-            },
-            "AZ": {
-              "header_path": [
-                "RW Qty"
-              ],
-              "target": "rework_quantity",
-              "cell_policy": "literal_only"
-            },
-            "BA": {
-              "header_path": [
-                "Remain Qty"
-              ],
-              "target": "remaining_quantity",
-              "cell_policy": "literal_only"
-            },
-            "BE": {
-              "header_path": [
-                "OQC_LOT_ID"
-              ],
-              "target": "oqc_lot_id_pending_relation",
-              "cell_policy": "literal_only"
-            },
-            "BF": {
-              "header_path": [
-                "WO_ID"
-              ],
-              "target": "workorder_id_pending_precedence",
-              "cell_policy": "literal_only"
-            },
-            "BM": {
-              "header_path": [
-                "ORG_ID"
-              ],
-              "target": "organization_code_pending_validation",
-              "cell_policy": "literal_only"
-            }
+          "adapter_policy": {
+          "source": "Total Decision",
+          "logical_source": "GMES/OQC",
+          "negative_quantities": "reject_row",
+          "organization": "preserve_source_code_without_IAM_mapping",
+          "unknown_states": "preserve_and_warn",
+          "unparsed_dates": "preserve_and_warn",
+          "restricted_values": "presence_only_before_pipeline",
+          "identity_aliases": "never_equate_distinct_identifiers"
+        },
+        "columns": {
+            "A": {"header_path": ["Prod Date"], "target": "production_date", "cell_policy": "literal_only"},
+            "B": {"header_path": ["Inspection Date"], "target": "inspection_date", "cell_policy": "literal_only"},
+            "C": {"header_path": ["OQC ID"], "target": "oqc_id_pending_key_validation", "cell_policy": "literal_only"},
+            "D": {"header_path": ["Line"], "target": "production_line", "cell_policy": "literal_only"},
+            "F": {"header_path": ["MODEL"], "target": "model", "cell_policy": "literal_only"},
+            "G": {"header_path": ["Suffix"], "target": "model_suffix", "cell_policy": "literal_only"},
+            "J": {"header_path": ["WO Name"], "target": "workorder_number_pending_precedence", "cell_policy": "literal_only"},
+            "AK": {"header_path": ["Total Decision", "Result"], "target": "total_decision_result", "cell_policy": "literal_only"},
+            "AL": {"header_path": ["Total Decision", "Judge Date"], "target": "total_decision_at", "cell_policy": "literal_only"},
+            "AM": {"header_path": ["Total Decision", "User"], "target": "total_decision_user_restricted", "cell_policy": "literal_only"},
+            "AN": {"header_path": ["Total Decision", "Total Decision Remark"], "target": "total_decision_remark_restricted", "cell_policy": "literal_only"},
+            "AP": {"header_path": ["ERP Upload", "Result"], "target": "erp_upload_result", "cell_policy": "literal_only"},
+            "AQ": {"header_path": ["ERP Upload", "Upload Date"], "target": "erp_upload_at", "cell_policy": "literal_only"},
+            "AR": {"header_path": ["ERP Upload", "Upload User"], "target": "erp_upload_user_restricted", "cell_policy": "literal_only"},
+            "AX": {"header_path": ["Hold Qty"], "target": "hold_quantity", "cell_policy": "literal_only"},
+            "AY": {"header_path": ["Up. Qty"], "target": "uploaded_quantity", "cell_policy": "literal_only"},
+            "AZ": {"header_path": ["RW Qty"], "target": "rework_quantity", "cell_policy": "literal_only"},
+            "BA": {"header_path": ["Remain Qty"], "target": "remaining_quantity", "cell_policy": "literal_only"},
+            "BE": {"header_path": ["OQC_LOT_ID"], "target": "oqc_lot_id_pending_relation", "cell_policy": "literal_only"},
+            "BF": {"header_path": ["WO_ID"], "target": "workorder_id_pending_precedence", "cell_policy": "literal_only"},
+            "BM": {"header_path": ["ORG_ID"], "target": "organization_code_pending_validation", "cell_policy": "literal_only"}
           },
           "restricted_columns": [
-            {
-              "column": "AM",
-              "header_path": [
-                "Total Decision",
-                "User"
-              ],
-              "reason": "audit actor; mask in logs and restrict access"
-            },
-            {
-              "column": "AR",
-              "header_path": [
-                "ERP Upload",
-                "Upload User"
-              ],
-              "reason": "audit actor; mask in logs and restrict access"
-            }
+            {"column": "AM", "header_path": ["Total Decision", "User"], "reason": "audit actor; mask in logs and restrict access"},
+            {"column": "AR", "header_path": ["ERP Upload", "Upload User"], "reason": "audit actor; mask in logs and restrict access"}
           ],
           "denied_columns": [
-            {
-              "column": "Z",
-              "header_path": [
-                "MANUAL_OWNER"
-              ],
-              "reason": "sensitive and no evidence in sample"
-            },
-            {
-              "column": "BG",
-              "header_path": [
-                "Inspection ID"
-              ],
-              "reason": "no evidence in 551 observed rows"
-            },
-            {
-              "column": "BH",
-              "header_path": [
-                "WOID"
-              ],
-              "reason": "no evidence in 551 observed rows"
-            },
-            {
-              "columns": [
-                "AS",
-                "AT",
-                "AU",
-                "AV",
-                "AW"
-              ],
-              "header_path": [
-                "Approval"
-              ],
-              "reason": "entire block has no evidence in 551 observed rows"
-            },
-            {
-              "columns": [
-                "AJ",
-                "AO"
-              ],
-              "header": "C",
-              "reason": "repeated ambiguous header without authorized meaning"
-            },
-            {
-              "columns": [
-                "L",
-                "BN"
-              ],
-              "header": "Not in 6 Months",
-              "reason": "repeated header without confirmed distinction"
-            }
-          ],
-          "adapter_policy": {
-            "source": "Total Decision",
-            "logical_source": "GMES/OQC",
-            "negative_quantities": "reject_row",
-            "organization": "preserve_source_code_without_IAM_mapping",
-            "unknown_states": "preserve_and_warn",
-            "unparsed_dates": "preserve_and_warn",
-            "restricted_values": "presence_only_before_pipeline",
-            "identity_aliases": "never_equate_distinct_identifiers"
-          }
+            {"column": "Z", "header_path": ["MANUAL_OWNER"], "reason": "sensitive and no evidence in sample"},
+            {"column": "BG", "header_path": ["Inspection ID"], "reason": "no evidence in 551 observed rows"},
+            {"column": "BH", "header_path": ["WOID"], "reason": "no evidence in 551 observed rows"},
+            {"columns": ["AS", "AT", "AU", "AV", "AW"], "header_path": ["Approval"], "reason": "entire block has no evidence in 551 observed rows"},
+            {"columns": ["AJ", "AO"], "header": "C", "reason": "repeated ambiguous header without authorized meaning"},
+            {"columns": ["L", "BN"], "header": "Not in 6 Months", "reason": "repeated header without confirmed distinction"}
+          ]
         }
       ]
     }

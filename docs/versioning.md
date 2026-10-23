@@ -70,7 +70,7 @@ Toda mudança inclui cenários em `rules_scenarios.json`, testes e atualização
 [business-rules.md](business-rules.md). O catálogo não deve ser alterado para
 “corrigir” resultados históricos; eles permanecem ligados à versão aplicada.
 
-## Adapters de planilhas compostas
+## Adapters de planilhas estruturadas
 
 `backend/app/model/wo_status_adapter.json` declara `adapter_version` (SemVer) e a
 `contract_version` de [real-workbook-contracts-v1.json](real-workbook-contracts-v1.json).
@@ -83,6 +83,8 @@ A versão do adapter é gravada na proveniência de cada campo normalizado
   `MAJOR`, com nova versão do contrato, testes e matriz de rastreabilidade.
 
 Um teste compara o adapter ao contrato versionado; os dois mudam juntos.
+
+A mesma política aplica-se a `model/total_decision_adapter.json`, cuja proveniência usa `total_decision@1.0.0`. O contrato `1.2.0-draft` acrescenta as políticas conservadoras de ingestão e minimização de Total Decision; não muda os seletores ou a semântica do adapter WO Status. A API passa de `0.7.0` para `0.8.0` pela adição compatível da fonte de upload.
 
 ## Regras de normalização
 
