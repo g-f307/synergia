@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from app.ingestion_budget import IngestionLimitError
-from app.spreadsheet_reader import IngestionRun, LazySheetRows, open_workbook
+from app.spreadsheet_reader import (
+    IngestionRun,
+    LazySheetRows,
+    SourceColumn,
+    open_workbook,
+)
 
 RULES_PATH = Path(__file__).with_name("model") / "normalization_rules.json"
 REQUIRED_RULES = {
@@ -80,6 +85,8 @@ def _without_accents(value: str) -> str:
 
 
 def normalize_column_name(value: Any) -> str:
+    if isinstance(value, SourceColumn):
+        return value.canonical
     text = _without_accents(str(value or "").strip().lower())
     normalized = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
     return COLUMN_ALIASES.get(normalized, normalized)
@@ -253,15 +260,17 @@ def normalize_tables(
                 source_column = str(raw_headers[index])
                 values[field] = normalized
                 originals[field] = _json_value(original)
-                transformations.append(
-                    {
-                        "field": field,
-                        "source_column": source_column,
-                        "original_value": _json_value(original),
-                        "normalized_value": normalized,
-                        "operation": operation,
-                    }
-                )
+                transformation = {
+                    "field": field,
+                    "source_column": source_column,
+                    "original_value": _json_value(original),
+                    "normalized_value": normalized,
+                    "operation": operation,
+                }
+                adapter = getattr(raw_headers[index], "adapter", None)
+                if adapter:
+                    transformation["adapter"] = adapter
+                transformations.append(transformation)
                 if issue_code:
                     issues.append(
                         {

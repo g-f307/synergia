@@ -1149,3 +1149,109 @@ def test_unreadable_csv_reaching_the_value_error_path_counts_as_rejected(
     assert response.json()["error"]["code"] == "invalid_file"
     assert _outcome_count("rejected") == before + 1
     assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]
+
+
+def _wo_status_bytes(edge: bool = False) -> bytes:
+    import sys
+
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from scripts.generate_wo_status_fixture import build_workbook
+
+    return build_workbook(edge=edge)[0]
+
+
+@pytest.mark.parametrize("allowlist", ["*", None])
+def test_wo_status_upload_routes_each_sheet_to_its_logical_source(
+    api, monkeypatch, allowlist
+) -> None:
+    client, repository, _ = api
+    if allowlist is None:
+        # No environment list: the adapter's versioned contract applies.
+        monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
+
+    response = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo-status.xlsx", _wo_status_bytes(), XLSX_TYPE)},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["source"] == "WO Status"
+    assert body["status"] == "completed_with_errors"
+    records = repository.normalized_records[body["execution_id"]]
+    assert {record["source"] for record in records} == {"N-FP", "OWM", "TMS"}
+    assert {record["sheet"] for record in records} == {
+        "NFP",
+        "OWM SN",
+        "CTNR STATUS",
+    }
+    assert {record["source_file_id"] for record in records} == {
+        repository.files[body["execution_id"]][0]["id"]
+    }
+
+
+def test_wo_status_same_workbook_is_not_processed_twice(api) -> None:
+    client, _, _ = api
+    content = _wo_status_bytes()
+    first = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo-status.xlsx", content, XLSX_TYPE)},
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo-status.xlsx", content, XLSX_TYPE)},
+    )
+
+    assert second.status_code == 409
+    assert second.json()["error"]["code"] == "duplicate_file"
+
+
+def test_wo_status_requires_an_xlsx_workbook(api) -> None:
+    client, _, _ = api
+
+    response = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo-status.csv", b"workorder\nWO-1\n", "text/csv")},
+    )
+
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "unsupported_extension"
+
+
+def test_upload_policy_lists_the_composite_source_as_xlsx_only(api) -> None:
+    client, _, _ = api
+
+    response = client.get("/imports/policy")
+
+    policy = next(p for p in response.json()["policies"] if p["source"] == "WO Status")
+    assert policy["allowed_extensions"] == ["xlsx"]
+
+
+def test_composite_policy_and_upload_ignore_the_global_csv_json_setting(
+    api, monkeypatch
+) -> None:
+    client, _, _ = api
+    monkeypatch.setenv("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx")
+
+    policy = next(
+        p
+        for p in client.get("/imports/policy").json()["policies"]
+        if p["source"] == "WO Status"
+    )
+    response = client.post(
+        "/imports",
+        data={"source": "WO Status"},
+        files={"file": ("wo.csv", b"workorder\nWO-1\n", "text/csv")},
+    )
+
+    assert policy["allowed_extensions"] == ["xlsx"]
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "unsupported_extension"

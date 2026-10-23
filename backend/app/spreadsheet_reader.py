@@ -10,7 +10,12 @@ from typing import Any
 
 from openpyxl import load_workbook
 
-from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.ingestion_budget import (
+    IngestionBudget,
+    IngestionClock,
+    IngestionLimitError,
+    budget_for,
+)
 from app.observability.telemetry import safe_log
 from app.xlsx_package import check_open_parts
 
@@ -46,6 +51,27 @@ def open_workbook(
             workbook.close()
 
 
+class SourceColumn(str):
+    """Header of an adapter column.
+
+    Its text is the origin (``"Y:Demand ID"``) so provenance keeps the original
+    column; ``canonical`` is the field the pipeline works with.
+    """
+
+    canonical: str
+    letter: str
+    adapter: str | None
+
+    def __new__(
+        cls, label: str, canonical: str, letter: str, adapter: str | None = None
+    ) -> SourceColumn:
+        column = super().__new__(cls, label)
+        column.canonical = canonical
+        column.letter = letter
+        column.adapter = adapter
+        return column
+
+
 class LocatedRow(list[Any]):
     """Spreadsheet row that retains its physical position after preambles."""
 
@@ -71,9 +97,9 @@ class IngestionRun:
         self.phase = "reading"
         self.rows_by_phase: dict[str, int] = {}
 
-    def restart(self) -> None:
-        """Start the processing window once the file is about to be consumed."""
-        self.clock = self.budget.start()
+    def attach(self, clock: IngestionClock) -> None:
+        """Share the execution clock: one time window for every sheet of a file."""
+        self.clock = clock
         self.rows_by_phase = {}
 
     def begin(self, phase: str) -> None:

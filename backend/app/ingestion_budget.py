@@ -3,9 +3,11 @@ from __future__ import annotations
 import os
 import re
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
+
+from app.wo_status_spec import COMPOSITE_SOURCE, MAX_SECONDS, load_spec
 
 DEFAULT_MAX_SHEETS = 64
 DEFAULT_MAX_ROWS = 1_048_576
@@ -131,6 +133,9 @@ class IngestionBudget:
     max_issues: int = DEFAULT_MAX_ISSUES
     progress_interval: int = DEFAULT_PROGRESS_INTERVAL
     allowed_sheets: frozenset[str] | None = None
+    # Composite sources read only the columns their adapter maps: the retained
+    # cells and the memory estimate follow those columns, not the sheet width.
+    selected_columns: Mapping[str, frozenset[int]] | None = None
 
     def estimated_memory(self, rows: int, cells: int) -> int:
         """Conservative peak bytes of the complete pipeline.
@@ -175,6 +180,11 @@ class IngestionBudget:
             max_open_bytes=min(budget.max_open_bytes for budget in budgets),
         )
 
+    def columns_of(self, sheet: str | None) -> frozenset[int] | None:
+        if self.selected_columns is None or sheet is None:
+            return None
+        return self.selected_columns.get(sheet.casefold())
+
     def authorizes(self, sheet: str) -> bool:
         return self.allowed_sheets is None or sheet.casefold() in self.allowed_sheets
 
@@ -205,9 +215,16 @@ def _source_key(source: str) -> str:
     return re.sub(r"[^A-Z0-9]+", "_", source.upper()).strip("_")
 
 
-def _positive(name: str, source_key: str, default: int | float, cast=int):
+def _positive(
+    name: str,
+    source_key: str,
+    default: int | float,
+    cast=int,
+    *,
+    use_global: bool = True,
+):
     raw = os.getenv(f"{name}_{source_key}") if source_key else None
-    if raw is None:
+    if raw is None and use_global:
         raw = os.getenv(name)
     if raw is None or not raw.strip():
         return default
@@ -220,7 +237,7 @@ def _positive(name: str, source_key: str, default: int | float, cast=int):
     return value
 
 
-def _allowed_sheets(source_key: str) -> frozenset[str] | None:
+def _allowed_sheets(source_key: str, source: str = "") -> frozenset[str] | None:
     """Resolve the sheets a source may read; unset or empty authorizes none.
 
     Failing closed keeps auxiliary or forbidden sheets out of the pipeline when
@@ -233,6 +250,11 @@ def _allowed_sheets(source_key: str) -> frozenset[str] | None:
     names = frozenset(
         part.strip().casefold() for part in raw.split("|") if part.strip()
     )
+    if source == COMPOSITE_SOURCE:
+        # The adapter's versioned contract names the sheets it can ingest: an
+        # empty list or ``*`` means all of them, and a narrower list restricts.
+        contract = load_spec().authorized_names()
+        return contract if not names or "*" in names else names & contract
     return None if "*" in names else names
 
 
@@ -257,13 +279,22 @@ def budget_for(source: str) -> IngestionBudget:
             "INGESTION_MAX_OPEN_BYTES", key, DEFAULT_MAX_OPEN_BYTES
         ),
         max_seconds=_positive(
-            "INGESTION_MAX_SECONDS", key, DEFAULT_MAX_SECONDS, cast=float
+            "INGESTION_MAX_SECONDS",
+            key,
+            MAX_SECONDS if source == COMPOSITE_SOURCE else DEFAULT_MAX_SECONDS,
+            cast=float,
+            # The composite source has a measured default that a generic global
+            # setting (tuned for small files) must not silently replace.
+            use_global=source != COMPOSITE_SOURCE,
         ),
         max_issues=_positive("INGESTION_MAX_ISSUES", key, DEFAULT_MAX_ISSUES),
         progress_interval=_positive(
             "INGESTION_PROGRESS_INTERVAL", key, DEFAULT_PROGRESS_INTERVAL
         ),
-        allowed_sheets=_allowed_sheets(key),
+        allowed_sheets=_allowed_sheets(key, source),
+        selected_columns=(
+            load_spec().selected_columns() if source == COMPOSITE_SOURCE else None
+        ),
     )
 
 

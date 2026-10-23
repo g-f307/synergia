@@ -45,6 +45,14 @@ BASELINE_PROBES = {
     "0028": ("column", "identity_users", "font_scale"),
     "0029": ("column", "identity_sessions", "device_label"),
     "0030": ("table", "synergia", "notification_template_revisions"),
+    # Widening CHECKs creates no object, so the probe reads their definitions.
+    "0031": (
+        "checks_contain",
+        "",
+        "executions.executions_source_check:WO Status;"
+        "source_files.source_files_source_check:WO Status;"
+        "file_inspections.file_inspections_source_check:WO Status",
+    ),
 }
 
 
@@ -99,6 +107,30 @@ def object_exists(
             """,
             (parent, name),
         ).fetchone()
+    elif kind == "checks_contain":
+        # "table.constraint:fragment;..." - every definition must hold its fragment.
+        row = (1,)
+        for item in name.split(";"):
+            target, _, fragment = item.partition(":")
+            table, _, constraint = target.partition(".")
+            found = connection.execute(
+                """
+                SELECT 1
+                FROM pg_constraint constraint_record
+                JOIN pg_class table_record
+                  ON table_record.oid = constraint_record.conrelid
+                JOIN pg_namespace schema_record
+                  ON schema_record.oid = table_record.relnamespace
+                WHERE schema_record.nspname = 'synergia'
+                  AND table_record.relname = %s
+                  AND constraint_record.conname = %s
+                  AND strpos(pg_get_constraintdef(constraint_record.oid), %s) > 0
+                """,
+                (table, constraint, fragment),
+            ).fetchone()
+            if found is None:
+                row = None
+                break
     elif kind == "index":
         row = connection.execute(
             """

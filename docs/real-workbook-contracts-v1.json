@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "contract_version": "1.0.0-draft",
+  "contract_version": "1.1.0-draft",
   "status": "proposed",
   "issue": 137,
   "default_policy": "deny",
@@ -58,7 +58,7 @@
             "literal_oqc_pass": 4672
           },
           "columns": {
-            "U": {"header": "Plant", "target": "organization_code_pending_validation", "cell_policy": "literal_only"},
+            "U": {"header": "Plant", "target": "plant_organization_scope_pending", "cell_policy": "literal_only"},
             "W": {"header": "Line", "target": "production_line", "cell_policy": "literal_only"},
             "Y": {"header": "Demand ID", "target": "demand_id", "cell_policy": "literal_only"},
             "AA": {"header": "Model", "target": "model", "cell_policy": "literal_only"},
@@ -193,9 +193,9 @@
             "C": {"header": "CTNR No", "target": "container_number", "cell_policy": "literal_only"},
             "D": {"header": "CTNR Status", "target": "container_status", "cell_policy": "literal_only"},
             "I": {"header": "Model", "target": "model", "cell_policy": "literal_only"},
-            "J": {"header": "Load Plan Qty", "target": "planned_quantity", "cell_policy": "literal_only"},
-            "K": {"header": "Load Qty", "target": "loaded_quantity", "cell_policy": "literal_only"},
-            "P": {"header": "Rmn Qty", "target": "remaining_quantity", "cell_policy": "literal_only"},
+            "J": {"header": "Load Plan Qty", "target": "load_planned_quantity", "cell_policy": "literal_only"},
+            "K": {"header": "Load Qty", "target": "load_quantity", "cell_policy": "literal_only"},
+            "P": {"header": "Rmn Qty", "target": "load_remaining_quantity", "cell_policy": "literal_only"},
             "AH": {"header": "Load Plan Date", "target": "load_plan_date", "cell_policy": "literal_only"},
             "AK": {"header": "Loading Date", "target": "loading_date", "cell_policy": "literal_only"},
             "AL": {"header": "Load Confirm Date", "target": "load_confirmed_at", "cell_policy": "literal_only"}

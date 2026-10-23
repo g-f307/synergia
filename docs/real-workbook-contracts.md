@@ -4,7 +4,7 @@
 
 Este documento registra o contrato estrutural proposto para as famílias de
 workbooks `WO Status` e `Total Decision`. A versão inicial é
-`1.0.0-draft`, está vinculada à issue
+`1.1.0-draft`, está vinculada à issue
 [#137](https://github.com/g-f307/synergia/issues/137) e ainda depende das
 confirmações listadas ao final.
 
@@ -136,7 +136,7 @@ devem ser rejeitados com código estável, sem publicar o valor original.
 | `Model`, `Suffix` | `model`, `model_suffix` | inferido |
 | `Line` | `production_line` | inferido |
 | AM / `Lot Qty` | `lot_quantity` | literal em 8.309 linhas; unidade pendente |
-| U / `Plant` | `organization_code` | literal em 8.309 linhas; confirmar se planta equivale ao escopo organizacional |
+| U / `Plant` | `plant` | literal em 8.309 linhas; preservada sem semântica de organização até o cliente confirmar se planta equivale ao escopo organizacional |
 | `PST`, `Due Date`, `BOM Date` | datas específicas do domínio | pendente: não reduzir todas a uma única data |
 | `W/O Status` | `status` | pendente: catálogo e precedência |
 | JV / `OQC Pass` | `oqc_pass_quantity` ou estado | literal em 4.672 linhas; tipo e unidade pendentes |
@@ -186,7 +186,7 @@ a relação com `OWMS Hold` e `OWM SN`.
 | --- | --- | --- |
 | `CTNR No`, `CTNR Status` | `container_number`, `container_status` | inferido |
 | `Model` | `model` | literal em 398 linhas |
-| `Load Plan Qty`, `Load Qty`, `Rmn Qty` | quantidades planejada, carregada e restante | inferido |
+| `Load Plan Qty`, `Load Qty`, `Rmn Qty` | `load_planned_quantity`, `load_quantity`, `load_remaining_quantity` | inferido; nomes próprios para não competir com a precedência global de `planned_quantity` |
 | `Load Plan Date`, `Loading Date`, `Load Confirm Date` | datas logísticas distintas | literais; cobertura varia por campo |
 | `Closing Date` | nenhum | sem evidência na amostra; negar até nova amostra e validação |
 | `W/O`, `Inspection No`, `Inspection Status` | nenhum | sem evidência nas 398 linhas; negar até nova amostra e validação |
@@ -258,6 +258,17 @@ sintéticas ou sanitizadas e possuir manifesto próprio.
     pelo RBAC? Qual fonte literal deve fornecer a organização de `OWM SN`?
 14. Cabeçalhos repetidos como `C` e `Not in 6 Months` possuem usos distintos ou
     devem ser descartados integralmente?
+
+## Histórico do contrato
+
+- `1.1.0-draft` (#139): `Plant` deixa de ser mapeada como `organization_code`
+  (campo `plant`) e as quantidades de contêiner de `CTNR STATUS` recebem nomes
+  próprios (`load_planned_quantity`, `load_quantity`, `load_remaining_quantity`),
+  porque `planned_quantity` participa da precedência global de consolidação.
+- `1.0.0-draft` (#137): contrato inicial.
+
+Os adapters da família `WO Status` implementam este contrato e estão descritos em
+[wo-status-adapters.md](wo-status-adapters.md).
 
 ## Próximas etapas
 

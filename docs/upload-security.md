@@ -31,6 +31,7 @@ com percent-encoding são rejeitados.
 | OWM | CSV, JSON, XLSX | `text/csv`, `application/json`, MIME OpenXML | 25 MiB |
 | GMES/OQC | CSV, JSON, XLSX | `text/csv`, `application/json`, MIME OpenXML | 25 MiB |
 | TMS | CSV, JSON, XLSX | `text/csv`, `application/json`, MIME OpenXML | 25 MiB |
+| WO Status (composta) | XLSX | MIME OpenXML | ver [wo-status-adapters.md](wo-status-adapters.md#limites-da-fonte) |
 
 `application/octet-stream` é tratado como MIME não declarado: ele não determina
 o tipo, que continua sendo identificado pelo conteúdo. Um MIME específico

@@ -209,3 +209,56 @@ def test_retention_cleanup_only_removes_expired_quarantine(tmp_path) -> None:
 
     assert removed == [result.internal_name.split(".", 1)[0]]
     assert result.quarantine_path.exists() is False
+
+
+def test_composite_source_has_its_own_measured_upload_limits(monkeypatch) -> None:
+    from app.wo_status_spec import ARCHIVE_UNCOMPRESSED_BYTES, UPLOAD_MAX_BYTES
+
+    monkeypatch.setenv("UPLOAD_MAX_BYTES", "1000")
+    monkeypatch.setenv("UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES", "2000")
+    monkeypatch.delenv("UPLOAD_MAX_BYTES_WO_STATUS", raising=False)
+    monkeypatch.delenv("UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES_WO_STATUS", raising=False)
+
+    composite = policy_for("WO Status")
+    generic = policy_for("N-FP")
+
+    assert composite.max_bytes == UPLOAD_MAX_BYTES
+    assert composite.max_archive_uncompressed_bytes == ARCHIVE_UNCOMPRESSED_BYTES
+    assert composite.budget.max_seconds == 900
+    assert (generic.max_bytes, generic.max_archive_uncompressed_bytes) == (1000, 2000)
+
+    monkeypatch.setenv("UPLOAD_MAX_BYTES_WO_STATUS", "5000")
+    monkeypatch.setenv("UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES_WO_STATUS", "7000")
+    overridden = policy_for("WO Status")
+    assert (overridden.max_bytes, overridden.max_archive_uncompressed_bytes) == (
+        5000,
+        7000,
+    )
+
+
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [
+        ("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx"),
+        ("UPLOAD_ALLOWED_EXTENSIONS_WO_STATUS", "csv,json,xlsx"),
+    ],
+)
+def test_composite_source_is_xlsx_only_whatever_the_configuration(
+    monkeypatch, variable, value
+) -> None:
+    monkeypatch.setenv(variable, value)
+
+    assert policy_for("WO Status").allowed_extensions == frozenset({".xlsx"})
+
+
+def test_global_time_setting_does_not_replace_the_composite_default(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("INGESTION_MAX_SECONDS", "300")
+    monkeypatch.delenv("INGESTION_MAX_SECONDS_WO_STATUS", raising=False)
+
+    assert policy_for("WO Status").budget.max_seconds == 900
+    assert policy_for("N-FP").budget.max_seconds == 300
+
+    monkeypatch.setenv("INGESTION_MAX_SECONDS_WO_STATUS", "1200")
+    assert policy_for("WO Status").budget.max_seconds == 1200

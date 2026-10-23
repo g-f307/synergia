@@ -210,18 +210,22 @@ def _scan_worksheet(
     is_dangerous: Callable[[str], bool],
 ) -> None:
     authorized = profile.authorized
+    selected = budget.columns_of(profile.name)
     sheet_data = None
     row_index = 0
+    current_column = 0
     for event, element in ElementTree.iterparse(reader, events=("start", "end")):  # type: ignore[arg-type]
         tag = _local(element.tag)
         if event == "start":
             if tag == "sheetData":
                 sheet_data = element
+            elif tag == "c":
+                current_column = _column_index(element.get("r", ""))
             continue
         if tag == "f":
             if is_dangerous(element.text or ""):
                 raise PackageViolation("dangerous_formula")
-            if authorized:
+            if authorized and (selected is None or current_column in selected):
                 profile.formulas += 1
                 totals.formulas += 1
                 if totals.formulas > budget.max_formulas:
@@ -234,9 +238,11 @@ def _scan_worksheet(
         elif tag == "dimension" and authorized:
             _check_dimension(element.get("ref", ""), profile, budget, totals)
         elif tag == "c" and authorized:
+            profile.columns = max(profile.columns, current_column)
+            if selected is not None and current_column not in selected:
+                continue
             profile.cells += 1
             totals.actual_cells += 1
-            profile.columns = max(profile.columns, _column_index(element.get("r", "")))
             if totals.actual_cells > budget.max_cells:
                 raise IngestionLimitError(
                     "workbook_cell_limit",
@@ -289,6 +295,9 @@ def _check_dimension(
     last_row = int(match.group(4) or match.group(2))
     columns = max(last_column - first_column + 1, 0)
     rows = max(last_row - first_row + 1, 0)
+    selected = budget.columns_of(profile.name)
+    if selected is not None:
+        columns = min(columns, len(selected))
     if last_column > budget.max_columns:
         raise IngestionLimitError(
             "workbook_column_limit",

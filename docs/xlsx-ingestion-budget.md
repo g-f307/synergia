@@ -29,9 +29,10 @@ continuam descritos em [upload-security.md](upload-security.md).
 | Consolidação e regras (`processing`) | valida registros, consolida, classifica e agrega; consulta o relógio nos laços de validação de registros, de indexação, resolução e consolidação (a cada 1.024 registros, inclusive dentro de um único Workorder) e de classificação (a cada 256 Workorders e a cada 1.024 fatos de um Workorder) | ver "Memória dos registros" |
 
 Cada arquivo é lido em três passagens (validação, registros importados e
-normalização). O relógio de processamento reinicia por arquivo, antes da
-primeira passagem; a admissão e a consolidação têm relógios próprios, todos
-sob `INGESTION_MAX_SECONDS`.
+normalização). A admissão tem um relógio próprio. Depois dela, o processamento usa um **único
+relógio por execução**, compartilhado por todos os arquivos, por todas as abas de
+um mesmo arquivo e pela consolidação; vale o menor `INGESTION_MAX_SECONDS` entre as
+fontes participantes.
 
 ## Limites
 
@@ -49,7 +50,7 @@ não numéricos ou menores ou iguais a zero tornam a configuração inválida.
 | `INGESTION_MAX_MEMORY_BYTES` | 1.073.741.824 | estimativa de memória do pipeline completo, por execução (ver "Memória dos registros") |
 | `INGESTION_MAX_OPEN_BYTES` | 33.554.432 (32 MiB) | bytes descompactados de `sharedStrings.xml`, `styles.xml`, `workbook.xml` e temas, carregados inteiros na abertura |
 | `INGESTION_MAX_FILES` | 10 | arquivos por requisição (global, sem sufixo de fonte) |
-| `INGESTION_MAX_SECONDS` | 300 | admissão, leitura/normalização e consolidação, cada uma com relógio próprio |
+| `INGESTION_MAX_SECONDS` | 300 | admissão (relógio próprio) e, depois, leitura, normalização e consolidação da execução (relógio único) |
 | `INGESTION_MAX_ISSUES` | 250.000 | ocorrências de validação e normalização por arquivo e por execução |
 | `INGESTION_PROGRESS_INTERVAL` | 10.000 | linhas entre eventos de progresso |
 | `INGESTION_ALLOWED_SHEETS` | **nenhuma** | nomes de abas separados por `\|`, sem diferenciar maiúsculas; `*` autoriza todas |
@@ -78,6 +79,13 @@ Se nenhuma aba do arquivo constar da lista, a rejeição também é
 `no_authorized_sheet`. O contrato versionado de fontes e abas está em
 [real-workbook-contracts.md](real-workbook-contracts.md); os adapters que o
 aplicam são entregues em issues próprias.
+
+### Fontes compostas
+
+Para a fonte `WO Status`, a lista de abas padrão é a do contrato do adapter
+(`INGESTION_ALLOWED_SHEETS_WO_STATUS` a restringe) e os orçamentos de células,
+fórmulas e memória contam somente as colunas que o adapter mantém, não a largura
+da aba. Veja [wo-status-adapters.md](wo-status-adapters.md#limites-da-fonte).
 
 ### Dimensão declarada
 

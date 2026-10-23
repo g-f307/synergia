@@ -18,6 +18,11 @@ from urllib.parse import unquote
 from fastapi import UploadFile
 
 from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.wo_status_spec import (
+    ARCHIVE_UNCOMPRESSED_BYTES,
+    COMPOSITE_SOURCE,
+    UPLOAD_MAX_BYTES,
+)
 from app.xlsx_package import PackageViolation, scan_package
 
 DEFAULT_MAX_BYTES = 25 * 1024 * 1024
@@ -104,23 +109,33 @@ def policy_for(source: str) -> UploadPolicy:
     source_key = _source_env_key(source)
     allowed_value = os.getenv(
         f"UPLOAD_ALLOWED_EXTENSIONS_{source_key}",
-        os.getenv("UPLOAD_ALLOWED_EXTENSIONS", "csv,json,xlsx"),
+        os.getenv(
+            "UPLOAD_ALLOWED_EXTENSIONS",
+            # The composite WO Status workbook is only meaningful as XLSX.
+            "xlsx" if source == COMPOSITE_SOURCE else "csv,json,xlsx",
+        ),
     )
     allowed = frozenset(
         f".{value.strip().lower().lstrip('.')}"
         for value in allowed_value.split(",")
         if value.strip()
     )
+    if source == COMPOSITE_SOURCE:
+        # No configuration can widen the composite source beyond XLSX.
+        allowed = allowed & {".xlsx"}
     unsupported = allowed.difference(MEDIA_TYPES)
     if unsupported:
         extensions = ", ".join(sorted(unsupported))
         raise RuntimeError(
             f"UPLOAD_ALLOWED_EXTENSIONS contém extensões não suportadas: {extensions}"
         )
+    composite = source == COMPOSITE_SOURCE
     max_bytes = int(
         os.getenv(
             f"UPLOAD_MAX_BYTES_{source_key}",
-            os.getenv("UPLOAD_MAX_BYTES", str(DEFAULT_MAX_BYTES)),
+            str(UPLOAD_MAX_BYTES)
+            if composite
+            else os.getenv("UPLOAD_MAX_BYTES", str(DEFAULT_MAX_BYTES)),
         )
     )
     if max_bytes <= 0:
@@ -132,8 +147,13 @@ def policy_for(source: str) -> UploadPolicy:
         max_archive_entries=int(os.getenv("UPLOAD_MAX_ARCHIVE_ENTRIES", "2000")),
         max_archive_uncompressed_bytes=int(
             os.getenv(
-                "UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES",
-                str(min(max(max_bytes * 4, 50 * 1024 * 1024), 250 * 1024 * 1024)),
+                f"UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES_{source_key}",
+                str(ARCHIVE_UNCOMPRESSED_BYTES)
+                if composite
+                else os.getenv(
+                    "UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES",
+                    str(min(max(max_bytes * 4, 50 * 1024 * 1024), 250 * 1024 * 1024)),
+                ),
             )
         ),
         max_compression_ratio=int(os.getenv("UPLOAD_MAX_COMPRESSION_RATIO", "100")),

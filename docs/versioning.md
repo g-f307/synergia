@@ -70,6 +70,20 @@ Toda mudança inclui cenários em `rules_scenarios.json`, testes e atualização
 [business-rules.md](business-rules.md). O catálogo não deve ser alterado para
 “corrigir” resultados históricos; eles permanecem ligados à versão aplicada.
 
+## Adapters de planilhas compostas
+
+`backend/app/model/wo_status_adapter.json` declara `adapter_version` (SemVer) e a
+`contract_version` de [real-workbook-contracts-v1.json](real-workbook-contracts-v1.json).
+A versão do adapter é gravada na proveniência de cada campo normalizado
+(`wo_status@1.0.0`).
+
+- coluna, tipo ou regra de janela compatível acrescentada: `MINOR`;
+- correção sem mudar o resultado de nenhuma linha válida: `PATCH`;
+- mudança de chave, de coluna lida, de nome canônico ou de interpretação:
+  `MAJOR`, com nova versão do contrato, testes e matriz de rastreabilidade.
+
+Um teste compara o adapter ao contrato versionado; os dois mudam juntos.
+
 ## Regras de normalização
 
 `backend/app/model/normalization_rules.json` é declarativo e validado no

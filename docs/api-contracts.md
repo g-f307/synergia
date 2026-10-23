@@ -125,6 +125,11 @@ nunca inclui caminho absoluto, chave de storage ou nome interno. Formatos,
 limites, inspeções de conteúdo e retenção estão em
 [upload-security.md](upload-security.md).
 
+A fonte `WO Status` (somente XLSX) reúne abas de várias fontes lógicas: cada aba
+autorizada entra no pipeline com a fonte N-FP, OWM ou TMS, e `GET /imports/policy`
+lista a política da fonte composta. Os adapters, as abas e os códigos de rejeição por
+linha estão em [wo-status-adapters.md](wo-status-adapters.md).
+
 Uma rejeição por capacidade de uma planilha (`workbook_*`, `ingestion_*`,
 `no_authorized_sheet` e `unreadable_workbook`) usa o envelope de erro comum e
 acrescenta a `error.details` os campos `guidance` e, quando aplicável, `limit`,
