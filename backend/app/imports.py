@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from collections.abc import Generator
+from contextlib import suppress
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -40,7 +41,8 @@ from app.execution import (
     import_fingerprint,
     validate_transition,
 )
-from app.ingestion_budget import LIMIT_GUIDANCE
+from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError
+from app.observability.metrics import record_ingestion_rejection
 from app.observability.telemetry import (
     bind_execution_id,
     current_correlation_id,
@@ -737,6 +739,15 @@ class PostgresImportRepository:
                 "DELETE FROM synergia.source_files WHERE execution_id = %s",
                 (execution_id,),
             )
+            # Nothing was committed, so the reservation must not make a later
+            # attempt with the same files look like a duplicate request.
+            connection.execute(
+                """
+                DELETE FROM synergia.execution_idempotency
+                WHERE execution_id = %s AND request_type = 'import'
+                """,
+                (execution_id,),
+            )
         self.transition_execution(execution_id, "failed", reason)
 
     def finish(
@@ -1066,6 +1077,10 @@ async def upload_import(
                     inspection.quarantine_path.unlink(missing_ok=True)
                 raise
             if not inspection.accepted:
+                if inspection.reason_code in LIMIT_GUIDANCE:
+                    record_ingestion_rejection(
+                        inspection.reason_code, frozenset(LIMIT_GUIDANCE)
+                    )
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 if pipeline_inputs:
@@ -1202,6 +1217,9 @@ async def upload_import(
                     artifact_directory, result
                 ),
             )
+        except IngestionLimitError:
+            _remove_pipeline_artifacts(destinations[0].parent)
+            raise
         except Exception as exc:
             _remove_pipeline_artifacts(destinations[0].parent)
             repository.finish(execution_id, "failed", "pipeline_error")
@@ -1230,6 +1248,24 @@ async def upload_import(
         )
     except HTTPException:
         raise
+    except IngestionLimitError as exc:
+        for destination in destinations:
+            destination.unlink(missing_ok=True)
+        for directory in {stored.parent for stored in destinations}:
+            with suppress(OSError):
+                directory.rmdir()
+        if pipeline_inputs:
+            repository.abort_claim(execution_id, exc.code)
+        if not exc.recorded:
+            record_ingestion_rejection(exc.code, frozenset(LIMIT_GUIDANCE))
+        _error(
+            repository,
+            execution_id,
+            _inspection_http_status(exc.code),
+            exc.code,
+            exc.message,
+            exc.details(),
+        )
     except ValueError as exc:
         for destination in destinations:
             destination.unlink(missing_ok=True)

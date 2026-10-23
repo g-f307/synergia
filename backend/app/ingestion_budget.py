@@ -75,6 +75,7 @@ class IngestionLimitError(ValueError):
         self.limit = limit
         self.observed = observed
         self.sheet = sheet
+        self.recorded = False
 
     @property
     def message(self) -> str:

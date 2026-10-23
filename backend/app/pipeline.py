@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable, Collection
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
+from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError
 from app.normalization import normalize_column_name, normalize_tables
+from app.observability.metrics import observe_ingestion
+from app.observability.telemetry import safe_log
 from app.processing import process_normalized_records
+from app.spreadsheet_reader import IngestionRun, LazySheetRows
 from app.validation import (
     DataReadError,
     failed_validation_report,
@@ -78,6 +83,43 @@ def read_source(
         if extension == ".xlsx":
             raise ValueError("arquivo XLSX inválido") from exc
         raise
+
+
+def _run_of(tables: list[Any]) -> IngestionRun | None:
+    """Find the shared ingestion run behind lazily read worksheets, if any."""
+    for _, _, rows in tables:
+        if isinstance(rows, LazySheetRows):
+            return rows.run
+    return None
+
+
+def _record_ingestion(
+    run: IngestionRun,
+    *,
+    outcome: str,
+    rows_processed: int,
+    rows_rejected: int,
+    reason: str | None = None,
+) -> None:
+    duration = run.clock.elapsed
+    peak = observe_ingestion(
+        outcome=outcome,
+        duration_seconds=duration,
+        rows_processed=rows_processed,
+        rows_rejected=rows_rejected,
+        reason=reason,
+        allowed_reasons=frozenset(LIMIT_GUIDANCE),
+    )
+    safe_log(
+        logging.INFO if outcome == "completed" else logging.WARNING,
+        f"ingestion.{outcome}",
+        source=run.source,
+        reason_code=reason,
+        processed_count=rows_processed,
+        rejected_count=rows_rejected,
+        duration_ms=int(duration * 1000),
+        peak_memory_bytes=peak,
+    )
 
 
 def _original_value(value: Any) -> Any:
@@ -173,37 +215,60 @@ def run_pipeline_batch(
         file_name = str(item["file_name"])
         source_file_id = int(item["source_file_id"])
         tables = item["tables"]
-        validation = validate_tables(
-            tables, source, known_organizations, item["read_issues"]
-        )
-        imported = [
-            {
-                **record,
-                "execution_id": execution_id,
-                "source_file_id": source_file_id,
-                "file_name": file_name,
+        run = _run_of(tables)
+        # CSV and JSON have no lazy sheets or budget, but are still measured.
+        meter = run or IngestionRun(source)
+        max_issues = run.budget.max_issues if run is not None else None
+        try:
+            if run is not None:
+                run.restart()
+                run.begin("validating")
+            validation = validate_tables(
+                tables, source, known_organizations, item["read_issues"], max_issues
+            )
+            if run is not None:
+                run.begin("importing")
+            imported = [
+                {
+                    **record,
+                    "execution_id": execution_id,
+                    "source_file_id": source_file_id,
+                    "file_name": file_name,
+                }
+                for record in _imported_records(tables, source)
+            ]
+            file_issues = validation["issues"]
+            structural_blocked = any(
+                issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
+                for issue in file_issues
+            )
+            if structural_blocked:
+                blocked_files.add(source_file_id)
+            rejected_rows = {
+                (issue["sheet"], issue["row"])
+                for issue in file_issues
+                if issue["severity"] == "error" and (issue.get("row") or 0) > 1
             }
-            for record in _imported_records(tables, source)
-        ]
-        file_issues = validation["issues"]
-        structural_blocked = any(
-            issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
-            for issue in file_issues
-        )
-        if structural_blocked:
-            blocked_files.add(source_file_id)
-        rejected_rows = {
-            (issue["sheet"], issue["row"])
-            for issue in file_issues
-            if issue["severity"] == "error" and (issue.get("row") or 0) > 1
-        }
-        eligible_rows = (
-            set()
-            if structural_blocked
-            else {(record["sheet"], record["row"]) for record in imported}
-            - rejected_rows
-        )
-        normalized = normalize_tables(tables, source, eligible_rows)
+            eligible_rows = (
+                set()
+                if structural_blocked
+                else {(record["sheet"], record["row"]) for record in imported}
+                - rejected_rows
+            )
+            if run is not None:
+                run.begin("normalizing")
+            normalized = normalize_tables(tables, source, eligible_rows, max_issues)
+        except IngestionLimitError as exc:
+            if run is not None:
+                _record_ingestion(
+                    run,
+                    outcome="rejected",
+                    rows_processed=run.rows_read,
+                    rows_rejected=0,
+                    reason=exc.code,
+                )
+                exc.recorded = True
+            raise
         normalized_records.extend(
             {
                 **record,
@@ -225,12 +290,34 @@ def run_pipeline_batch(
                 else "file"
             )
             issues.append(issue)
+        if run is not None and len(issues) > run.budget.max_issues:
+            _record_ingestion(
+                run,
+                outcome="rejected",
+                rows_processed=run.rows_read,
+                rows_rejected=0,
+                reason="ingestion_issue_limit",
+            )
+            error = IngestionLimitError(
+                "ingestion_issue_limit",
+                limit=run.budget.max_issues,
+                observed=len(issues),
+            )
+            error.recorded = True
+            raise error
         imported_records.extend(imported)
         valid_records += len(eligible_rows)
-        rejected_records += len(imported) if structural_blocked else len(rejected_rows)
+        file_rejected = len(imported) if structural_blocked else len(rejected_rows)
+        rejected_records += file_rejected
+        _record_ingestion(
+            meter,
+            outcome="completed",
+            rows_processed=len(imported),
+            rows_rejected=file_rejected,
+        )
         # The normalized/imported representations are now authoritative. Drop
-        # the parsed table rows before reading the next phase so reference
-        # volumes do not retain three complete in-memory copies of each file.
+        # the lazy table handles before the next phase; no pass keeps a copy of
+        # the parsed worksheet.
         item["tables"] = []
 
     if blocked_files and not normalized_records:
