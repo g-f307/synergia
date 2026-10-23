@@ -12,7 +12,7 @@ from itertools import islice
 from pathlib import Path
 from typing import Any
 
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter as _letter
 
 from app.ingestion_budget import IngestionLimitError
 from app.spreadsheet_reader import (
@@ -20,6 +20,7 @@ from app.spreadsheet_reader import (
     IngestionRun,
     LazySheetRows,
     LocatedRow,
+    SourceColumn,
     open_workbook,
 )
 
@@ -74,6 +75,8 @@ SCHEMAS = {
     "TMS": SourceSchema(
         ("workorder_number",), COMMON_ALIASES, ("quantity",), ("shipment_date",)
     ),
+    # Composite adapters validate their own identity, types and dates.
+    "WO Status": SourceSchema((), {}, (), ()),
 }
 
 FORMULA_ERRORS = ("#VALUE!", "#REF!", "#DIV/0!", "#NAME?", "#NUM!", "#N/A", "#NULL!")
@@ -314,8 +317,10 @@ def validate_tables(
     known_organizations: Collection[str] | None = None,
     initial_issues: list[dict[str, Any]] | None = None,
     max_issues: int | None = None,
+    schema: SourceSchema | None = None,
 ) -> dict[str, Any]:
-    schema = SCHEMAS[source]
+    custom_schema = schema is not None
+    schema = schema or SCHEMAS[source]
     allowed_organizations = (
         {value.strip().upper() for value in known_organizations}
         if known_organizations is not None
@@ -329,8 +334,21 @@ def validate_tables(
 
     for sheet, raw_headers, rows in tables:
         seen_rows: dict[bytes, int] = {}
-        normalized = [_header(value) for value in raw_headers]
+        normalized = [
+            value.canonical if isinstance(value, SourceColumn) else _header(value)
+            for value in raw_headers
+        ]
         headers = [schema.aliases.get(value, value) for value in normalized]
+
+        def get_column_letter(index: int, _raw: Any = raw_headers) -> str:
+            # Adapter columns report their original letter, not their position.
+            header = _raw[index - 1] if 0 < index <= len(_raw) else None
+            return (
+                header.letter
+                if isinstance(header, SourceColumn)
+                else _letter(index)
+            )
+
         header_row = _header_row(rows)
         for index, value in enumerate(normalized, 1):
             if not value:
@@ -354,8 +372,10 @@ def validate_tables(
                         column=required,
                     )
                 )
-        if source == "GMES/OQC" and not any(
-            field in headers for field in RELATIONSHIP_IDENTIFIERS
+        if (
+            source == "GMES/OQC"
+            and not custom_schema
+            and not any(field in headers for field in RELATIONSHIP_IDENTIFIERS)
         ):
             issues.append(
                 _issue(
@@ -374,7 +394,12 @@ def validate_tables(
                     observed=len(issues),
                     sheet=sheet,
                 )
-            if not any(value not in (None, "") for value in values):
+            adapter_issues = getattr(values, "adapter_issues", ())
+            for adapter_issue in adapter_issues:
+                issues.append({**adapter_issue, "sheet": sheet, "row": offset})
+            if not adapter_issues and not any(
+                value not in (None, "") for value in values
+            ):
                 issues.append(
                     _issue(
                         "empty_row",
@@ -387,7 +412,9 @@ def validate_tables(
                 continue
             row_count += 1
             row_key = _row_digest(values)
-            if row_key in seen_rows:
+            # Adapter placeholder rows hold no values, so they never "duplicate".
+            has_values = any(value not in (None, "") for value in values)
+            if has_values and row_key in seen_rows:
                 issues.append(
                     _issue(
                         "duplicate_row",
@@ -398,7 +425,7 @@ def validate_tables(
                         row=offset,
                     )
                 )
-            else:
+            elif has_values:
                 seen_rows[row_key] = offset
             record = {
                 header: values[index] if index < len(values) else None
@@ -435,10 +462,14 @@ def validate_tables(
                             column=get_column_letter(headers.index(field) + 1),
                         )
                     )
-            if source == "GMES/OQC" and not any(
-                record.get(field) not in (None, "")
-                for field in RELATIONSHIP_IDENTIFIERS
-                if field in headers
+            if (
+                source == "GMES/OQC"
+                and not custom_schema
+                and not any(
+                    record.get(field) not in (None, "")
+                    for field in RELATIONSHIP_IDENTIFIERS
+                    if field in headers
+                )
             ):
                 issues.append(
                     _issue(

@@ -46,6 +46,27 @@ def open_workbook(
             workbook.close()
 
 
+class SourceColumn(str):
+    """Header of an adapter column.
+
+    Its text is the origin (``"Y:Demand ID"``) so provenance keeps the original
+    column; ``canonical`` is the field the pipeline works with.
+    """
+
+    canonical: str
+    letter: str
+    adapter: str | None
+
+    def __new__(
+        cls, label: str, canonical: str, letter: str, adapter: str | None = None
+    ) -> SourceColumn:
+        column = super().__new__(cls, label)
+        column.canonical = canonical
+        column.letter = letter
+        column.adapter = adapter
+        return column
+
+
 class LocatedRow(list[Any]):
     """Spreadsheet row that retains its physical position after preambles."""
 

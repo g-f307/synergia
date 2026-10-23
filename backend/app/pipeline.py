@@ -20,8 +20,10 @@ from app.validation import (
     read_tables,
     validate_tables,
 )
+from app.wo_status import WoStatusImporter, expand_composite, is_composite
 
 STRUCTURAL_ISSUES = {
+    "contract_drift",
     "empty_file",
     "empty_sheet",
     "invalid_header",
@@ -57,6 +59,7 @@ class TabularSourceImporter:
 IMPORTERS: dict[str, SourceImporter] = {
     source: TabularSourceImporter() for source in ("N-FP", "OWM", "GMES/OQC", "TMS")
 }
+IMPORTERS["WO Status"] = WoStatusImporter()
 
 
 def read_source(
@@ -280,6 +283,15 @@ def _run_pipeline_batch(
     resume: bool,
     stats: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    # A composite upload becomes one input per authorized sheet, each with its
+    # logical source, so the usual per-source flow applies unchanged.
+    inputs = [
+        sub
+        for item in inputs
+        for sub in (
+            expand_composite(item) if is_composite(str(item["source"])) else [item]
+        )
+    ]
     if not resume:
         repository.transition_execution(execution_id, "validating", "pipeline_started")
     imported_records: list[dict[str, Any]] = []
@@ -314,7 +326,12 @@ def _run_pipeline_batch(
             run.restart()
             run.begin("validating")
         validation = validate_tables(
-            tables, source, known_organizations, item["read_issues"], max_issues
+            tables,
+            source,
+            known_organizations,
+            item["read_issues"],
+            max_issues,
+            item.get("schema"),
         )
         if run is not None:
             run.begin("importing")
@@ -462,7 +479,7 @@ def _run_pipeline_batch(
         else "completed"
     )
     sources = list(dict.fromkeys(str(item["source"]) for item in inputs))
-    file_names = [str(item["file_name"]) for item in inputs]
+    file_names = list(dict.fromkeys(str(item["file_name"]) for item in inputs))
     result = {
         "execution_id": execution_id,
         "source": sources[0],
