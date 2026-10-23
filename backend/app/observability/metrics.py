@@ -54,6 +54,33 @@ DEPENDENCY_DEGRADED = Gauge(
     registry=REGISTRY,
 )
 
+INGESTION_DURATION = Histogram(
+    "synergia_ingestion_duration_seconds",
+    "Time spent reading, validating and normalizing one file.",
+    ("outcome",),
+    buckets=(0.1, 0.5, 1, 5, 10, 30, 60, 120, 300, 600),
+    registry=REGISTRY,
+)
+INGESTION_ROWS = Counter(
+    "synergia_ingestion_rows",
+    "Rows handled by file ingestion, split by result.",
+    ("result",),
+    registry=REGISTRY,
+)
+INGESTION_REJECTIONS = Counter(
+    "synergia_ingestion_rejections",
+    "Files rejected by an ingestion resource budget, by stable reason.",
+    ("reason",),
+    registry=REGISTRY,
+)
+INGESTION_PEAK_MEMORY = Gauge(
+    "synergia_ingestion_peak_memory_bytes",
+    "Process peak resident memory observed when the last ingestion finished.",
+    registry=REGISTRY,
+)
+
+_INGESTION_OUTCOMES = frozenset({"completed", "rejected", "failed"})
+
 _SAFE_STATES = {
     "execution": frozenset(
         {
@@ -150,6 +177,45 @@ def observe_http_request(
     status_class = f"{status_code // 100}xx" if 100 <= status_code <= 599 else "unknown"
     HTTP_REQUESTS.labels(safe_method, safe_route, status_class).inc()
     HTTP_DURATION.labels(safe_method, safe_route).observe(max(duration_seconds, 0))
+
+
+def peak_memory_bytes() -> int | None:
+    """Return the process resident-memory high-water mark, when measurable."""
+    try:
+        import resource
+        import sys
+    except ImportError:  # pragma: no cover - platforms without ``resource``
+        return None
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return int(peak if sys.platform == "darwin" else peak * 1024)
+
+
+def record_ingestion_rejection(
+    reason: str, allowed_reasons: frozenset[str] = frozenset()
+) -> None:
+    INGESTION_REJECTIONS.labels(reason if reason in allowed_reasons else "other").inc()
+
+
+def observe_ingestion(
+    *,
+    outcome: str,
+    duration_seconds: float,
+    rows_processed: int,
+    rows_rejected: int,
+    reason: str | None = None,
+    allowed_reasons: frozenset[str] = frozenset(),
+) -> int | None:
+    """Record one ingestion with bounded labels and return the peak memory."""
+    safe_outcome = outcome if outcome in _INGESTION_OUTCOMES else "failed"
+    INGESTION_DURATION.labels(safe_outcome).observe(max(duration_seconds, 0))
+    INGESTION_ROWS.labels("processed").inc(max(rows_processed, 0))
+    INGESTION_ROWS.labels("rejected").inc(max(rows_rejected, 0))
+    if reason is not None:
+        record_ingestion_rejection(reason, allowed_reasons)
+    peak = peak_memory_bytes()
+    if peak is not None:
+        INGESTION_PEAK_MEMORY.set(peak)
+    return peak
 
 
 def record_dependency(component: str, status: str) -> None:

@@ -1,3 +1,4 @@
+import tracemalloc
 from pathlib import Path
 
 import pytest
@@ -238,7 +239,10 @@ def test_reads_xlsx_from_temporary_path_without_xlsx_suffix(tmp_path) -> None:
     tables, read_issues = read_source(path, ".xlsx", "N-FP")
 
     assert read_issues == []
-    assert tables == [("Sheet", ["workorder", "status"], [["WO-1", "open"]])]
+    assert [(sheet, headers, list(rows)) for sheet, headers, rows in tables] == [
+        ("Sheet", ["workorder", "status"], [["WO-1", "open"]])
+    ]
+    assert not isinstance(tables[0][2], list)
 
 
 def test_reads_multisheet_quality_workbook_with_titles_and_real_row_numbers(
@@ -342,3 +346,387 @@ def test_batch_pipeline_uses_real_file_ids_for_multisource_provenance() -> None:
         result["processing"]["summary"]["classifications_by_rule"]["source_divergence"]
         == 1
     )
+
+
+def _narrow_workbook(path: Path, rows: int, workorders: int) -> None:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["workorder", "serial", "status"])
+    for index in range(rows):
+        worksheet.append([f"WO-{index % workorders:05d}", f"SN-{index:07d}", "open"])
+    workbook.save(path)
+    workbook.close()
+
+
+def test_full_pipeline_memory_of_a_narrow_sheet_stays_under_the_budget_estimate(
+    tmp_path,
+) -> None:
+    rows = 4_000
+    path = tmp_path / "estreita.xlsx"
+    _narrow_workbook(path, rows, workorders=200)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+    budget = tables[0][2].run.budget
+    repository = RecordingRepository()
+
+    tracemalloc.start()
+    try:
+        result = run_pipeline(
+            execution_id="exec-narrow",
+            file_name="estreita.xlsx",
+            source="OWM",
+            repository=repository,
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert result["summary"]["rows_read"] == rows
+    assert peak <= budget.estimated_memory(rows + 1, (rows + 1) * 3), peak
+
+
+def test_consolidation_stage_honours_the_time_budget_in_the_real_code(
+    tmp_path, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
+    from app.ingestion_budget import IngestionLimitError
+
+    path = tmp_path / "pequena.xlsx"
+    _narrow_workbook(path, rows=30, workorders=3)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+    real_process = pipeline.process_normalized_records
+
+    def expire_then_process(records, **kwargs):
+        monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: 10**9)
+        return real_process(records, **kwargs)
+
+    monkeypatch.setattr(pipeline, "process_normalized_records", expire_then_process)
+
+    with pytest.raises(IngestionLimitError) as excinfo:
+        run_pipeline(
+            execution_id="exec-slow",
+            file_name="pequena.xlsx",
+            source="OWM",
+            repository=RecordingRepository(),
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert excinfo.value.code == "ingestion_time_limit"
+
+
+def _normalized(workorders: int) -> list[dict]:
+    from app.normalization import normalize_tables
+
+    rows = [[f"WO-{index:05d}", "open"] for index in range(workorders)]
+    records = normalize_tables([("S", ["workorder", "status"], rows)], "N-FP")[
+        "records"
+    ]
+    return [{**record, "execution_id": "e", "source_file_id": 1} for record in records]
+
+
+@pytest.mark.parametrize("defer", [False, True])
+def test_every_long_loop_of_the_real_stages_consults_the_clock(defer) -> None:
+    from app.processing import process_normalized_records
+
+    calls = []
+
+    class Expired(Exception):
+        pass
+
+    def checkpoint() -> None:
+        calls.append(1)
+        if len(calls) >= 6:
+            raise Expired
+
+    with pytest.raises(Expired):
+        process_normalized_records(
+            _normalized(700),
+            execution_id="e",
+            classified_at="2026-08-28T12:00:00+00:00",
+            defer_rule_details=defer,
+            checkpoint=checkpoint,
+        )
+
+    assert len(calls) == 6
+
+
+def test_batch_records_each_file_duration_when_its_phase_ends(
+    tmp_path, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
+    from app.observability.metrics import INGESTION_DURATION
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: clock["now"])
+    inputs = []
+    for position, source in enumerate(("N-FP", "OWM"), start=1):
+        path = tmp_path / f"arquivo-{position}.xlsx"
+        _narrow_workbook(path, rows=5, workorders=5)
+        tables, read_issues = read_source(path, ".xlsx", source)
+        inputs.append(
+            {
+                "file_name": path.name,
+                "source": source,
+                "source_file_id": position,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        )
+    real_normalize = pipeline.normalize_tables
+
+    def slow_second_file(tables, source, *args, **kwargs):
+        if source == "OWM":
+            clock["now"] += 100.0
+        return real_normalize(tables, source, *args, **kwargs)
+
+    monkeypatch.setattr(pipeline, "normalize_tables", slow_second_file)
+    duration = INGESTION_DURATION.labels("completed")
+    before = duration._sum.get()
+
+    run_pipeline_batch(
+        execution_id="exec-batch",
+        inputs=inputs,
+        repository=RecordingRepository(),
+        classified_at="2026-08-28T12:00:00+00:00",
+    )
+
+    # The first file ended at 0 s and the second at 100 s; neither includes the
+    # files after it nor the consolidation.
+    assert duration._sum.get() - before == pytest.approx(100.0)
+
+
+def test_unexpected_failure_is_recorded_with_the_failed_outcome(
+    tmp_path, monkeypatch
+) -> None:
+    from app import pipeline
+    from app.observability.metrics import INGESTION_DURATION
+
+    path = tmp_path / "falha.xlsx"
+    _narrow_workbook(path, rows=5, workorders=5)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("falha inesperada")
+
+    monkeypatch.setattr(pipeline, "process_normalized_records", broken)
+    failed = INGESTION_DURATION.labels("failed")
+    before = sum(bucket.get() for bucket in failed._buckets)
+
+    with pytest.raises(RuntimeError):
+        run_pipeline(
+            execution_id="exec-broken",
+            file_name=path.name,
+            source="OWM",
+            repository=RecordingRepository(),
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert sum(bucket.get() for bucket in failed._buckets) == before + 1
+
+
+def _threshold_case(tmp_path, monkeypatch, data_rows: int, threshold: int = 40):
+    from app import ingestion_budget
+
+    monkeypatch.setattr(ingestion_budget, "RULE_DETAIL_DEFER_ROWS", threshold)
+    monkeypatch.setattr("app.pipeline.RULE_DETAIL_DEFER_THRESHOLD", threshold)
+    # Physical rows include the header, so the streaming lower bound sees one
+    # row more than the normalized records.
+    cheapest = (
+        (threshold + 1) * ingestion_budget.DEFERRED_ROW_COST_BYTES
+        + threshold * 2 * ingestion_budget.CELL_COST_BYTES
+    )
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(cheapest + 1))
+    path = tmp_path / f"limiar-{data_rows}.xlsx"
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["workorder", "status"])
+    for index in range(data_rows):
+        worksheet.append([f"WO-{index:05d}", "open"])
+    workbook.save(path)
+    workbook.close()
+    tables, read_issues = read_source(path, ".xlsx", "N-FP")
+    return run_pipeline(
+        execution_id="exec-threshold",
+        file_name=path.name,
+        source="N-FP",
+        repository=RecordingRepository(),
+        tables=tables,
+        read_issues=read_issues,
+        source_file_id=1,
+        classified_at="2026-08-28T12:00:00+00:00",
+    )
+
+
+def test_estimate_uses_the_normalized_count_that_decides_deferral(
+    tmp_path, monkeypatch
+) -> None:
+    from app.ingestion_budget import IngestionLimitError
+
+    # 40 physical rows (header included) leave 39 normalized records, which is
+    # below the deferral threshold: the expensive regime applies even though the
+    # physical row count alone looks like the cheap one.
+    with pytest.raises(IngestionLimitError) as excinfo:
+        _threshold_case(tmp_path, monkeypatch, data_rows=39)
+
+    assert excinfo.value.code == "workbook_memory_limit"
+    assert excinfo.value.observed > excinfo.value.limit
+
+
+def test_estimate_switches_to_the_cheap_regime_at_the_threshold(
+    tmp_path, monkeypatch
+) -> None:
+    result = _threshold_case(tmp_path, monkeypatch, data_rows=40)
+
+    assert result["summary"]["rows_read"] == 40
+    assert result["processing"]["classifications"]["rule_details_deferred"] is True
+
+
+@pytest.mark.parametrize("order", [("N-FP", "OWM"), ("OWM", "N-FP")])
+def test_issue_budget_of_an_execution_does_not_depend_on_file_order(
+    tmp_path, monkeypatch, order
+) -> None:
+    from app.ingestion_budget import IngestionLimitError
+
+    monkeypatch.setenv("INGESTION_MAX_ISSUES_N_FP", "2")
+    inputs = []
+    for position, source in enumerate(order, start=1):
+        path = tmp_path / f"sujo-{position}.xlsx"
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.append(["workorder", "status"])
+        worksheet.append([None, "open"])
+        worksheet.append([None, "closed"])
+        workbook.save(path)
+        workbook.close()
+        tables, read_issues = read_source(path, ".xlsx", source)
+        inputs.append(
+            {
+                "file_name": path.name,
+                "source": source,
+                "source_file_id": position,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        )
+
+    with pytest.raises(IngestionLimitError) as excinfo:
+        run_pipeline_batch(
+            execution_id="exec-issues",
+            inputs=inputs,
+            repository=RecordingRepository(),
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert excinfo.value.code == "ingestion_issue_limit"
+    assert excinfo.value.limit == 2
+    assert excinfo.value.observed == 4
+
+
+def _one_workorder(records: int) -> list[dict]:
+    from app.normalization import normalize_tables
+
+    rows = [["WO-UNICO", f"SN-{index:06d}", "open"] for index in range(records)]
+    normalized = normalize_tables(
+        [("S", ["workorder", "serial", "status"], rows)], "OWM"
+    )["records"]
+    return [{**item, "execution_id": "e", "source_file_id": 1} for item in normalized]
+
+
+def test_a_single_workorder_with_many_records_consults_the_clock_inside_its_passes(
+    monkeypatch,
+) -> None:
+    from app import consolidation, processing
+
+    records = _one_workorder(5_000)
+    state = {"calls": 0, "inside_consolidation": 0, "inside_classification": 0}
+
+    def checkpoint() -> None:
+        state["calls"] += 1
+
+    def counting(name, function):
+        def wrapper(*args, **kwargs):
+            before = state["calls"]
+            result = function(*args, **kwargs)
+            state[name] += state["calls"] - before
+            return result
+
+        return wrapper
+
+    monkeypatch.setattr(
+        consolidation,
+        "_consolidate_workorder",
+        counting("inside_consolidation", consolidation._consolidate_workorder),
+    )
+    monkeypatch.setattr(
+        processing, "classify", counting("inside_classification", processing.classify)
+    )
+
+    result = processing.process_normalized_records(
+        records,
+        execution_id="e",
+        classified_at="2026-08-28T12:00:00+00:00",
+        checkpoint=checkpoint,
+    )
+
+    assert result["summary"]["consolidated_workorders"] == 1
+    # Each pass over the 5,000 records of the only Workorder polls the clock.
+    assert state["inside_consolidation"] >= 5
+    assert state["inside_classification"] >= 5
+
+
+def test_an_expired_clock_stops_a_single_huge_workorder_midway(monkeypatch) -> None:
+    from app import consolidation
+    from app.processing import process_normalized_records
+
+    class Expired(Exception):
+        pass
+
+    state = {"inside": False, "polls_inside": 0}
+    original = consolidation._consolidate_workorder
+
+    def tracking(*args, **kwargs):
+        state["inside"] = True
+        try:
+            return original(*args, **kwargs)
+        finally:
+            state["inside"] = False
+
+    def checkpoint() -> None:
+        if state["inside"]:
+            state["polls_inside"] += 1
+            if state["polls_inside"] == 2:
+                raise Expired
+
+    monkeypatch.setattr(consolidation, "_consolidate_workorder", tracking)
+
+    with pytest.raises(Expired):
+        process_normalized_records(
+            _one_workorder(5_000),
+            execution_id="e",
+            classified_at="2026-08-28T12:00:00+00:00",
+            checkpoint=checkpoint,
+        )
+
+    assert state["polls_inside"] == 2
+
+
+def test_paced_sequence_polls_while_iterating_and_keeps_sequence_behaviour() -> None:
+    from app.pacing import CHECK_EVERY, paced
+
+    calls = []
+    sequence = paced(list(range(CHECK_EVERY * 3 + 1)), lambda: calls.append(1))
+
+    assert len(sequence) == CHECK_EVERY * 3 + 1
+    assert sequence[5] == 5
+    assert sum(1 for _ in sequence) == CHECK_EVERY * 3 + 1
+    assert len(calls) == 4
+    assert paced([1], None) == [1]

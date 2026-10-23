@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from collections.abc import Generator
+from contextlib import suppress
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -40,6 +42,8 @@ from app.execution import (
     import_fingerprint,
     validate_transition,
 )
+from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError, max_files
+from app.observability.metrics import observe_ingestion
 from app.observability.telemetry import (
     bind_execution_id,
     current_correlation_id,
@@ -736,6 +740,15 @@ class PostgresImportRepository:
                 "DELETE FROM synergia.source_files WHERE execution_id = %s",
                 (execution_id,),
             )
+            # Nothing was committed, so the reservation must not make a later
+            # attempt with the same files look like a duplicate request.
+            connection.execute(
+                """
+                DELETE FROM synergia.execution_idempotency
+                WHERE execution_id = %s AND request_type = 'import'
+                """,
+                (execution_id,),
+            )
         self.transition_execution(execution_id, "failed", reason)
 
     def finish(
@@ -876,6 +889,7 @@ def _error(
     http_status: int,
     code: str,
     message: str,
+    details: dict | None = None,
 ) -> None:
     current = repository.get(execution_id)
     if current is not None and current["status"] != "failed":
@@ -889,7 +903,12 @@ def _error(
     )
     raise HTTPException(
         status_code=http_status,
-        detail={"code": code, "message": message, "execution_id": execution_id},
+        detail={
+            "code": code,
+            "message": message,
+            "execution_id": execution_id,
+            **(details or {}),
+        },
     )
 
 
@@ -914,11 +933,41 @@ INSPECTION_MESSAGES = {
     "archive_compression_ratio": "Razão de compressão abusiva",
     "archive_path_traversal": "Caminho inseguro dentro do arquivo compactado",
     "encrypted_archive": "Arquivo compactado criptografado não permitido",
+    **{code: message for code, (message, _) in LIMIT_GUIDANCE.items()},
 }
 
 
+def _observe_terminal(
+    outcome: str, started: float, reason: str | None = None
+) -> None:
+    """Record a terminal outcome decided before or outside the pipeline."""
+    peak = observe_ingestion(
+        outcome=outcome,
+        duration_seconds=time.monotonic() - started,
+        rows_processed=0,
+        rows_rejected=0,
+        reason=reason if outcome == "rejected" else None,
+        allowed_reasons=frozenset(LIMIT_GUIDANCE),
+    )
+    safe_log(
+        logging.WARNING,
+        f"ingestion.{outcome}",
+        reason_code=reason,
+        duration_ms=int((time.monotonic() - started) * 1000),
+        peak_memory_bytes=peak,
+    )
+
+
+def _rejection_details(inspection) -> dict | None:
+    details = dict(inspection.reason_details or {})
+    guidance = LIMIT_GUIDANCE.get(inspection.reason_code)
+    if guidance and "guidance" not in details:
+        details["guidance"] = guidance[1]
+    return details or None
+
+
 def _inspection_http_status(reason_code: str) -> int:
-    if reason_code == "file_too_large":
+    if reason_code == "file_too_large" or reason_code.startswith("workbook_"):
         return status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
     if reason_code in {
         "unsupported_extension",
@@ -966,6 +1015,16 @@ async def upload_import(
 ) -> ImportStatus:
     execution_id = str(uuid4())
     bind_execution_id(execution_id)
+    started = time.monotonic()
+    if len(file) > max_files():
+        error = IngestionLimitError(
+            "ingestion_file_limit", limit=max_files(), observed=len(file)
+        )
+        _observe_terminal("rejected", started, error.code)
+        raise HTTPException(
+            status_code=413,
+            detail={"code": error.code, "message": error.message, **error.details()},
+        )
     if not source or len(source) != len(file):
         raise HTTPException(
             status_code=422,
@@ -1050,6 +1109,7 @@ async def upload_import(
                     inspection.quarantine_path.unlink(missing_ok=True)
                 raise
             if not inspection.accepted:
+                _observe_terminal("rejected", started, inspection.reason_code)
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 if pipeline_inputs:
@@ -1062,6 +1122,7 @@ async def upload_import(
                     INSPECTION_MESSAGES.get(
                         inspection.reason_code, "Arquivo rejeitado pela inspeção"
                     ),
+                    _rejection_details(inspection),
                 )
             try:
                 destination = release_to_accepted(
@@ -1076,6 +1137,7 @@ async def upload_import(
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 repository.abort_claim(execution_id, "storage_error")
+                _observe_terminal("failed", started, "storage_error")
                 safe_log(
                     logging.ERROR,
                     "import.storage.failed",
@@ -1185,6 +1247,9 @@ async def upload_import(
                     artifact_directory, result
                 ),
             )
+        except IngestionLimitError:
+            _remove_pipeline_artifacts(destinations[0].parent)
+            raise
         except Exception as exc:
             _remove_pipeline_artifacts(destinations[0].parent)
             repository.finish(execution_id, "failed", "pipeline_error")
@@ -1213,16 +1278,36 @@ async def upload_import(
         )
     except HTTPException:
         raise
+    except IngestionLimitError as exc:
+        for destination in destinations:
+            destination.unlink(missing_ok=True)
+        for directory in {stored.parent for stored in destinations}:
+            with suppress(OSError):
+                directory.rmdir()
+        if pipeline_inputs:
+            repository.abort_claim(execution_id, exc.code)
+        if not exc.recorded:
+            _observe_terminal("rejected", started, exc.code)
+        _error(
+            repository,
+            execution_id,
+            _inspection_http_status(exc.code),
+            exc.code,
+            exc.message,
+            exc.details(),
+        )
     except ValueError as exc:
         for destination in destinations:
             destination.unlink(missing_ok=True)
         if pipeline_inputs:
             repository.abort_claim(execution_id, "invalid_file")
+        _observe_terminal("rejected", started, "invalid_file")
         _error(repository, execution_id, 422, "invalid_file", str(exc))
     except Exception as exc:
         for destination in destinations:
             destination.unlink(missing_ok=True)
         repository.abort_claim(execution_id, "preparation_error")
+        _observe_terminal("failed", started)
         safe_log(
             logging.ERROR,
             "import.preparation.failed",

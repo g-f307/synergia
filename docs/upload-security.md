@@ -82,8 +82,12 @@ O endpoint exige `import.create`.
 - arquivo vazio, truncado, corrompido, binário incompatível ou desconhecido.
 
 O controle de ZIP ocorre com base no diretório central antes da descompressão
-completa. A leitura integral só ocorre depois de limites de entradas, tamanho e
-razão terem sido aprovados.
+completa. As partes XML são percorridas em blocos, nunca lidas inteiras: a
+varredura de marcadores, a contagem de bytes descompactados, o limite de tempo
+e os limites de abas, linhas, colunas, células, fórmulas e dimensão declarada
+são aplicados durante a passagem. Declarações de entidades XML são rejeitadas
+como `corrupted_file`. Os limites, os códigos de rejeição e as medições estão
+em [xlsx-ingestion-budget.md](xlsx-ingestion-budget.md).
 
 ## Auditoria sem exposição de caminho
 

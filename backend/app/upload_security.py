@@ -7,15 +7,18 @@ import os
 import re
 import secrets
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from io import StringIO
 from pathlib import Path, PurePosixPath
+from typing import Any
 from urllib.parse import unquote
-from xml.etree import ElementTree
 
 from fastapi import UploadFile
+
+from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.xlsx_package import PackageViolation, scan_package
 
 DEFAULT_MAX_BYTES = 25 * 1024 * 1024
 DEFAULT_RETENTION_HOURS = 24
@@ -55,6 +58,7 @@ class UploadPolicy:
     max_archive_uncompressed_bytes: int
     max_compression_ratio: int
     rejected_retention_hours: int
+    budget: IngestionBudget = field(default_factory=IngestionBudget)
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,7 @@ class InspectionResult:
     retained_until: datetime | None
     discarded_at: datetime | None
     quarantine_path: Path | None
+    reason_details: dict[str, Any] | None = None
 
     @property
     def accepted(self) -> bool:
@@ -79,10 +84,16 @@ class InspectionResult:
 
 
 class UnsafeUpload(ValueError):
-    def __init__(self, reason_code: str, detected_media_type: str | None = None):
+    def __init__(
+        self,
+        reason_code: str,
+        detected_media_type: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
         super().__init__(reason_code)
         self.reason_code = reason_code
         self.detected_media_type = detected_media_type
+        self.details = details
 
 
 def _source_env_key(source: str) -> str:
@@ -135,6 +146,7 @@ def policy_for(source: str) -> UploadPolicy:
                 )
             ),
         ),
+        budget=budget_for(source),
     )
 
 
@@ -275,34 +287,13 @@ def _validate_xlsx_archive(path: Path, policy: UploadPolicy) -> str:
             if "xl/connections.xml" in names:
                 raise UnsafeUpload("external_link")
 
-            for entry in entries:
-                lower_name = entry.filename.lower()
-                if not lower_name.endswith((".xml", ".rels")):
-                    continue
-                payload = archive.read(entry)
-                lowered = payload.lower()
-                if b"macroenabled" in lowered or b"vbaproject" in lowered:
-                    raise UnsafeUpload("macro_or_active_content")
-                if (
-                    b'targetmode="external"' in lowered
-                    or b"targetmode='external'" in lowered
-                ):
-                    raise UnsafeUpload("external_link")
-                if b"<oleobject" in lowered or b":oleobject" in lowered:
-                    raise UnsafeUpload("embedded_object")
-                if lower_name.startswith("xl/worksheets/"):
-                    try:
-                        root = ElementTree.fromstring(payload)
-                    except ElementTree.ParseError as exc:
-                        raise UnsafeUpload("corrupted_file") from exc
-                    for formula in root.iter():
-                        if formula.tag.rsplit("}", 1)[
-                            -1
-                        ] == "f" and _has_dangerous_formula(formula.text or ""):
-                            raise UnsafeUpload("dangerous_formula")
-
+            scan_package(archive, policy, is_dangerous=_has_dangerous_formula)
             if archive.testzip() is not None:
                 raise UnsafeUpload("corrupted_file")
+    except PackageViolation as exc:
+        raise UnsafeUpload(exc.code) from exc
+    except IngestionLimitError as exc:
+        raise UnsafeUpload(exc.code, details=exc.details()) from exc
     except zipfile.BadZipFile as exc:
         raise UnsafeUpload("corrupted_file") from exc
     return DETECTED_MEDIA_TYPES[".xlsx"]
@@ -331,6 +322,7 @@ def _rejected_result(
     quarantine_path: Path,
     policy: UploadPolicy,
     analyzed_at: datetime,
+    reason_details: dict[str, Any] | None = None,
 ) -> InspectionResult:
     retained_until = analyzed_at + timedelta(hours=policy.rejected_retention_hours)
     discarded_at = None
@@ -354,6 +346,7 @@ def _rejected_result(
         retained_until=retained_until,
         discarded_at=discarded_at,
         quarantine_path=retained_path,
+        reason_details=reason_details,
     )
 
 
@@ -434,6 +427,7 @@ async def receive_and_inspect(
             quarantine_path=quarantine_path,
             policy=policy,
             analyzed_at=analyzed_at,
+            reason_details=exc.details,
         )
 
 

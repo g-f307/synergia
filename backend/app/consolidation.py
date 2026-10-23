@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from typing import Any
+
+from app.pacing import paced
 
 SOURCE_ORDER = ("N-FP", "GMES/OQC", "OWM", "TMS")
 IDENTIFIER_FIELDS = (
@@ -441,13 +443,21 @@ def _consolidate_workorder(
 
 
 def consolidate(
-    records: Iterable[Mapping[str, Any]], *, isolate_failures: bool = False
+    records: Iterable[Mapping[str, Any]],
+    *,
+    isolate_failures: bool = False,
+    checkpoint: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
-    """Consolidate normalized records into deterministic, auditable Workorders."""
+    """Consolidate normalized records into deterministic, auditable Workorders.
+
+    ``checkpoint`` lets the caller enforce a time budget inside the long loops.
+    """
     ordered: list[Mapping[str, Any]] = []
     seen_records: dict[tuple[Any, ...], Mapping[str, Any]] = {}
     duplicate_issues: list[dict[str, Any]] = []
-    for record in sorted(records, key=_record_key):
+    for position, record in enumerate(sorted(records, key=_record_key)):
+        if checkpoint is not None and position % 1024 == 0:
+            checkpoint()
         identity = _record_identity(record)
         if identity is None or identity not in seen_records:
             ordered.append(record)
@@ -469,6 +479,9 @@ def consolidate(
                 "row": record.get("row"),
             }
         )
+    # Index building, relationship resolution and per-Workorder passes all loop
+    # over every record; pacing keeps the deadline enforced inside them.
+    ordered = paced(ordered, checkpoint)
     indexes: dict[str, dict[str, str]] = {}
     ambiguous: dict[str, set[str]] = {}
     candidates: dict[str, dict[str, set[str]]] = {}
@@ -521,11 +534,13 @@ def consolidate(
     # assigned. Release their per-identifier sets before materializing the
     # provenance-rich consolidated Workorders.
     del indexes, candidates, ordered, seen_records
-    for workorder in sorted(grouped):
+    for position, workorder in enumerate(sorted(grouped)):
+        if checkpoint is not None and position % 256 == 0:
+            checkpoint()
         workorder_records = grouped.pop(workorder)
         try:
             consolidated, workorder_issues = _consolidate_workorder(
-                workorder, workorder_records
+                workorder, paced(workorder_records, checkpoint)
             )
         except ConsolidationError as exc:
             if not isolate_failures:

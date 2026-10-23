@@ -125,6 +125,15 @@ nunca inclui caminho absoluto, chave de storage ou nome interno. Formatos,
 limites, inspeções de conteúdo e retenção estão em
 [upload-security.md](upload-security.md).
 
+Uma rejeição por capacidade de uma planilha (`workbook_*`, `ingestion_*`,
+`no_authorized_sheet` e `unreadable_workbook`) usa o envelope de erro comum e
+acrescenta a `error.details` os campos `guidance` e, quando aplicável, `limit`,
+`observed` e `sheet`. Os limites `workbook_*` respondem `413`; os demais,
+`422`. A execução termina como `failed` com o código como motivo, sem registros
+parciais, e o mesmo arquivo pode ser reenviado depois de ajustado o orçamento.
+Os códigos e a operação estão em
+[xlsx-ingestion-budget.md](xlsx-ingestion-budget.md).
+
 ## Paginação, filtros e ordenação
 
 `GET /executions`, `GET /pending-items` e `GET /history` aceitam `page` (padrão `1`) e

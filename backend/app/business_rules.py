@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+
+from app.pacing import paced
 
 RULES_PATH = Path(__file__).with_name("model") / "business_rules.json"
 REQUIRED_RULES = {
@@ -558,8 +561,12 @@ def classify(
     classified_at: str,
     previous_history: list[dict[str, Any]] | None = None,
     catalog: dict[str, Any] = RULE_CATALOG,
+    checkpoint: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
-    """Apply deterministic rules without mutating consolidation or prior history."""
+    """Apply deterministic rules without mutating consolidation or prior history.
+
+    ``checkpoint`` lets the caller enforce a time budget inside the Workorder loop.
+    """
     if not run_id.strip():
         raise BusinessRuleError("run_id é obrigatório")
     as_of = _as_date(classified_at)
@@ -571,7 +578,9 @@ def classify(
     }
     current: list[dict[str, Any]] = []
     evaluations: list[dict[str, Any]] = []
-    for workorder_number in sorted(workorders):
+    for position, workorder_number in enumerate(sorted(workorders)):
+        if checkpoint is not None and position % 256 == 0:
+            checkpoint()
         workorder = workorders[workorder_number]
         facts = sorted(
             workorder.get("classification_facts", []),
@@ -583,6 +592,7 @@ def classify(
                 int(fact.get("row", 0)),
             ),
         )
+        facts = paced(facts, checkpoint)
         release_dates = [
             parsed
             for fact in facts

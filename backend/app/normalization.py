@@ -9,7 +9,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook
+from app.ingestion_budget import IngestionLimitError
+from app.spreadsheet_reader import IngestionRun, LazySheetRows, open_workbook
 
 RULES_PATH = Path(__file__).with_name("model") / "normalization_rules.json"
 REQUIRED_RULES = {
@@ -169,7 +170,7 @@ def _json_value(value: Any) -> Any:
     return str(value)
 
 
-def _read_tables(path: Path, extension: str):
+def _read_tables(path: Path, extension: str, source: str | None = None):
     if extension == ".csv":
         with path.open(encoding="utf-8-sig", newline="") as stream:
             rows = list(csv.reader(stream, strict=True))
@@ -187,14 +188,14 @@ def _read_tables(path: Path, extension: str):
             [[record.get(key) for key in headers] for record in records],
         )
         return
-    workbook = load_workbook(path, read_only=True, data_only=False)
-    try:
-        for worksheet in workbook.worksheets:
-            rows = [list(row) for row in worksheet.iter_rows(values_only=True)]
-            if rows and any(value not in (None, "") for value in rows[0]):
-                yield worksheet.title, rows[0], rows[1:]
-    finally:
-        workbook.close()
+    run = IngestionRun(source or "default")
+    with open_workbook(path, run.budget) as workbook:
+        for name in workbook.sheetnames:
+            if not run.budget.authorizes(name):
+                continue
+            first = next(workbook[name].iter_rows(values_only=True), None)
+            if first is not None and any(value not in (None, "") for value in first):
+                yield name, list(first), LazySheetRows(path, name, 0, run)
 
 
 def _normalize_value(field: str, value: Any) -> tuple[Any, str, str | None]:
@@ -224,6 +225,7 @@ def normalize_tables(
     tables: list[tuple[str, list[Any], list[list[Any]]]],
     source: str,
     eligible_rows: set[tuple[str, int]] | None = None,
+    max_issues: int | None = None,
 ) -> dict[str, Any]:
     records: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
@@ -235,6 +237,13 @@ def normalize_tables(
                 continue
             if eligible_rows is not None and (sheet, row_number) not in eligible_rows:
                 continue
+            if max_issues is not None and len(issues) > max_issues:
+                raise IngestionLimitError(
+                    "ingestion_issue_limit",
+                    limit=max_issues,
+                    observed=len(issues),
+                    sheet=sheet,
+                )
             values: dict[str, Any] = {}
             originals: dict[str, Any] = {}
             transformations: list[dict[str, Any]] = []
@@ -286,4 +295,4 @@ def normalize_tables(
 
 
 def normalize_file(path: Path, extension: str, source: str) -> dict[str, Any]:
-    return normalize_tables(list(_read_tables(path, extension)), source)
+    return normalize_tables(list(_read_tables(path, extension, source)), source)

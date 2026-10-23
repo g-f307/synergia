@@ -12,26 +12,28 @@ from app.upload_security import InspectionDecision, InspectionResult
 
 pytestmark = [pytest.mark.integration, pytest.mark.security]
 EXECUTION_ID = "upload-security-persistence"
+RETRY_EXECUTION_ID = "upload-security-persistence-retry"
 
 
 @pytest.fixture(autouse=True)
 def cleanup_upload_security_data():
     yield
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
-        for table in (
-            "audit_events",
-            "source_files",
-            "file_inspections",
-            "execution_idempotency",
-            "execution_state_transitions",
-        ):
+        for execution_id in (EXECUTION_ID, RETRY_EXECUTION_ID):
+            for table in (
+                "audit_events",
+                "source_files",
+                "file_inspections",
+                "execution_idempotency",
+                "execution_state_transitions",
+            ):
+                connection.execute(
+                    f"DELETE FROM synergia.{table} WHERE execution_id = %s",
+                    (execution_id,),
+                )
             connection.execute(
-                f"DELETE FROM synergia.{table} WHERE execution_id = %s",
-                (EXECUTION_ID,),
+                "DELETE FROM synergia.executions WHERE id = %s", (execution_id,)
             )
-        connection.execute(
-            "DELETE FROM synergia.executions WHERE id = %s", (EXECUTION_ID,)
-        )
 
 
 def _result(
@@ -130,3 +132,41 @@ def test_persists_inspection_source_link_and_safe_audit_payload() -> None:
             (rejected_id,),
         ).fetchone()[0]
     assert discarded_at is not None
+
+
+def test_aborted_claim_releases_hash_and_reservation_for_a_new_attempt() -> None:
+    repository = PostgresImportRepository(os.environ["DATABASE_URL"])
+    digest = "d" * 64
+
+    def attempt(execution_id: str, internal_character: str):
+        repository.start(execution_id, "N-FP", "technical", "integration-test")
+        inspection = _result(InspectionDecision.ACCEPTED, internal_character)
+        inspection_id = repository.record_inspection(execution_id, "N-FP", inspection)
+        claimed = repository.claim_file(
+            execution_id,
+            file_name=inspection.original_name,
+            extension="csv",
+            size_bytes=inspection.size_bytes,
+            digest=digest,
+            media_type=inspection.declared_media_type,
+            detected_media_type=inspection.detected_media_type or "",
+            storage_key=f"accepted/n_fp/{execution_id}/{inspection.internal_name}",
+            inspection_id=inspection_id,
+            source="N-FP",
+        )
+        return claimed, repository.claim_processing(execution_id, [digest])
+
+    (first_file, first_duplicate), first_processing = attempt(EXECUTION_ID, "a")
+    assert first_file is not None and first_duplicate is None
+    assert first_processing is None
+
+    repository.abort_claim(EXECUTION_ID, "ingestion_issue_limit")
+
+    (second_file, second_duplicate), second_processing = attempt(
+        RETRY_EXECUTION_ID, "e"
+    )
+    assert second_file is not None
+    assert second_duplicate is None
+    assert second_processing is None
+    assert repository.get(EXECUTION_ID)["status"] == "failed"
+    assert repository.get(EXECUTION_ID)["failure_reason"] == "ingestion_issue_limit"
