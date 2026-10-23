@@ -38,6 +38,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [catálogo, visualização e exportação web de relatórios](docs/reports-ui.md);
 - [ciclo de vida, idempotência e reprocessamento](docs/execution-lifecycle.md);
 - [recebimento seguro, quarentena e retenção](docs/upload-security.md);
+- [orçamento de recursos, medição e operação da ingestão de XLSX](docs/xlsx-ingestion-budget.md);
 - [ADR da estratégia de identidade e sessão](docs/adr/0001-identity-strategy.md);
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
 - [modelo de ameaças e baseline de riscos](docs/threat-model.md);

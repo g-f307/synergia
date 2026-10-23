@@ -47,6 +47,9 @@ export IMPORT_STORAGE_DIR=/var/lib/synergia/imports
 # O padrão é 25 MiB e 24 horas de retenção para rejeitados
 export UPLOAD_MAX_BYTES=26214400
 export UPLOAD_REJECTED_RETENTION_HOURS=24
+# Orçamento de planilhas XLSX (padrões em docs/xlsx-ingestion-budget.md)
+export INGESTION_MAX_CELLS=2000000
+export INGESTION_MAX_SECONDS=300
 # Opcional: catálogo oficial, separado por vírgulas
 export VALID_ORGANIZATION_CODES=ORG-001,LG
 ```
