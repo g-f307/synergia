@@ -287,10 +287,12 @@ de memória por byte de XML. Esse custo independe da aba lida e por isso tem
 orçamento próprio (`INGESTION_MAX_OPEN_BYTES`, verificado pelo cabeçalho do ZIP na
 admissão e novamente antes de cada abertura).
 
-Esta entrega não valida nem normaliza os valores do workbook real: os adapters
-por fonte dependem das respostas do cliente registradas em
-[real-workbook-contracts.md](real-workbook-contracts.md). O leitor genérico não
-reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`.
+As medições acima pertencem à entrega original da #138, anterior aos adapters.
+WO Status e Total Decision agora possuem adapters próprios (#139/#140), com
+políticas conservadoras para as respostas ainda pendentes do cliente. O leitor
+genérico continua sem reconhecer os cabeçalhos dessas famílias. O corpus e as
+medições integradas atualizadas estão em
+[ingestion-corpus-validation.md](ingestion-corpus-validation.md).
 
 ## Procedimento para ajustar um limite
 

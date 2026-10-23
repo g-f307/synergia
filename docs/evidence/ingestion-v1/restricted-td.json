@@ -1,0 +1,96 @@
+{
+  "contains_source_values": false,
+  "environment": {
+    "architecture": "x86_64",
+    "cgroup_memory_limit_bytes": null,
+    "cpu_model": "AMD Ryzen 5 7535HS with Radeon Graphics",
+    "dependencies": {
+      "fastapi": "0.141.1",
+      "openpyxl": "3.1.5",
+      "psycopg": "3.3.6"
+    },
+    "logical_cpus": 12,
+    "os": "Linux",
+    "physical_memory_bytes": 15907278848,
+    "python": "3.12.3",
+    "release": "6.11.0-26-generic",
+    "rss_measurement": "proc-self-VmHWM"
+  },
+  "generated_rows_per_family": null,
+  "input_kind": "restricted_opt_in",
+  "limitations": [
+    "RSS is a process high-water mark, not a per-phase delta",
+    "Generation runs outside the measured worker",
+    "No database writes in volume or restricted-file runs",
+    "Measurements do not authorize raising production limits"
+  ],
+  "passed": true,
+  "profile": "local",
+  "report_version": "1.0.0",
+  "runs": [
+    {
+      "baseline_peak_rss_bytes": 61362176,
+      "configuration": {
+        "authorized_contract_sheets": [
+          "sheet1"
+        ],
+        "ingestion": {
+          "max_cells": 2000000,
+          "max_columns": 16384,
+          "max_formulas": 2000000,
+          "max_issues": 250000,
+          "max_memory_bytes": 1073741824,
+          "max_open_bytes": 33554432,
+          "max_rows": 1048576,
+          "max_seconds": 300.0,
+          "max_sheets": 64,
+          "progress_interval": 10000
+        },
+        "upload": {
+          "max_archive_entries": 2000,
+          "max_archive_uncompressed_bytes": 104857600,
+          "max_bytes": 26214400,
+          "max_compression_ratio": 100,
+          "rejected_retention_hours": 24
+        }
+      },
+      "duration_seconds": 0.9679,
+      "file_bytes": 168845,
+      "outcome": "completed",
+      "passed": true,
+      "peak_rss_bytes": 73490432,
+      "reconciliation": {
+        "balanced": true,
+        "blocking": false,
+        "codes": {
+          "column_ignored": 53,
+          "invalid_quantity": 1,
+          "restricted_value_minimized": 1228,
+          "unknown_state": 1090,
+          "unparsed_date": 1102
+        },
+        "contains_source_values": false,
+        "sheets": [
+          {
+            "accepted": 550,
+            "balanced": true,
+            "duplicated": 0,
+            "ignored": 0,
+            "imported": 551,
+            "normalized": 550,
+            "present": true,
+            "read": 551,
+            "rejected": 1,
+            "sheet": "Sheet1",
+            "source": "GMES/OQC"
+          }
+        ],
+        "source": "Total Decision",
+        "status": "completed_with_errors"
+      },
+      "scenario": "within_budget",
+      "source": "Total Decision"
+    }
+  ],
+  "watchdog_seconds": 900
+}

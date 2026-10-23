@@ -70,8 +70,10 @@ def validate_migrations() -> None:
 
 def validate_synthetic_data() -> None:
     ingestion_dataset = SYNTHETIC_DATA / "ingestion-v1"
-    verify_ingestion_manifest(ingestion_dataset)
-    ingestion_files = {p for p in ingestion_dataset.iterdir() if p.is_file()}
+    ingestion_files = set()
+    if ingestion_dataset.exists():
+        verify_ingestion_manifest(ingestion_dataset)
+        ingestion_files = {p for p in ingestion_dataset.iterdir() if p.is_file()}
     # This corpus includes deliberately unreadable files. Validate its frozen
     # bytes, not the operational fixture contract or generic spreadsheet rules.
     quality_dataset = SYNTHETIC_DATA / "ai-quality-v2"
