@@ -13,12 +13,14 @@ try:
         validate_manifest as validate_homologation_manifest,
     )
     from generate_synthetic_data import validate_manifest
+    from ingestion_corpus import verify_manifest as verify_ingestion_manifest
 except ModuleNotFoundError:
     from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
     from scripts.generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
     from scripts.generate_synthetic_data import validate_manifest
+    from scripts.ingestion_corpus import verify_manifest as verify_ingestion_manifest
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +69,9 @@ def validate_migrations() -> None:
 
 
 def validate_synthetic_data() -> None:
+    ingestion_dataset = SYNTHETIC_DATA / "ingestion-v1"
+    verify_ingestion_manifest(ingestion_dataset)
+    ingestion_files = {p for p in ingestion_dataset.iterdir() if p.is_file()}
     # This corpus includes deliberately unreadable files. Validate its frozen
     # bytes, not the operational fixture contract or generic spreadsheet rules.
     quality_dataset = SYNTHETIC_DATA / "ai-quality-v2"
@@ -91,7 +96,7 @@ def validate_synthetic_data() -> None:
     ]
 
     for path in files:
-        if path in quality_files:
+        if path in quality_files or path in ingestion_files:
             continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))

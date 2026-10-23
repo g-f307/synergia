@@ -1,0 +1,32 @@
+{
+  "balanced": true,
+  "blocking": false,
+  "codes": {
+    "column_ignored": 45,
+    "formula_not_allowed": 1,
+    "invalid_quantity": 1,
+    "missing_identity": 1,
+    "restricted_value_minimized": 12,
+    "unknown_state": 1,
+    "unparsed_date": 1
+  },
+  "contains_source_values": false,
+  "normalized_sha256": "7f3955087842aaa9f9cbf3596ac49367310752cf5b3b60ba21d6a77d54ced883",
+  "sheets": [
+    {
+      "accepted": 1,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 4,
+      "normalized": 1,
+      "present": true,
+      "read": 4,
+      "rejected": 3,
+      "sheet": "Sheet1",
+      "source": "GMES/OQC"
+    }
+  ],
+  "source": "Total Decision",
+  "status": "completed_with_errors"
+}

@@ -310,6 +310,8 @@ def build_workbook(
 ) -> tuple[bytes, dict[str, dict[str, int]]]:
     """Return the deterministic workbook bytes and the counts it was built with."""
     book = Workbook()
+    book.properties.created = datetime(2026, 1, 1)
+    book.properties.modified = datetime(2026, 1, 1)
     book.remove(book.active)
     for name in SHEET_ORDER:
         book.create_sheet(name)

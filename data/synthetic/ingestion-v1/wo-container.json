@@ -1,0 +1,65 @@
+{
+  "balanced": true,
+  "blocking": false,
+  "codes": {
+    "sheet_missing": 3
+  },
+  "contains_source_values": false,
+  "normalized_sha256": "f0ce90b5ad2c35118aa0f345e726dd3372d72fb220e69553c800d1c7fe7149b5",
+  "sheets": [
+    {
+      "accepted": 0,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 0,
+      "normalized": 0,
+      "present": false,
+      "read": 0,
+      "rejected": 0,
+      "sheet": "NFP",
+      "source": "N-FP"
+    },
+    {
+      "accepted": 0,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 0,
+      "normalized": 0,
+      "present": false,
+      "read": 0,
+      "rejected": 0,
+      "sheet": "OWM SN",
+      "source": "OWM"
+    },
+    {
+      "accepted": 0,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 0,
+      "normalized": 0,
+      "present": false,
+      "read": 0,
+      "rejected": 0,
+      "sheet": "LOT PENDING_OQC",
+      "source": "GMES/OQC"
+    },
+    {
+      "accepted": 2,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 2,
+      "normalized": 2,
+      "present": true,
+      "read": 2,
+      "rejected": 0,
+      "sheet": "CTNR STATUS",
+      "source": "TMS"
+    }
+  ],
+  "source": "WO Status",
+  "status": "completed"
+}
