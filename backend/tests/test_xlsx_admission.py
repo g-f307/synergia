@@ -343,3 +343,39 @@ def test_rejects_a_large_shared_strings_table_before_opening(
     assert result.reason_code == "workbook_metadata_limit"
     assert result.reason_details["observed"] >= 200_000
     assert result.reason_details["limit"] == 100_000
+
+
+def _wo_status_workbook() -> bytes:
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from scripts.generate_wo_status_fixture import build_workbook
+
+    return build_workbook()[0]
+
+
+def test_composite_source_budgets_the_mapped_columns_not_the_sheet_width(
+    tmp_path, monkeypatch
+) -> None:
+    content = _wo_status_workbook()
+    # The NFP sheet is 283 columns wide but the adapter keeps nine of them.
+    monkeypatch.setenv("INGESTION_MAX_CELLS", "2000")
+
+    composite = _inspect(tmp_path, content, source="WO Status")
+    generic = _inspect(tmp_path, content, source="N-FP")
+
+    assert composite.accepted, composite.reason_code
+    assert generic.reason_code in {"workbook_dimension_limit", "no_authorized_sheet"}
+
+
+def test_composite_source_rejects_when_the_mapped_cells_exceed_the_budget(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("INGESTION_MAX_CELLS", "100")
+
+    result = _inspect(tmp_path, _wo_status_workbook(), source="WO Status")
+
+    assert result.reason_code in {"workbook_dimension_limit", "workbook_cell_limit"}

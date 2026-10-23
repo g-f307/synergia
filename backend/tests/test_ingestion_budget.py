@@ -146,3 +146,31 @@ def test_file_limit_is_global_and_positive(monkeypatch) -> None:
     monkeypatch.setenv("INGESTION_MAX_FILES", "0")
     with pytest.raises(RuntimeError, match="INGESTION_MAX_FILES"):
         ingestion_budget.max_files()
+
+
+def test_composite_source_defaults_to_the_adapter_sheets(monkeypatch) -> None:
+    from app.wo_status_spec import load_spec
+
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS_WO_STATUS", raising=False)
+
+    budget = budget_for("WO Status")
+
+    assert budget.allowed_sheets == load_spec().authorized_names()
+    assert budget.authorizes("owm sn")
+    assert not budget.authorizes("Analysis 2")
+    assert budget.columns_of("NFP") == frozenset(
+        {21, 23, 25, 27, 28, 39, 233, 239, 282}
+    )
+    assert budget_for("OWM").columns_of("OWM SN") is None
+
+
+def test_composite_source_allowlist_can_be_narrowed_but_not_widened_by_default(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS_WO_STATUS", "NFP")
+
+    budget = budget_for("WO Status")
+
+    assert budget.authorizes("NFP")
+    assert not budget.authorizes("CTNR STATUS")
