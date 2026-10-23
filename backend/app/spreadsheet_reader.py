@@ -114,7 +114,6 @@ class LazySheetRows:
     def __iter__(self) -> Iterator[LocatedRow]:
         budget = self.run.budget
         cells = 0
-        last_row = 0
         try:
             with open_workbook(self.path) as workbook:
                 worksheet = workbook[self.sheet]
@@ -146,11 +145,9 @@ class LazySheetRows:
                             observed=cells,
                             sheet=self.sheet,
                         )
-                    last_row = number
                     self._check_memory(budget.minimum_memory(number, cells))
                     self.run.tick()
                     yield LocatedRow(list(values), number)
-                self._check_memory(budget.estimated_memory(last_row, cells))
         except IngestionLimitError:
             raise
         except Exception as exc:

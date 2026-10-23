@@ -8,7 +8,7 @@ from openpyxl import Workbook
 
 from app.ingestion_budget import (
     CELL_COST_BYTES,
-    ROW_COST_BYTES,
+    DEFERRED_ROW_COST_BYTES,
     IngestionBudget,
     IngestionLimitError,
 )
@@ -156,11 +156,12 @@ def test_reading_enforces_the_budget_with_boundary_values(
     assert excinfo.value.limit == limit
 
 
-def test_reading_enforces_the_memory_estimate_for_narrow_sheets(
+def test_reading_stops_early_when_even_the_cheapest_regime_does_not_fit(
     tmp_path, monkeypatch
 ) -> None:
-    per_row = ROW_COST_BYTES + 2 * CELL_COST_BYTES
-    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(per_row * 20))
+    # 19 data rows end at physical row 20 with 38 cells.
+    limit = 20 * DEFERRED_ROW_COST_BYTES + 38 * CELL_COST_BYTES
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(limit))
     within = _save(tmp_path, _simple(19), "within.xlsx")
     above = _save(tmp_path, _simple(25), "above.xlsx")
 

@@ -9,11 +9,9 @@ import pytest
 from openpyxl import Workbook
 from starlette.datastructures import Headers, UploadFile
 
-from app import ingestion_budget
 from app.ingestion_budget import (
     CELL_COST_BYTES,
     DEFERRED_ROW_COST_BYTES,
-    ROW_COST_BYTES,
     IngestionBudget,
 )
 from app.upload_security import receive_and_inspect
@@ -115,7 +113,7 @@ def test_rejects_every_workbook_when_no_sheet_is_authorized(
 def test_memory_estimate_bounds_narrow_sheets_with_many_rows(
     tmp_path, monkeypatch
 ) -> None:
-    per_row = ROW_COST_BYTES + 2 * CELL_COST_BYTES
+    per_row = DEFERRED_ROW_COST_BYTES + 2 * CELL_COST_BYTES
     monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(per_row * 50))
 
     at_limit = _inspect(tmp_path, _workbook_bytes(rows=50, columns=2))
@@ -124,20 +122,6 @@ def test_memory_estimate_bounds_narrow_sheets_with_many_rows(
     assert at_limit.accepted, at_limit.reason_code
     assert above_limit.reason_code == "workbook_memory_limit"
     assert above_limit.reason_details["limit"] == per_row * 50
-
-
-def test_memory_check_does_not_reject_a_large_sheet_by_its_prefix(
-    tmp_path, monkeypatch
-) -> None:
-    # Past the rule-detail deferral threshold each row is cheaper, so a prefix of
-    # the sheet must not be priced with the pre-deferral row cost.
-    monkeypatch.setattr(ingestion_budget, "RULE_DETAIL_DEFER_ROWS", 40)
-    limit = 100 * DEFERRED_ROW_COST_BYTES + 200 * CELL_COST_BYTES
-    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(limit))
-
-    result = _inspect(tmp_path, _workbook_bytes(rows=100, columns=2))
-
-    assert result.accepted, result.reason_code
 
 
 def test_accepts_a_workbook_within_every_limit(tmp_path) -> None:

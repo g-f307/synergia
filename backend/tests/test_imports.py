@@ -944,3 +944,40 @@ def test_structured_rejection_from_the_reader_reaches_the_response(
     execution_id = error["details"]["execution_id"]
     assert repository.get(execution_id)["failure_reason"] == code
     assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]
+
+
+def test_files_accepted_individually_are_budgeted_together(api, monkeypatch) -> None:
+    from app.ingestion_budget import CELL_COST_BYTES, ROW_COST_BYTES
+
+    client, repository, storage = api
+    # Each file holds 30 normalized records; two of them exceed the limit.
+    one_file = 30 * ROW_COST_BYTES + 60 * CELL_COST_BYTES
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(one_file + 1))
+    single = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("a.xlsx", _workbook_with_rows(30), XLSX_TYPE)},
+    )
+    assert single.status_code == 201
+
+    together = client.post(
+        "/imports",
+        data={"source": ["N-FP", "OWM"]},
+        files=[
+            ("file", ("b.xlsx", _workbook_with_rows(31), XLSX_TYPE)),
+            ("file", ("c.xlsx", _workbook_with_rows(32), XLSX_TYPE)),
+        ],
+    )
+
+    assert together.status_code == 413
+    error = together.json()["error"]
+    assert error["code"] == "workbook_memory_limit"
+    assert error["details"]["observed"] > error["details"]["limit"]
+    assert repository.get(error["details"]["execution_id"])["status"] == "failed"
+    assert not [
+        path
+        for path in storage.glob(
+            f"accepted/**/{error['details']['execution_id']}/*"
+        )
+        if path.is_file()
+    ]

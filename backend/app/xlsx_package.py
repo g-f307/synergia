@@ -291,24 +291,21 @@ def _check_dimension(
 
 
 def _check_memory(
-    budget: IngestionBudget,
-    rows: int,
-    cells: int,
-    profile: SheetProfile | None,
-    *,
-    final: bool = False,
+    budget: IngestionBudget, rows: int, cells: int, profile: SheetProfile
 ) -> None:
-    estimate = (
-        budget.estimated_memory(rows, cells)
-        if final
-        else budget.minimum_memory(rows, cells)
-    )
+    """Reject early only when even the cheapest pipeline regime would not fit.
+
+    The regime that applies depends on how many records survive validation, a
+    count that is unknown at admission; the pipeline applies the exact estimate
+    on the execution totals once it is known.
+    """
+    estimate = budget.minimum_memory(rows, cells)
     if estimate > budget.max_memory_bytes:
         raise IngestionLimitError(
             "workbook_memory_limit",
             limit=budget.max_memory_bytes,
             observed=estimate,
-            sheet=profile.name if profile is not None else None,
+            sheet=profile.name,
         )
 
 
@@ -371,5 +368,4 @@ def scan_package(
         raise PackageViolation("corrupted_file") from exc
     except (zipfile.BadZipFile, zlib.error, EOFError, OSError) as exc:
         raise PackageViolation("corrupted_file") from exc
-    _check_memory(budget, totals.rows, totals.actual_cells, None, final=True)
     return profile

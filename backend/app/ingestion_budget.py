@@ -120,12 +120,14 @@ class IngestionBudget:
     allowed_sheets: frozenset[str] | None = None
 
     def estimated_memory(self, rows: int, cells: int) -> int:
-        """Conservative peak bytes of the complete pipeline for ``rows``/``cells``.
+        """Conservative peak bytes of the complete pipeline.
 
-        Calibrated on the resident memory of ``run_pipeline`` (validation,
-        normalization, consolidation and rules) in docs/xlsx-ingestion-budget.md.
-        The row cost dominates narrow sheets and drops once the pipeline defers
-        per-rule details, so the estimate is piecewise on that threshold.
+        ``rows`` is the number of **normalized records** of the execution, the
+        same count that decides ``defer_rule_details`` in the pipeline; ``cells``
+        is the number of values they hold. Calibrated on the resident memory of
+        ``run_pipeline`` (validation, normalization, consolidation and rules) in
+        docs/xlsx-ingestion-budget.md. The row cost drops once the pipeline
+        defers per-rule details, so the estimate is piecewise on that threshold.
         """
         row_cost = (
             DEFERRED_ROW_COST_BYTES
@@ -135,11 +137,11 @@ class IngestionBudget:
         return rows * row_cost + cells * CELL_COST_BYTES
 
     def minimum_memory(self, rows: int, cells: int) -> int:
-        """Lower bound of ``estimated_memory`` for any final row count.
+        """Lower bound of ``estimated_memory`` for any normalized count.
 
-        While a sheet is still being streamed the final row count is unknown, so
-        early termination may only use the cheapest regime; the exact estimate
-        is applied once the totals are known.
+        Before validation the normalized count is unknown (headers, preambles,
+        empty and rejected rows lower it), so admission and streaming may only
+        stop early on the cheapest regime, which holds for any final count.
         """
         return rows * DEFERRED_ROW_COST_BYTES + cells * CELL_COST_BYTES
 

@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
-from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError
+from app.ingestion_budget import LIMIT_GUIDANCE, IngestionBudget, IngestionLimitError
 from app.normalization import normalize_column_name, normalize_tables
 from app.observability.metrics import observe_ingestion
 from app.observability.telemetry import safe_log
@@ -124,6 +124,35 @@ def _record_ingestion(
     )
 
 
+def _check_execution_memory(
+    budget: IngestionBudget,
+    rows: int,
+    cells: int,
+    *,
+    final: bool,
+    meter: IngestionRun,
+) -> None:
+    estimate = (
+        budget.estimated_memory(rows, cells)
+        if final
+        else budget.minimum_memory(rows, cells)
+    )
+    if estimate <= budget.max_memory_bytes:
+        return
+    error = IngestionLimitError(
+        "workbook_memory_limit", limit=budget.max_memory_bytes, observed=estimate
+    )
+    _record_ingestion(
+        meter,
+        outcome="rejected",
+        rows_processed=rows,
+        rows_rejected=0,
+        reason=error.code,
+    )
+    error.recorded = True
+    raise error
+
+
 def _original_value(value: Any) -> Any:
     if value is None or isinstance(value, str | int | float | bool):
         return value
@@ -212,6 +241,9 @@ def run_pipeline_batch(
     valid_records = 0
     rejected_records = 0
     lazy_budget = None
+    file_stats: list[tuple[IngestionRun, int, int]] = []
+    held_rows = 0
+    held_cells = 0
 
     for item in inputs:
         source = str(item["source"])
@@ -313,16 +345,32 @@ def run_pipeline_batch(
         valid_records += len(eligible_rows)
         file_rejected = len(imported) if structural_blocked else len(rejected_rows)
         rejected_records += file_rejected
-        _record_ingestion(
-            meter,
-            outcome="completed",
-            rows_processed=len(imported),
-            rows_rejected=file_rejected,
-        )
+        file_stats.append((meter, len(imported), file_rejected))
+        # Every file of the execution accumulates in the same lists, so the
+        # budget is also checked on the running totals; only the cheapest
+        # regime is known to apply until the normalized count is final.
+        held_rows += len(imported)
+        held_cells += sum(len(record["original_values"]) for record in imported)
+        if lazy_budget is not None:
+            _check_execution_memory(
+                lazy_budget, held_rows, held_cells, final=False, meter=meter
+            )
         # The normalized/imported representations are now authoritative. Drop
         # the lazy table handles before the next phase; no pass keeps a copy of
         # the parsed worksheet.
         item["tables"] = []
+
+    if lazy_budget is not None:
+        # ``defer_rule_details`` below depends on the normalized count of the
+        # whole execution, which is only known now; the estimate uses that same
+        # cardinality and covers every file accumulated in the execution.
+        _check_execution_memory(
+            lazy_budget,
+            len(normalized_records),
+            sum(len(record["values"]) for record in normalized_records),
+            final=True,
+            meter=file_stats[-1][0],
+        )
 
     # Consolidation and rules get their own time window under the same budget.
     checkpoint = lazy_budget.start().check if lazy_budget is not None else None
@@ -355,6 +403,13 @@ def run_pipeline_batch(
                     execution_id, "applying_rules", "consolidation_completed"
                 )
             ),
+        )
+    for meter, processed, rejected in file_stats:
+        _record_ingestion(
+            meter,
+            outcome="completed",
+            rows_processed=processed,
+            rows_rejected=rejected,
         )
     error_count = sum(issue["severity"] == "error" for issue in issues)
     warning_count = sum(issue["severity"] == "warning" for issue in issues)

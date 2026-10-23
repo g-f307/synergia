@@ -46,7 +46,7 @@ não numéricos ou menores ou iguais a zero tornam a configuração inválida.
 | `INGESTION_MAX_COLUMNS` | 16.384 | maior coluna de cada aba processada |
 | `INGESTION_MAX_CELLS` | 2.000.000 | soma das células das abas processadas e da área declarada em `<dimension>` |
 | `INGESTION_MAX_FORMULAS` | 2.000.000 | soma das fórmulas das abas processadas |
-| `INGESTION_MAX_MEMORY_BYTES` | 1.073.741.824 | estimativa de memória do pipeline completo (ver "Memória dos registros") |
+| `INGESTION_MAX_MEMORY_BYTES` | 1.073.741.824 | estimativa de memória do pipeline completo, por execução (ver "Memória dos registros") |
 | `INGESTION_MAX_SECONDS` | 300 | admissão, leitura/normalização e consolidação, cada uma com relógio próprio |
 | `INGESTION_MAX_ISSUES` | 250.000 | ocorrências de validação e normalização por arquivo e por execução |
 | `INGESTION_PROGRESS_INTERVAL` | 10.000 | linhas entre eventos de progresso |
@@ -170,19 +170,36 @@ O orçamento usa uma estimativa de memória do **pipeline completo**
 (`IngestionBudget.estimated_memory`):
 
 ```text
-bytes = linhas × custo_da_linha + células × 320
-custo_da_linha = 22.000 abaixo de 50.000 linhas; 4.500 a partir de 50.000
+bytes = registros_normalizados × custo_do_registro + células × 320
+custo_do_registro = 22.000 abaixo de 50.000 registros; 4.500 a partir de 50.000
 ```
 
-O limiar de 50.000 acompanha `RULE_DETAIL_DEFER_THRESHOLD`: a partir dele o
-pipeline não retém o detalhe das regras e o custo por linha cai, o que torna a
-estimativa não monotônica (o pior caso está logo abaixo do limiar). Durante a
-leitura só o custo mínimo (4.500 por linha) interrompe cedo, porque o total de
-linhas ainda é desconhecido; a estimativa exata é aplicada com os totais ao
-final da admissão e de cada passagem. Com três colunas, o limite padrão (1 GiB) admite cerca de 47 mil linhas no
-regime caro e cerca de 196 mil no regime barato, menos se as células forem
-muito largas; a consolidação consulta o relógio a cada 256
-Workorders.
+O limiar de 50.000 é o mesmo de `RULE_DETAIL_DEFER_THRESHOLD`, que decide se o
+pipeline retém o detalhe das regras. Por isso a estimativa usa a **mesma
+cardinalidade** do pipeline — os registros normalizados de toda a execução — e
+não as linhas físicas do arquivo, que incluem cabeçalho, preâmbulo e linhas
+vazias, inválidas ou rejeitadas. Um workbook de 50.000 linhas físicas com
+cabeçalho gera, no máximo, 49.999 registros e permanece no regime caro. A
+estimativa não é monotônica: o pior caso está logo abaixo do limiar.
+
+A verificação ocorre em três momentos:
+
+1. **Admissão e leitura:** o total de registros ainda é desconhecido, então só se
+   aplica o limite inferior (`minimum_memory`, 4.500 bytes por linha física mais
+   320 por célula), válido para qualquer contagem final. Ele interrompe cedo
+   planilhas que não caberiam nem no regime barato.
+2. **Acúmulo da execução:** como todos os arquivos de uma requisição alimentam as
+   mesmas listas de registros, o limite inferior também é verificado sobre os
+   totais acumulados a cada arquivo.
+3. **Antes da consolidação:** com todos os arquivos normalizados, a estimativa
+   exata é aplicada ao total de registros e células da execução. Vários arquivos
+   individualmente abaixo do limite são, portanto, rejeitados quando somados
+   (`workbook_memory_limit`, sem `sheet`). Execuções só com CSV ou JSON não têm
+   orçamento e mantêm o comportamento anterior.
+
+Com três colunas, o limite padrão (1 GiB) admite cerca de 47 mil registros no
+regime caro e cerca de 196 mil no regime barato, menos se as células forem muito
+largas. A consolidação consulta o relógio a cada 256 Workorders.
 
 ## Medições
 
@@ -263,6 +280,8 @@ reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`
   limitados, mas o consumo não é constante.
 - A estimativa é calibrada no ambiente descrito abaixo e em formas de dados
   medidas; planilhas com formato muito diferente exigem nova medição.
+- O número de arquivos por requisição não é limitado; a memória é contida pelo
+  orçamento agregado da execução, mas o tempo de admissão cresce com cada arquivo.
 - O tempo da consolidação cresce de forma quadrática com o número de
   Workorders distintos; o orçamento de tempo apenas o interrompe.
 - O cabeçalho é procurado nas primeiras 200 linhas de cada aba.

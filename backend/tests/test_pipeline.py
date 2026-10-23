@@ -419,3 +419,60 @@ def test_consolidation_stage_honours_the_time_budget(tmp_path, monkeypatch) -> N
         )
 
     assert excinfo.value.code == "ingestion_time_limit"
+
+
+def _threshold_case(tmp_path, monkeypatch, data_rows: int, threshold: int = 40):
+    from app import ingestion_budget
+
+    monkeypatch.setattr(ingestion_budget, "RULE_DETAIL_DEFER_ROWS", threshold)
+    monkeypatch.setattr("app.pipeline.RULE_DETAIL_DEFER_THRESHOLD", threshold)
+    # Physical rows include the header, so the streaming lower bound sees one
+    # row more than the normalized records.
+    cheapest = (
+        (threshold + 1) * ingestion_budget.DEFERRED_ROW_COST_BYTES
+        + threshold * 2 * ingestion_budget.CELL_COST_BYTES
+    )
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(cheapest + 1))
+    path = tmp_path / f"limiar-{data_rows}.xlsx"
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["workorder", "status"])
+    for index in range(data_rows):
+        worksheet.append([f"WO-{index:05d}", "open"])
+    workbook.save(path)
+    workbook.close()
+    tables, read_issues = read_source(path, ".xlsx", "N-FP")
+    return run_pipeline(
+        execution_id="exec-threshold",
+        file_name=path.name,
+        source="N-FP",
+        repository=RecordingRepository(),
+        tables=tables,
+        read_issues=read_issues,
+        source_file_id=1,
+        classified_at="2026-08-28T12:00:00+00:00",
+    )
+
+
+def test_estimate_uses_the_normalized_count_that_decides_deferral(
+    tmp_path, monkeypatch
+) -> None:
+    from app.ingestion_budget import IngestionLimitError
+
+    # 40 physical rows (header included) leave 39 normalized records, which is
+    # below the deferral threshold: the expensive regime applies even though the
+    # physical row count alone looks like the cheap one.
+    with pytest.raises(IngestionLimitError) as excinfo:
+        _threshold_case(tmp_path, monkeypatch, data_rows=39)
+
+    assert excinfo.value.code == "workbook_memory_limit"
+    assert excinfo.value.observed > excinfo.value.limit
+
+
+def test_estimate_switches_to_the_cheap_regime_at_the_threshold(
+    tmp_path, monkeypatch
+) -> None:
+    result = _threshold_case(tmp_path, monkeypatch, data_rows=40)
+
+    assert result["summary"]["rows_read"] == 40
+    assert result["processing"]["classifications"]["rule_details_deferred"] is True
