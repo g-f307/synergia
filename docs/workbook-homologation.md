@@ -1,5 +1,11 @@
 # Homologacao da planilha de referencia
 
+> **Escopo histórico:** este documento descreve a planilha de referência usada
+> na homologação sintética anterior. Ele não autoriza a ingestão das famílias
+> `WO Status` e `Total Decision`, que possuem fórmulas, pivôs, cabeçalhos e
+> decisões próprias documentadas em
+> [`real-workbook-contracts.md`](real-workbook-contracts.md).
+
 ## Resultado
 
 A copia autorizada foi inspecionada somente no ambiente local. O arquivo real,

@@ -9,6 +9,14 @@ Os mapeamentos declarativos ficam em
 inicialização e uma regra ausente, com tipo incorreto ou chave duplicada causa
 falha explícita. Os algoritmos de transformação permanecem em Python.
 
+Os workbooks reais de homologação possuem contratos por fonte, cabeçalhos e
+abas permitidas em
+[`real-workbook-contracts.md`](real-workbook-contracts.md). Esses contratos
+restringem a entrada antes deste catálogo genérico: uma coluna reconhecida pela
+normalização não autoriza, por si só, que qualquer aba real seja ingerida.
+Adapters específicos devem negar abas e colunas não listadas, excluir fórmulas,
+totais e visões derivadas e registrar sua própria versão na proveniência.
+
 ## Campos internos
 
 | Conceito | Nome interno | Exemplos de cabeçalho aceitos | Transformação |

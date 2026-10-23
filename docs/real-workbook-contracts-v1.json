@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "1.0.0-draft",
+  "status": "proposed",
+  "issue": 137,
+  "default_policy": "deny",
+  "provenance_required": [
+    "source_file_sha256",
+    "source_sheet",
+    "source_row",
+    "adapter_id",
+    "adapter_version",
+    "execution_id",
+    "ingested_at"
+  ],
+  "security": {
+    "real_files_in_repository": false,
+    "real_values_in_logs_or_fixtures": false,
+    "sensitive_fields": [
+      "user_identifiers",
+      "free_text_remarks",
+      "supplier_and_carrier_names",
+      "customer_and_destination_references"
+    ]
+  },
+  "workbooks": [
+    {
+      "family": "wo_status",
+      "duplicate_samples_observed": true,
+      "sheets": [
+        {
+          "name": "NFP",
+          "decision": "candidate_source_mixed",
+          "target": "N-FP",
+          "header_rows": [3],
+          "data_start_row": 4,
+          "rationale": "mixed planning source with identifiers, formulas and formula errors",
+          "formula_policy": "deny_formula_and_error_cells",
+          "unlisted_columns": "deny",
+          "identity": {"required_any": ["demand_id", "workorder_number"]},
+          "types": {"identifiers": "string", "quantities": "decimal_non_negative", "dates": "local_date_pending_timezone"},
+          "columns": {
+            "Demand ID": "demand_id",
+            "W/O": "workorder_number",
+            "Model": "model",
+            "Suffix": "model_suffix",
+            "Line": "production_line",
+            "Lot Qty": "lot_quantity",
+            "Plant": "organization_code_pending_validation",
+            "W/O Status": "status_pending_catalog",
+            "OQC Pass": "oqc_pass_semantics_pending"
+          }
+        },
+        {
+          "name": "OWM SN",
+          "decision": "candidate_source",
+          "target": "OWM",
+          "header_rows": [2],
+          "data_start_row": 3,
+          "rationale": "candidate relationship source for workorders, serials, OQC lots and pallets",
+          "formula_policy": "deny",
+          "unlisted_columns": "deny",
+          "identity": {"required_all": ["serial_number"], "required_any": ["workorder_number", "lot_number"]},
+          "types": {"identifiers": "string", "quantities": "integer_non_negative", "flags": "pending_domain_catalog"},
+          "columns": {
+            "Org": "organization_code",
+            "W/O": "workorder_number",
+            "Serial Number": "serial_number",
+            "OQC Lot": "lot_number",
+            "Pallet No": "pallet_number",
+            "Pallet Qty": "pallet_quantity",
+            "Model": "model",
+            "Locator": "locator",
+            "Status": "status",
+            "OQC Pass": "oqc_flag_pending_domain",
+            "OQC Hold Flag": "hold_flag_pending_domain",
+            "REASON": "reason_restricted"
+          }
+        },
+        {
+          "name": "LOT PENDING_OQC",
+          "decision": "candidate_source",
+          "target": "GMES/OQC",
+          "header_rows": [3],
+          "data_start_row": 4,
+          "rationale": "candidate source for OQC holds, releases, reasons and status changes",
+          "formula_policy": "deny",
+          "unlisted_columns": "deny",
+          "identity": {"required_all": ["workorder_number", "status"]},
+          "types": {"identifiers": "string", "quantities": "decimal_non_negative", "dates": "local_datetime_pending_timezone"},
+          "columns": {
+            "WO": "workorder_number",
+            "Prod Date": "production_date",
+            "Reason": "reason_restricted",
+            "Hold Group Code": "hold_group_code",
+            "Status": "status_pending_catalog",
+            "Status Change Date": "status_changed_at",
+            "Cause Dept.": "responsible_area_pending_validation",
+            "Hold Qty": "hold_quantity",
+            "Release Qty": "released_quantity",
+            "Target Date": "target_date",
+            "Request User": "request_user_restricted",
+            "Change User": "change_user_restricted"
+          }
+        },
+        {
+          "name": "CTNR STATUS",
+          "decision": "candidate_source",
+          "target": "TMS",
+          "header_rows": [1],
+          "data_start_row": 2,
+          "rationale": "candidate logistics source for containers, loads, inspections and workorders",
+          "formula_policy": "deny",
+          "unlisted_columns": "deny",
+          "identity": {"required_all": ["container_number"]},
+          "types": {"identifiers": "string", "quantities": "decimal", "dates": "local_datetime_pending_timezone"},
+          "columns": {
+            "CTNR No": "container_number",
+            "CTNR Status": "container_status",
+            "Model": "model",
+            "W/O": "workorder_number",
+            "Load Plan Qty": "planned_quantity",
+            "Load Qty": "loaded_quantity",
+            "Rmn Qty": "remaining_quantity",
+            "Load Plan Date": "load_plan_date",
+            "Loading Date": "loading_date",
+            "Load Confirm Date": "load_confirmed_at",
+            "Inspection No": "inspection_number",
+            "Inspection Status": "inspection_status"
+          }
+        },
+        {"name": "Mercosul", "decision": "auxiliary_pending_validation", "target": null, "rationale": "hidden auxiliary sheet without confirmed ownership or semantics"},
+        {"name": "Analysis 2", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Analysis NPI", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Planilha2", "decision": "auxiliary_pending_validation", "target": null, "rationale": "intermediate structure without a confirmed contract"},
+        {"name": "OWMS Hold", "decision": "exclude_pending_precedence", "target": null, "rationale": "overlaps hold data from candidate sources and precedence is unknown"},
+        {"name": "RWOK LOCATOR", "decision": "auxiliary_pending_validation", "target": null, "rationale": "rework locator lookup without confirmed key or precedence"},
+        {"name": "RWOK LOCATOR (2)", "decision": "auxiliary_pending_validation", "target": null, "rationale": "second locator lookup variant without confirmed key or precedence"},
+        {"name": "VESSEL DEAD LINE", "decision": "auxiliary_pending_validation", "target": null, "rationale": "logistics schedule without confirmed authority or grain"},
+        {"name": "ICMS", "decision": "exclude_derived", "target": null, "rationale": "fiscal or analytical view outside the initial operational contract"},
+        {"name": "Analysis QTY", "decision": "exclude_derived", "target": null, "rationale": "hidden derived analytical view"},
+        {"name": "OTD1", "decision": "exclude_derived", "target": null, "rationale": "derived analytical view"},
+        {"name": "Sales", "decision": "exclude_derived", "target": null, "rationale": "commercial derived view outside the initial operational contract"},
+        {"name": "Master", "decision": "auxiliary_pending_validation", "target": null, "rationale": "possible lookup without confirmed owner or precedence"}
+      ]
+    },
+    {
+      "family": "total_decision",
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "decision": "candidate_source",
+          "target": "GMES/OQC",
+          "header_rows": [1, 2],
+          "summary_rows": [3],
+          "data_start_row": 4,
+          "rationale": "literal inspection, decision and approval records with a two-row header",
+          "formula_policy": "deny",
+          "unlisted_columns": "deny",
+          "identity": {
+            "required_any_oqc": ["oqc_id_pending_key_validation", "oqc_lot_id_pending_relation", "inspection_id_pending_key_validation"],
+            "required_any_workorder": ["workorder_number_pending_precedence", "workorder_id_pending_precedence", "workorder_id_legacy_pending_precedence"]
+          },
+          "types": {"identifiers": "string", "quantities": "decimal", "dates": "local_datetime_pending_timezone"},
+          "columns": {
+            "OQC ID": "oqc_id_pending_key_validation",
+            "OQC_LOT_ID": "oqc_lot_id_pending_relation",
+            "Inspection ID": "inspection_id_pending_key_validation",
+            "WO Name": "workorder_number_pending_precedence",
+            "WO_ID": "workorder_id_pending_precedence",
+            "WOID": "workorder_id_legacy_pending_precedence",
+            "MODEL": "model",
+            "Suffix": "model_suffix",
+            "Line": "production_line",
+            "Prod Date": "production_date",
+            "Inspection Date": "inspection_date",
+            "Total Decision / Result": "total_decision_result",
+            "Total Decision / Judge Date": "total_decision_at",
+            "Total Decision / User": "total_decision_user_restricted",
+            "Total Decision / Total Decision Remark": "total_decision_remark_restricted",
+            "Approval / Approval": "approval_result",
+            "Approval / Date": "approval_at",
+            "Approval / User": "approval_user_restricted",
+            "Approval / Remark": "approval_remark_restricted",
+            "Hold Qty": "hold_quantity",
+            "Up. Qty": "uploaded_quantity",
+            "RW Qty": "rework_quantity",
+            "Remain Qty": "remaining_quantity"
+          }
+        }
+      ]
+    }
+  ]
+}
