@@ -1,46 +1,89 @@
-<section class="reports-page" aria-labelledby="reports-title" [attr.aria-busy]="loading()">
-  <header class="page-header">
-    <div><p class="eyebrow">{{ i18n.t('reports.eyebrow') }}</p><h1 id="reports-title">{{ i18n.t('reports.title') }}</h1><p class="page-subtitle">{{ i18n.t('reports.subtitle') }}</p></div>
-    <div class="page-actions"><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()">{{ i18n.t('reports.refresh') }}</button>@if(canGenerate()){<button type="button" (click)="openGeneration()" [disabled]="!policy()">{{ i18n.t('reports.generate') }}</button>}</div>
+<section class="reports-page catalog-surface" aria-labelledby="reports-title" [attr.aria-busy]="loading()">
+  <h1 id="reports-title" class="sr-only">{{ i18n.t('reports.title') }}</h1>
+  <header class="catalog-controls">
+    <div class="catalog-header-row">
+      <div class="catalog-overview"><h2>{{ i18n.t('reports.catalogHeading') }}</h2><p>{{ i18n.t('reports.catalogDescription') }}</p></div>
+      <div class="page-actions"><button type="button" class="secondary" (click)="refresh()" [disabled]="loading()"><span aria-hidden="true">↻</span>{{ i18n.t('reports.refresh') }}</button>@if(canGenerate()){<button type="button" (click)="openGeneration()" [disabled]="!policy()"><span aria-hidden="true">＋</span>{{ i18n.t('reports.generate') }}</button>}</div>
+    </div>
+    <details class="report-filters">
+      <summary><span class="filter-summary-title"><span class="filter-toggle-icon" aria-hidden="true">▶</span>{{ i18n.t('executions.filtersTitle') }}</span><small>{{ i18n.t('reports.subtitle') }}</small></summary>
+      <form class="filters" (submit)="apply($event)">
+        <label>{{ i18n.t('reports.organization') }}<select [value]="organizationId()" (change)="organizationId.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allOrganizations') }}</option>@for(item of policy()?.read_organizations ?? [];track item.id){<option [value]="item.id">{{ item.display_name }} — {{ item.organization_code }}</option>}</select></label>
+        <label>{{ i18n.t('reports.type') }}<select [value]="reportType()" (change)="reportType.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allTypes') }}</option><option value="workorder_consolidated">{{ i18n.t('reports.type.workorder') }}</option><option value="oqc_summary">{{ i18n.t('reports.type.oqc') }}</option></select></label>
+        <label>{{ i18n.t('reports.status') }}<select [value]="stateFilter()" (change)="stateFilter.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allStates') }}</option><option value="generating">{{ i18n.t('reports.state.generating') }}</option><option value="succeeded">{{ i18n.t('reports.state.succeeded') }}</option><option value="failed">{{ i18n.t('reports.state.failed') }}</option><option value="cancelled">{{ i18n.t('reports.state.cancelled') }}</option></select></label>
+        <label>{{ i18n.t('reports.execution') }}<input class="technical" type="search" [value]="executionId()" (input)="executionId.set($any($event.target).value)"></label>
+        <label>{{ i18n.t('reports.sort') }}<select [value]="sort()" (change)="sort.set($any($event.target).value)"><option value="newest">{{ i18n.t('reports.sort.newest') }}</option><option value="oldest">{{ i18n.t('reports.sort.oldest') }}</option><option value="type">{{ i18n.t('reports.sort.type') }}</option></select></label>
+        <label>{{ i18n.t('queries.pageSize') }}<select [value]="pageSize()" (change)="pageSize.set(+$any($event.target).value)"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
+        <div class="filter-actions"><button type="button" class="secondary" (click)="clear()">{{ i18n.t('reports.clear') }}</button><button type="submit">{{ i18n.t('reports.apply') }}</button></div>
+      </form>
+    </details>
   </header>
 
-  <form class="card filters" (submit)="apply($event)">
-    <label>{{ i18n.t('reports.organization') }}<select [value]="organizationId()" (change)="organizationId.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allOrganizations') }}</option>@for(item of policy()?.read_organizations ?? [];track item.id){<option [value]="item.id">{{ item.display_name }} — {{ item.organization_code }}</option>}</select></label>
-    <label>{{ i18n.t('reports.type') }}<select [value]="reportType()" (change)="reportType.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allTypes') }}</option><option value="workorder_consolidated">{{ i18n.t('reports.type.workorder') }}</option><option value="oqc_summary">{{ i18n.t('reports.type.oqc') }}</option></select></label>
-    <label>{{ i18n.t('reports.status') }}<select [value]="stateFilter()" (change)="stateFilter.set($any($event.target).value)"><option value="">{{ i18n.t('reports.allStates') }}</option><option value="generating">{{ i18n.t('reports.state.generating') }}</option><option value="succeeded">{{ i18n.t('reports.state.succeeded') }}</option><option value="failed">{{ i18n.t('reports.state.failed') }}</option><option value="cancelled">{{ i18n.t('reports.state.cancelled') }}</option></select></label>
-    <label>{{ i18n.t('reports.execution') }}<input class="technical" type="search" [value]="executionId()" (input)="executionId.set($any($event.target).value)"></label>
-    <label>{{ i18n.t('reports.sort') }}<select [value]="sort()" (change)="sort.set($any($event.target).value)"><option value="newest">{{ i18n.t('reports.sort.newest') }}</option><option value="oldest">{{ i18n.t('reports.sort.oldest') }}</option><option value="type">{{ i18n.t('reports.sort.type') }}</option></select></label>
-    <label>{{ i18n.t('queries.pageSize') }}<select [value]="pageSize()" (change)="pageSize.set(+$any($event.target).value)"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
-    <div class="filter-actions"><button type="button" class="secondary" (click)="clear()">{{ i18n.t('reports.clear') }}</button><button type="submit">{{ i18n.t('reports.apply') }}</button></div>
-  </form>
+  <section class="available-section" aria-labelledby="available-title">
+    <header class="section-heading"><h2 id="available-title">{{ i18n.t('reports.availableShort') }}</h2></header>
+    <div class="template-grid">
+      @for(template of policy()?.report_types ?? [];track template.report_type){
+        <article class="report-template" [attr.data-template]="template.report_type">
+          <div class="template-sheet" [class.oqc-sheet]="template.report_type === 'oqc_summary'" aria-hidden="true">
+            <span class="sheet-mark"><img src="/assets/icons/report.svg" alt=""></span>
+            <span class="sheet-title"></span><span class="sheet-subtitle"></span>
+            <span class="sheet-rule"></span>
+            @if(template.report_type === 'workorder_consolidated'){
+              <span class="sheet-table sheet-table-head"></span><span class="sheet-table"></span><span class="sheet-table"></span><span class="sheet-table short"></span>
+            }@else{
+              <span class="sheet-chart"><i></i><i></i><i></i><i></i></span><span class="sheet-caption"></span>
+            }
+          </div>
+          <div class="template-content">
+            <div><h3>{{ typeLabel(template.report_type) }}</h3><p>{{ i18n.t(template.report_type === 'workorder_consolidated' ? 'reports.template.workorder' : 'reports.template.oqc') }}</p></div>
+            @if(canGenerate()){<button type="button" class="secondary template-action" (click)="selectTemplate(template.report_type)">{{ i18n.t('reports.useTemplate') }}<span aria-hidden="true">›</span></button>}
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <header class="recent-heading">
+    <div class="catalog-intro"><h2 id="recent-title">{{ i18n.t('reports.recent') }}</h2>@if(result();as current){<p>{{ i18n.t('queries.total',{count:i18n.formatNumber(current.pagination.total)}) }}</p>}@else{<p>{{ i18n.t('reports.subtitle') }}</p>}</div>
+  </header>
 
   @if(policyFailure()){<syn-state [state]="policyFailureState()" [title]="policyFailureTitle()" [message]="policyFailureMessage()">@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</syn-state>}
   @if(downloadFailure()){<syn-state [state]="downloadFailure()?.kind === 'forbidden' ? 'forbidden' : 'unavailable'" [title]="i18n.t('reports.exportErrorTitle')" [message]="i18n.t('reports.exportError')">@if(downloadFailure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ downloadFailure()?.correlationId }}</p>}</syn-state>}
   @if(loading()){<syn-state state="loading" [title]="i18n.t('reports.loadingTitle')" [message]="i18n.t('reports.loading')" />}
   @if(failureState();as currentState){<syn-state [state]="currentState" [title]="failureTitle()" [message]="failureMessage()">@if(failure()?.correlationId){<p class="technical">{{ i18n.t('reports.correlation') }}: {{ failure()?.correlationId }}</p>}</syn-state>}
   @if(result();as current){
-    @if(hasPartial()){<syn-state state="partial" [title]="i18n.t('reports.partialTitle')" [message]="i18n.t('reports.partial')" />}
     @if(hasStale()){<syn-state state="stale" [title]="i18n.t('reports.staleTitle')" [message]="i18n.t('reports.stale')" />}
-    <section class="card results" aria-labelledby="available-title"><header><div><h2 id="available-title">{{ i18n.t('reports.available') }}</h2><p>{{ i18n.t('queries.total',{count:i18n.formatNumber(current.pagination.total)}) }}</p></div></header>
+    <section class="report-results" aria-labelledby="recent-title">
       @if(!current.items.length){<syn-state state="empty" [title]="i18n.t('reports.emptyTitle')" [message]="i18n.t('reports.empty')" />}
       @else {
-        <div class="report-grid">@for(item of current.items.slice(0,3);track item.report_id){<article class="report-card"><div class="report-heading"><img src="/assets/icons/report.svg" alt="" aria-hidden="true"><div><h3>{{ typeLabel(item.report_type) }}</h3><span class="technical">v{{ item.version }}</span></div><syn-badge [tone]="tone(item)">{{ stateLabel(item.state) }}</syn-badge></div><dl><div><dt>{{ i18n.t('reports.execution') }}</dt><dd class="technical">{{ item.execution_id }}</dd></div><div><dt>{{ i18n.t('reports.completeness') }}</dt><dd>{{ completenessLabel(item.completeness) }}</dd></div><div><dt>{{ i18n.t('reports.reference') }}</dt><dd>{{ i18n.formatDate(item.reference_at,{dateStyle:'short',timeStyle:'short'}) }}</dd></div></dl><div class="actions"><a [routerLink]="['/reports',item.report_id]" [queryParams]="{version:item.version,from:router.url}">{{ i18n.t('reports.view') }}</a>@if(canExport()){<button type="button" class="secondary" (click)="export(item)" [disabled]="item.state !== 'succeeded'">{{ i18n.t('reports.exportCsv') }}</button>}</div></article>}</div>
-        <syn-responsive-table><table><thead><tr><th>{{ i18n.t('reports.type') }}</th><th>{{ i18n.t('reports.version') }}</th><th>{{ i18n.t('reports.createdAt') }}</th><th>{{ i18n.t('reports.execution') }}</th><th>{{ i18n.t('reports.completeness') }}</th><th>{{ i18n.t('reports.status') }}</th><th>{{ i18n.t('reports.actions') }}</th></tr></thead><tbody>@for(item of current.items;track item.report_id){<tr><td>{{ typeLabel(item.report_type) }}</td><td class="technical">v{{ item.version }}</td><td>{{ i18n.formatDate(item.created_at,{dateStyle:'short',timeStyle:'short'}) }}</td><td><a class="technical" [routerLink]="['/executions',item.execution_id]" [queryParams]="{from:router.url}">{{ item.execution_id }}</a></td><td>{{ completenessLabel(item.completeness) }}</td><td><syn-badge [tone]="tone(item)">{{ stateLabel(item.state) }}</syn-badge></td><td><a [routerLink]="['/reports',item.report_id]" [queryParams]="{version:item.version,from:router.url}">{{ i18n.t('reports.details') }}</a></td></tr>}</tbody></table></syn-responsive-table>
+        <div class="report-list">@for(item of current.items;track item.report_id){
+          <article class="report-row">
+            <div class="report-identity"><span class="report-icon" aria-hidden="true"><img src="/assets/icons/report.svg" alt=""></span><div><h3><a [routerLink]="['/reports',item.report_id]" [queryParams]="{version:item.version,from:router.url}">{{ typeLabel(item.report_type) }}</a></h3><small>{{ i18n.formatDate(item.created_at,{dateStyle:'short',timeStyle:'short'}) }}</small></div></div>
+            <div class="report-version"><span>{{ i18n.t('reports.version') }}</span><strong class="technical">v{{ item.version }}</strong><small>{{ completenessLabel(item.completeness) }}</small></div>
+            <div class="report-execution"><span>{{ i18n.t('reports.execution') }}</span><a class="technical" [routerLink]="['/executions',item.execution_id]" [queryParams]="{from:router.url}">{{ item.execution_id }}</a><small>{{ i18n.t('reports.reference') }}: {{ i18n.formatDate(item.reference_at,{dateStyle:'short',timeStyle:'short'}) }}</small></div>
+            <div class="report-state"><span>{{ i18n.t('reports.status') }}</span><syn-badge [tone]="tone(item)">{{ stateLabel(item.state) }}</syn-badge></div>
+            <div class="row-actions">@if(canExport()){<button type="button" class="secondary export-action" (click)="export(item)" [disabled]="item.state !== 'succeeded'">{{ i18n.t('reports.exportCsv') }}</button>}<a class="detail-action" [routerLink]="['/reports',item.report_id]" [queryParams]="{version:item.version,from:router.url}"><span>{{ i18n.t('reports.view') }}</span><span aria-hidden="true">›</span></a></div>
+          </article>
+        }</div>
       }
       @if(current.pagination.pages){<syn-pagination [page]="current.pagination.page" [pages]="current.pagination.pages" (pageChange)="changePage($event)" />}
     </section>
   }
 </section>
 
-@if(generationOpen()){<syn-modal [title]="i18n.t('reports.generateTitle')" (dismissed)="closeGeneration()"><form class="generation-form" (submit)="generate($event)">
-  <label>{{ i18n.t('reports.type') }}<select [value]="generationType()" (change)="generationType.set($any($event.target).value);dataState.set('')"><option value="workorder_consolidated">{{ i18n.t('reports.type.workorder') }}</option><option value="oqc_summary">{{ i18n.t('reports.type.oqc') }}</option></select></label>
-  <label>{{ i18n.t('reports.organization') }}<select [value]="generationOrganization()" (change)="generationOrganization.set($any($event.target).value)" required><option value="">{{ i18n.t('reports.selectOrganization') }}</option>@for(item of policy()?.generation_organizations ?? [];track item.id){<option [value]="item.id">{{ item.display_name }} — {{ item.organization_code }}</option>}</select></label>
-  <label>{{ i18n.t('reports.execution') }}<input class="technical" [value]="generationExecution()" (input)="generationExecution.set($any($event.target).value)" required></label>
-  <label>{{ i18n.t('reports.reference') }}<input type="datetime-local" [value]="referenceAt()" (input)="referenceAt.set($any($event.target).value)" required></label>
-  <div class="period"><label>{{ i18n.t('reports.dateFrom') }}<input type="date" [value]="dateFrom()" (input)="dateFrom.set($any($event.target).value)"></label><label>{{ i18n.t('reports.dateTo') }}<input type="date" [value]="dateTo()" (input)="dateTo.set($any($event.target).value)"></label></div>
-  <label>{{ i18n.t('reports.dataState') }}<select [value]="dataState()" (change)="dataState.set($any($event.target).value)"><option value="">{{ i18n.t('reports.any') }}</option>@for(item of allowedGenerationStates();track item){<option [value]="item">{{ dataStateLabel(item) }}</option>}</select></label>
-  <label>Workorder<input class="technical" [value]="workorderNumber()" (input)="workorderNumber.set($any($event.target).value)"></label>
-  @if(generationType()==='oqc_summary'){<label>{{ i18n.t('queries.lot') }}<input class="technical" [value]="lotNumber()" (input)="lotNumber.set($any($event.target).value)"></label><label>{{ i18n.t('pending.priority') }}<select [value]="priority()" (change)="priority.set($any($event.target).value)"><option value="">{{ i18n.t('reports.any') }}</option><option value="critical">{{ i18n.t('pending.priority.critical') }}</option><option value="high">{{ i18n.t('pending.priority.high') }}</option><option value="normal">{{ i18n.t('pending.priority.normal') }}</option><option value="low">{{ i18n.t('pending.priority.low') }}</option></select></label>}
+@if(generationOpen()){<syn-modal class="report-generation-modal" [title]="i18n.t('reports.generateTitle')" (dismissed)="closeGeneration()"><form class="generation-form" (submit)="generate($event)">
+  <p class="generation-help">{{ i18n.t('reports.snapshotHelp') }}</p>
+  <div class="generation-grid">
+    <label>{{ i18n.t('reports.type') }}<select [value]="generationType()" (change)="generationType.set($any($event.target).value);dataState.set('')"><option value="workorder_consolidated">{{ i18n.t('reports.type.workorder') }}</option><option value="oqc_summary">{{ i18n.t('reports.type.oqc') }}</option></select></label>
+    <label>{{ i18n.t('reports.organization') }}<select [value]="generationOrganization()" (change)="generationOrganization.set($any($event.target).value)" required><option value="">{{ i18n.t('reports.selectOrganization') }}</option>@for(item of policy()?.generation_organizations ?? [];track item.id){<option [value]="item.id">{{ item.display_name }} — {{ item.organization_code }}</option>}</select></label>
+    <label class="generation-wide">{{ i18n.t('reports.execution') }}<input class="technical" [value]="generationExecution()" (input)="generationExecution.set($any($event.target).value)" required></label>
+    <label>{{ i18n.t('reports.reference') }}<input type="datetime-local" [value]="referenceAt()" (input)="referenceAt.set($any($event.target).value)" required></label>
+    <label>{{ i18n.t('reports.dataState') }}<select [value]="dataState()" (change)="dataState.set($any($event.target).value)"><option value="">{{ i18n.t('reports.any') }}</option>@for(item of allowedGenerationStates();track item){<option [value]="item">{{ dataStateLabel(item) }}</option>}</select></label>
+    <label>{{ i18n.t('reports.dateFrom') }}<input type="date" [value]="dateFrom()" (input)="dateFrom.set($any($event.target).value)"></label>
+    <label>{{ i18n.t('reports.dateTo') }}<input type="date" [value]="dateTo()" (input)="dateTo.set($any($event.target).value)"></label>
+    <label>Workorder<input class="technical" [value]="workorderNumber()" (input)="workorderNumber.set($any($event.target).value)"></label>
+    @if(generationType()==='oqc_summary'){<label>{{ i18n.t('queries.lot') }}<input class="technical" [value]="lotNumber()" (input)="lotNumber.set($any($event.target).value)"></label><label>{{ i18n.t('pending.priority') }}<select [value]="priority()" (change)="priority.set($any($event.target).value)"><option value="">{{ i18n.t('reports.any') }}</option><option value="critical">{{ i18n.t('pending.priority.critical') }}</option><option value="high">{{ i18n.t('pending.priority.high') }}</option><option value="normal">{{ i18n.t('pending.priority.normal') }}</option><option value="low">{{ i18n.t('pending.priority.low') }}</option></select></label>}
+  </div>
   @if(generationError()){<p class="error" role="alert">{{ generationError() }}</p>}@if(generationFailure()){<p class="error" role="alert">{{ failureMessage(generationFailure()) }}@if(generationFailure()?.correlationId){ <span class="technical">{{ generationFailure()?.correlationId }}</span>}</p>}
-  <button type="submit" [disabled]="generationBusy()">{{ generationBusy()?i18n.t('reports.generating'):i18n.t('reports.generate') }}</button>
+  <div class="generation-actions"><button type="button" class="secondary" (click)="closeGeneration()">{{ i18n.t('common.close') }}</button><button type="submit" [disabled]="generationBusy()">{{ generationBusy()?i18n.t('reports.generating'):i18n.t('reports.generate') }}</button></div>
 </form></syn-modal>}

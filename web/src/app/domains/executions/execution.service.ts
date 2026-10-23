@@ -2,17 +2,17 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Classification, Divergence, Evidence, Execution, ExecutionCatalogFilters, ExecutionCatalogItem, Page, PendingItem, ReprocessResult } from './execution.models';
+import { Classification, Divergence, Evidence, Execution, ExecutionCatalogFilters, ExecutionCatalogPage, Page, PendingItem, ReprocessResult } from './execution.models';
 
 @Injectable({ providedIn: 'root' })
 export class ExecutionService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrl}/executions`;
-  list(filters: ExecutionCatalogFilters): Observable<Page<ExecutionCatalogItem>> {
+  list(filters: ExecutionCatalogFilters): Observable<ExecutionCatalogPage> {
     let params = new HttpParams().set('page', filters.page).set('page_size', filters.pageSize).set('sort', filters.sort);
     const optional: Record<string, string|undefined> = { organization_id: filters.organizationId, status: filters.status, lifecycle: filters.lifecycle, source: filters.source, file_type: filters.fileType, date_from: this.localInstant(filters.dateFrom), date_to: this.localInstant(filters.dateTo), execution_id: filters.executionId };
     for (const [key, value] of Object.entries(optional)) if (value) params = params.set(key, value);
-    return this.http.get<Page<ExecutionCatalogItem>>(this.base, { params });
+    return this.http.get<ExecutionCatalogPage>(this.base, { params });
   }
   get(id: string): Observable<Execution> { return this.http.get<Execution>(`${this.base}/${encodeURIComponent(id)}`); }
   divergences(id: string, page: number, severity = '', source = ''): Observable<Page<Divergence>> {

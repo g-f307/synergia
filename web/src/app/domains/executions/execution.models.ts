@@ -1,5 +1,6 @@
 export interface Pagination { page: number; page_size: number; total: number; pages: number; }
 export interface Page<T> { items: T[]; pagination: Pagination; sort: string; }
+export interface ExecutionCatalogPage extends Page<ExecutionCatalogItem> { generated_at: string; }
 export interface ExecutionCatalogItem { execution_id: string; organization_id: string|null; status: string; lifecycle: 'active'|'completed'|'partial'|'failed'; attempt: number; source: string|null; file_types: string[]; file_count: number; rows_read: number; error_count: number; warning_count: number; started_at: string; finished_at: string|null; }
 export interface ExecutionCatalogFilters { organizationId?: string; status?: string; lifecycle?: string; source?: string; fileType?: string; dateFrom?: string; dateTo?: string; executionId?: string; page: number; pageSize: number; sort: 'oldest'|'newest'; }
 export interface StateEvent { from_state: string | null; to_state: string; reason: string; state_version: number; occurred_at: string; }

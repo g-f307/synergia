@@ -1,5 +1,7 @@
 <section class="admin-links" [attr.aria-label]="i18n.t(titleKey)">
-  <h2>{{ i18n.t(titleKey) }}</h2>
+  <details class="admin-association-disclosure">
+    <summary><span>{{ i18n.t(titleKey) }}</span><span class="admin-disclosure-icon" aria-hidden="true">⌄</span></summary>
+    <div class="admin-association-content">
   @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
   @else if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p><button type="button" (click)="reload()">{{ i18n.t('adminUi.retry') }}</button></div> }
   @else if (result(); as page) {
@@ -10,12 +12,12 @@
         @else { <span>{{ label(link) }}</span> }
         @if (link.organization_id) { <small>{{ i18n.t('adminUi.orgScoped') }}: {{ link.organization_id }}</small> }
         @else { <small>{{ i18n.t('adminUi.global') }}</small> }
-        <button type="button" class="secondary" [disabled]="busy()" (click)="revoke(link)">{{ i18n.t('adminUi.revoke') }}</button>
+        <button type="button" class="secondary danger" [disabled]="busy()" (click)="openRevoke(link)">{{ i18n.t('adminUi.revoke') }}</button>
       </li>
     }</ul> }
     @if (page.pages > 1) { <nav class="admin-pagination" [attr.aria-label]="i18n.t('adminUi.pages')"><button type="button" [disabled]="page.page <= 1" (click)="changePage(page.page - 1)">{{ i18n.t('adminUi.previous') }}</button><span>{{ page.page }} / {{ page.pages }}</span><button type="button" [disabled]="page.page >= page.pages" (click)="changePage(page.page + 1)">{{ i18n.t('adminUi.next') }}</button></nav> }
   }
-  <form class="admin-form" (submit)="grant($event)">
+  <form class="admin-form admin-association-form" (submit)="grant($event)">
     <h3>{{ i18n.t('adminUi.grant') }}</h3>
     @if (target === 'user') {
       <label>{{ i18n.t('adminUi.searchUser') }}<input name="targetQuery" [(ngModel)]="targetQuery"></label>
@@ -42,6 +44,26 @@
     <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
     @if (formError()) { <p role="alert">{{ formErrorMessage() }}</p> }
     @if (mutationFailure()) { <p role="alert">{{ i18n.t(mutationFailureKey()) }}</p> }
-    <button type="submit" [disabled]="busy() || !!candidateFailure() || (scoped() && scope === 'organization' && !!organizationFailure())">{{ i18n.t('adminUi.grant') }}</button>
-  </form>
+    <footer class="admin-form-actions admin-association-actions"><button type="submit" [disabled]="busy() || !!candidateFailure() || (scoped() && scope === 'organization' && !!organizationFailure())">{{ i18n.t('adminUi.grant') }}</button></footer>
+    </form>
+    </div>
+  </details>
 </section>
+@if (revokeTarget(); as target) {
+  <div class="admin-modal-backdrop">
+    <button type="button" class="admin-modal-dismiss" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeRevoke()"></button>
+    <section class="admin-modal admin-lifecycle-dialog is-destructive" role="dialog" aria-modal="true" aria-labelledby="association-revoke-title" aria-describedby="association-revoke-description">
+      <header>
+        <div class="admin-modal-heading"><span class="admin-modal-action-icon" aria-hidden="true">!</span><div><h2 id="association-revoke-title">{{ i18n.t('adminUi.revoke') }}</h2><p id="association-revoke-description">{{ i18n.t('adminUi.confirmRevoke') }}</p></div></div>
+        <button type="button" class="admin-icon-button" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeRevoke()">×</button>
+      </header>
+      <div class="admin-modal-subject"><span>{{ i18n.t(titleKey) }}</span><strong>{{ label(target) }}</strong><small>{{ target.organization_id ? i18n.t('adminUi.orgScoped') + ': ' + target.organization_id : i18n.t('adminUi.global') }}</small></div>
+      <form class="lifecycle-form" (submit)="submitRevoke($event)">
+        <label><span>{{ i18n.t('adminUi.reason') }}</span><small>{{ i18n.t('adminUi.reasonHint') }}</small><textarea name="revokeReason" required minlength="3" maxlength="500" [value]="revokeReason" (input)="revokeReason = $any($event.target).value"></textarea></label>
+        @if (revokeError()) { <p role="alert">{{ i18n.t(revokeError()!) }}</p> }
+        @if (mutationFailure()) { <p role="alert">{{ i18n.t(mutationFailureKey()) }}</p> }
+        <div class="admin-modal-actions"><button type="button" class="secondary" (click)="closeRevoke()">{{ i18n.t('adminUi.cancel') }}</button><button type="submit" class="danger" [disabled]="busy()">{{ i18n.t('adminUi.revoke') }}</button></div>
+      </form>
+    </section>
+  </div>
+}

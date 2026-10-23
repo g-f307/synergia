@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
@@ -39,6 +39,8 @@ export class AdminAssociationPanelComponent implements OnInit {
   readonly organizationFailure = signal<ApiFailure | null>(null);
   readonly mutationFailure = signal<ApiFailure | null>(null);
   readonly formError = signal<TranslationKey | null>(null);
+  readonly revokeTarget = signal<AdminAssociation | null>(null);
+  readonly revokeError = signal<TranslationKey | null>(null);
   readonly busy = signal(false);
   selectedTarget = '';
   selectedOrganization = '';
@@ -46,6 +48,7 @@ export class AdminAssociationPanelComponent implements OnInit {
   targetQuery = '';
   organizationQuery = '';
   reason = '';
+  revokeReason = '';
   private page = 1;
   candidatePage = 1;
   organizationPage = 1;
@@ -115,16 +118,27 @@ export class AdminAssociationPanelComponent implements OnInit {
       error: (failure: ApiFailure) => { this.busy.set(false); this.mutationFailure.set(failure); }
     });
   }
-  revoke(link: AdminAssociation): void {
-    this.formError.set(null); this.mutationFailure.set(null);
-    if (this.reason.trim().length < 3) { this.formError.set('adminUi.reasonRequired'); return; }
-    if (!window.confirm(this.i18n.t('adminUi.confirmRevoke'))) return;
+  openRevoke(link: AdminAssociation): void {
+    this.revokeTarget.set(link); this.revokeReason = ''; this.revokeError.set(null); this.mutationFailure.set(null);
+  }
+  closeRevoke(): void {
+    if (this.busy()) return;
+    this.revokeTarget.set(null); this.revokeReason = ''; this.revokeError.set(null);
+  }
+  submitRevoke(event: Event): void {
+    event.preventDefault();
+    const link = this.revokeTarget();
+    if (!link) return;
+    this.revokeError.set(null); this.mutationFailure.set(null);
+    if (this.revokeReason.trim().length < 3) { this.revokeError.set('adminUi.reasonRequired'); return; }
     this.busy.set(true);
-    this.api.revoke(this.kind, link.left_id, link.right_id, this.reason.trim(), link.organization_id ?? undefined).subscribe({
-      next: () => { this.busy.set(false); this.reason = ''; this.reload(); this.changed.emit(); },
+    this.api.revoke(this.kind, link.left_id, link.right_id, this.revokeReason.trim(), link.organization_id ?? undefined).subscribe({
+      next: () => { this.busy.set(false); this.closeRevoke(); this.reload(); this.changed.emit(); },
       error: (failure: ApiFailure) => { this.busy.set(false); this.mutationFailure.set(failure); }
     });
   }
+  @HostListener('document:keydown.escape')
+  closeRevokeOnEscape(): void { if (this.revokeTarget()) this.closeRevoke(); }
   failureKey(): TranslationKey { return adminFailureKey(this.failure()); }
   candidateFailureKey(): TranslationKey { return adminFailureKey(this.candidateFailure()); }
   organizationFailureKey(): TranslationKey { return adminFailureKey(this.organizationFailure()); }

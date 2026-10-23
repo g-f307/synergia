@@ -20,7 +20,78 @@ describe('ReportCatalogComponent', () => {
     await TestBed.configureTestingModule({ imports: [ReportCatalogComponent], providers: [provideRouter([]), { provide: Router, useValue: router }, { provide: ActivatedRoute, useValue: { queryParamMap: params.asObservable() } }, { provide: ReportService, useValue: { policy, list, create, export: () => of({ body: new Blob(['safe']), headers: { get: () => null } }) } }, { provide: SessionService, useValue: { hasPermission: (key: string) => granted().includes(key) } }] }).compileComponents();
     fixture = TestBed.createComponent(ReportCatalogComponent); fixture.detectChanges();
   });
-  it('renders empty and partial catalog states without fixed report data', () => { response.next(reportPage([])); fixture.detectChanges(); expect(fixture.nativeElement.querySelector('[data-state="empty"]')).not.toBeNull(); response.next(reportPage([reportVersion({ completeness: 'partial' })])); fixture.detectChanges(); expect(fixture.nativeElement.querySelector('[data-state="partial"]')).not.toBeNull(); expect(fixture.nativeElement.textContent).toContain('exec-1'); });
+  it('keeps partiality on the report row without a catalog-wide warning', () => {
+    response.next(reportPage([])); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-state="empty"]')).not.toBeNull();
+    response.next(reportPage([reportVersion({ completeness: 'partial' })])); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.report-row')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-state="partial"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Parciais');
+  });
+  it('renders each report once in the operational list', () => {
+    response.next(reportPage([reportVersion()]));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.report-row').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.report-grid')).toBeNull();
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+  });
+  it('separates available templates from recent generated reports', () => {
+    response.next(reportPage([reportVersion()]));
+    fixture.detectChanges();
+    const templates = fixture.nativeElement.querySelectorAll('.report-template');
+    expect(templates.length).toBe(2);
+    expect(fixture.nativeElement.querySelector('[aria-labelledby="recent-title"] .report-row')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Disponíveis');
+    expect(fixture.nativeElement.textContent).toContain('Recentes');
+  });
+  it('opens generation with the selected available template', () => {
+    response.next(reportPage([]));
+    fixture.detectChanges();
+    const oqcTemplate = fixture.nativeElement.querySelector('[data-template="oqc_summary"] button') as HTMLButtonElement;
+    oqcTemplate.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.generationType()).toBe('oqc_summary');
+    expect(fixture.nativeElement.querySelector('syn-modal.report-generation-modal')).not.toBeNull();
+  });
+  it('keeps catalog filters in the shared collapsible disclosure pattern', () => {
+    const disclosure = fixture.nativeElement.querySelector('details.report-filters');
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.querySelector('.filter-toggle-icon')?.textContent).toContain('▶');
+    expect(disclosure.querySelector('form.filters')).not.toBeNull();
+  });
+  it('keeps page actions and filters in the top controls header', () => {
+    expect(fixture.nativeElement.querySelector('.catalog-controls .catalog-header-row > .page-actions')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.catalog-controls > .report-filters')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.recent-heading .page-actions')).toBeNull();
+  });
+  it('introduces available and recent content from one shared page heading', () => {
+    const heading = fixture.nativeElement.querySelector('.catalog-overview') as HTMLElement;
+    expect(heading.querySelector('h2')?.textContent).toContain('Catálogo e histórico');
+    expect(heading.querySelector('p')?.textContent).toContain('modelos disponíveis');
+    expect(fixture.nativeElement.querySelector('.available-section .section-heading p')).toBeNull();
+  });
+  it('keeps many recent reports and pagination inside the scrollable page surface', () => {
+    const items = Array.from({ length: 25 }, (_, index) => reportVersion({ report_id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}` }));
+    response.next({ items, pagination: { page: 1, page_size: 25, total: 30, pages: 2 }, sort: 'newest' });
+    fixture.detectChanges();
+    const surface = fixture.nativeElement.querySelector('.reports-page') as HTMLElement;
+    const list = fixture.nativeElement.querySelector('.report-list') as HTMLElement;
+    expect(fixture.nativeElement.querySelectorAll('.report-row').length).toBe(25);
+    expect(getComputedStyle(surface).overflowY).toBe('auto');
+    expect(getComputedStyle(list).overflowY).not.toBe('auto');
+    expect(fixture.nativeElement.querySelector('syn-pagination')).not.toBeNull();
+  });
+  it('uses a single scrollable surface and leaves the route title for assistive technology', () => {
+    expect(fixture.nativeElement.querySelector('.reports-page.catalog-surface')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('h1.sr-only')).not.toBeNull();
+  });
+  it('opens generation in the adapted responsive form with its own action footer', () => {
+    fixture.componentInstance.openGeneration();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('syn-modal.report-generation-modal')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.generation-grid')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.generation-actions button').length).toBe(2);
+  });
   it('preserves filters, sorting and pagination in the URL', () => { fixture.componentInstance.organizationId.set('org-1'); fixture.componentInstance.executionId.set('exec-9'); fixture.componentInstance.changePage(3); expect(router.navigate).toHaveBeenCalledWith([], { relativeTo: jasmine.anything(), queryParams: jasmine.objectContaining({ organization: 'org-1', type: 'oqc_summary', state: 'succeeded', execution: 'exec-9', sort: 'oldest', page: 3, pageSize: 10 }) }); });
   it('requires and sends an organization for generation', () => { fixture.componentInstance.generationOrganization.set(''); fixture.componentInstance.generationExecution.set('exec-1'); fixture.componentInstance.generate(new Event('submit')); expect(create).not.toHaveBeenCalled(); fixture.componentInstance.generationOrganization.set('44444444-4444-4444-8444-444444444444'); fixture.componentInstance.generate(new Event('submit')); expect(create).toHaveBeenCalledWith(jasmine.objectContaining({ organization_id: '44444444-4444-4444-8444-444444444444', execution_id: 'exec-1' })); });
   it('defaults the reference after the current minute so recent executions are included', () => {

@@ -1,28 +1,81 @@
-<section class="admin-page" aria-labelledby="admin-access-detail-title">
-  <a [routerLink]="['/admin', kind]">{{ i18n.t('adminUi.back') }}</a>
-  <h1 id="admin-access-detail-title">{{ title() }}</h1>
-  @if (loading()) { <p role="status">{{ i18n.t('admin.loading') }}</p> }
-  @else {
-    @if (item(); as current) { <p>{{ i18n.t(current.is_active ? 'adminUi.active' : 'adminUi.inactive') }} · {{ i18n.t('adminUi.version') }} {{ current.version }}</p><p class="admin-muted">{{ current.id }}</p> }
-    @if (failure()) { <div role="alert"><p>{{ i18n.t(failureKey()) }}</p>@if (id && failure()?.kind === 'conflict') { <button type="button" (click)="reload()">{{ i18n.t('adminUi.reload') }}</button> }</div> }
-    @if (formError()) { <p role="alert">{{ formErrorMessage() }}</p> }
-    @if (!id || item()) {
-      <form class="admin-form" (submit)="save($event)">
-        <label>{{ nameLabel() }}<input name="name" required [readonly]="kind === 'roles' && !!id" [maxlength]="kind === 'groups' ? 160 : 120" [(ngModel)]="name"></label>
-        <label>{{ detailLabel() }}<textarea name="detail" maxlength="500" [(ngModel)]="detail"></textarea></label>
-        <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
-        <button type="submit" [disabled]="busy()">{{ i18n.t('adminUi.save') }}</button>
-      </form>
-      @if (item(); as current) { <div class="admin-actions"><button type="button" class="secondary" [disabled]="busy()" (click)="changeStatus()">{{ i18n.t(current.is_active ? 'adminUi.deactivate' : 'adminUi.activate') }}</button></div> }
-      @if (id && kind === 'groups') {
-        <syn-admin-association-panel kind="user_group" side="right" [entityId]="id" target="user" titleKey="adminUi.groupUsers" />
-        <syn-admin-association-panel kind="group_role" side="left" [entityId]="id" target="role" titleKey="adminUi.groupRoles" />
-      }
-      @if (id && kind === 'roles') {
-        <syn-admin-association-panel kind="user_role" side="right" [entityId]="id" target="user" titleKey="adminUi.roleUsers" />
-        <syn-admin-association-panel kind="group_role" side="right" [entityId]="id" target="group" titleKey="adminUi.roleGroups" />
-        <syn-admin-association-panel kind="role_permission" side="left" [entityId]="id" target="permission" titleKey="adminUi.rolePermissions" />
-      }
+<section class="admin-page admin-editor-page" aria-labelledby="admin-access-detail-title">
+  <header class="admin-detail-heading">
+    <a class="admin-back" [routerLink]="['/admin', kind]" [attr.aria-label]="i18n.t('adminUi.back')">←</a>
+    <div><h1 id="admin-access-detail-title">{{ title() }}</h1><p>{{ i18n.t(kind === 'groups' ? 'adminUi.groupEditorDescription' : 'adminUi.roleEditorDescription') }}</p></div>
+  </header>
+
+  @if (loading()) {
+    <p class="admin-state" role="status">{{ i18n.t('admin.loading') }}</p>
+  } @else {
+    @if (item(); as current) {
+      <div class="admin-record-summary">
+        <span class="admin-status" [class.is-inactive]="!current.is_active">{{ i18n.t(current.is_active ? 'adminUi.active' : 'adminUi.inactive') }}</span>
+        <span>{{ i18n.t('adminUi.version') }} {{ current.version }}</span><code>{{ current.id }}</code>
+      </div>
+      <nav class="admin-editor-tabs" role="tablist" [attr.aria-label]="i18n.t('adminUi.editorSections')">
+        <button id="access-details-tab" type="button" role="tab" data-section="details" [attr.aria-selected]="activeSection() === 'details'" [attr.tabindex]="activeSection() === 'details' ? 0 : -1" (click)="activeSection.set('details')">{{ i18n.t('adminUi.detailsSection') }}</button>
+        <button id="access-associations-tab" type="button" role="tab" data-section="associations" [attr.aria-selected]="activeSection() === 'associations'" [attr.tabindex]="activeSection() === 'associations' ? 0 : -1" (click)="activeSection.set('associations')">{{ i18n.t('adminUi.associationsSection') }}</button>
+      </nav>
+    }
+
+    @if (failure()) { <div class="admin-state" role="alert"><p>{{ i18n.t(failureKey()) }}</p>@if (id && failure()?.kind === 'conflict') { <button type="button" (click)="reload()">{{ i18n.t('adminUi.reload') }}</button> }</div> }
+    @if (formError()) { <p class="admin-inline-error" role="alert">{{ formErrorMessage() }}</p> }
+
+    @if (!id || (item() && activeSection() === 'details')) {
+      <div class="admin-editor-panel" role="tabpanel" [attr.aria-labelledby]="id ? 'access-details-tab' : null">
+        <section class="admin-record-form" aria-labelledby="access-data-title">
+          <div class="admin-section-heading"><h2 id="access-data-title">{{ dataTitle() }}</h2><p>{{ i18n.t('adminUi.recordDataDescription') }}</p></div>
+          <form class="admin-form admin-record-editor-form" [class.admin-create-form]="!id" [class.admin-edit-form]="!!id" (submit)="save($event)">
+            <div class="admin-form-grid">
+              <label>{{ nameLabel() }}<input name="name" required [readonly]="kind === 'roles' && !!id" [maxlength]="kind === 'groups' ? 160 : 120" [(ngModel)]="name"></label>
+              <label>{{ detailLabel() }}<textarea name="detail" maxlength="500" [(ngModel)]="detail"></textarea></label>
+            </div>
+            <section class="admin-change-section" aria-labelledby="access-change-control-title">
+              <div class="admin-section-heading"><h2 id="access-change-control-title">{{ i18n.t('adminUi.changeControl') }}</h2><p>{{ i18n.t('adminUi.changeControlDescription') }}</p></div>
+              <label>{{ i18n.t('adminUi.reason') }}<textarea name="reason" required minlength="3" maxlength="500" [(ngModel)]="reason"></textarea></label>
+            </section>
+            <footer class="admin-form-actions admin-editor-actions"><button type="submit" [disabled]="busy()">{{ i18n.t('adminUi.save') }}</button></footer>
+          </form>
+        </section>
+        @if (item(); as current) {
+          <section class="admin-lifecycle" aria-labelledby="access-lifecycle-section-title">
+            <div class="admin-section-heading"><h2 id="access-lifecycle-section-title">{{ i18n.t('adminUi.lifecycleTitle') }}</h2><p>{{ i18n.t('adminUi.lifecycleDescription') }}</p></div>
+            <div class="admin-actions"><button type="button" class="secondary" [class.danger]="current.is_active" [attr.data-action]="current.is_active ? 'deactivate-access-detail' : 'activate-access-detail'" [disabled]="busy()" (click)="openLifecycle()">{{ i18n.t(current.is_active ? 'adminUi.deactivate' : 'adminUi.activate') }}</button></div>
+          </section>
+        }
+      </div>
+    }
+
+    @if (id && item() && activeSection() === 'associations') {
+      <div class="admin-editor-panel admin-association-stack" role="tabpanel" aria-labelledby="access-associations-tab">
+        @if (kind === 'groups') {
+          <syn-admin-association-panel kind="user_group" side="right" [entityId]="id" target="user" titleKey="adminUi.groupUsers" />
+          <syn-admin-association-panel kind="group_role" side="left" [entityId]="id" target="role" titleKey="adminUi.groupRoles" />
+        } @else {
+          <syn-admin-association-panel kind="user_role" side="right" [entityId]="id" target="user" titleKey="adminUi.roleUsers" />
+          <syn-admin-association-panel kind="group_role" side="right" [entityId]="id" target="group" titleKey="adminUi.roleGroups" />
+          <syn-admin-association-panel kind="role_permission" side="left" [entityId]="id" target="permission" titleKey="adminUi.rolePermissions" />
+        }
+      </div>
     }
   }
 </section>
+@if (lifecycleOpen()) {
+  @if (item(); as current) {
+    <div class="admin-modal-backdrop">
+      <button type="button" class="admin-modal-dismiss" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeLifecycle()"></button>
+      <section class="admin-modal admin-lifecycle-dialog" [class.is-destructive]="current.is_active" [class.is-restorative]="!current.is_active" role="dialog" aria-modal="true" aria-labelledby="access-lifecycle-title" aria-describedby="access-lifecycle-description">
+        <header>
+          <div class="admin-modal-heading"><span class="admin-modal-action-icon" aria-hidden="true">{{ current.is_active ? '!' : '↻' }}</span><div><h2 id="access-lifecycle-title">{{ i18n.t(kind === 'groups' ? (current.is_active ? 'adminUi.deactivateGroup' : 'adminUi.activateGroup') : (current.is_active ? 'adminUi.deactivateRole' : 'adminUi.activateRole')) }}</h2><p id="access-lifecycle-description">{{ i18n.t(current.is_active ? 'adminUi.deactivateImpact' : 'adminUi.activateImpact') }}</p></div></div>
+          <button type="button" class="admin-icon-button" [attr.aria-label]="i18n.t('adminUi.close')" (click)="closeLifecycle()">×</button>
+        </header>
+        <div class="admin-modal-subject"><span>{{ i18n.t(kind === 'groups' ? 'adminUi.lifecycleGroup' : 'adminUi.lifecycleRole') }}</span><strong>{{ name }}</strong><small>{{ detail || i18n.t('adminUi.noDescription') }}</small></div>
+        <form class="lifecycle-form" (submit)="submitLifecycle($event)">
+          <label><span>{{ i18n.t('adminUi.reason') }}</span><small>{{ i18n.t('adminUi.reasonHint') }}</small><textarea name="lifecycleReason" required minlength="3" maxlength="500" [value]="lifecycleReason" (input)="lifecycleReason = $any($event.target).value"></textarea></label>
+          @if (lifecycleError()) { <p role="alert">{{ i18n.t(lifecycleError()!) }}</p> }
+          <div class="admin-modal-actions"><button type="button" class="secondary" (click)="closeLifecycle()">{{ i18n.t('adminUi.cancel') }}</button><button type="submit" [class.danger]="current.is_active" [disabled]="busy()">{{ i18n.t(current.is_active ? 'adminUi.deactivate' : 'adminUi.activate') }}</button></div>
+        </form>
+      </section>
+    </div>
+  }
+}

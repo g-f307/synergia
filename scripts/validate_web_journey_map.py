@@ -49,6 +49,10 @@ MATRIX_ROW = re.compile(
     r"`?(?P<scope>[^`| ]+)`? \|"
 )
 ANGULAR_PATH = re.compile(r"\bpath:\s*'(?P<path>[^']*)'")
+ANGULAR_REDIRECT = re.compile(
+    r"\{[^{}]*\bpath:\s*'(?P<path>[^']*)'[^{}]*\bredirectTo:\s*'[^']+'[^{}]*\}",
+    re.DOTALL,
+)
 
 
 def _openapi_operations() -> set[tuple[str, str]]:
@@ -76,10 +80,15 @@ def _matrix_contracts() -> dict[tuple[str, str], tuple[str, str]]:
 
 
 def _current_routes() -> set[str]:
+    source = APP_ROUTES.read_text(encoding="utf-8")
     paths = {
         match.group("path")
-        for match in ANGULAR_PATH.finditer(APP_ROUTES.read_text(encoding="utf-8"))
+        for match in ANGULAR_PATH.finditer(source)
     }
+    redirects = {
+        match.group("path") for match in ANGULAR_REDIRECT.finditer(source)
+    }
+    paths.difference_update(redirects)
     return {f"/{path}" for path in paths - {"", "**"}}
 
 

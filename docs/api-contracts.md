@@ -41,7 +41,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `POST /imports` | inicia uma importação rastreável | `201` |
 | `GET /imports/policy` | políticas por fonte e organizações ativas autorizadas | `200` |
 | `GET /imports/{execution_id}/inspections` | decisões de segurança dos arquivos | `200` |
-| `GET /executions` | catálogo paginado e filtrado no escopo autorizado | `200` |
+| `GET /executions` | catálogo paginado e filtrado no escopo autorizado, com `generated_at` UTC referente ao cálculo da resposta | `200` |
 | `GET /executions/{execution_id}` | estado e tentativa da execução | `200` |
 | `GET /imports/{execution_id}/validation-report` | erros e avisos | `200` |
 | `GET /workorders/{workorder_number}` | Workorder, lotes e seriais | `200` |
@@ -127,7 +127,7 @@ limites, inspeções de conteúdo e retenção estão em
 
 ## Paginação, filtros e ordenação
 
-`GET /pending-items` e `GET /history` aceitam `page` (padrão `1`) e
+`GET /executions`, `GET /pending-items` e `GET /history` aceitam `page` (padrão `1`) e
 `page_size` (padrão `25`, máximo `100`). A resposta informa:
 
 ```json
@@ -138,6 +138,11 @@ limites, inspeções de conteúdo e retenção estão em
   "generated_at": "2026-09-04T12:00:00Z"
 }
 ```
+
+Em `GET /executions`, o `page_size` padrão é `20`. O campo `generated_at` é o
+instante UTC, com fuso horário, em que o servidor calculou o catálogo. Ele pode
+ser usado pela interface para informar a atualidade da consulta, sem representar
+o início ou o término de qualquer execução.
 
 A fila retorna apenas pendências `open` por padrão. Ela pode ser filtrada por
 `status`, `category`, `priority`, `responsible_area`, `workorder_number`,

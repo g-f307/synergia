@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -14,7 +14,8 @@ import { AdminAssociationPanelComponent } from './admin-association-panel.compon
   selector: 'syn-admin-user-editor',
   imports: [AdminAssociationPanelComponent, FormsModule, RouterLink],
   templateUrl: './admin-user-editor.component.html',
-  styleUrl: './admin.component.css'
+  styleUrl: './admin.component.css',
+  host: { class: 'admin-route' }
 })
 export class AdminUserEditorComponent {
   readonly i18n = inject(I18nService);
@@ -30,10 +31,14 @@ export class AdminUserEditorComponent {
   readonly effective = signal<EffectivePermission[]>([]);
   readonly effectiveLoading = signal(false);
   readonly effectiveFailure = signal<ApiFailure | null>(null);
+  readonly activeSection = signal<'details' | 'associations'>('details');
+  readonly lifecycleAction = signal<'block' | 'unblock' | 'deactivate' | 'reactivate' | null>(null);
+  readonly lifecycleError = signal<TranslationKey | null>(null);
   displayName = '';
   status: 'pending' | 'active' = 'active';
   emails: UserEmail[] = [{ email: '', is_primary: true, is_verified: false }];
   reason = '';
+  lifecycleReason = '';
 
   constructor() { if (this.id) this.reload(); }
 
@@ -82,13 +87,38 @@ export class AdminUserEditorComponent {
     if (!this.id || !this.user() || this.busy()) return;
     this.formError.set(null); this.failure.set(null);
     if (this.reason.trim().length < 3) { this.formError.set('adminUi.reasonRequired'); return; }
-    if ((action === 'block' || action === 'deactivate') && !window.confirm(this.i18n.t('adminUi.confirmStatus'))) return;
     this.busy.set(true);
     this.api.changeUserStatus(this.id, action, this.user()!.version, this.reason.trim()).subscribe({
-      next: (user) => { this.accept(user); this.reason = ''; this.busy.set(false); },
+      next: (user) => { this.accept(user); this.reason = ''; this.busy.set(false); this.closeLifecycle(); },
       error: (failure: ApiFailure) => { this.busy.set(false); this.failure.set(failure); }
     });
   }
+
+  openLifecycle(action: 'block' | 'unblock' | 'deactivate' | 'reactivate'): void {
+    this.lifecycleAction.set(action);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+  closeLifecycle(): void {
+    if (this.busy()) return;
+    this.lifecycleAction.set(null);
+    this.lifecycleReason = '';
+    this.lifecycleError.set(null);
+  }
+  submitLifecycle(event: Event): void {
+    event.preventDefault();
+    const action = this.lifecycleAction();
+    if (!action || this.busy()) return;
+    if (this.lifecycleReason.trim().length < 3) {
+      this.lifecycleError.set('adminUi.reasonRequired');
+      return;
+    }
+    this.reason = this.lifecycleReason.trim();
+    this.changeStatus(action);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeLifecycleOnEscape(): void { this.closeLifecycle(); }
 
   failureKey(): TranslationKey { return adminFailureKey(this.failure()); }
   effectiveFailureKey(): TranslationKey { return adminFailureKey(this.effectiveFailure()); }

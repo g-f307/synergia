@@ -170,6 +170,7 @@ def test_lists_execution_catalog_and_preserves_direct_identifier_search(api) -> 
         "total": 1,
         "pages": 1,
     }
+    assert datetime.fromisoformat(payload["generated_at"]).tzinfo is not None
 
 
 def test_normalizes_catalog_period_with_offsets_to_utc(api) -> None:

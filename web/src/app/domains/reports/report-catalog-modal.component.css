@@ -1,0 +1,79 @@
+.generation-form {
+  display: grid;
+  gap: 18px;
+  max-height: min(72vh, 46rem);
+  overflow: auto;
+  padding: 22px 24px 12px;
+}
+
+.generation-help {
+  color: var(--syn-text-secondary);
+  font-size: .82rem;
+  margin: 0;
+  max-width: 58ch;
+}
+
+.generation-grid {
+  display: grid;
+  gap: 15px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.generation-grid label { font-size: .78rem; }
+.generation-wide { grid-column: 1 / -1; }
+
+.generation-actions {
+  align-items: center;
+  border-top: 1px solid var(--syn-border);
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+  margin-inline: -24px;
+  padding: 18px 24px 0;
+}
+
+.generation-actions button {
+  border-radius: 999px;
+  min-width: 130px;
+}
+
+:host ::ng-deep .report-generation-modal .backdrop {
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+:host ::ng-deep .report-generation-modal [role='dialog'] {
+  background: var(--syn-bg-card);
+  border: 1px solid var(--syn-border);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+  max-width: 48rem;
+  overflow: hidden;
+  padding: 0;
+}
+
+:host ::ng-deep .report-generation-modal [role='dialog'] > h2 {
+  border-bottom: 1px solid var(--syn-border);
+  font-size: 1.1rem;
+  margin: 0;
+  padding: 20px 24px;
+}
+
+:host ::ng-deep .report-generation-modal [role='dialog'] > button.secondary {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .generation-grid { grid-template-columns: 1fr; }
+  .generation-wide { grid-column: auto; }
+  .generation-form { padding: 18px 18px 10px; }
+  .generation-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-inline: -18px;
+    padding-inline: 18px;
+  }
+  .generation-actions button { min-width: 0; }
+  :host ::ng-deep .report-generation-modal .backdrop { padding: 10px; }
+  :host ::ng-deep .report-generation-modal [role='dialog'] { border-radius: 20px; }
+}

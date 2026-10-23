@@ -37,60 +37,68 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
   imports: [RouterLink],
   template: `
     <section class="imports-page" aria-labelledby="import-title">
-      <header class="page-header">
-        <p class="eyebrow">{{ i18n.t('imports.eyebrow') }}</p>
-        <h1 id="import-title">{{ i18n.t('imports.newTitle') }}</h1>
-        <p>{{ i18n.t('imports.introduction') }}</p>
-      </header>
+      <h1 id="import-title" class="sr-only">{{ i18n.t('imports.newTitle') }}</h1>
 
-      <div class="imports-grid">
-        <form class="card" (submit)="submit($event)">
-          <label for="import-source">{{ i18n.t('imports.source') }}</label>
-          <select id="import-source" [disabled]="busy() || policyLoading()" [value]="source()" (change)="selectSource($any($event.target).value)">
-            @for (item of sources; track item) { <option [value]="item">{{ item }}</option> }
-          </select>
+      <div class="import-workspace">
+        <header class="workspace-heading">
+          <div><h2>{{ i18n.t('imports.workspaceTitle') }}</h2><p>{{ i18n.t('imports.introduction') }}</p></div>
+        </header>
 
-          @if (!policyLoading() && organizationSelectionRequired()) {
-            <label for="import-organization">{{ i18n.t('imports.organization') }}</label>
-            <select id="import-organization" [disabled]="busy() || !!policyFailure()" [value]="organizationId()" (change)="organizationId.set($any($event.target).value)">
-              <option value="">{{ i18n.t('imports.selectOrganization') }}</option>
-              @for (organization of organizationOptions(); track organization.id) {
-                <option [value]="organization.id">{{ organization.display_name }} — {{ organization.organization_code }}</option>
+        <aside class="trust-panel" aria-labelledby="import-rules-title">
+          <header><h2 id="import-rules-title">{{ i18n.t('imports.rulesTitle') }}</h2></header>
+          <div class="trust-grid">
+            <div class="trust-item"><span>{{ i18n.t('imports.ruleFormats', { formats: formatsLabel() }) }}</span></div>
+            <div class="trust-item"><span>{{ i18n.t('imports.ruleSize', { size: sizeLabel() }) }}</span></div>
+            <div class="trust-item"><span>{{ i18n.t('imports.ruleInspection') }}</span></div>
+            <div class="trust-item"><span>{{ i18n.t('imports.ruleServer') }}</span></div>
+          </div>
+        </aside>
+
+        <form class="upload-form" (submit)="submit($event)">
+          <div class="workflow-grid">
+            <section class="workflow-step source-step" aria-labelledby="source-step-title">
+              <header><span aria-hidden="true">1</span><div><h3 id="source-step-title">{{ i18n.t('imports.sourceStepTitle') }}</h3><p>{{ i18n.t('imports.sourceHint') }}</p></div></header>
+              <label class="field-label" for="import-source">{{ i18n.t('imports.source') }}</label>
+              <select id="import-source" name="source" autocomplete="off" [disabled]="busy() || policyLoading()" [value]="source()" (change)="selectSource($any($event.target).value)">
+                @for (item of sources; track item) { <option [value]="item" translate="no">{{ item }}</option> }
+              </select>
+              @if (!policyLoading() && organizationSelectionRequired()) {
+                <label class="field-label" for="import-organization">{{ i18n.t('imports.organization') }}</label>
+                <select id="import-organization" name="organization" autocomplete="off" [disabled]="busy() || !!policyFailure()" [value]="organizationId()" (change)="organizationId.set($any($event.target).value)">
+                  <option value="">{{ i18n.t('imports.selectOrganization') }}</option>
+                  @for (organization of organizationOptions(); track organization.id) { <option [value]="organization.id">{{ organization.display_name }} — {{ organization.organization_code }}</option> }
+                </select>
               }
-            </select>
-          }
+            </section>
 
-          <label for="import-file">{{ i18n.t('imports.file') }}</label>
-          <input #fileInput id="import-file" type="file" [accept]="acceptedExtensions()"
-            [disabled]="busy() || policyLoading() || !!policyFailure()" [attr.aria-describedby]="fileError() ? 'import-file-help import-file-error' : 'import-file-help'"
-            [attr.aria-invalid]="fileError() ? true : null" (change)="selectFile($event)">
-          <p id="import-file-help" class="help">{{ policyDescription() }}</p>
-          @if (fileError()) { <p id="import-file-error" class="error" role="alert">{{ fileError() }}</p> }
-          @if (file(); as selected) {
-            <p class="selected-file"><strong>{{ safeName(selected.name) }}</strong><span>{{ formatBytes(selected.size) }}</span></p>
-          }
-
-          <button type="submit" [disabled]="!canSubmit()" [attr.aria-busy]="busy()">
-            {{ i18n.t(busy() ? 'imports.submitting' : 'imports.submit') }}
-          </button>
+            <section class="workflow-step file-step" aria-labelledby="file-step-title">
+              <header><span aria-hidden="true">2</span><div><h3 id="file-step-title">{{ i18n.t('imports.file') }}</h3><p id="import-file-help">{{ policyDescription() }}</p></div></header>
+              <div class="file-control">
+                <input #fileInput class="file-input" id="import-file" name="file" autocomplete="off" type="file" [accept]="acceptedExtensions()"
+                  [disabled]="busy() || policyLoading() || !!policyFailure()" [attr.aria-describedby]="fileError() ? 'import-file-help import-file-error' : 'import-file-help'"
+                  [attr.aria-invalid]="fileError() ? true : null" (change)="selectFile($event)">
+                <label class="file-picker" for="import-file">
+                  <img src="/assets/icons/data-source.svg" alt="" aria-hidden="true" width="30" height="30">
+                  <span class="file-copy">
+                    @if (file(); as selected) { <strong>{{ safeName(selected.name) }}</strong><small>{{ formatBytes(selected.size) }}</small> }
+                    @else { <strong>{{ i18n.t('imports.chooseFile') }}</strong><small>{{ i18n.t('imports.noFile') }}</small> }
+                  </span>
+                  <span class="picker-action">{{ i18n.t(file() ? 'imports.changeFile' : 'imports.browseFile') }}</span>
+                </label>
+              </div>
+              @if (fileError()) { <p id="import-file-error" class="error inline-error" role="alert">{{ fileError() }}</p> }
+            </section>
+          </div>
+          <footer class="form-actions"><button type="submit" [disabled]="!canSubmit()" [attr.aria-busy]="busy()">{{ i18n.t(busy() ? 'imports.submitting' : 'imports.submit') }}</button></footer>
         </form>
 
-        <aside class="card rules" aria-labelledby="import-rules-title">
-          <h2 id="import-rules-title">{{ i18n.t('imports.rulesTitle') }}</h2>
-          <ul>
-            <li>{{ i18n.t('imports.ruleFormats', { formats: formatsLabel() }) }}</li>
-            <li>{{ i18n.t('imports.ruleSize', { size: sizeLabel() }) }}</li>
-            <li>{{ i18n.t('imports.ruleInspection') }}</li>
-            <li>{{ i18n.t('imports.ruleServer') }}</li>
-          </ul>
-        </aside>
       </div>
 
-      @if (policyLoading()) { <p role="status">{{ i18n.t('imports.policyLoading') }}</p> }
-      @if (policyFailure()) { <div class="card error" role="alert"><strong>{{ i18n.t('imports.policyError') }}</strong>@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</div> }
+      @if (policyLoading()) { <p class="policy-status" role="status">{{ i18n.t('imports.policyLoading') }}</p> }
+      @if (policyFailure()) { <div class="result-panel error" role="alert"><strong>{{ i18n.t('imports.policyError') }}</strong>@if(policyFailure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ policyFailure()?.correlationId }}</p>}</div> }
 
       @if (state() !== 'idle') {
-        <section class="card result" role="status" aria-live="polite">
+        <section class="result-panel result" role="status" aria-live="polite">
           <h2>{{ stateTitle() }}</h2>
           <p>{{ stateMessage() }}</p>
           @if (rejectionReason()) { <p class="error"><strong>{{ rejectionReason() }}</strong></p> }
@@ -108,10 +116,9 @@ const REJECTION_KEYS: Record<string, TranslationKey> = {
     </section>
   `,
   styles: [`
-    .imports-page{display:grid;gap:var(--space-5);max-width:70rem}.page-header{border-bottom:1px solid var(--syn-border);display:block;margin-bottom:0;padding-bottom:var(--syn-space-4)}.imports-grid{display:grid;gap:var(--space-5);grid-template-columns:minmax(18rem,2fr) minmax(16rem,1fr)}
-    .help,.rules,p{color:var(--color-muted)}.rules{align-self:start}.selected-file{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:space-between;margin:0}
-    .result{border-left:.3rem solid var(--color-info)}progress{accent-color:var(--color-brand);inline-size:100%;min-height:1rem}.button-link{display:inline-block;font-weight:700;margin-top:var(--space-3)}
-    @media(max-width:48rem){.imports-grid{grid-template-columns:1fr}.rules{order:-1}}
+    :host{display:block;height:100%;min-height:0}.imports-page{--line:color-mix(in srgb,var(--syn-text) 9%,transparent);background:var(--syn-bg-card);border:1px solid var(--line);border-radius:28px;display:flex;flex-direction:column;gap:16px;height:100%;min-height:0;overflow:hidden;padding:clamp(20px,2.5vw,34px)}.sr-only,.file-input{clip:rect(0,0,0,0);clip-path:inset(50%);height:1px;overflow:hidden;position:absolute;white-space:nowrap;width:1px}.import-workspace{display:grid;gap:24px;min-height:0;overflow-x:hidden;overflow-y:auto;padding-right:4px;scrollbar-gutter:stable;width:100%}.workspace-heading{align-items:center;display:flex}.workspace-heading h2,.workspace-heading p{margin:0}.workspace-heading h2{font-size:1.35rem;text-wrap:balance}.workspace-heading p{color:var(--syn-text-secondary);font-size:.88rem;margin-top:4px}.workflow-grid{display:grid;gap:18px;grid-template-columns:minmax(240px,.7fr) minmax(360px,1.3fr)}.workflow-step{border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;min-width:0;padding:20px}.workflow-step>header{align-items:flex-start;display:flex;gap:11px;margin-bottom:18px}.workflow-step>header>span{align-items:center;background:var(--syn-primary);border-radius:50%;color:#fff;display:flex;flex:0 0 28px;font-size:.78rem;font-weight:700;height:28px;justify-content:center}.workflow-step h3,.workflow-step p{margin:0}.workflow-step h3{font-size:.95rem}.workflow-step header p{color:var(--syn-text-secondary);font-size:.78rem;line-height:1.45;margin-top:3px}.field-label{font-size:.78rem;font-weight:600;margin-bottom:6px}.source-step select+.field-label{margin-top:16px}.source-step select{background-color:var(--syn-bg-card);color:var(--syn-text);min-height:46px}.file-step{background:color-mix(in srgb,var(--syn-bg) 55%,var(--syn-bg-card))}.file-control{display:flex;flex:1;min-height:150px}.file-picker{align-items:center;border:1px dashed color-mix(in srgb,var(--syn-primary) 38%,var(--syn-border));border-radius:16px;cursor:pointer;display:grid;gap:14px;grid-template-columns:auto minmax(0,1fr) auto;padding:24px;transition:background var(--syn-transition),border-color var(--syn-transition);width:100%}.file-picker:hover,.file-control:focus-within .file-picker{background:var(--syn-primary-light);border-color:var(--syn-primary)}.file-copy{display:grid;min-width:0}.file-copy strong{overflow-wrap:anywhere}.file-copy small{color:var(--syn-text-secondary);font-size:.78rem;margin-top:4px}.picker-action{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:999px;color:var(--syn-primary);font-size:.8rem;font-weight:700;padding:9px 14px;white-space:nowrap}.inline-error{font-size:.8rem;margin:10px 0 0}.form-actions{border-top:1px solid var(--line);display:flex;justify-content:flex-end;margin-top:18px;padding-top:18px}.form-actions button{border-radius:999px;min-width:160px}.trust-panel{background:var(--syn-bg);border-radius:16px;justify-self:center;max-width:58rem;padding:16px 18px;width:fit-content}.trust-panel>header{margin-bottom:13px}.trust-panel h2{font-size:.9rem;margin:0}.trust-grid{display:grid;gap:10px 28px;grid-template-columns:repeat(2,minmax(18rem,1fr))}.trust-item{color:var(--syn-text-secondary);font-size:.76rem;line-height:1.45;min-width:0}.policy-status,.result-panel{width:100%}.policy-status{color:var(--syn-text-secondary);font-size:.82rem;margin:0}.result-panel{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:16px;padding:18px}.result{border-left:4px solid var(--syn-info)}progress{accent-color:var(--syn-primary);inline-size:100%;min-height:1rem}.button-link{display:inline-block;font-weight:700;margin-top:var(--space-3)}
+    @media(max-width:54rem){.workflow-grid{grid-template-columns:1fr}.trust-grid{grid-template-columns:1fr}}
+    @media(max-width:36rem){.imports-page{border-radius:20px;padding:18px}.trust-panel{width:100%}.trust-grid{grid-template-columns:1fr}.workflow-step{padding:16px}.file-picker{grid-template-columns:auto minmax(0,1fr);padding:18px}.picker-action{grid-column:1/-1;text-align:center}.form-actions button{width:100%}}
   `]
 })
 export class ImportCreateComponent implements OnInit {

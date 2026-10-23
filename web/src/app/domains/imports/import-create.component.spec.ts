@@ -77,6 +77,46 @@ describe('ImportCreateComponent', () => {
     expect(upload).toHaveBeenCalledWith('N-FP', file, 'org-1');
   });
 
+  it('presents an accessible operator workspace with a keyboard-usable file picker', () => {
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const picker = element.querySelector('label.file-picker') as HTMLLabelElement;
+    const input = element.querySelector('#import-file') as HTMLInputElement;
+
+    expect(element.querySelector('.import-workspace')).not.toBeNull();
+    expect(element.querySelector('.eyebrow')).toBeNull();
+    expect(picker.htmlFor).toBe('import-file');
+    expect(input.name).toBe('file');
+    expect(input.autocomplete).toBe('off');
+    expect(element.querySelectorAll('.trust-item').length).toBe(4);
+    expect(element.querySelectorAll('.workflow-step').length).toBe(2);
+  });
+
+  it('uses the shared screen frame and keeps supporting content visually quiet', () => {
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const frame = element.querySelector('.imports-page') as HTMLElement;
+
+    expect(getComputedStyle(frame).borderRadius).toBe('28px');
+    expect(element.querySelector('.workspace-icon')).toBeNull();
+    expect(element.querySelectorAll('.trust-panel img').length).toBe(0);
+    expect(element.textContent).not.toContain('O envio inicia uma nova execução');
+  });
+
+  it('places the compact preparation checklist before the two workflow steps', () => {
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const checklist = element.querySelector('.trust-panel') as HTMLElement;
+    const workflow = element.querySelector('.workflow-grid') as HTMLElement;
+
+    expect(checklist.compareDocumentPosition(workflow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(getComputedStyle(checklist).justifySelf).toBe('center');
+    expect(getComputedStyle(checklist).maxWidth).not.toBe('none');
+  });
+
   it('requires an explicit organization and sends it for a global permission', () => {
     permissionOrganizations = null;
     policy.and.returnValue(of({

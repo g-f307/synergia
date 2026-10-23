@@ -1,5 +1,9 @@
 # Fundação visual e técnica da aplicação web
 
+Este documento descreve a fundação, os tokens e os ativos. As regras
+obrigatórias para compor telas novas ou alterar telas existentes estão na
+[norma de implementação visual do frontend](frontend-implementation-standard.md).
+
 ## Origem e autorização
 
 Os ativos foram incorporados da tag imutável `prototype-v1.0`, diretório
@@ -32,8 +36,9 @@ críticas.
 | Contexto | Variante |
 | --- | --- |
 | superfície clara | `logo-horizontal.png` |
-| superfície escura | `logo-negativa-horizontal.png` |
-| espaço reduzido | `simbolo.png` ou `simbolo-negativo.png` |
+| superfície escura | `logo-dark-horizontal.svg` |
+| espaço reduzido claro | `simbolo.png` |
+| autenticação | `synergia-logo-vertical.svg` |
 
 Logos usam `object-fit: contain`, preservando proporção, e não recebem filtros
 ou recoloração. Ícones monocromáticos podem herdar contraste do shell.

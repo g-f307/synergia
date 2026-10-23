@@ -13,6 +13,7 @@ describe('OperationalSearchComponent', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(async () => {
+    localStorage.removeItem('synergia.operational-search.recent');
     response = new Subject<OperationalSearchPage>();
     params = new BehaviorSubject(convertToParamMap({ type: 'workorder', query: '000123', page: '1', pageSize: '10', sort: 'updated_desc' }));
     router = jasmine.createSpyObj<Router>('Router', ['navigate', 'navigateByUrl', 'createUrlTree', 'serializeUrl'], { url: '/search?type=workorder&query=000123&page=1&pageSize=10&sort=updated_desc', events: new Subject() });
@@ -32,6 +33,8 @@ describe('OperationalSearchComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => localStorage.removeItem('synergia.operational-search.recent'));
+
   it('renders scoped context and keeps leading zeroes in links', () => {
     response.next(page()); fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
@@ -39,6 +42,42 @@ describe('OperationalSearchComponent', () => {
     expect(text).toContain('exec-001');
     expect(text).toContain('synergia.operational');
     expect(text).toContain('04/09/2026');
+  });
+
+  it('uses the shared screen frame without repeating the visible page title', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const frame = element.querySelector('.operational-search') as HTMLElement;
+
+    expect(getComputedStyle(frame).borderRadius).toBe('28px');
+    expect(getComputedStyle(frame).overflowY).toBe('auto');
+    expect(getComputedStyle(frame).alignContent).toBe('start');
+    expect(element.querySelector('h1.sr-only')).not.toBeNull();
+    expect(element.querySelector('.eyebrow')).toBeNull();
+    expect(element.querySelector('.page-subtitle')).toBeNull();
+  });
+
+  it('keeps the compact search filters visible and explicitly labelled', () => {
+    const element = fixture.nativeElement as HTMLElement;
+    const form = element.querySelector('form.search-filters');
+    const controls = [...element.querySelectorAll('.search-filters input, .search-filters select')] as Array<HTMLInputElement | HTMLSelectElement>;
+
+    expect(form).not.toBeNull();
+    expect(element.querySelector('details')).toBeNull();
+    expect(controls.length).toBe(4);
+    expect(controls.every((control) => !!control.id && !!control.getAttribute('name'))).toBeTrue();
+    expect(controls.every((control) => element.querySelector(`label[for="${control.id}"]`))).toBeTrue();
+  });
+
+  it('keeps a local history of successful searches and lets the operator repeat one', () => {
+    response.next(page());
+    fixture.detectChanges();
+    const recent = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.recent-search');
+
+    expect(recent?.textContent).toContain('000123');
+    expect(JSON.parse(localStorage.getItem('synergia.operational-search.recent') ?? '[]')[0]).toEqual(jasmine.objectContaining({ type: 'workorder', query: '000123' }));
+
+    recent?.click();
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: jasmine.objectContaining({ type: 'workorder', query: '000123', page: 1 }) }));
   });
 
   it('preserves all filters when changing page', () => {

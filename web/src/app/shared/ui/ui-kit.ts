@@ -22,7 +22,7 @@ export class PaginationComponent { readonly i18n = inject(I18nService); readonly
 @Component({ selector: 'syn-responsive-table', template: '<div class="table" tabindex="0" role="region" [attr.aria-label]="i18n.t(\'accessibility.horizontalTable\')"><ng-content /></div>', styles: [':host{display:block;max-width:100%;min-width:0}.table{max-width:100%;overflow:auto}.table:focus{outline:.1875rem solid var(--color-focus)}'] })
 export class ResponsiveTableComponent { readonly i18n = inject(I18nService); }
 
-@Component({ selector: 'syn-modal', template: '<div class="backdrop"><section role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1"><h2>{{ title() }}</h2><ng-content /><button type="button" class="secondary" (click)="close()">{{ i18n.t(\'common.close\') }}</button></section></div>', styles: ['.backdrop{background:rgb(0 0 0/60%);display:grid;inset:0;padding:var(--space-4);place-items:center;position:fixed;z-index:30}section{background:var(--color-surface);border-radius:var(--radius-md);max-width:36rem;padding:var(--space-5);width:100%}'] })
+@Component({ selector: 'syn-modal', template: '<div class="backdrop"><section role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1"><h2>{{ title() }}</h2><ng-content /><button type="button" class="secondary" (click)="close()">{{ i18n.t(\'common.close\') }}</button></section><button type="button" class="backdrop-dismiss" tabindex="-1" aria-hidden="true" (click)="close()"></button></div>', styles: ['.backdrop{background:rgb(0 0 0/60%);display:grid;inset:0;padding:var(--space-4);place-items:center;position:fixed;z-index:30}.backdrop-dismiss{border:0;border-radius:0;height:100%;inset:0;opacity:0;position:absolute;width:100%}section{background:var(--color-surface);border-radius:var(--radius-md);max-width:36rem;padding:var(--space-5);position:relative;width:100%;z-index:1}'] })
 export class ModalComponent implements AfterViewInit, OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   readonly i18n = inject(I18nService);
@@ -35,7 +35,7 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
   trapFocus(event: KeyboardEvent): void {
     if (event.key !== 'Tab') return;
     const dialog = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('[role=dialog]');
-    const controls = [...(this.host.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter((element) => !element.hasAttribute('disabled'));
+    const controls = [...(this.host.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter((element) => !element.hasAttribute('disabled') && !element.classList.contains('backdrop-dismiss'));
     if (!controls.length) return;
     const first = controls[0];
     const last = controls[controls.length - 1];

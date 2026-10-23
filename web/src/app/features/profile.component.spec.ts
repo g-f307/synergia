@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 
 import { UserProfile } from '../core/session.models';
 import { SessionService } from '../core/session.service';
@@ -82,13 +82,34 @@ describe('ProfileComponent', () => {
     expect(fixture.nativeElement.querySelector('img.avatar-preview')).not.toBeNull();
   });
 
-  it('renders the remodeled profile as separate settings and avatar surfaces', () => {
+  it('previews a selected avatar immediately while the upload is pending', () => {
+    profileState.set({ ...profile, avatar: null });
+    session.uploadAvatar.and.returnValue(NEVER);
     const fixture = TestBed.createComponent(ProfileComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.page-header')).not.toBeNull();
+    const file = new File(['preview'], 'avatar.png', { type: 'image/png' });
+    fixture.componentInstance.selectAvatar({ target: { files: [file] } } as unknown as Event);
+    fixture.detectChanges();
+
+    const image = fixture.nativeElement.querySelector('img.avatar-preview') as HTMLImageElement;
+    expect(image).not.toBeNull();
+    expect(image.src).toContain('blob:avatar');
+    expect(session.uploadAvatar).toHaveBeenCalledWith(file);
+  });
+
+  it('renders avatar, settings and sessions inside one continuous surface', () => {
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('h1.sr-only')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.profile-settings')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.avatar-panel')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.avatar-stage')).not.toBeNull();
+    expect(getComputedStyle(fixture.nativeElement.querySelector('.profile-page')).overflowY).toBe('auto');
+    expect(getComputedStyle(fixture.nativeElement.querySelector('.avatar-panel')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(fixture.nativeElement.querySelector('.profile-settings')).borderTopStyle).toBe('none');
+    expect(getComputedStyle(fixture.nativeElement.querySelector('syn-sessions .sessions')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
 
   it('increases computed title and form label sizes with the large preference', () => {

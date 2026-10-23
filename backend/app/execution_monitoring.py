@@ -80,6 +80,7 @@ class ExecutionCatalogPage(BaseModel):
     items: list[ExecutionCatalogItem]
     pagination: Pagination
     sort: str
+    generated_at: datetime
 
 
 class Divergence(BaseModel):
@@ -439,7 +440,15 @@ def _ensure_execution(repository: MonitoringRepository, execution_id: str) -> No
         )
 
 
-def _page(model, items: list[dict], page: int, page_size: int, total: int, sort: str):
+def _page(
+    model,
+    items: list[dict],
+    page: int,
+    page_size: int,
+    total: int,
+    sort: str,
+    **extra: Any,
+):
     return model(
         items=items,
         pagination=Pagination(
@@ -449,6 +458,7 @@ def _page(model, items: list[dict], page: int, page_size: int, total: int, sort:
             pages=math.ceil(total / page_size) if total else 0,
         ),
         sort=sort,
+        **extra,
     )
 
 
@@ -488,7 +498,15 @@ def list_executions(
         page_size=page_size,
         sort=sort,
     )
-    return _page(ExecutionCatalogPage, items, page, page_size, total, sort)
+    return _page(
+        ExecutionCatalogPage,
+        items,
+        page,
+        page_size,
+        total,
+        sort,
+        generated_at=datetime.now(UTC),
+    )
 
 
 @router.get(

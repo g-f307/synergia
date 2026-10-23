@@ -24,6 +24,35 @@ describe('ReportDetailComponent', () => {
   });
   it('renders exact snapshot values and related scoped navigation', () => { const text = fixture.nativeElement.textContent as string; const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[]; expect(text).toContain('WO-001'); expect(text).toContain('LOT-001'); expect(text).toContain('0'); expect(text).toContain('Não informado'); expect(links.some((link) => link.textContent?.includes('WO-001'))).toBeTrue(); expect(links.some((link) => link.textContent?.includes('LOT-001'))).toBeTrue(); });
   it('preserves the exact catalog URL when returning', () => { fixture.componentInstance.back(); expect(router.navigateByUrl).toHaveBeenCalledWith('/reports?state=succeeded&page=2'); });
+  it('keeps the report viewer inside one fixed frame with a single internal scroll surface', () => {
+    const frame = fixture.nativeElement.querySelector('.report-detail') as HTMLElement;
+    const scroll = fixture.nativeElement.querySelector('.detail-scroll') as HTMLElement;
+    expect(Math.abs(frame.offsetHeight - fixture.nativeElement.clientHeight)).toBeLessThanOrEqual(2);
+    expect(getComputedStyle(frame).overflowY).toBe('hidden');
+    expect(getComputedStyle(scroll).overflowY).toBe('auto');
+  });
+  it('uses one concise toolbar without repeating the route hierarchy', () => {
+    const toolbar = fixture.nativeElement.querySelector('.detail-toolbar') as HTMLElement;
+    expect(toolbar.querySelector('h1')?.textContent).toContain('Visualização do relatório');
+    expect(toolbar.querySelector('.back-link')).not.toBeNull();
+    expect(toolbar.querySelector('.eyebrow')).toBeNull();
+    expect(toolbar.querySelector('.page-subtitle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.report-breadcrumbs')).toBeNull();
+  });
+  it('places the back action above the title and organizes report identity separately from its facts', () => {
+    const toolbar = fixture.nativeElement.querySelector('.detail-toolbar') as HTMLElement;
+    expect(toolbar.children[0].classList).toContain('back-link');
+    expect(toolbar.children[1].tagName).toBe('H1');
+    expect(toolbar.querySelector('.detail-title')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.report-overview')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.report-facts')).not.toBeNull();
+  });
+  it('shows at most one pagination control for the active report tab', () => {
+    expect(fixture.nativeElement.querySelectorAll('syn-pagination').length).toBeLessThanOrEqual(1);
+    params.next(convertToParamMap({ version: '1', tab: 'history', historyPage: '1' }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('syn-pagination').length).toBeLessThanOrEqual(1);
+  });
   it('shows history failures instead of hiding them as empty data', async () => { api.versions.and.returnValue(throwError(() => ({ kind: 'unavailable', status: 500, code: 'failure', message: 'safe', correlationId: 'corr', fields: [] } as ApiFailure))); params.next(convertToParamMap({ version: '1', tab: 'history' })); fixture.detectChanges(); expect(fixture.nativeElement.textContent).toContain('Histórico indisponível'); });
   it('renders OQC pending relationships without interpreting content as HTML', () => { api.get.and.returnValue(of(reportDetail({ report_type: 'oqc_summary', data: { kind: 'oqc_summary', count: 1, distinct_lots: 1, by_reason: { hold: 1 }, by_priority: { high: 1 }, by_organization: { ORG: 1 }, items: [{ workorder_number: 'WO-002', lot_number: 'LOT-002', organization_code: 'ORG', decision_state: 'pending', reason: '<script>unsafe()</script>', pending_item_id: 7, priority: 'high', priority_score: 90, pending_reason: 'Review', pending_status: 'open' }] } }))); params.next(convertToParamMap({ version: '1', tab: 'data' })); fixture.detectChanges(); const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[]; expect(fixture.nativeElement.textContent).toContain('<script>unsafe()</script>'); expect(fixture.nativeElement.querySelector('script')).toBeNull(); expect(links.some((link) => link.textContent?.includes('Review'))).toBeTrue(); });
   it('supports arrow-key navigation between accessible tabs', () => { const tablist = fixture.nativeElement.querySelector('[role="tablist"]') as HTMLElement; tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { tab: 'history', page: 1 } })); expect(document.activeElement?.id).toBe('report-tab-history'); });
@@ -42,11 +71,19 @@ describe('ReportDetailComponent', () => {
     const cases = [
       { report: reportDetail({ state: 'generating', completed_at: null, data: null, created_at: new Date().toISOString() }), expected: 'Em geração' },
       { report: reportDetail(), expected: 'Gerado' },
-      { report: reportDetail({ completeness: 'partial' }), expected: 'Dados parciais — revisão necessária' },
+      { report: reportDetail({ completeness: 'partial' }), expected: 'Parciais' },
       { report: reportDetail({ state: 'generating', completed_at: null, data: null, created_at: '2020-01-01T00:00:00Z' }), expected: 'Geração possivelmente interrompida' },
       { report: reportDetail({ state: 'failed', completeness: null, data: null, failure_code: 'generation_failed', failure_message: 'internal' }), expected: 'Geração não concluída' }
     ];
     for (const item of cases) { api.get.and.returnValue(of(item.report)); params.next(convertToParamMap({ version: '1', tab: 'summary' })); fixture.detectChanges(); expect(fixture.nativeElement.textContent).toContain(item.expected); }
+  });
+  it('keeps the partial status badge without rendering a partial-data banner', () => {
+    api.get.and.returnValue(of(reportDetail({ completeness: 'partial' })));
+    params.next(convertToParamMap({ version: '1', tab: 'summary' }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Parciais');
+    expect(fixture.nativeElement.querySelector('syn-state [data-state="partial"]')).toBeNull();
   });
   it('represents forbidden, not-found and unavailable report responses distinctly', () => {
     const cases: Array<{ failure: ApiFailure; expected: string }> = [

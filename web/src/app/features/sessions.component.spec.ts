@@ -40,22 +40,40 @@ describe('SessionsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Chrome / Windows');
     expect(fixture.nativeElement.textContent).toContain('Sessão atual');
     expect(fixture.nativeElement.querySelectorAll('.session-list li').length).toBe(2);
+    const icons = [...fixture.nativeElement.querySelectorAll('img.device-icon')] as HTMLImageElement[];
+    expect(icons.map((icon) => icon.getAttribute('src'))).toEqual([
+      '/assets/icons/device-chrome.svg', '/assets/icons/device-windows.svg',
+      '/assets/icons/device-chrome.svg', '/assets/icons/device-windows.svg'
+    ]);
+    expect(icons.every((icon) => icon.alt === '')).toBeTrue();
   });
 
-  it('requires confirmation before revoking one or all other sessions', () => {
+  it('uses safe fallback icons for unknown device labels', () => {
+    session.listSessions.and.returnValue(of([{ ...current, device: 'Navegador desconhecido / Sistema desconhecido' }]));
     const fixture = TestBed.createComponent(SessionsComponent);
     fixture.detectChanges();
-    const confirmation = spyOn(window, 'confirm').and.returnValue(false);
-    fixture.componentInstance.revoke(other);
-    fixture.componentInstance.revokeOthers();
-    expect(session.revokeSession).not.toHaveBeenCalled();
-    expect(session.revokeOtherSessions).not.toHaveBeenCalled();
+    const icons = [...fixture.nativeElement.querySelectorAll('img.device-icon')] as HTMLImageElement[];
+    expect(icons.map((icon) => icon.getAttribute('src'))).toEqual([
+      '/assets/icons/device-browser.svg', '/assets/icons/device-system.svg'
+    ]);
+  });
 
-    confirmation.and.returnValue(true);
+  it('requires the accessible confirmation dialog before revoking sessions', () => {
+    const fixture = TestBed.createComponent(SessionsComponent);
+    fixture.detectChanges();
+
     fixture.componentInstance.revoke(other);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(session.revokeSession).not.toHaveBeenCalled();
+
+    fixture.componentInstance.confirmRevocation();
     expect(session.revokeSession).toHaveBeenCalledWith(other);
     expect(fixture.componentInstance.sessions()).toEqual([current]);
+
     fixture.componentInstance.revokeOthers();
+    fixture.componentInstance.confirmRevocation();
     expect(session.revokeOtherSessions).toHaveBeenCalled();
   });
 });

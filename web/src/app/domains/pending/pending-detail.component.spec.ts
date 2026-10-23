@@ -14,4 +14,15 @@ describe('PendingDetailComponent',()=>{
   beforeEach(async()=>{response=new Subject();router=jasmine.createSpyObj<Router>('Router',['navigateByUrl','createUrlTree','serializeUrl'],{events:new Subject(),url:'/pending-items/1'});router.createUrlTree.and.returnValue({} as UrlTree);router.serializeUrl.and.returnValue('/related');await TestBed.configureTestingModule({imports:[PendingDetailComponent],providers:[provideRouter([]),{provide:Router,useValue:router},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:convertToParamMap({pendingId:'1'}),queryParamMap:convertToParamMap({from:'/pending-items?status=open&page=2'})}}},{provide:SessionService,useValue:{hasPermission:()=>false,profile:signal(null)}},{provide:PendingService,useValue:{detail:()=>response.asObservable()}}]}).compileComponents();fixture=TestBed.createComponent(PendingDetailComponent);fixture.detectChanges()});
   it('explains rule, version, context, and safely renders evidence',()=>{response.next(pendingItem({evidence:{note:'<script>unsafe()</script>'}}));fixture.detectChanges();const text=fixture.nativeElement.textContent as string;expect(text).toContain('pre_release_pending');expect(text).toContain('1.0.0');expect(text).toContain('WO-001');expect(text).toContain('<script>unsafe()</script>');expect(fixture.nativeElement.querySelector('script')).toBeNull();expect(text).not.toContain('Aprovar')});
   it('handles absent evidence and returns to the exact queue URL',()=>{response.next(pendingItem({evidence:{}}));fixture.detectChanges();expect(fixture.nativeElement.textContent).toContain('Nenhuma evidência');fixture.componentInstance.back();expect(router.navigateByUrl).toHaveBeenCalledWith('/pending-items?status=open&page=2')});
+  it('uses one consistent surface with a visible title and internally scrolling content',()=>{
+    response.next(pendingItem());fixture.detectChanges();
+    const page=fixture.nativeElement.querySelector('.pending-detail') as HTMLElement;
+    const body=fixture.nativeElement.querySelector('.detail-scroll') as HTMLElement;
+    expect(getComputedStyle(page).overflow).toBe('hidden');
+    expect(getComputedStyle(body).overflowY).toBe('auto');
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Detalhes da pendência');
+    expect(fixture.nativeElement.querySelectorAll('.card').length).toBe(0);
+    expect(fixture.nativeElement.querySelector('.eyebrow')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.nature-icon')).toBeNull();
+  });
 });
