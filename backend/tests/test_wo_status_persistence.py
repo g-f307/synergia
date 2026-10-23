@@ -161,3 +161,29 @@ def test_committing_the_same_result_twice_is_refused_without_duplicates(
         repository.commit_pipeline(execution_id, result)
 
     assert _counts(database_url, execution_id) == first
+
+
+def test_reconciliation_report_matches_the_persisted_execution(seeded) -> None:
+    from scripts.validate_wo_status import _persisted_counts
+
+    from app.wo_status_report import build_report, compare_persisted
+
+    database_url, execution_id, _, path, _ = seeded
+    _run(seeded)
+    report = build_report(path)
+
+    persisted = _persisted_counts(database_url, execution_id)
+
+    assert compare_persisted(report, persisted) == {"matches": True, "differences": []}
+    with psycopg.connect(database_url) as connection:
+        connection.execute(
+            "DELETE FROM synergia.normalized_records WHERE execution_id = %s "
+            "AND sheet_name = 'NFP' AND row_number = 4",
+            (execution_id,),
+        )
+    comparison = compare_persisted(
+        report, _persisted_counts(database_url, execution_id)
+    )
+    assert comparison["matches"] is False
+    assert comparison["differences"][0]["sheet"] == "NFP"
+    assert comparison["differences"][0]["kind"] == "normalized"
