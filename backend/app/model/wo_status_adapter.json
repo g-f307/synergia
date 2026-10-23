@@ -1,7 +1,7 @@
 {
   "adapter_id": "wo_status",
   "adapter_version": "1.0.0",
-  "contract_version": "1.1.0-draft",
+  "contract_version": "1.2.0-draft",
   "source": "WO Status",
   "sheets": {
     "NFP": {

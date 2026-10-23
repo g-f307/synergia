@@ -1,0 +1,222 @@
+{
+  "adapter_id": "total_decision",
+  "adapter_version": "1.0.0",
+  "contract_version": "1.2.0-draft",
+  "source": "Total Decision",
+  "sheet": "Sheet1",
+  "header_rows": [
+    1,
+    2
+  ],
+  "summary_rows": [
+    3
+  ],
+  "data_start_row": 4,
+  "identity": {
+    "all": [
+      "oqc_lot_id"
+    ],
+    "any": [
+      "workorder_number",
+      "workorder_id"
+    ]
+  },
+  "columns": [
+    {
+      "letter": "A",
+      "header_path": [
+        "Prod Date"
+      ],
+      "field": "production_date",
+      "kind": "date",
+      "contract_target": "production_date"
+    },
+    {
+      "letter": "B",
+      "header_path": [
+        "Inspection Date"
+      ],
+      "field": "inspection_date",
+      "kind": "date",
+      "contract_target": "inspection_date"
+    },
+    {
+      "letter": "C",
+      "header_path": [
+        "OQC ID"
+      ],
+      "field": "oqc_id",
+      "kind": "id",
+      "contract_target": "oqc_id_pending_key_validation"
+    },
+    {
+      "letter": "D",
+      "header_path": [
+        "Line"
+      ],
+      "field": "production_line",
+      "kind": "text",
+      "contract_target": "production_line"
+    },
+    {
+      "letter": "F",
+      "header_path": [
+        "MODEL"
+      ],
+      "field": "model",
+      "kind": "text",
+      "contract_target": "model"
+    },
+    {
+      "letter": "G",
+      "header_path": [
+        "Suffix"
+      ],
+      "field": "model_suffix",
+      "kind": "text",
+      "contract_target": "model_suffix"
+    },
+    {
+      "letter": "J",
+      "header_path": [
+        "WO Name"
+      ],
+      "field": "workorder_number",
+      "kind": "id",
+      "contract_target": "workorder_number_pending_precedence"
+    },
+    {
+      "letter": "AK",
+      "header_path": [
+        "Total Decision",
+        "Result"
+      ],
+      "field": "total_decision_result",
+      "kind": "status",
+      "contract_target": "total_decision_result"
+    },
+    {
+      "letter": "AL",
+      "header_path": [
+        "Total Decision",
+        "Judge Date"
+      ],
+      "field": "total_decision_at",
+      "kind": "datetime",
+      "contract_target": "total_decision_at"
+    },
+    {
+      "letter": "AM",
+      "header_path": [
+        "Total Decision",
+        "User"
+      ],
+      "field": "total_decision_user_present",
+      "kind": "restricted",
+      "contract_target": "total_decision_user_restricted"
+    },
+    {
+      "letter": "AN",
+      "header_path": [
+        "Total Decision",
+        "Total Decision Remark"
+      ],
+      "field": "total_decision_remark_present",
+      "kind": "restricted",
+      "contract_target": "total_decision_remark_restricted"
+    },
+    {
+      "letter": "AP",
+      "header_path": [
+        "ERP Upload",
+        "Result"
+      ],
+      "field": "erp_upload_result",
+      "kind": "status",
+      "contract_target": "erp_upload_result"
+    },
+    {
+      "letter": "AQ",
+      "header_path": [
+        "ERP Upload",
+        "Upload Date"
+      ],
+      "field": "erp_upload_at",
+      "kind": "datetime",
+      "contract_target": "erp_upload_at"
+    },
+    {
+      "letter": "AR",
+      "header_path": [
+        "ERP Upload",
+        "Upload User"
+      ],
+      "field": "erp_upload_user_present",
+      "kind": "restricted",
+      "contract_target": "erp_upload_user_restricted"
+    },
+    {
+      "letter": "AX",
+      "header_path": [
+        "Hold Qty"
+      ],
+      "field": "hold_quantity",
+      "kind": "qty",
+      "contract_target": "hold_quantity"
+    },
+    {
+      "letter": "AY",
+      "header_path": [
+        "Up. Qty"
+      ],
+      "field": "uploaded_quantity",
+      "kind": "qty",
+      "contract_target": "uploaded_quantity"
+    },
+    {
+      "letter": "AZ",
+      "header_path": [
+        "RW Qty"
+      ],
+      "field": "rework_quantity",
+      "kind": "qty",
+      "contract_target": "rework_quantity"
+    },
+    {
+      "letter": "BA",
+      "header_path": [
+        "Remain Qty"
+      ],
+      "field": "remaining_quantity",
+      "kind": "qty",
+      "contract_target": "remaining_quantity"
+    },
+    {
+      "letter": "BE",
+      "header_path": [
+        "OQC_LOT_ID"
+      ],
+      "field": "oqc_lot_id",
+      "kind": "id",
+      "contract_target": "oqc_lot_id_pending_relation"
+    },
+    {
+      "letter": "BF",
+      "header_path": [
+        "WO_ID"
+      ],
+      "field": "workorder_id",
+      "kind": "id",
+      "contract_target": "workorder_id_pending_precedence"
+    },
+    {
+      "letter": "BM",
+      "header_path": [
+        "ORG_ID"
+      ],
+      "field": "source_organization_code",
+      "kind": "id",
+      "contract_target": "organization_code_pending_validation"
+    }
+  ]
+}
