@@ -29,6 +29,7 @@ from app.wo_status_spec import load_spec as workorder_spec  # noqa: E402
 
 CORPUS = ROOT / "data/synthetic/ingestion-v1"
 VERSION = "1.0.0"
+CONFIGURATION = {"minimal_rows": 4, "edge_rows": 6, "tail_rows": 2}
 CLASSIFIED_AT = "2026-01-10T00:00:00+00:00"
 
 
@@ -180,8 +181,12 @@ def edited(content, *, only=None, action=None):
 
 
 def corpus_cases():
-    clean, _ = workorder(rows=4, tail=2)
-    edge, _ = workorder(rows=6, tail=2, edge=True)
+    clean, _ = workorder(
+        rows=CONFIGURATION["minimal_rows"], tail=CONFIGURATION["tail_rows"]
+    )
+    edge, _ = workorder(
+        rows=CONFIGURATION["edge_rows"], tail=CONFIGURATION["tail_rows"], edge=True
+    )
     yield "wo-composite", "WO Status", edge
     for name, sheet in (
         ("nfp", "NFP"),
@@ -231,6 +236,7 @@ def verify_manifest(directory=CORPUS):
         or manifest.get("schema_version") != VERSION
         or manifest.get("contains_real_data") is not False
         or manifest.get("seed") != 141
+        or manifest.get("configuration") != CONFIGURATION
     ):
         raise ValueError("Manifesto de ingestão incompatível")
     listed = {"manifest.json", "README.md"}

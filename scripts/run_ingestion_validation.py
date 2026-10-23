@@ -6,6 +6,7 @@ import argparse
 import importlib.metadata
 import json
 import logging
+import math
 import os
 import platform
 import subprocess
@@ -199,10 +200,38 @@ def parser():
     return result
 
 
+def expected_counts(source, rows):
+    windows = (
+        {
+            "NFP": (rows, 0, 0),
+            "OWM SN": (rows + 8, 8, 0),
+            "CTNR STATUS": (rows // 2, 0, 0),
+            "LOT PENDING_OQC": (16, 10, 6),
+        }
+        if source == "WO Status"
+        else {"Sheet1": (rows, 0, 0)}
+    )
+    return {
+        sheet: {
+            "read": read,
+            "ignored": ignored,
+            "imported": read - ignored,
+            "normalized": read - ignored - rejected,
+            "rejected": rejected,
+            "duplicated": 0,
+        }
+        for sheet, (read, ignored, rejected) in windows.items()
+    }
+
+
 def main():
     cli = parser()
     args = cli.parse_args()
-    if args.timeout <= 0 or (args.rows is not None and args.rows < 4):
+    if (
+        not math.isfinite(args.timeout)
+        or args.timeout <= 0
+        or (args.rows is not None and args.rows < 4)
+    ):
         cli.error("Timeout deve ser positivo e o perfil exige ao menos quatro linhas")
     if args.worker:
         if os.getenv("SYNERGIA_INGESTION_VALIDATION_WORKER") != "1":
@@ -240,21 +269,18 @@ def main():
             for scenario in ("within_budget",) if real else SCENARIOS:
                 runs.append(run_child(path, source, scenario, args.timeout))
                 if not real and scenario == "within_budget":
-                    expected = (
-                        {
-                            "NFP": rows,
-                            "OWM SN": rows,
-                            "CTNR STATUS": rows // 2,
-                            "LOT PENDING_OQC": 0,
-                        }
-                        if source == "WO Status"
-                        else {"Sheet1": rows}
-                    )
+                    expected = expected_counts(source, rows)
                     actual = {
-                        s["sheet"]: s["normalized"]
+                        s["sheet"]: {
+                            key: s[key] for key in expected.get(s["sheet"], {})
+                        }
                         for s in runs[-1].get("reconciliation", {}).get("sheets", [])
                     }
-                    runs[-1]["expected_normalized_by_sheet"] = expected
+                    runs[-1]["expected_normalized_by_sheet"] = {
+                        sheet: counts["normalized"]
+                        for sheet, counts in expected.items()
+                    }
+                    runs[-1]["expected_counts_by_sheet"] = expected
                     runs[-1]["passed"] = runs[-1]["passed"] and actual == expected
                 print(
                     json.dumps(

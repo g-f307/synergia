@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.ingestion_corpus import (  # noqa: E402
+    CONFIGURATION,
     CORPUS,
     VERSION,
     canonical,
@@ -49,7 +50,7 @@ def write(directory):
                 "schema_version": VERSION,
                 "seed": 141,
                 "contains_real_data": False,
-                "configuration": {"minimal_rows": 4, "edge_rows": 6, "tail_rows": 2},
+                "configuration": CONFIGURATION,
                 "cases": cases,
             }
         )

@@ -10,6 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from scripts.build_ingestion_corpus import verify as verify_corpus  # noqa: E402
 from scripts.ingestion_corpus import (  # noqa: E402
     CORPUS,
     corpus_cases,
@@ -33,6 +34,16 @@ def test_frozen_case_matches_hashes_semantics_and_reconciliation(case):
     report, result = execute(CORPUS / case["input"], case["source"])
     assert golden(report, result) == json.loads(expected_bytes)
     assert report["balanced"]
+    records = json.dumps(
+        result["imported_records"] + result["normalized_records"], default=str
+    )
+    for forbidden in (
+        "SYNTHETIC-RESTRICTED-CONTENT",
+        "SYNTHETIC-DENIED-CONTENT",
+        "DADO-NAO-AUTORIZADO",
+        "NEVER-IMPORT-SUMMARY",
+    ):
+        assert forbidden not in records
     assert {
         row["row"]
         for row in result["normalized_records"]
@@ -59,6 +70,35 @@ def test_accidental_fixture_or_golden_change_is_detected(tmp_path, kind):
     path.write_bytes(path.read_bytes() + b" ")
     with pytest.raises(ValueError, match="Hash"):
         verify_manifest(target)
+
+
+def test_manifest_configuration_cannot_silently_diverge_from_generator(tmp_path):
+    target = tmp_path / "corpus"
+    shutil.copytree(CORPUS, target)
+    path = target / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["configuration"]["minimal_rows"] += 1
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="incompatível"):
+        verify_manifest(target)
+
+
+def test_semantic_comparison_rejects_modified_golden_even_if_its_hash_is_updated(
+    tmp_path,
+):
+    target = tmp_path / "corpus"
+    shutil.copytree(CORPUS, target)
+    manifest = json.loads((target / "manifest.json").read_text())
+    case = manifest["cases"][0]
+    path = target / case["golden"]
+    expected = json.loads(path.read_text())
+    expected["sheets"][0]["read"] += 1
+    path.write_text(json.dumps(expected))
+    case["golden_sha256"] = digest(path.read_bytes())
+    (target / "manifest.json").write_text(json.dumps(manifest))
+    verify_manifest(target)
+    with pytest.raises(ValueError, match="gabarito"):
+        verify_corpus(target)
 
 
 def test_public_counts_never_include_private_names_values_or_hashes(tmp_path):

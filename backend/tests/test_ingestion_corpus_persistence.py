@@ -127,7 +127,7 @@ class CorpusDatabase:
             source_file_id=file_id,
         )
 
-    def reconcile(self, seeded, report):
+    def reconcile(self, seeded, report, result):
         identifier, file_id, case = seeded
         with psycopg.connect(self.database) as conn:
             actual = {}
@@ -143,9 +143,75 @@ class CorpusDatabase:
                         (identifier, file_id),
                     ).fetchall()
                 )
-            for sheet in report["sheets"]:
-                for kind in actual:
-                    assert actual[kind].get(sheet["sheet"], 0) == sheet[kind]
+            for kind in actual:
+                assert actual[kind] == {
+                    sheet["sheet"]: sheet[kind]
+                    for sheet in report["sheets"]
+                    if sheet[kind]
+                }
+            expected_values = sorted(
+                [
+                    (
+                        r["sheet"],
+                        r["row"],
+                        r["original_values"],
+                        r["values"],
+                        r["transformations"],
+                    )
+                    for r in result["normalized_records"]
+                ],
+                key=lambda row: row[:2],
+            )
+            assert self.snapshot(identifier) == expected_values
+            persisted_imports = conn.execute(
+                "SELECT sheet_name, row_number, original_values "
+                "FROM synergia.imported_records "
+                "WHERE execution_id = %s ORDER BY sheet_name, row_number",
+                (identifier,),
+            ).fetchall()
+            assert persisted_imports == sorted(
+                [
+                    (r["sheet"], r["row"], r["original_values"])
+                    for r in result["imported_records"]
+                ],
+                key=lambda row: row[:2],
+            )
+            fields = (
+                "workorder_number",
+                "planned_quantity",
+                "produced_quantity",
+                "received_quantity",
+                "released_quantity",
+                "pending_quantity",
+                "retained_quantity",
+                "partially_released",
+            )
+            persisted_workorders = conn.execute(
+                f"SELECT {', '.join(fields)} FROM synergia.workorders "
+                "WHERE execution_id = %s ORDER BY workorder_number",
+                (identifier,),
+            ).fetchall()
+            assert persisted_workorders == sorted(
+                [
+                    tuple(w.get(key) for key in fields)
+                    for w in result["processing"]["consolidation"]["workorders"]
+                ],
+                key=lambda row: row[0],
+            )
+            for table, count_key in (
+                ("lots", "consolidated_lots"),
+                ("serials", "consolidated_serials"),
+                ("classifications", "classifications"),
+            ):
+                assert (
+                    conn.execute(
+                        f"SELECT count(*) FROM synergia.{table} "
+                        "WHERE execution_id = %s",
+                        (identifier,),
+                    ).fetchone()[0]
+                    == (result["processing"]["summary"][count_key])
+                )
+            assert self.repository.get(identifier)["status"] == report["status"]
             rejected = conn.execute(
                 "SELECT count(*) FROM synergia.imported_records "
                 "WHERE execution_id = %s AND processing_status = 'rejected'",
@@ -217,7 +283,7 @@ def test_every_frozen_case_reconciles_with_real_persistence(corpus_db, case):
     )
     report, result = corpus_db.run(seeded)
     assert golden(report, result) == json.loads((CORPUS / case["golden"]).read_text())
-    corpus_db.reconcile(seeded, report)
+    corpus_db.reconcile(seeded, report, result)
     snapshot = corpus_db.snapshot(seeded[0])
     with pytest.raises(RuntimeError, match="não está apta"):
         corpus_db.repository.commit_pipeline(seeded[0], result)
@@ -238,8 +304,8 @@ def test_simultaneous_same_file_runs_have_one_owner_and_one_result(corpus_db, na
         if duplicate:
             corpus_db.repository.abort_claim(seeded[0], "duplicate_file")
             return duplicate, None
-        report, _ = corpus_db.run(seeded)
-        corpus_db.reconcile(seeded, report)
+        report, result = corpus_db.run(seeded)
+        corpus_db.reconcile(seeded, report, result)
         return seeded[0], report
 
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -250,6 +316,29 @@ def test_simultaneous_same_file_runs_have_one_owner_and_one_result(corpus_db, na
     loser = next(s for s in seeds if s[0] != results[0][0])
     assert corpus_db.snapshot(loser[0]) == []
     assert corpus_db.repository.get(loser[0])["status"] == "failed"
+
+
+@pytest.mark.parametrize(
+    "table,column",
+    [
+        ("normalized_records", "normalized_values"),
+        ("imported_records", "original_values"),
+    ],
+)
+def test_reconciliation_detects_corrupted_content_without_count_changes(
+    corpus_db, table, column
+):
+    seeded = corpus_db.seed("td-clean")
+    report, result = corpus_db.run(seeded)
+    corpus_db.reconcile(seeded, report, result)
+    with psycopg.connect(corpus_db.database) as conn:
+        conn.execute(
+            f"UPDATE synergia.{table} SET {column} = "
+            f"{column} || '{{\"injected\":true}}'::jsonb WHERE execution_id = %s",
+            (seeded[0],),
+        )
+    with pytest.raises(AssertionError):
+        corpus_db.reconcile(seeded, report, result)
 
 
 @pytest.mark.parametrize("names", [("wo-nfp", "wo-owm"), ("td-clean", "td-mixed")])
@@ -268,7 +357,7 @@ def test_simultaneous_distinct_files_preserve_each_organizations_results(
             is None
         )
         report, result = corpus_db.run(seeded)
-        corpus_db.reconcile(seeded, report)
+        corpus_db.reconcile(seeded, report, result)
         assert golden(report, result) == json.loads(
             (CORPUS / seeded[2]["golden"]).read_text()
         )
@@ -310,7 +399,7 @@ def test_concurrent_reprocess_replay_then_actual_processing_preserves_original(
     seeded = corpus_db.attach(retry, name)
     report, result = corpus_db.run(seeded)
     assert golden(report, result) == golden(original_report, original_result)
-    corpus_db.reconcile(seeded, report)
+    corpus_db.reconcile(seeded, report, result)
     assert corpus_db.snapshot(original[0]) == snapshot
     assert corpus_db.snapshot(retry) == snapshot
 
@@ -337,8 +426,8 @@ def test_generated_batches_run_concurrently_with_complete_persistence(
             )
             is None
         )
-        report, _ = corpus_db.run(seeded)
-        corpus_db.reconcile(seeded, report)
+        report, result = corpus_db.run(seeded)
+        corpus_db.reconcile(seeded, report, result)
         assert sum(s["normalized"] for s in report["sheets"]) == (
             300 if seeded[2]["source"] == "WO Status" else 160
         )

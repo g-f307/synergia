@@ -19,8 +19,8 @@ exportados. A evidência não equivale a aceite corporativo ou autorização de 
 
 | Cenário | Lidas | Ignoradas | Importadas | Normalizadas | Rejeitadas | Duração | Pico RSS |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| WO Status sintético, 10.000 linhas base | 25.024 | 18 | 25.006 | 25.000 | 6 | 26,02 s | 334,9 MiB |
-| Total Decision sintético, 10.000 linhas | 10.000 | 0 | 10.000 | 10.000 | 0 | 18,01 s | 272,6 MiB |
+| WO Status sintético, 10.000 linhas base | 25.024 | 18 | 25.006 | 25.000 | 6 | 29,87 s | 334,6 MiB |
+| Total Decision sintético, 10.000 linhas | 10.000 | 0 | 10.000 | 10.000 | 0 | 19,66 s | 272,7 MiB |
 | WO Status integral, restrito | 102.332 | 33.537 | 68.795 | 68.776 | 19 | 190,60 s | 685,2 MiB |
 | Total Decision integral, restrito | 551 | 0 | 551 | 550 | 1 | 0,97 s | 70,1 MiB |
 
@@ -60,8 +60,8 @@ ampliar o volume. A tabela e os artefatos abaixo usam as execuções corrigidas.
 
 ## Testes e verificações
 
-- 746 testes não integrados aprovados; 631 de integração aprovados em banco novo.
-- Dentro dessas suítes: 17 testes do corpus, oito do runner e 22 de persistência/concorrência do corpus.
+- 751 testes não integrados aprovados; 633 de integração aprovados em banco novo.
+- Dentro dessas suítes: 19 testes do corpus, onze do runner e 24 de persistência/concorrência do corpus.
 - Onze fixtures e gabaritos regenerados com bytes idênticos e hashes verificados.
 - Concorrência: um proprietário para o mesmo arquivo; arquivos distintos em organizações distintas; lotes gerados simultâneos com 300 e 160 registros normalizados.
 - Reprocessamento concorrente: um pedido efetivo e um replay, processamento real da nova tentativa e resultados originais preservados.
@@ -74,6 +74,27 @@ e a suíte completa repetida com sucesso. Não houve alteração da API, do dom�
 das migrations ou dos contratos dos adapters nesta issue.
 
 ## Artefatos sanitizados e limites do aceite
+
+A revisão posterior à implementação reforçou a comparação do conteúdo
+persistido (além das contagens), a validação da configuração do manifesto e a
+recusa de timeouts não finitos. Acrescentou testes que injetam corrupção no
+banco e alteram gabaritos mantendo hashes atualizados; ambos precisam ser
+detectados. O volume passou a exigir também as contagens esperadas de lidas,
+ignoradas, importadas, rejeitadas e duplicadas por aba, além das normalizadas.
+O perfil sintético foi medido novamente com esses controles. As medições
+integrais restritas foram preservadas: a revisão não alterou leitura, adapters
+ou regras do pipeline. Workorders persistidos, lotes, seriais, classificações
+e estado final também são conferidos pelos testes de reconciliação.
+
+| Critério da #141 | Evidência verificável |
+| --- | --- |
+| CI sem dependência de arquivos reais | fixtures locais inventadas; `build_ingestion_corpus.py`; perfil CI no workflow; execução remota ainda pendente |
+| Hashes e gabaritos detectam alterações | regeneração idêntica; mutação de XLSX/JSON; configuração divergente; contraprova com hash atualizado |
+| Volume comprova limites e rejeição segura | doze cenários medidos; códigos exatos; watchdog inválido/expirado; limpeza e reenvio pela API |
+| Concorrência sem duplicação ou corrupção | proprietário único; arquivos distintos; lotes gerados; comparação do conteúdo persistido e dos resultados consolidados |
+| Reprocessamento segue a política | pedidos concorrentes e replay; nova tentativa processada; original preservado |
+| Ausência de dados reais em artefatos públicos | geração inventada; sentinelas em importados/normalizados e relatórios; arquivos reais ignorados; relatórios restritos sem nomes, hashes ou valores |
+| Ambiente, configuração e limitações informados | CPU, RAM, versões, limites, duração/RSS e ressalvas nos JSON e neste relatório |
 
 - [Volume sintético e configuração dos doze cenários](evidence/ingestion-v1/synthetic-volume.json).
 - [Execução integral WO Status — somente agregados](evidence/ingestion-v1/restricted-wo.json).

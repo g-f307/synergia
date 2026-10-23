@@ -47,6 +47,12 @@ def test_both_adapter_families_complete_volume_and_reject_each_budget(tmp_path):
         assert case["peak_rss_bytes"] >= case["baseline_peak_rss_bytes"] > 0
         assert case["duration_seconds"] > 0
         assert case["configuration"]["ingestion"]["max_memory_bytes"] > 0
+        if case["scenario"] == "within_budget":
+            for sheet in case["reconciliation"]["sheets"]:
+                for key, expected in case["expected_counts_by_sheet"][
+                    sheet["sheet"]
+                ].items():
+                    assert sheet[key] == expected
     for forbidden in (
         "SYN-WO",
         "SYNTHETIC-RESTRICTED-CONTENT",
@@ -115,6 +121,13 @@ def test_watchdog_is_a_failure_not_a_successful_budget_rejection():
         c["reason_code"] == "watchdog_timeout" and not c["passed"]
         for c in report["runs"]
     )
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_watchdog_refuses_nonfinite_timeout(value):
+    process = run("--timeout=" + value)
+    assert process.returncode == 2
+    assert "Traceback" not in process.stderr
 
 
 def test_volume_generator_does_not_invent_negative_container_quantities(tmp_path):

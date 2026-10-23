@@ -26,6 +26,9 @@ minimizados e transformações. Verificação não escreve nem atualiza gabarito
 O gerador fixa timestamps do documento e do ZIP; uma mudança de dependência que
 altere os bytes exige revisão explícita. A verificação também recusa arquivos
 extras, inclusive em subdiretórios.
+Configuração divergente do gerador também é recusada. Um teste altera um
+gabarito e atualiza seu hash para comprovar que a comparação semântica continua
+detectando a divergência, independentemente da integridade dos bytes.
 
 ```bash
 backend/.venv/bin/python scripts/build_ingestion_corpus.py
@@ -52,6 +55,9 @@ Rejeições por capacidade são terminais e não são reconciliações parciais 
 
 Os testes PostgreSQL comparam gabarito, contagens de `imported_records`,
 `normalized_records`, estado de rejeição, hash do arquivo e proveniência.
+Também comparam o conteúdo integral persistido de originais, valores normalizados
+e transformações com o resultado do pipeline. Testes de corrupção mantêm as
+contagens e alteram os valores no banco, exigindo que a reconciliação falhe.
 Incluem onze casos congelados, duas famílias disputando o mesmo arquivo,
 arquivos distintos em organizações distintas, lotes gerados concorrentes e
 pedidos concorrentes de reprocessamento seguidos do processamento efetivo.
@@ -90,6 +96,9 @@ WO Status gera NFP e OWM com N linhas, CTNR com N/2 e as linhas constantes de
 LOT PENDING_OQC; Total Decision gera N linhas operacionais. Quantidades da
 massa limpa permanecem não negativas ao ampliar o volume. A geração acontece
 fora do worker medido e seus arquivos não são versionados.
+A geração consome memória no processo operador e não está coberta pelo
+watchdog de ingestão. Os perfis medidos não atestam valores arbitrários de
+`--rows`; a medição RSS do relatório descreve somente o worker de ingestão.
 
 O relatório informa CPU, arquitetura, CPUs lógicas, memória física e limite
 cgroup disponível, SO/kernel, versões Python/dependências, limites efetivos,
@@ -100,7 +109,9 @@ com `resource`, há fallback `getrusage`; a evidência validada desta entrega é
 Um watchdog externo encerra um worker que exceda `--timeout` (padrão 900 s).
 Timeout, erro de processo e erro de validação não contam como rejeição segura:
 o comando retorna falha. O cenário normal exige reconciliação equilibrada e
-ausência de bloqueio estrutural; cada cenário negativo exige seu código exato.
+ausência de bloqueio estrutural e compara todas as contagens por aba com a
+massa gerada; cada cenário negativo exige seu código exato. O timeout precisa
+ser positivo e finito; `NaN` e infinito não desabilitam o watchdog.
 
 RSS é o pico do processo, não consumo marginal por fase. O limite de memória
 da aplicação é uma estimativa preventiva, não um teto RSS imposto pelo kernel.

@@ -29,7 +29,7 @@
   "report_version": "1.0.0",
   "runs": [
     {
-      "baseline_peak_rss_bytes": 61440000,
+      "baseline_peak_rss_bytes": 61095936,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -57,11 +57,51 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 26.0222,
+      "duration_seconds": 29.8665,
+      "expected_counts_by_sheet": {
+        "CTNR STATUS": {
+          "duplicated": 0,
+          "ignored": 0,
+          "imported": 5000,
+          "normalized": 5000,
+          "read": 5000,
+          "rejected": 0
+        },
+        "LOT PENDING_OQC": {
+          "duplicated": 0,
+          "ignored": 10,
+          "imported": 6,
+          "normalized": 0,
+          "read": 16,
+          "rejected": 6
+        },
+        "NFP": {
+          "duplicated": 0,
+          "ignored": 0,
+          "imported": 10000,
+          "normalized": 10000,
+          "read": 10000,
+          "rejected": 0
+        },
+        "OWM SN": {
+          "duplicated": 0,
+          "ignored": 8,
+          "imported": 10000,
+          "normalized": 10000,
+          "read": 10008,
+          "rejected": 0
+        }
+      },
+      "expected_normalized_by_sheet": {
+        "CTNR STATUS": 5000,
+        "LOT PENDING_OQC": 0,
+        "NFP": 10000,
+        "OWM SN": 10000
+      },
       "file_bytes": 1301689,
       "outcome": "completed",
       "passed": true,
-      "peak_rss_bytes": 351203328,
+      "peak_rss_bytes": 350900224,
       "reconciliation": {
         "balanced": true,
         "blocking": false,
@@ -131,7 +171,7 @@
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61231104,
+      "baseline_peak_rss_bytes": 61321216,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -159,7 +199,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0096,
+      "duration_seconds": 0.0106,
       "file_bytes": 1301689,
       "limit": {
         "limit": 1,
@@ -167,13 +207,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 64507904,
+      "peak_rss_bytes": 64466944,
       "reason_code": "workbook_row_limit",
       "scenario": "row_limit",
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61263872,
+      "baseline_peak_rss_bytes": 61464576,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -201,7 +241,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0091,
+      "duration_seconds": 0.0109,
       "file_bytes": 1301689,
       "limit": {
         "limit": 1,
@@ -209,13 +249,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 64540672,
+      "peak_rss_bytes": 64610304,
       "reason_code": "workbook_dimension_limit",
       "scenario": "cell_limit",
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61423616,
+      "baseline_peak_rss_bytes": 60932096,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -243,7 +283,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0097,
+      "duration_seconds": 0.0104,
       "file_bytes": 1301689,
       "limit": {
         "limit": 1,
@@ -251,13 +291,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 64700416,
+      "peak_rss_bytes": 64208896,
       "reason_code": "workbook_memory_limit",
       "scenario": "memory_limit",
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61792256,
+      "baseline_peak_rss_bytes": 61186048,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -285,7 +325,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 1.3669,
+      "duration_seconds": 1.4389,
       "file_bytes": 1301689,
       "limit": {
         "limit": 1,
@@ -293,13 +333,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 67239936,
+      "peak_rss_bytes": 66531328,
       "reason_code": "ingestion_issue_limit",
       "scenario": "issue_limit",
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61644800,
+      "baseline_peak_rss_bytes": 61612032,
       "configuration": {
         "authorized_contract_sheets": [
           "ctnr status",
@@ -335,13 +375,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 61644800,
+      "peak_rss_bytes": 61612032,
       "reason_code": "ingestion_time_limit",
       "scenario": "time_limit",
       "source": "WO Status"
     },
     {
-      "baseline_peak_rss_bytes": 61452288,
+      "baseline_peak_rss_bytes": 61816832,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -366,11 +406,24 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 18.0122,
+      "duration_seconds": 19.6562,
+      "expected_counts_by_sheet": {
+        "Sheet1": {
+          "duplicated": 0,
+          "ignored": 0,
+          "imported": 10000,
+          "normalized": 10000,
+          "read": 10000,
+          "rejected": 0
+        }
+      },
+      "expected_normalized_by_sheet": {
+        "Sheet1": 10000
+      },
       "file_bytes": 876155,
       "outcome": "completed",
       "passed": true,
-      "peak_rss_bytes": 285839360,
+      "peak_rss_bytes": 285925376,
       "reconciliation": {
         "balanced": true,
         "blocking": false,
@@ -401,7 +454,7 @@
       "source": "Total Decision"
     },
     {
-      "baseline_peak_rss_bytes": 61538304,
+      "baseline_peak_rss_bytes": 61943808,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -426,7 +479,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.009,
+      "duration_seconds": 0.0094,
       "file_bytes": 876155,
       "limit": {
         "limit": 1,
@@ -434,13 +487,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 65208320,
+      "peak_rss_bytes": 65613824,
       "reason_code": "workbook_row_limit",
       "scenario": "row_limit",
       "source": "Total Decision"
     },
     {
-      "baseline_peak_rss_bytes": 61415424,
+      "baseline_peak_rss_bytes": 61706240,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -465,7 +518,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0089,
+      "duration_seconds": 0.0113,
       "file_bytes": 876155,
       "limit": {
         "limit": 1,
@@ -473,13 +526,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 65085440,
+      "peak_rss_bytes": 65376256,
       "reason_code": "workbook_dimension_limit",
       "scenario": "cell_limit",
       "source": "Total Decision"
     },
     {
-      "baseline_peak_rss_bytes": 61837312,
+      "baseline_peak_rss_bytes": 61874176,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -504,7 +557,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0099,
+      "duration_seconds": 0.0096,
       "file_bytes": 876155,
       "limit": {
         "limit": 1,
@@ -512,13 +565,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 65507328,
+      "peak_rss_bytes": 65544192,
       "reason_code": "workbook_memory_limit",
       "scenario": "memory_limit",
       "source": "Total Decision"
     },
     {
-      "baseline_peak_rss_bytes": 61566976,
+      "baseline_peak_rss_bytes": 61079552,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -543,7 +596,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 1.0268,
+      "duration_seconds": 1.0974,
       "file_bytes": 876155,
       "limit": {
         "limit": 1,
@@ -551,13 +604,13 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 67596288,
+      "peak_rss_bytes": 66797568,
       "reason_code": "ingestion_issue_limit",
       "scenario": "issue_limit",
       "source": "Total Decision"
     },
     {
-      "baseline_peak_rss_bytes": 61313024,
+      "baseline_peak_rss_bytes": 61042688,
       "configuration": {
         "authorized_contract_sheets": [
           "sheet1"
@@ -582,7 +635,7 @@
           "rejected_retention_hours": 24
         }
       },
-      "duration_seconds": 0.0014,
+      "duration_seconds": 0.0015,
       "file_bytes": 876155,
       "limit": {
         "limit": 1e-06,
@@ -590,7 +643,7 @@
       },
       "outcome": "rejected",
       "passed": true,
-      "peak_rss_bytes": 61313024,
+      "peak_rss_bytes": 61173760,
       "reason_code": "ingestion_time_limit",
       "scenario": "time_limit",
       "source": "Total Decision"
