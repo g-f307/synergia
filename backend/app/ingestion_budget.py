@@ -7,6 +7,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
+from app.total_decision_spec import SOURCE as TOTAL_DECISION_SOURCE
+from app.total_decision_spec import load_spec as load_decision_spec
 from app.wo_status_spec import COMPOSITE_SOURCE, MAX_SECONDS, load_spec
 
 DEFAULT_MAX_SHEETS = 64
@@ -250,10 +252,11 @@ def _allowed_sheets(source_key: str, source: str = "") -> frozenset[str] | None:
     names = frozenset(
         part.strip().casefold() for part in raw.split("|") if part.strip()
     )
-    if source == COMPOSITE_SOURCE:
+    if source in {COMPOSITE_SOURCE, TOTAL_DECISION_SOURCE}:
         # The adapter's versioned contract names the sheets it can ingest: an
         # empty list or ``*`` means all of them, and a narrower list restricts.
-        contract = load_spec().authorized_names()
+        spec = load_spec() if source == COMPOSITE_SOURCE else load_decision_spec()
+        contract = spec.authorized_names()
         return contract if not names or "*" in names else names & contract
     return None if "*" in names else names
 
@@ -293,7 +296,11 @@ def budget_for(source: str) -> IngestionBudget:
         ),
         allowed_sheets=_allowed_sheets(key, source),
         selected_columns=(
-            load_spec().selected_columns() if source == COMPOSITE_SOURCE else None
+            load_spec().selected_columns()
+            if source == COMPOSITE_SOURCE
+            else load_decision_spec().selected_columns()
+            if source == TOTAL_DECISION_SOURCE
+            else None
         ),
     )
 

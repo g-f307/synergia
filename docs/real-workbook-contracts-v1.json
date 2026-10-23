@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "contract_version": "1.1.0-draft",
+  "contract_version": "1.2.0-draft",
   "status": "proposed",
   "issue": 137,
   "default_policy": "deny",
@@ -254,6 +254,16 @@
             "empty_inspection_id": 551,
             "empty_legacy_workorder_id": 551,
             "empty_approval_block": 551
+          },
+          "adapter_policy": {
+            "source": "Total Decision",
+            "logical_source": "GMES/OQC",
+            "negative_quantities": "reject_row",
+            "organization": "preserve_source_code_without_IAM_mapping",
+            "unknown_states": "preserve_and_warn",
+            "unparsed_dates": "preserve_and_warn",
+            "restricted_values": "presence_only_before_pipeline",
+            "identity_aliases": "never_equate_distinct_identifiers"
           },
           "columns": {
             "A": {"header_path": ["Prod Date"], "target": "production_date", "cell_policy": "literal_only"},

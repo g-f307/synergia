@@ -14,6 +14,8 @@ from app.observability.metrics import observe_ingestion
 from app.observability.telemetry import safe_log
 from app.processing import process_normalized_records
 from app.spreadsheet_reader import IngestionRun, LazySheetRows
+from app.total_decision import TotalDecisionImporter, expand_total_decision
+from app.total_decision_spec import SOURCE as TOTAL_DECISION_SOURCE
 from app.validation import (
     DataReadError,
     failed_validation_report,
@@ -60,6 +62,7 @@ IMPORTERS: dict[str, SourceImporter] = {
     source: TabularSourceImporter() for source in ("N-FP", "OWM", "GMES/OQC", "TMS")
 }
 IMPORTERS["WO Status"] = WoStatusImporter()
+IMPORTERS[TOTAL_DECISION_SOURCE] = TotalDecisionImporter()
 
 
 def read_source(
@@ -203,7 +206,9 @@ def _imported_records(
                     "row": row_number,
                     "original_values": {
                         field: (
-                            _original_value(row[index]) if index < len(row) else None
+                            _original_value(getattr(row, "original_values", row)[index])
+                            if index < len(row)
+                            else None
                         )
                         for index, field in enumerate(fields)
                     },
@@ -295,7 +300,11 @@ def _run_pipeline_batch(
         sub
         for item in inputs
         for sub in (
-            expand_composite(item) if is_composite(str(item["source"])) else [item]
+            expand_composite(item)
+            if is_composite(str(item["source"]))
+            else [expand_total_decision(item)]
+            if item["source"] == TOTAL_DECISION_SOURCE
+            else [item]
         )
     ]
     if not resume:
@@ -469,9 +478,7 @@ def _run_pipeline_batch(
             normalized_records,
             execution_id=execution_id,
             classified_at=classified_at,
-            defer_rule_details=(
-                len(normalized_records) >= RULE_DETAIL_DEFER_THRESHOLD
-            ),
+            defer_rule_details=(len(normalized_records) >= RULE_DETAIL_DEFER_THRESHOLD),
             checkpoint=checkpoint,
             on_consolidated=(
                 None

@@ -11,6 +11,13 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0032": (
+        "checks_contain",
+        "",
+        "executions.executions_source_check:Total Decision;"
+        "source_files.source_files_source_check:Total Decision;"
+        "file_inspections.file_inspections_source_check:Total Decision",
+    ),
     "0001": ("schema", "synergia", ""),
     "0002": ("table", "synergia", "executions"),
     "0003": ("column", "source_files", "storage_key"),
@@ -154,9 +161,7 @@ def resolve_baseline(files: list[Path], requested: str) -> int:
     return names.index(requested)
 
 
-def validate_baseline(
-    connection: psycopg.Connection, migrations: list[Path]
-) -> None:
+def validate_baseline(connection: psycopg.Connection, migrations: list[Path]) -> None:
     missing = []
     for migration in migrations:
         prefix = migration.name.split("_", 1)[0]

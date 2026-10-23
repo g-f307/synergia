@@ -72,6 +72,31 @@ def migration_count(database: str) -> int:
         ).fetchone()[0]
 
 
+@pytest.mark.parametrize("table", ["executions", "source_files", "file_inspections"])
+def test_total_decision_baseline_requires_all_source_constraints(
+    migration_database: str,
+    table: str,
+) -> None:
+    index = next(i for i, path in enumerate(MIGRATIONS) if path.name.startswith("0032"))
+    apply_legacy_schema(migration_database, index)
+    with psycopg.connect("", dbname=migration_database) as connection:
+        connection.execute(
+            sql.SQL(
+                "ALTER TABLE synergia.{} DROP CONSTRAINT {}, "
+                "ADD CONSTRAINT {} CHECK (source IN "
+                "('N-FP', 'OWM', 'GMES/OQC', 'TMS', 'WO Status', 'Total Decision'))"
+            ).format(
+                sql.Identifier(table),
+                sql.Identifier(f"{table}_source_check"),
+                sql.Identifier(f"{table}_source_check"),
+            )
+        )
+    result = run_migrations(migration_database, MIGRATIONS[index].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert migration_count(migration_database) == 0
+
+
 def test_adopts_completely_legacy_database(migration_database: str) -> None:
     apply_legacy_schema(migration_database, len(MIGRATIONS))
 

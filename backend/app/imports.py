@@ -68,6 +68,7 @@ class ImportSource(StrEnum):
     gmes_oqc = "GMES/OQC"
     tms = "TMS"
     wo_status = "WO Status"
+    total_decision = "Total Decision"
 
 
 class ImportStatus(BaseModel):

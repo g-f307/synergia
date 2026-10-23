@@ -18,6 +18,7 @@ from urllib.parse import unquote
 from fastapi import UploadFile
 
 from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
+from app.total_decision_spec import SOURCE as TOTAL_DECISION_SOURCE
 from app.wo_status_spec import (
     ARCHIVE_UNCOMPRESSED_BYTES,
     COMPOSITE_SOURCE,
@@ -112,7 +113,9 @@ def policy_for(source: str) -> UploadPolicy:
         os.getenv(
             "UPLOAD_ALLOWED_EXTENSIONS",
             # The composite WO Status workbook is only meaningful as XLSX.
-            "xlsx" if source == COMPOSITE_SOURCE else "csv,json,xlsx",
+            "xlsx"
+            if source in {COMPOSITE_SOURCE, TOTAL_DECISION_SOURCE}
+            else "csv,json,xlsx",
         ),
     )
     allowed = frozenset(
@@ -120,7 +123,7 @@ def policy_for(source: str) -> UploadPolicy:
         for value in allowed_value.split(",")
         if value.strip()
     )
-    if source == COMPOSITE_SOURCE:
+    if source in {COMPOSITE_SOURCE, TOTAL_DECISION_SOURCE}:
         # No configuration can widen the composite source beyond XLSX.
         allowed = allowed & {".xlsx"}
     unsupported = allowed.difference(MEDIA_TYPES)
