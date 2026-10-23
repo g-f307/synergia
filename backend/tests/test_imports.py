@@ -976,8 +976,150 @@ def test_files_accepted_individually_are_budgeted_together(api, monkeypatch) -> 
     assert repository.get(error["details"]["execution_id"])["status"] == "failed"
     assert not [
         path
-        for path in storage.glob(
-            f"accepted/**/{error['details']['execution_id']}/*"
-        )
+        for path in storage.glob(f"accepted/**/{error['details']['execution_id']}/*")
         if path.is_file()
     ]
+
+
+@pytest.mark.parametrize("order", [("N-FP", "OWM"), ("OWM", "N-FP")])
+def test_aggregate_budget_uses_the_most_restrictive_source_in_any_order(
+    api, monkeypatch, order
+) -> None:
+    from app.ingestion_budget import CELL_COST_BYTES, ROW_COST_BYTES
+
+    client, repository, storage = api
+    one_file = 30 * ROW_COST_BYTES + 60 * CELL_COST_BYTES
+    # N-FP keeps the 1 GiB default; OWM only fits one 30-record file.
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES_OWM", str(one_file + one_file // 10))
+
+    alone = client.post(
+        "/imports",
+        data={"source": "OWM"},
+        files={"file": ("sozinho.xlsx", _workbook_with_rows(30), XLSX_TYPE)},
+    )
+    assert alone.status_code == 201
+
+    together = client.post(
+        "/imports",
+        data={"source": list(order)},
+        files=[
+            ("file", ("um.xlsx", _workbook_with_rows(30), XLSX_TYPE)),
+            ("file", ("dois.xlsx", _workbook_with_rows(31), XLSX_TYPE)),
+        ],
+    )
+
+    assert together.status_code == 413
+    error = together.json()["error"]
+    assert error["code"] == "workbook_memory_limit"
+    assert error["details"]["limit"] == one_file + one_file // 10
+
+
+def test_request_is_rejected_before_processing_when_it_has_too_many_files(
+    api, monkeypatch
+) -> None:
+    client, repository, storage = api
+    monkeypatch.setenv("INGESTION_MAX_FILES", "2")
+    files = [
+        ("file", (f"f{index}.xlsx", _workbook_with_rows(3), XLSX_TYPE))
+        for index in range(3)
+    ]
+
+    response = client.post(
+        "/imports", data={"source": ["N-FP", "OWM", "TMS"]}, files=files
+    )
+
+    assert response.status_code == 413
+    error = response.json()["error"]
+    assert error["code"] == "ingestion_file_limit"
+    assert error["details"]["limit"] == 2
+    assert error["details"]["observed"] == 3
+    assert error["details"]["guidance"]
+    assert repository.executions == {}
+    assert not [path for path in storage.glob("**/*") if path.is_file()]
+
+    accepted = client.post(
+        "/imports",
+        data={"source": ["N-FP", "OWM"]},
+        files=files[:2],
+    )
+    assert accepted.status_code == 201
+
+
+def _outcome_count(outcome: str) -> int:
+    from app.observability.metrics import INGESTION_DURATION
+
+    return sum(bucket.get() for bucket in INGESTION_DURATION.labels(outcome)._buckets)
+
+
+def test_admission_rejection_records_duration_and_peak_memory(api, monkeypatch) -> None:
+    from app.observability.metrics import INGESTION_PEAK_MEMORY
+
+    client, _, _ = api
+    monkeypatch.setenv("INGESTION_MAX_ROWS", "5")
+    before = _outcome_count("rejected")
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("grande.xlsx", _workbook_with_rows(20), XLSX_TYPE)},
+    )
+
+    assert response.status_code == 413
+    assert _outcome_count("rejected") == before + 1
+    assert INGESTION_PEAK_MEMORY._value.get() > 0
+
+
+def test_consolidation_timeout_is_a_structured_rejection_with_metrics(
+    api, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
+    from app.observability.metrics import INGESTION_REJECTIONS
+
+    client, repository, storage = api
+    real_process = pipeline.process_normalized_records
+
+    def expire_then_process(records, **kwargs):
+        monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: 10**9)
+        return real_process(records, **kwargs)
+
+    monkeypatch.setattr(pipeline, "process_normalized_records", expire_then_process)
+    before_count = _outcome_count("rejected")
+    before_reason = INGESTION_REJECTIONS.labels("ingestion_time_limit")._value.get()
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("lento.xlsx", _workbook_with_rows(20), XLSX_TYPE)},
+    )
+
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "ingestion_time_limit"
+    assert error["details"]["guidance"]
+    assert repository.get(error["details"]["execution_id"])["status"] == "failed"
+    assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]
+    assert _outcome_count("rejected") == before_count + 1
+    after_reason = INGESTION_REJECTIONS.labels("ingestion_time_limit")._value.get()
+    assert after_reason == before_reason + 1
+
+
+def test_unexpected_pipeline_failure_counts_as_failed_once(api, monkeypatch) -> None:
+    from app import pipeline
+
+    client, _, _ = api
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("falha inesperada")
+
+    monkeypatch.setattr(pipeline, "process_normalized_records", broken)
+    before = _outcome_count("failed")
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("quebra.xlsx", _workbook_with_rows(5), XLSX_TYPE)},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "pipeline_error"
+    assert _outcome_count("failed") == before + 1

@@ -139,6 +139,31 @@ def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
+OPEN_PARTS = ("xl/sharedstrings.xml", "xl/styles.xml", "xl/workbook.xml")
+
+
+def open_parts_bytes(archive: zipfile.ZipFile) -> int:
+    """Uncompressed size of the parts openpyxl loads whole when opening a book.
+
+    Shared strings, styles and the workbook definition are materialized by the
+    reader before any row is read, so their size must be bounded up front.
+    """
+    return sum(
+        entry.file_size
+        for entry in archive.infolist()
+        if entry.filename.lower() in OPEN_PARTS
+        or entry.filename.lower().startswith("xl/theme/")
+    )
+
+
+def check_open_parts(archive: zipfile.ZipFile, budget: IngestionBudget) -> None:
+    size = open_parts_bytes(archive)
+    if size > budget.max_open_bytes:
+        raise IngestionLimitError(
+            "workbook_metadata_limit", limit=budget.max_open_bytes, observed=size
+        )
+
+
 def read_sheet_refs(archive: zipfile.ZipFile) -> list[SheetRef]:
     """Resolve sheet names to package parts from the (small) workbook parts."""
     members = {entry.filename.lower(): entry for entry in archive.infolist()}
@@ -319,6 +344,7 @@ def scan_package(
     budget = policy.budget
     clock = budget.start()
     ledger = ByteLedger(policy.max_archive_uncompressed_bytes)
+    check_open_parts(archive, budget)
     references = read_sheet_refs(archive)
     profile = XlsxProfile(sheet_names=[reference.name for reference in references])
     if len(references) > budget.max_sheets:

@@ -189,7 +189,7 @@ def _read_tables(path: Path, extension: str, source: str | None = None):
         )
         return
     run = IngestionRun(source or "default")
-    with open_workbook(path) as workbook:
+    with open_workbook(path, run.budget) as workbook:
         for name in workbook.sheetnames:
             if not run.budget.authorizes(name):
                 continue

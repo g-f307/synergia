@@ -5,6 +5,7 @@ import pytest
 from app import ingestion_budget
 from app.ingestion_budget import (
     DEFAULT_MAX_CELLS,
+    IngestionBudget,
     IngestionLimitError,
     budget_for,
 )
@@ -120,3 +121,28 @@ def test_clock_raises_only_after_the_deadline(monkeypatch) -> None:
         clock.check()
     assert excinfo.value.code == "ingestion_time_limit"
     assert excinfo.value.limit == clock.max_seconds
+
+
+def test_most_restrictive_budget_is_independent_of_the_order(monkeypatch) -> None:
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", "1000000")
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES_OWM", "64000")
+    monkeypatch.setenv("INGESTION_MAX_SECONDS_TMS", "5")
+    budgets = [budget_for(source) for source in ("N-FP", "OWM", "TMS")]
+
+    forward = IngestionBudget.most_restrictive(budgets)
+    backward = IngestionBudget.most_restrictive(list(reversed(budgets)))
+
+    assert forward.max_memory_bytes == backward.max_memory_bytes == 64000
+    assert forward.max_seconds == backward.max_seconds == 5
+
+
+def test_file_limit_is_global_and_positive(monkeypatch) -> None:
+    monkeypatch.delenv("INGESTION_MAX_FILES", raising=False)
+    assert ingestion_budget.max_files() == ingestion_budget.DEFAULT_MAX_FILES
+
+    monkeypatch.setenv("INGESTION_MAX_FILES", "3")
+    assert ingestion_budget.max_files() == 3
+
+    monkeypatch.setenv("INGESTION_MAX_FILES", "0")
+    with pytest.raises(RuntimeError, match="INGESTION_MAX_FILES"):
+        ingestion_budget.max_files()

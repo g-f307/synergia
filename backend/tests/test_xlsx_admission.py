@@ -313,3 +313,33 @@ def test_inspection_memory_does_not_grow_with_the_sheet_size(tmp_path) -> None:
 
     assert result.accepted, result.reason_code
     assert peak < uncompressed / 2, (peak, uncompressed)
+
+
+def _with_padded_part(content: bytes, name: str, size: int) -> bytes:
+    import os
+
+    target = BytesIO()
+    with (
+        zipfile.ZipFile(BytesIO(content)) as original,
+        zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as modified,
+    ):
+        for entry in original.infolist():
+            if entry.filename != name:
+                modified.writestr(entry, original.read(entry))
+        # Incompressible text keeps the part below the compression-ratio guard,
+        # so only the dedicated metadata budget can reject it.
+        modified.writestr(name, os.urandom(size // 2).hex().encode())
+    return target.getvalue()
+
+
+def test_rejects_a_large_shared_strings_table_before_opening(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("INGESTION_MAX_OPEN_BYTES", "100000")
+    content = _with_padded_part(_workbook_bytes(), "xl/sharedStrings.xml", 200_000)
+
+    result = _inspect(tmp_path, content)
+
+    assert result.reason_code == "workbook_metadata_limit"
+    assert result.reason_details["observed"] >= 200_000
+    assert result.reason_details["limit"] == 100_000

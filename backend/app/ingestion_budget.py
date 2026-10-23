@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import re
 import time
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
 from typing import Any
 
 DEFAULT_MAX_SHEETS = 64
@@ -12,6 +13,8 @@ DEFAULT_MAX_COLUMNS = 16_384
 DEFAULT_MAX_CELLS = 2_000_000
 DEFAULT_MAX_FORMULAS = 2_000_000
 DEFAULT_MAX_MEMORY_BYTES = 1024 * 1024 * 1024
+DEFAULT_MAX_OPEN_BYTES = 32 * 1024 * 1024
+DEFAULT_MAX_FILES = 10
 RULE_DETAIL_DEFER_ROWS = 50_000  # keep equal to pipeline.RULE_DETAIL_DEFER_THRESHOLD
 ROW_COST_BYTES = 22_000
 DEFERRED_ROW_COST_BYTES = 4_500
@@ -44,6 +47,15 @@ LIMIT_GUIDANCE: dict[str, tuple[str, str]] = {
     "workbook_memory_limit": (
         "Estimativa de memória da planilha acima do orçamento",
         "Reduza linhas ou colunas, ou solicite aumento medido do orçamento.",
+    ),
+    "workbook_metadata_limit": (
+        "Metadados do pacote acima do orçamento",
+        "As strings compartilhadas e os estilos são carregados na abertura; "
+        "reexporte a planilha sem estilos ou textos não utilizados.",
+    ),
+    "ingestion_file_limit": (
+        "Arquivos em excesso na requisição",
+        "Envie menos arquivos por requisição ou solicite aumento medido do limite.",
     ),
     "workbook_formula_limit": (
         "Planilha com fórmulas acima do limite",
@@ -114,6 +126,7 @@ class IngestionBudget:
     max_cells: int = DEFAULT_MAX_CELLS
     max_formulas: int = DEFAULT_MAX_FORMULAS
     max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES
+    max_open_bytes: int = DEFAULT_MAX_OPEN_BYTES
     max_seconds: float = DEFAULT_MAX_SECONDS
     max_issues: int = DEFAULT_MAX_ISSUES
     progress_interval: int = DEFAULT_PROGRESS_INTERVAL
@@ -144,6 +157,23 @@ class IngestionBudget:
         stop early on the cheapest regime, which holds for any final count.
         """
         return rows * DEFERRED_ROW_COST_BYTES + cells * CELL_COST_BYTES
+
+    @staticmethod
+    def most_restrictive(budgets: Sequence[IngestionBudget]) -> IngestionBudget:
+        """Combine the budgets of every source in one execution deterministically.
+
+        The accumulated records and the consolidation stage are shared by all
+        files, so the smallest memory, time and issue limits among the
+        participating sources apply, whatever the order of the files.
+        """
+        first = budgets[0]
+        return replace(
+            first,
+            max_memory_bytes=min(budget.max_memory_bytes for budget in budgets),
+            max_seconds=min(budget.max_seconds for budget in budgets),
+            max_issues=min(budget.max_issues for budget in budgets),
+            max_open_bytes=min(budget.max_open_bytes for budget in budgets),
+        )
 
     def authorizes(self, sheet: str) -> bool:
         return self.allowed_sheets is None or sheet.casefold() in self.allowed_sheets
@@ -176,7 +206,9 @@ def _source_key(source: str) -> str:
 
 
 def _positive(name: str, source_key: str, default: int | float, cast=int):
-    raw = os.getenv(f"{name}_{source_key}", os.getenv(name))
+    raw = os.getenv(f"{name}_{source_key}") if source_key else None
+    if raw is None:
+        raw = os.getenv(name)
     if raw is None or not raw.strip():
         return default
     try:
@@ -221,6 +253,9 @@ def budget_for(source: str) -> IngestionBudget:
         max_memory_bytes=_positive(
             "INGESTION_MAX_MEMORY_BYTES", key, DEFAULT_MAX_MEMORY_BYTES
         ),
+        max_open_bytes=_positive(
+            "INGESTION_MAX_OPEN_BYTES", key, DEFAULT_MAX_OPEN_BYTES
+        ),
         max_seconds=_positive(
             "INGESTION_MAX_SECONDS", key, DEFAULT_MAX_SECONDS, cast=float
         ),
@@ -230,3 +265,8 @@ def budget_for(source: str) -> IngestionBudget:
         ),
         allowed_sheets=_allowed_sheets(key),
     )
+
+
+def max_files() -> int:
+    """Files accepted by one import request (global, not per source)."""
+    return _positive("INGESTION_MAX_FILES", "", DEFAULT_MAX_FILES)

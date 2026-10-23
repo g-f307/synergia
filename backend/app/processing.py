@@ -13,10 +13,14 @@ class ProcessingError(ValueError):
 
 
 def _validated_records(
-    records: Iterable[Mapping[str, Any]], execution_id: str
+    records: Iterable[Mapping[str, Any]],
+    execution_id: str,
+    checkpoint: Callable[[], None] | None = None,
 ) -> list[dict[str, Any]]:
     validated: list[dict[str, Any]] = []
-    for record in records:
+    for position, record in enumerate(records):
+        if checkpoint is not None and position % 1024 == 0:
+            checkpoint()
         if record.get("execution_id") != execution_id:
             raise ProcessingError(
                 "Todos os registros normalizados devem pertencer à execução atual"
@@ -41,8 +45,12 @@ def process_normalized_records(
     checkpoint: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Consolidate and classify eligible normalized records from one execution."""
-    eligible = _validated_records(records, execution_id)
-    consolidation = consolidate(eligible, isolate_failures=True)
+    eligible = _validated_records(records, execution_id, checkpoint)
+    consolidation = consolidate(
+        eligible, isolate_failures=True, checkpoint=checkpoint
+    )
+    if checkpoint is not None:
+        checkpoint()
     if on_consolidated is not None:
         on_consolidated()
     classifiable_workorders = []
@@ -64,6 +72,7 @@ def process_normalized_records(
                 run_id=execution_id,
                 classified_at=classified_at,
                 catalog=catalog,
+                checkpoint=checkpoint,
             )
         except BusinessRuleError as exc:
             failure = {
@@ -105,7 +114,10 @@ def process_normalized_records(
             run_id=execution_id,
             classified_at=classified_at,
             catalog=catalog,
+            checkpoint=checkpoint,
         )
+        if checkpoint is not None:
+            checkpoint()
     workorders = consolidation["workorders"]
     rule_counts = (
         deferred_rule_counts

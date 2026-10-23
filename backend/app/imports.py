@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from collections.abc import Generator
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -41,8 +42,8 @@ from app.execution import (
     import_fingerprint,
     validate_transition,
 )
-from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError
-from app.observability.metrics import record_ingestion_rejection
+from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError, max_files
+from app.observability.metrics import observe_ingestion, record_ingestion_rejection
 from app.observability.telemetry import (
     bind_execution_id,
     current_correlation_id,
@@ -936,6 +937,27 @@ INSPECTION_MESSAGES = {
 }
 
 
+def _observe_terminal(
+    outcome: str, started: float, reason: str | None = None
+) -> None:
+    """Record a terminal outcome decided before or outside the pipeline."""
+    peak = observe_ingestion(
+        outcome=outcome,
+        duration_seconds=time.monotonic() - started,
+        rows_processed=0,
+        rows_rejected=0,
+        reason=reason,
+        allowed_reasons=frozenset(LIMIT_GUIDANCE),
+    )
+    safe_log(
+        logging.WARNING,
+        f"ingestion.{outcome}",
+        reason_code=reason,
+        duration_ms=int((time.monotonic() - started) * 1000),
+        peak_memory_bytes=peak,
+    )
+
+
 def _rejection_details(inspection) -> dict | None:
     details = dict(inspection.reason_details or {})
     guidance = LIMIT_GUIDANCE.get(inspection.reason_code)
@@ -993,6 +1015,16 @@ async def upload_import(
 ) -> ImportStatus:
     execution_id = str(uuid4())
     bind_execution_id(execution_id)
+    started = time.monotonic()
+    if len(file) > max_files():
+        error = IngestionLimitError(
+            "ingestion_file_limit", limit=max_files(), observed=len(file)
+        )
+        record_ingestion_rejection(error.code, frozenset(LIMIT_GUIDANCE))
+        raise HTTPException(
+            status_code=413,
+            detail={"code": error.code, "message": error.message, **error.details()},
+        )
     if not source or len(source) != len(file):
         raise HTTPException(
             status_code=422,
@@ -1077,10 +1109,7 @@ async def upload_import(
                     inspection.quarantine_path.unlink(missing_ok=True)
                 raise
             if not inspection.accepted:
-                if inspection.reason_code in LIMIT_GUIDANCE:
-                    record_ingestion_rejection(
-                        inspection.reason_code, frozenset(LIMIT_GUIDANCE)
-                    )
+                _observe_terminal("rejected", started, inspection.reason_code)
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 if pipeline_inputs:
@@ -1257,7 +1286,7 @@ async def upload_import(
         if pipeline_inputs:
             repository.abort_claim(execution_id, exc.code)
         if not exc.recorded:
-            record_ingestion_rejection(exc.code, frozenset(LIMIT_GUIDANCE))
+            _observe_terminal("rejected", started, exc.code)
         _error(
             repository,
             execution_id,
@@ -1276,6 +1305,7 @@ async def upload_import(
         for destination in destinations:
             destination.unlink(missing_ok=True)
         repository.abort_claim(execution_id, "preparation_error")
+        _observe_terminal("failed", started)
         safe_log(
             logging.ERROR,
             "import.preparation.failed",

@@ -388,30 +388,29 @@ def test_full_pipeline_memory_of_a_narrow_sheet_stays_under_the_budget_estimate(
     assert peak <= budget.estimated_memory(rows + 1, (rows + 1) * 3), peak
 
 
-def test_consolidation_stage_honours_the_time_budget(tmp_path, monkeypatch) -> None:
-    from app import ingestion_budget
+def test_consolidation_stage_honours_the_time_budget_in_the_real_code(
+    tmp_path, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
     from app.ingestion_budget import IngestionLimitError
 
     path = tmp_path / "pequena.xlsx"
     _narrow_workbook(path, rows=30, workorders=3)
     tables, read_issues = read_source(path, ".xlsx", "OWM")
-    repository = RecordingRepository()
+    real_process = pipeline.process_normalized_records
 
-    def expire_then_process(records, *, checkpoint, **kwargs):
-        assert checkpoint is not None
-        monkeypatch.setattr(
-            ingestion_budget.time, "monotonic", lambda: 10**9, raising=True
-        )
-        checkpoint()
+    def expire_then_process(records, **kwargs):
+        monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: 10**9)
+        return real_process(records, **kwargs)
 
-    monkeypatch.setattr("app.pipeline.process_normalized_records", expire_then_process)
+    monkeypatch.setattr(pipeline, "process_normalized_records", expire_then_process)
 
     with pytest.raises(IngestionLimitError) as excinfo:
         run_pipeline(
             execution_id="exec-slow",
             file_name="pequena.xlsx",
             source="OWM",
-            repository=repository,
+            repository=RecordingRepository(),
             tables=tables,
             read_issues=read_issues,
             source_file_id=1,
@@ -419,6 +418,119 @@ def test_consolidation_stage_honours_the_time_budget(tmp_path, monkeypatch) -> N
         )
 
     assert excinfo.value.code == "ingestion_time_limit"
+
+
+def _normalized(workorders: int) -> list[dict]:
+    from app.normalization import normalize_tables
+
+    rows = [[f"WO-{index:05d}", "open"] for index in range(workorders)]
+    records = normalize_tables([("S", ["workorder", "status"], rows)], "N-FP")[
+        "records"
+    ]
+    return [{**record, "execution_id": "e", "source_file_id": 1} for record in records]
+
+
+@pytest.mark.parametrize("defer", [False, True])
+def test_every_long_loop_of_the_real_stages_consults_the_clock(defer) -> None:
+    from app.processing import process_normalized_records
+
+    calls = []
+
+    class Expired(Exception):
+        pass
+
+    def checkpoint() -> None:
+        calls.append(1)
+        if len(calls) >= 6:
+            raise Expired
+
+    with pytest.raises(Expired):
+        process_normalized_records(
+            _normalized(700),
+            execution_id="e",
+            classified_at="2026-08-28T12:00:00+00:00",
+            defer_rule_details=defer,
+            checkpoint=checkpoint,
+        )
+
+    assert len(calls) == 6
+
+
+def test_batch_records_each_file_duration_when_its_phase_ends(
+    tmp_path, monkeypatch
+) -> None:
+    from app import ingestion_budget, pipeline
+    from app.observability.metrics import INGESTION_DURATION
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(ingestion_budget.time, "monotonic", lambda: clock["now"])
+    inputs = []
+    for position, source in enumerate(("N-FP", "OWM"), start=1):
+        path = tmp_path / f"arquivo-{position}.xlsx"
+        _narrow_workbook(path, rows=5, workorders=5)
+        tables, read_issues = read_source(path, ".xlsx", source)
+        inputs.append(
+            {
+                "file_name": path.name,
+                "source": source,
+                "source_file_id": position,
+                "tables": tables,
+                "read_issues": read_issues,
+            }
+        )
+    real_normalize = pipeline.normalize_tables
+
+    def slow_second_file(tables, source, *args, **kwargs):
+        if source == "OWM":
+            clock["now"] += 100.0
+        return real_normalize(tables, source, *args, **kwargs)
+
+    monkeypatch.setattr(pipeline, "normalize_tables", slow_second_file)
+    duration = INGESTION_DURATION.labels("completed")
+    before = duration._sum.get()
+
+    run_pipeline_batch(
+        execution_id="exec-batch",
+        inputs=inputs,
+        repository=RecordingRepository(),
+        classified_at="2026-08-28T12:00:00+00:00",
+    )
+
+    # The first file ended at 0 s and the second at 100 s; neither includes the
+    # files after it nor the consolidation.
+    assert duration._sum.get() - before == pytest.approx(100.0)
+
+
+def test_unexpected_failure_is_recorded_with_the_failed_outcome(
+    tmp_path, monkeypatch
+) -> None:
+    from app import pipeline
+    from app.observability.metrics import INGESTION_DURATION
+
+    path = tmp_path / "falha.xlsx"
+    _narrow_workbook(path, rows=5, workorders=5)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("falha inesperada")
+
+    monkeypatch.setattr(pipeline, "process_normalized_records", broken)
+    failed = INGESTION_DURATION.labels("failed")
+    before = sum(bucket.get() for bucket in failed._buckets)
+
+    with pytest.raises(RuntimeError):
+        run_pipeline(
+            execution_id="exec-broken",
+            file_name=path.name,
+            source="OWM",
+            repository=RecordingRepository(),
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert sum(bucket.get() for bucket in failed._buckets) == before + 1
 
 
 def _threshold_case(tmp_path, monkeypatch, data_rows: int, threshold: int = 40):

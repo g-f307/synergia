@@ -101,9 +101,9 @@ def _record_ingestion(
     outcome: str,
     rows_processed: int,
     rows_rejected: int,
+    duration: float,
     reason: str | None = None,
 ) -> None:
-    duration = run.clock.elapsed
     peak = observe_ingestion(
         outcome=outcome,
         duration_seconds=duration,
@@ -124,33 +124,40 @@ def _record_ingestion(
     )
 
 
+def _record_execution(
+    stats: list[dict[str, Any]], outcome: str, reason: str | None = None
+) -> None:
+    """Record every file of an execution under the execution's terminal outcome.
+
+    Each file keeps the duration captured when its own phase ended, so later
+    files and the consolidation never inflate it. The rejection reason is
+    counted once per execution.
+    """
+    for position, stat in enumerate(stats):
+        meter: IngestionRun = stat["meter"]
+        duration = stat["duration"]
+        _record_ingestion(
+            meter,
+            outcome=outcome,
+            rows_processed=stat["rows"],
+            rows_rejected=stat["rejected"],
+            duration=meter.clock.elapsed if duration is None else duration,
+            reason=reason if position == 0 else None,
+        )
+
+
 def _check_execution_memory(
-    budget: IngestionBudget,
-    rows: int,
-    cells: int,
-    *,
-    final: bool,
-    meter: IngestionRun,
+    budget: IngestionBudget, rows: int, cells: int, *, final: bool
 ) -> None:
     estimate = (
         budget.estimated_memory(rows, cells)
         if final
         else budget.minimum_memory(rows, cells)
     )
-    if estimate <= budget.max_memory_bytes:
-        return
-    error = IngestionLimitError(
-        "workbook_memory_limit", limit=budget.max_memory_bytes, observed=estimate
-    )
-    _record_ingestion(
-        meter,
-        outcome="rejected",
-        rows_processed=rows,
-        rows_rejected=0,
-        reason=error.code,
-    )
-    error.recorded = True
-    raise error
+    if estimate > budget.max_memory_bytes:
+        raise IngestionLimitError(
+            "workbook_memory_limit", limit=budget.max_memory_bytes, observed=estimate
+        )
 
 
 def _original_value(value: Any) -> Any:
@@ -232,6 +239,40 @@ def run_pipeline_batch(
     resume: bool = False,
 ) -> dict[str, Any]:
     """Process every source file from one execution without rereading originals."""
+    stats: list[dict[str, Any]] = []
+    try:
+        result = _run_pipeline_batch(
+            execution_id=execution_id,
+            inputs=inputs,
+            repository=repository,
+            classified_at=classified_at,
+            known_organizations=known_organizations,
+            prepare_commit=prepare_commit,
+            resume=resume,
+            stats=stats,
+        )
+    except IngestionLimitError as exc:
+        _record_execution(stats, "rejected", exc.code)
+        exc.recorded = True
+        raise
+    except Exception:
+        _record_execution(stats, "failed")
+        raise
+    _record_execution(stats, "completed")
+    return result
+
+
+def _run_pipeline_batch(
+    *,
+    execution_id: str,
+    inputs: list[dict[str, Any]],
+    repository: PipelineRepository,
+    classified_at: str,
+    known_organizations: Collection[str] | None,
+    prepare_commit: Callable[[dict[str, Any]], None] | None,
+    resume: bool,
+    stats: list[dict[str, Any]],
+) -> dict[str, Any]:
     if not resume:
         repository.transition_execution(execution_id, "validating", "pipeline_started")
     imported_records: list[dict[str, Any]] = []
@@ -240,8 +281,7 @@ def run_pipeline_batch(
     blocked_files: set[int] = set()
     valid_records = 0
     rejected_records = 0
-    lazy_budget = None
-    file_stats: list[tuple[IngestionRun, int, int]] = []
+    lazy_budgets: list[IngestionBudget] = []
     held_rows = 0
     held_cells = 0
 
@@ -253,58 +293,54 @@ def run_pipeline_batch(
         run = _run_of(tables)
         # CSV and JSON have no lazy sheets or budget, but are still measured.
         meter = run or IngestionRun(source)
-        lazy_budget = lazy_budget or (run.budget if run is not None else None)
+        stat: dict[str, Any] = {
+            "meter": meter,
+            "rows": 0,
+            "rejected": 0,
+            "duration": None,
+        }
+        stats.append(stat)
+        if run is not None:
+            lazy_budgets.append(run.budget)
         max_issues = run.budget.max_issues if run is not None else None
-        try:
-            if run is not None:
-                run.restart()
-                run.begin("validating")
-            validation = validate_tables(
-                tables, source, known_organizations, item["read_issues"], max_issues
-            )
-            if run is not None:
-                run.begin("importing")
-            imported = [
-                {
-                    **record,
-                    "execution_id": execution_id,
-                    "source_file_id": source_file_id,
-                    "file_name": file_name,
-                }
-                for record in _imported_records(tables, source)
-            ]
-            file_issues = validation["issues"]
-            structural_blocked = any(
-                issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
-                for issue in file_issues
-            )
-            if structural_blocked:
-                blocked_files.add(source_file_id)
-            rejected_rows = {
-                (issue["sheet"], issue["row"])
-                for issue in file_issues
-                if issue["severity"] == "error" and (issue.get("row") or 0) > 1
+        if run is not None:
+            run.restart()
+            run.begin("validating")
+        validation = validate_tables(
+            tables, source, known_organizations, item["read_issues"], max_issues
+        )
+        if run is not None:
+            run.begin("importing")
+        imported = [
+            {
+                **record,
+                "execution_id": execution_id,
+                "source_file_id": source_file_id,
+                "file_name": file_name,
             }
-            eligible_rows = (
-                set()
-                if structural_blocked
-                else {(record["sheet"], record["row"]) for record in imported}
-                - rejected_rows
-            )
-            if run is not None:
-                run.begin("normalizing")
-            normalized = normalize_tables(tables, source, eligible_rows, max_issues)
-        except IngestionLimitError as exc:
-            if run is not None:
-                _record_ingestion(
-                    run,
-                    outcome="rejected",
-                    rows_processed=run.rows_read,
-                    rows_rejected=0,
-                    reason=exc.code,
-                )
-                exc.recorded = True
-            raise
+            for record in _imported_records(tables, source)
+        ]
+        file_issues = validation["issues"]
+        structural_blocked = any(
+            issue["severity"] == "error" and issue["code"] in STRUCTURAL_ISSUES
+            for issue in file_issues
+        )
+        if structural_blocked:
+            blocked_files.add(source_file_id)
+        rejected_rows = {
+            (issue["sheet"], issue["row"])
+            for issue in file_issues
+            if issue["severity"] == "error" and (issue.get("row") or 0) > 1
+        }
+        eligible_rows = (
+            set()
+            if structural_blocked
+            else {(record["sheet"], record["row"]) for record in imported}
+            - rejected_rows
+        )
+        if run is not None:
+            run.begin("normalizing")
+        normalized = normalize_tables(tables, source, eligible_rows, max_issues)
         normalized_records.extend(
             {
                 **record,
@@ -327,53 +363,51 @@ def run_pipeline_batch(
             )
             issues.append(issue)
         if run is not None and len(issues) > run.budget.max_issues:
-            _record_ingestion(
-                run,
-                outcome="rejected",
-                rows_processed=run.rows_read,
-                rows_rejected=0,
-                reason="ingestion_issue_limit",
-            )
-            error = IngestionLimitError(
+            raise IngestionLimitError(
                 "ingestion_issue_limit",
                 limit=run.budget.max_issues,
                 observed=len(issues),
             )
-            error.recorded = True
-            raise error
         imported_records.extend(imported)
         valid_records += len(eligible_rows)
         file_rejected = len(imported) if structural_blocked else len(rejected_rows)
         rejected_records += file_rejected
-        file_stats.append((meter, len(imported), file_rejected))
+        stat["rows"] = len(imported)
+        stat["rejected"] = file_rejected
+        stat["duration"] = meter.clock.elapsed
         # Every file of the execution accumulates in the same lists, so the
         # budget is also checked on the running totals; only the cheapest
         # regime is known to apply until the normalized count is final.
         held_rows += len(imported)
         held_cells += sum(len(record["original_values"]) for record in imported)
-        if lazy_budget is not None:
+        if lazy_budgets:
             _check_execution_memory(
-                lazy_budget, held_rows, held_cells, final=False, meter=meter
+                IngestionBudget.most_restrictive(lazy_budgets),
+                held_rows,
+                held_cells,
+                final=False,
             )
         # The normalized/imported representations are now authoritative. Drop
         # the lazy table handles before the next phase; no pass keeps a copy of
         # the parsed worksheet.
         item["tables"] = []
 
-    if lazy_budget is not None:
+    # The budgets of every source in the execution apply together, so the result
+    # does not depend on the order of the files.
+    aggregate = IngestionBudget.most_restrictive(lazy_budgets) if lazy_budgets else None
+    if aggregate is not None:
         # ``defer_rule_details`` below depends on the normalized count of the
         # whole execution, which is only known now; the estimate uses that same
         # cardinality and covers every file accumulated in the execution.
         _check_execution_memory(
-            lazy_budget,
+            aggregate,
             len(normalized_records),
             sum(len(record["values"]) for record in normalized_records),
             final=True,
-            meter=file_stats[-1][0],
         )
 
     # Consolidation and rules get their own time window under the same budget.
-    checkpoint = lazy_budget.start().check if lazy_budget is not None else None
+    checkpoint = aggregate.start().check if aggregate is not None else None
     if blocked_files and not normalized_records:
         processing = process_normalized_records(
             normalized_records,
@@ -403,13 +437,6 @@ def run_pipeline_batch(
                     execution_id, "applying_rules", "consolidation_completed"
                 )
             ),
-        )
-    for meter, processed, rejected in file_stats:
-        _record_ingestion(
-            meter,
-            outcome="completed",
-            rows_processed=processed,
-            rows_rejected=rejected,
         )
     error_count = sum(issue["severity"] == "error" for issue in issues)
     warning_count = sum(issue["severity"] == "warning" for issue in issues)

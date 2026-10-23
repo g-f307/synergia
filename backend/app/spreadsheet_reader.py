@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from itertools import islice
@@ -11,13 +12,16 @@ from openpyxl import load_workbook
 
 from app.ingestion_budget import IngestionBudget, IngestionLimitError, budget_for
 from app.observability.telemetry import safe_log
+from app.xlsx_package import check_open_parts
 
 HEADER_SCAN_ROWS = 200
 CLOCK_CHECK_INTERVAL = 1000
 
 
 @contextmanager
-def open_workbook(path: Path | str) -> Iterator[Any]:
+def open_workbook(
+    path: Path | str, budget: IngestionBudget | None = None
+) -> Iterator[Any]:
     """Open a workbook read-only from a stream, whatever the file suffix is.
 
     Stored uploads keep a neutral suffix, which openpyxl refuses when given a
@@ -25,6 +29,12 @@ def open_workbook(path: Path | str) -> Iterator[Any]:
     """
     with Path(path).open("rb") as stream:
         try:
+            if budget is not None:
+                # openpyxl loads shared strings and styles whole on opening, so
+                # their size is checked before it parses anything.
+                with zipfile.ZipFile(stream) as archive:
+                    check_open_parts(archive, budget)
+                stream.seek(0)
             workbook = load_workbook(stream, read_only=True, data_only=False)
         except IngestionLimitError:
             raise
@@ -115,7 +125,7 @@ class LazySheetRows:
         budget = self.run.budget
         cells = 0
         try:
-            with open_workbook(self.path) as workbook:
+            with open_workbook(self.path, budget) as workbook:
                 worksheet = workbook[self.sheet]
                 for number, values in enumerate(
                     worksheet.iter_rows(values_only=True), 1

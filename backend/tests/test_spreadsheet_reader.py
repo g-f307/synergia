@@ -277,3 +277,36 @@ def test_validation_and_normalization_memory_does_not_hold_the_sheet(
     assert report["row_count"] == rows
     # Validation keeps only a digest per row, never the parsed sheet.
     assert lazy_peak < materialized_peak * 0.7, (lazy_peak, materialized_peak)
+
+
+def test_reading_checks_the_metadata_size_before_openpyxl_parses_anything(
+    tmp_path, monkeypatch
+) -> None:
+    import os
+    import zipfile
+    from io import BytesIO
+
+    from app import spreadsheet_reader
+
+    monkeypatch.setenv("INGESTION_MAX_OPEN_BYTES", "100000")
+    base = _save(tmp_path, _simple(2)).read_bytes()
+    padded = tmp_path / "pesada.xlsx"
+    with (
+        zipfile.ZipFile(BytesIO(base)) as original,
+        zipfile.ZipFile(padded, "w", zipfile.ZIP_DEFLATED) as modified,
+    ):
+        for entry in original.infolist():
+            modified.writestr(entry, original.read(entry))
+        modified.writestr("xl/sharedStrings.xml", os.urandom(100_000).hex().encode())
+    opened = []
+    monkeypatch.setattr(
+        spreadsheet_reader,
+        "load_workbook",
+        lambda *args, **kwargs: opened.append(args) or pytest.fail("parsed"),
+    )
+
+    with pytest.raises(IngestionLimitError) as excinfo:
+        read_tables(padded, ".xlsx", "N-FP")
+
+    assert excinfo.value.code == "workbook_metadata_limit"
+    assert opened == []

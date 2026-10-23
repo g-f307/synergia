@@ -171,7 +171,7 @@ def _read_xlsx(
     issues: list[dict[str, Any]] = []
     tables: list[tuple[str, list[str], Any]] = []
     budget = run.budget
-    with open_workbook(path) as workbook:
+    with open_workbook(path, budget) as workbook:
         names = list(workbook.sheetnames)
         if len(names) > budget.max_sheets:
             raise IngestionLimitError(

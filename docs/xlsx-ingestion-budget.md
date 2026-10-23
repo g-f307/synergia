@@ -26,7 +26,7 @@ continuam descritos em [upload-security.md](upload-security.md).
 | Leitura (`spreadsheet_reader.LazySheetRows`) | reabre o arquivo a cada passagem em modo somente leitura e entrega as linhas uma a uma, reaplicando linhas, colunas, células e tempo | uma linha |
 | Validação | percorre as linhas guardando só um digest de 16 bytes por linha para detectar duplicidade e interrompe ao exceder o orçamento de ocorrências | proporcional ao número de linhas, não às células |
 | Normalização | gera os registros normalizados (ver "Memória dos registros") | proporcional às linhas e células aceitas |
-| Consolidação e regras (`processing`) | agrupa por Workorder e classifica; consulta o relógio a cada 256 Workorders | ver "Memória dos registros" |
+| Consolidação e regras (`processing`) | valida registros, consolida, classifica e agrega; consulta o relógio nos laços de validação (a cada 1.024 registros), consolidação e classificação (a cada 256 Workorders) | ver "Memória dos registros" |
 
 Cada arquivo é lido em três passagens (validação, registros importados e
 normalização). O relógio de processamento reinicia por arquivo, antes da
@@ -47,6 +47,8 @@ não numéricos ou menores ou iguais a zero tornam a configuração inválida.
 | `INGESTION_MAX_CELLS` | 2.000.000 | soma das células das abas processadas e da área declarada em `<dimension>` |
 | `INGESTION_MAX_FORMULAS` | 2.000.000 | soma das fórmulas das abas processadas |
 | `INGESTION_MAX_MEMORY_BYTES` | 1.073.741.824 | estimativa de memória do pipeline completo, por execução (ver "Memória dos registros") |
+| `INGESTION_MAX_OPEN_BYTES` | 33.554.432 (32 MiB) | bytes descompactados de `sharedStrings.xml`, `styles.xml`, `workbook.xml` e temas, carregados inteiros na abertura |
+| `INGESTION_MAX_FILES` | 10 | arquivos por requisição (global, sem sufixo de fonte) |
 | `INGESTION_MAX_SECONDS` | 300 | admissão, leitura/normalização e consolidação, cada uma com relógio próprio |
 | `INGESTION_MAX_ISSUES` | 250.000 | ocorrências de validação e normalização por arquivo e por execução |
 | `INGESTION_PROGRESS_INTERVAL` | 10.000 | linhas entre eventos de progresso |
@@ -97,6 +99,8 @@ aplicável, `details.limit`, `details.observed` e `details.sheet`.
 | `workbook_cell_limit` | 413 | células acima de `INGESTION_MAX_CELLS` |
 | `workbook_dimension_limit` | 413 | área declarada acima de `INGESTION_MAX_CELLS` |
 | `workbook_memory_limit` | 413 | estimativa de memória do pipeline acima de `INGESTION_MAX_MEMORY_BYTES` |
+| `workbook_metadata_limit` | 413 | partes carregadas na abertura acima de `INGESTION_MAX_OPEN_BYTES` |
+| `ingestion_file_limit` | 413 | mais arquivos que `INGESTION_MAX_FILES`, rejeitado antes de qualquer processamento |
 | `workbook_formula_limit` | 413 | fórmulas acima de `INGESTION_MAX_FORMULAS` |
 | `no_authorized_sheet` | 422 | lista de abas ausente, vazia ou sem correspondência no arquivo |
 | `ingestion_time_limit` | 422 | admissão ou processamento acima de `INGESTION_MAX_SECONDS` |
@@ -152,9 +156,16 @@ Métricas Prometheus:
   processo (`ru_maxrss`), registrado ao final de cada ingestão. É uma marca
   d'água do processo, não o consumo isolado do arquivo.
 
-As métricas e os eventos `ingestion.completed`/`ingestion.rejected` também
-medem arquivos CSV e JSON; o progresso por fase e os limites de recursos
-aplicam-se somente a XLSX.
+Todo caminho terminal registra um resultado: rejeição na admissão, rejeição ou
+falha durante o processamento (inclusive limite de tempo na consolidação),
+falha inesperada (`failed`) e conclusão. Em uma execução com vários arquivos,
+cada arquivo registra a duração capturada ao fim da própria fase, sem somar os
+arquivos seguintes nem a consolidação, e o resultado terminal da execução; o
+motivo da rejeição é contado uma vez por execução. As rejeições da admissão
+registram a duração até a decisão. As métricas e os eventos
+`ingestion.completed`, `ingestion.rejected` e `ingestion.failed` também medem
+arquivos CSV e JSON; o progresso por fase e os limites de recursos aplicam-se
+somente a XLSX.
 
 Nenhum nome de aba, nome de arquivo ou valor de célula é registrado.
 
@@ -196,6 +207,11 @@ A verificação ocorre em três momentos:
    individualmente abaixo do limite são, portanto, rejeitados quando somados
    (`workbook_memory_limit`, sem `sheet`). Execuções só com CSV ou JSON não têm
    orçamento e mantêm o comportamento anterior.
+
+Quando uma execução reúne fontes com limites diferentes (sufixos `_N_FP`, `_OWM`,
+`_GMES_OQC`, `_TMS`), valem em conjunto os **menores** limites de memória, tempo
+e ocorrências entre as fontes participantes, de modo que o resultado não depende
+da ordem dos arquivos no `multipart`.
 
 Com três colunas, o limite padrão (1 GiB) admite cerca de 47 mil registros no
 regime caro e cerca de 196 mil no regime barato, menos se as células forem muito
@@ -253,10 +269,13 @@ ambiente local autorizado. Nenhum valor é registrado.
 | `UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES=600000000` sem lista de abas | rejeitado por `workbook_dimension_limit` (área declarada de `NFP` = 2.352.296 > 2.000.000) |
 | mesmo limite de memória de 1,4 GiB e `INGESTION_ALLOWED_SHEETS="CTNR STATUS"` | admitido em cerca de 23 s com 45 MiB de RSS no pico |
 
-A abertura do workbook pelo openpyxl carrega a tabela de strings
-compartilhadas inteira e acrescentou cerca de 155 MiB nesse arquivo; esse custo
-é proporcional às strings do pacote, não à aba lida, e está limitado pelo
-orçamento de bytes descompactados.
+Ao abrir o workbook, o openpyxl carrega inteiros, antes de ler qualquer linha,
+as strings compartilhadas, os estilos e a definição do workbook. Nesse arquivo
+essas partes somam 17,4 MiB descompactados (4,8 de strings e 12,6 de estilos) e a
+abertura acrescentou cerca de 155 MiB de RSS em 6,7 s, aproximadamente 9 bytes
+de memória por byte de XML. Esse custo independe da aba lida e por isso tem
+orçamento próprio (`INGESTION_MAX_OPEN_BYTES`, verificado pelo cabeçalho do ZIP na
+admissão e novamente antes de cada abertura).
 
 Esta entrega não valida nem normaliza os valores do workbook real: os adapters
 por fonte dependem das respostas do cliente registradas em
@@ -280,11 +299,11 @@ reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`
   limitados, mas o consumo não é constante.
 - A estimativa é calibrada no ambiente descrito abaixo e em formas de dados
   medidas; planilhas com formato muito diferente exigem nova medição.
-- O número de arquivos por requisição não é limitado; a memória é contida pelo
-  orçamento agregado da execução, mas o tempo de admissão cresce com cada arquivo.
 - O tempo da consolidação cresce de forma quadrática com o número de
   Workorders distintos; o orçamento de tempo apenas o interrompe.
 - O cabeçalho é procurado nas primeiras 200 linhas de cada aba.
-- O openpyxl mantém as strings compartilhadas do pacote em memória.
+- O openpyxl carrega estilos e strings compartilhadas inteiros na abertura; o
+  orçamento de metadados limita esse custo, mas ele continua proporcional ao tamanho
+  dessas partes (cerca de 9 bytes por byte de XML no workbook medido).
 - O progresso é emitido em logs e métricas; não há consulta de progresso na API.
 - O pico de memória é do processo, não do arquivo.
