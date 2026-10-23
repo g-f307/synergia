@@ -11,6 +11,11 @@ DEFAULT_MAX_ROWS = 1_048_576
 DEFAULT_MAX_COLUMNS = 16_384
 DEFAULT_MAX_CELLS = 2_000_000
 DEFAULT_MAX_FORMULAS = 2_000_000
+DEFAULT_MAX_MEMORY_BYTES = 1024 * 1024 * 1024
+RULE_DETAIL_DEFER_ROWS = 50_000  # keep equal to pipeline.RULE_DETAIL_DEFER_THRESHOLD
+ROW_COST_BYTES = 22_000
+DEFERRED_ROW_COST_BYTES = 4_500
+CELL_COST_BYTES = 320
 DEFAULT_MAX_SECONDS = 300.0
 DEFAULT_MAX_ISSUES = 250_000
 DEFAULT_PROGRESS_INTERVAL = 10_000
@@ -36,13 +41,18 @@ LIMIT_GUIDANCE: dict[str, tuple[str, str]] = {
         "Dimensão declarada da aba acima do orçamento",
         "Reexporte a aba sem formatação ou células vazias além dos dados.",
     ),
+    "workbook_memory_limit": (
+        "Estimativa de memória da planilha acima do orçamento",
+        "Reduza linhas ou colunas, ou solicite aumento medido do orçamento.",
+    ),
     "workbook_formula_limit": (
         "Planilha com fórmulas acima do limite",
         "Exporte os valores calculados em vez das fórmulas.",
     ),
     "no_authorized_sheet": (
         "Nenhuma aba autorizada foi encontrada",
-        "Confirme os nomes das abas previstos para a fonte.",
+        "Configure as abas autorizadas da fonte (INGESTION_ALLOWED_SHEETS) e "
+        "confirme os nomes previstos no contrato.",
     ),
     "ingestion_time_limit": (
         "Processamento acima do tempo permitido",
@@ -103,10 +113,35 @@ class IngestionBudget:
     max_columns: int = DEFAULT_MAX_COLUMNS
     max_cells: int = DEFAULT_MAX_CELLS
     max_formulas: int = DEFAULT_MAX_FORMULAS
+    max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES
     max_seconds: float = DEFAULT_MAX_SECONDS
     max_issues: int = DEFAULT_MAX_ISSUES
     progress_interval: int = DEFAULT_PROGRESS_INTERVAL
     allowed_sheets: frozenset[str] | None = None
+
+    def estimated_memory(self, rows: int, cells: int) -> int:
+        """Conservative peak bytes of the complete pipeline for ``rows``/``cells``.
+
+        Calibrated on the resident memory of ``run_pipeline`` (validation,
+        normalization, consolidation and rules) in docs/xlsx-ingestion-budget.md.
+        The row cost dominates narrow sheets and drops once the pipeline defers
+        per-rule details, so the estimate is piecewise on that threshold.
+        """
+        row_cost = (
+            DEFERRED_ROW_COST_BYTES
+            if rows >= RULE_DETAIL_DEFER_ROWS
+            else ROW_COST_BYTES
+        )
+        return rows * row_cost + cells * CELL_COST_BYTES
+
+    def minimum_memory(self, rows: int, cells: int) -> int:
+        """Lower bound of ``estimated_memory`` for any final row count.
+
+        While a sheet is still being streamed the final row count is unknown, so
+        early termination may only use the cheapest regime; the exact estimate
+        is applied once the totals are known.
+        """
+        return rows * DEFERRED_ROW_COST_BYTES + cells * CELL_COST_BYTES
 
     def authorizes(self, sheet: str) -> bool:
         return self.allowed_sheets is None or sheet.casefold() in self.allowed_sheets
@@ -152,13 +187,19 @@ def _positive(name: str, source_key: str, default: int | float, cast=int):
 
 
 def _allowed_sheets(source_key: str) -> frozenset[str] | None:
+    """Resolve the sheets a source may read; unset or empty authorizes none.
+
+    Failing closed keeps auxiliary or forbidden sheets out of the pipeline when
+    nobody configured the contract's sheets. ``*`` is an explicit opt-in to read
+    every sheet, intended for synthetic data and controlled environments.
+    """
     raw = os.getenv(f"INGESTION_ALLOWED_SHEETS_{source_key}")
     if raw is None:
         raw = os.getenv("INGESTION_ALLOWED_SHEETS", "")
     names = frozenset(
         part.strip().casefold() for part in raw.split("|") if part.strip()
     )
-    return names or None
+    return None if "*" in names else names
 
 
 def budget_for(source: str) -> IngestionBudget:
@@ -175,6 +216,9 @@ def budget_for(source: str) -> IngestionBudget:
         max_columns=_positive("INGESTION_MAX_COLUMNS", key, DEFAULT_MAX_COLUMNS),
         max_cells=_positive("INGESTION_MAX_CELLS", key, DEFAULT_MAX_CELLS),
         max_formulas=_positive("INGESTION_MAX_FORMULAS", key, DEFAULT_MAX_FORMULAS),
+        max_memory_bytes=_positive(
+            "INGESTION_MAX_MEMORY_BYTES", key, DEFAULT_MAX_MEMORY_BYTES
+        ),
         max_seconds=_positive(
             "INGESTION_MAX_SECONDS", key, DEFAULT_MAX_SECONDS, cast=float
         ),

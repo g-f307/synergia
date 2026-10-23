@@ -7,6 +7,7 @@ x-backend-environment: &backend-environment
   PGUSER: ${POSTGRES_USER:-synergia}
   PGPASSWORD: ${POSTGRES_PASSWORD:-synergia-local-only}
   IMPORT_STORAGE_DIR: /var/lib/synergia/imports
+  INGESTION_ALLOWED_SHEETS: ${INGESTION_ALLOWED_SHEETS:-}
   PROFILE_AVATAR_STORAGE_ROOT: /var/lib/synergia/avatars
   EMAIL_CAPTURE_PATH: /var/lib/synergia/email-capture/messages.jsonl
   SYNERGIA_ENV: ${SYNERGIA_ENV:-development}

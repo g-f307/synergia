@@ -1,3 +1,4 @@
+import tracemalloc
 from pathlib import Path
 
 import pytest
@@ -345,3 +346,76 @@ def test_batch_pipeline_uses_real_file_ids_for_multisource_provenance() -> None:
         result["processing"]["summary"]["classifications_by_rule"]["source_divergence"]
         == 1
     )
+
+
+def _narrow_workbook(path: Path, rows: int, workorders: int) -> None:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["workorder", "serial", "status"])
+    for index in range(rows):
+        worksheet.append([f"WO-{index % workorders:05d}", f"SN-{index:07d}", "open"])
+    workbook.save(path)
+    workbook.close()
+
+
+def test_full_pipeline_memory_of_a_narrow_sheet_stays_under_the_budget_estimate(
+    tmp_path,
+) -> None:
+    rows = 4_000
+    path = tmp_path / "estreita.xlsx"
+    _narrow_workbook(path, rows, workorders=200)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+    budget = tables[0][2].run.budget
+    repository = RecordingRepository()
+
+    tracemalloc.start()
+    try:
+        result = run_pipeline(
+            execution_id="exec-narrow",
+            file_name="estreita.xlsx",
+            source="OWM",
+            repository=repository,
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert result["summary"]["rows_read"] == rows
+    assert peak <= budget.estimated_memory(rows + 1, (rows + 1) * 3), peak
+
+
+def test_consolidation_stage_honours_the_time_budget(tmp_path, monkeypatch) -> None:
+    from app import ingestion_budget
+    from app.ingestion_budget import IngestionLimitError
+
+    path = tmp_path / "pequena.xlsx"
+    _narrow_workbook(path, rows=30, workorders=3)
+    tables, read_issues = read_source(path, ".xlsx", "OWM")
+    repository = RecordingRepository()
+
+    def expire_then_process(records, *, checkpoint, **kwargs):
+        assert checkpoint is not None
+        monkeypatch.setattr(
+            ingestion_budget.time, "monotonic", lambda: 10**9, raising=True
+        )
+        checkpoint()
+
+    monkeypatch.setattr("app.pipeline.process_normalized_records", expire_then_process)
+
+    with pytest.raises(IngestionLimitError) as excinfo:
+        run_pipeline(
+            execution_id="exec-slow",
+            file_name="pequena.xlsx",
+            source="OWM",
+            repository=repository,
+            tables=tables,
+            read_issues=read_issues,
+            source_file_id=1,
+            classified_at="2026-08-28T12:00:00+00:00",
+        )
+
+    assert excinfo.value.code == "ingestion_time_limit"

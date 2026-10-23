@@ -10,20 +10,52 @@ from app.ingestion_budget import (
 )
 
 
-def test_defaults_are_explicit_and_authorize_every_sheet(monkeypatch) -> None:
-    for name in (
-        "INGESTION_MAX_CELLS",
-        "INGESTION_MAX_CELLS_OWM",
-        "INGESTION_ALLOWED_SHEETS",
-        "INGESTION_ALLOWED_SHEETS_OWM",
-    ):
-        monkeypatch.delenv(name, raising=False)
+def test_defaults_are_explicit(monkeypatch) -> None:
+    monkeypatch.delenv("INGESTION_MAX_CELLS", raising=False)
+    monkeypatch.delenv("INGESTION_MAX_CELLS_OWM", raising=False)
+
+    assert budget_for("OWM").max_cells == DEFAULT_MAX_CELLS
+
+
+@pytest.mark.parametrize("value", [None, "", "   ", " | "])
+def test_missing_or_empty_sheet_list_fails_closed(monkeypatch, value) -> None:
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS_OWM", raising=False)
+    if value is None:
+        monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
+    else:
+        monkeypatch.setenv("INGESTION_ALLOWED_SHEETS", value)
 
     budget = budget_for("OWM")
 
-    assert budget.max_cells == DEFAULT_MAX_CELLS
-    assert budget.allowed_sheets is None
-    assert budget.authorizes("Qualquer aba")
+    assert budget.allowed_sheets == frozenset()
+    assert not budget.authorizes("Qualquer aba")
+
+
+def test_wildcard_is_an_explicit_opt_in_per_source(monkeypatch) -> None:
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS", "OWM SN")
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS_TMS", "*")
+
+    assert budget_for("TMS").allowed_sheets is None
+    assert budget_for("TMS").authorizes("Qualquer aba")
+    assert budget_for("OWM").authorizes("owm sn")
+    assert not budget_for("OWM").authorizes("Qualquer aba")
+
+
+def test_memory_estimate_covers_narrow_sheets_and_follows_rule_deferral() -> None:
+    from app.pipeline import RULE_DETAIL_DEFER_THRESHOLD
+
+    budget = budget_for("OWM")
+
+    assert ingestion_budget.RULE_DETAIL_DEFER_ROWS == RULE_DETAIL_DEFER_THRESHOLD
+    below = budget.estimated_memory(RULE_DETAIL_DEFER_THRESHOLD - 1, 0)
+    above = budget.estimated_memory(RULE_DETAIL_DEFER_THRESHOLD, 0)
+    assert below > above
+    assert budget.estimated_memory(10, 100) == (
+        10 * ingestion_budget.ROW_COST_BYTES + 100 * ingestion_budget.CELL_COST_BYTES
+    )
+    # Many rows of only two columns stay far from the cell limit but not from
+    # the memory budget.
+    assert budget.estimated_memory(1_048_576, 2_097_152) > budget.max_memory_bytes
 
 
 def test_source_suffix_overrides_the_global_value(monkeypatch) -> None:
@@ -44,13 +76,14 @@ def test_rejects_invalid_limits_instead_of_disabling_them(monkeypatch, value) ->
 
 def test_allowed_sheets_use_pipe_and_ignore_case(monkeypatch) -> None:
     monkeypatch.setenv("INGESTION_ALLOWED_SHEETS_OWM", "OWM SN | Total, Decision ")
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
 
     budget = budget_for("OWM")
 
     assert budget.authorizes("owm sn")
     assert budget.authorizes("TOTAL, DECISION")
     assert not budget.authorizes("Analysis 2")
-    assert budget_for("TMS").allowed_sheets is None
+    assert budget_for("TMS").allowed_sheets == frozenset()
 
 
 def test_limit_error_carries_code_guidance_and_measurements() -> None:

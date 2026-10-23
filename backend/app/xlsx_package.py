@@ -54,7 +54,9 @@ class ByteLedger:
 @dataclass
 class Totals:
     declared_cells: int = 0
+    declared_rows: int = 0
     actual_cells: int = 0
+    rows: int = 0
     formulas: int = 0
     processed_sheets: int = 0
 
@@ -222,6 +224,12 @@ def _scan_worksheet(
                 reference = element.get("r")
                 row_index = int(reference) if reference else row_index + 1
                 profile.rows = max(profile.rows, row_index)
+                _check_memory(
+                    budget,
+                    totals.rows + profile.rows,
+                    totals.actual_cells,
+                    profile,
+                )
                 if profile.columns > budget.max_columns:
                     raise IngestionLimitError(
                         "workbook_column_limit",
@@ -271,12 +279,36 @@ def _check_dimension(
             sheet=profile.name,
         )
     totals.declared_cells += rows * columns
+    totals.declared_rows += rows
     if totals.declared_cells > budget.max_cells:
         raise IngestionLimitError(
             "workbook_dimension_limit",
             limit=budget.max_cells,
             observed=totals.declared_cells,
             sheet=profile.name,
+        )
+    _check_memory(budget, totals.declared_rows, totals.declared_cells, profile)
+
+
+def _check_memory(
+    budget: IngestionBudget,
+    rows: int,
+    cells: int,
+    profile: SheetProfile | None,
+    *,
+    final: bool = False,
+) -> None:
+    estimate = (
+        budget.estimated_memory(rows, cells)
+        if final
+        else budget.minimum_memory(rows, cells)
+    )
+    if estimate > budget.max_memory_bytes:
+        raise IngestionLimitError(
+            "workbook_memory_limit",
+            limit=budget.max_memory_bytes,
+            observed=estimate,
+            sheet=profile.name if profile is not None else None,
         )
 
 
@@ -330,6 +362,7 @@ def scan_package(
                     is_dangerous=is_dangerous,
                 )
                 if authorized:
+                    totals.rows += sheet.rows
                     totals.processed_sheets += 1
                     profile.processed.append(sheet)
                 else:
@@ -338,4 +371,5 @@ def scan_package(
         raise PackageViolation("corrupted_file") from exc
     except (zipfile.BadZipFile, zlib.error, EOFError, OSError) as exc:
         raise PackageViolation("corrupted_file") from exc
+    _check_memory(budget, totals.rows, totals.actual_cells, None, final=True)
     return profile

@@ -25,11 +25,13 @@ continuam descritos em [upload-security.md](upload-security.md).
 | Abertura (`validation._read_xlsx`) | lista as abas autorizadas e lê no máximo 200 linhas por aba para localizar o cabeçalho | uma janela de 200 linhas |
 | Leitura (`spreadsheet_reader.LazySheetRows`) | reabre o arquivo a cada passagem em modo somente leitura e entrega as linhas uma a uma, reaplicando linhas, colunas, células e tempo | uma linha |
 | Validação | percorre as linhas guardando só um digest de 16 bytes por linha para detectar duplicidade e interrompe ao exceder o orçamento de ocorrências | proporcional ao número de linhas, não às células |
-| Normalização | gera os registros normalizados (ver "Memória dos registros") | proporcional às células aceitas |
+| Normalização | gera os registros normalizados (ver "Memória dos registros") | proporcional às linhas e células aceitas |
+| Consolidação e regras (`processing`) | agrupa por Workorder e classifica; consulta o relógio a cada 256 Workorders | ver "Memória dos registros" |
 
 Cada arquivo é lido em três passagens (validação, registros importados e
 normalização). O relógio de processamento reinicia por arquivo, antes da
-primeira passagem; a admissão tem um relógio próprio.
+primeira passagem; a admissão e a consolidação têm relógios próprios, todos
+sob `INGESTION_MAX_SECONDS`.
 
 ## Limites
 
@@ -44,10 +46,11 @@ não numéricos ou menores ou iguais a zero tornam a configuração inválida.
 | `INGESTION_MAX_COLUMNS` | 16.384 | maior coluna de cada aba processada |
 | `INGESTION_MAX_CELLS` | 2.000.000 | soma das células das abas processadas e da área declarada em `<dimension>` |
 | `INGESTION_MAX_FORMULAS` | 2.000.000 | soma das fórmulas das abas processadas |
-| `INGESTION_MAX_SECONDS` | 300 | admissão e processamento, cada um com relógio próprio |
+| `INGESTION_MAX_MEMORY_BYTES` | 1.073.741.824 | estimativa de memória do pipeline completo (ver "Memória dos registros") |
+| `INGESTION_MAX_SECONDS` | 300 | admissão, leitura/normalização e consolidação, cada uma com relógio próprio |
 | `INGESTION_MAX_ISSUES` | 250.000 | ocorrências de validação e normalização por arquivo e por execução |
 | `INGESTION_PROGRESS_INTERVAL` | 10.000 | linhas entre eventos de progresso |
-| `INGESTION_ALLOWED_SHEETS` | todas | nomes de abas separados por `\|`, sem diferenciar maiúsculas |
+| `INGESTION_ALLOWED_SHEETS` | **nenhuma** | nomes de abas separados por `\|`, sem diferenciar maiúsculas; `*` autoriza todas |
 
 Os limites de arquivo compactado continuam em `UPLOAD_MAX_BYTES`,
 `UPLOAD_MAX_ARCHIVE_ENTRIES`, `UPLOAD_MAX_ARCHIVE_UNCOMPRESSED_BYTES` e
@@ -56,8 +59,12 @@ Os limites de arquivo compactado continuam em `UPLOAD_MAX_BYTES`,
 
 ### Abas autorizadas
 
-Com `INGESTION_ALLOWED_SHEETS` definido, somente as abas listadas são abertas,
-contadas e entregues ao pipeline. As demais:
+A seleção **falha fechada**: com `INGESTION_ALLOWED_SHEETS` ausente ou vazio,
+nenhuma aba é autorizada e todo XLSX é rejeitado com `no_authorized_sheet`. Somente
+as abas listadas são abertas, contadas e entregues ao pipeline; `*` é uma
+autorização explícita de todas as abas, destinada a dados sintéticos e a
+ambientes controlados (`.env.example`, testes e E2E a utilizam). Em homologação,
+liste as abas do contrato. As demais abas:
 
 - não consomem os orçamentos de linhas, colunas, células e fórmulas;
 - continuam sujeitas à varredura de segurança (fórmulas perigosas, macros,
@@ -65,7 +72,7 @@ contadas e entregues ao pipeline. As demais:
 - continuam contando para os limites de bytes descompactados, de entradas e de
   tempo, pois precisam ser percorridas.
 
-Se a lista estiver definida e nenhuma aba existir no arquivo, a rejeição é
+Se nenhuma aba do arquivo constar da lista, a rejeição também é
 `no_authorized_sheet`. O contrato versionado de fontes e abas está em
 [real-workbook-contracts.md](real-workbook-contracts.md); os adapters que o
 aplicam são entregues em issues próprias.
@@ -89,8 +96,9 @@ aplicável, `details.limit`, `details.observed` e `details.sheet`.
 | `workbook_column_limit` | 413 | aba com coluna acima de `INGESTION_MAX_COLUMNS` |
 | `workbook_cell_limit` | 413 | células acima de `INGESTION_MAX_CELLS` |
 | `workbook_dimension_limit` | 413 | área declarada acima de `INGESTION_MAX_CELLS` |
+| `workbook_memory_limit` | 413 | estimativa de memória do pipeline acima de `INGESTION_MAX_MEMORY_BYTES` |
 | `workbook_formula_limit` | 413 | fórmulas acima de `INGESTION_MAX_FORMULAS` |
-| `no_authorized_sheet` | 422 | nenhuma aba de `INGESTION_ALLOWED_SHEETS` no arquivo |
+| `no_authorized_sheet` | 422 | lista de abas ausente, vazia ou sem correspondência no arquivo |
 | `ingestion_time_limit` | 422 | admissão ou processamento acima de `INGESTION_MAX_SECONDS` |
 | `ingestion_issue_limit` | 422 | ocorrências acima de `INGESTION_MAX_ISSUES` |
 | `unreadable_workbook` | 422 | arquivo ilegível durante a leitura |
@@ -152,11 +160,29 @@ Nenhum nome de aba, nome de arquivo ou valor de célula é registrado.
 
 ## Memória dos registros
 
-A leitura e a validação não retêm a planilha, mas os registros normalizados
-são o resultado do pipeline: a consolidação por Workorder precisa de todos
-eles, e cada registro guarda valores originais, normalizados e uma
-transformação por célula. Por isso o consumo final cresce com as células
-aceitas, e o orçamento de células é o limite de memória efetivo.
+A leitura e a validação não retêm a planilha, mas os registros importados e
+normalizados são o resultado do pipeline: a consolidação por Workorder precisa
+de todos eles, e cada registro guarda valores originais, normalizados e uma
+transformação por célula. Por isso um limite apenas de células não protege
+planilhas estreitas com muitas linhas: o custo fixo por linha domina.
+
+O orçamento usa uma estimativa de memória do **pipeline completo**
+(`IngestionBudget.estimated_memory`):
+
+```text
+bytes = linhas × custo_da_linha + células × 320
+custo_da_linha = 22.000 abaixo de 50.000 linhas; 4.500 a partir de 50.000
+```
+
+O limiar de 50.000 acompanha `RULE_DETAIL_DEFER_THRESHOLD`: a partir dele o
+pipeline não retém o detalhe das regras e o custo por linha cai, o que torna a
+estimativa não monotônica (o pior caso está logo abaixo do limiar). Durante a
+leitura só o custo mínimo (4.500 por linha) interrompe cedo, porque o total de
+linhas ainda é desconhecido; a estimativa exata é aplicada com os totais ao
+final da admissão e de cada passagem. Com três colunas, o limite padrão (1 GiB) admite cerca de 47 mil linhas no
+regime caro e cerca de 196 mil no regime barato, menos se as células forem
+muito largas; a consolidação consulta o relógio a cada 256
+Workorders.
 
 ## Medições
 
@@ -173,8 +199,30 @@ com `INGESTION_MAX_CELLS` e `UPLOAD_MAX_BYTES` elevados:
 | 10.000 | 200.000 | 11,9 MB | 1,1 s | 0,6 s | 2,8 s | 3,1 s | 120 MB |
 | 50.000 | 1.000.000 | 61,0 MB | 5,5 s | 3,2 s | 14,2 s | 16,4 s | 398 MB |
 
-O custo marginal é de cerca de 350 bytes por célula aceita; com o limite padrão
-de 2.000.000 células, o pico esperado é de cerca de 0,7 GiB acima da base.
+Nesta tabela só entram admissão, abertura, validação e normalização: o custo
+marginal é de cerca de 350 bytes por célula aceita. Planilhas estreitas, com
+muitas linhas, custam mais por célula; veja o pipeline completo abaixo.
+
+### Pipeline completo (`run_pipeline`)
+
+Pico de RSS acima da base do processo, medido com
+`INGESTION_ALLOWED_SHEETS='*'` e `source=OWM`, três colunas (Workorder, serial,
+status):
+
+| Linhas | Workorders | Tempo | RSS acima da base | Por linha | Estimativa do orçamento |
+| --- | --- | --- | --- | --- | --- |
+| 10.000 | 10.000 | 49 s | 201 MB | 20,1 KB | 230 MB |
+| 10.000 | 500 | 3,9 s | 148 MB | 14,8 KB | 230 MB |
+| 30.000 | 1.000 | 12,4 s | 439 MB | 14,6 KB | 689 MB |
+| 60.000 | 2.000 | 16,5 s | 228 MB | 3,8 KB | 328 MB |
+| 100.000 | 5.000 | 31,8 s | 380 MB | 3,8 KB | 546 MB |
+
+Com duas colunas (`N-FP`), 10.000 linhas de Workorders distintos: 188 MB, abaixo
+da estimativa de 226 MB. O caso mais caro é o de muitos Workorders distintos,
+que também é o mais lento: o laço de classificação filtra as ocorrências por
+Workorder, o que cresce de forma quadrática. Esse custo é anterior a esta
+entrega e não foi alterado; o relógio da consolidação garante apenas que ele
+seja interrompido pelo orçamento de tempo.
 
 ### Workbook representativo (`WO Status`)
 
@@ -202,8 +250,8 @@ reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`
 
 1. Reproduza o caso com `scripts/measure_xlsx_ingestion.py`, em ambiente
    controlado e com uma aba por vez (`INGESTION_ALLOWED_SHEETS`).
-2. Registre duração por fase e pico de memória; a memória estimada é cerca de
-   350 bytes por célula aceita mais a base do processo.
+2. Registre duração por fase e pico de memória; compare com
+   `estimated_memory` (22.000 ou 4.500 bytes por linha mais 320 por célula).
 3. Aumente apenas o limite que bloqueou, preferencialmente com o sufixo da
    fonte, e confirme que a memória do contêiner comporta o novo pico.
 4. Registre a decisão e a medição no PR que alterar o valor padrão.
@@ -211,8 +259,12 @@ reconhece, por exemplo, o cabeçalho de `CTNR STATUS` e informa `invalid_header`
 ## Limitações conhecidas
 
 - Os registros importados e normalizados continuam materializados até a
-  consolidação e a persistência atômica; o limite de células os mantém
+  consolidação e a persistência atômica; o orçamento de memória os mantém
   limitados, mas o consumo não é constante.
+- A estimativa é calibrada no ambiente descrito abaixo e em formas de dados
+  medidas; planilhas com formato muito diferente exigem nova medição.
+- O tempo da consolidação cresce de forma quadrática com o número de
+  Workorders distintos; o orçamento de tempo apenas o interrompe.
 - O cabeçalho é procurado nas primeiras 200 linhas de cada aba.
 - O openpyxl mantém as strings compartilhadas do pacote em memória.
 - O progresso é emitido em logs e métricas; não há consulta de progresso na API.

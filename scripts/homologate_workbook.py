@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -9,6 +10,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
+# Offline tools read local files chosen by the operator; the service default
+# (no sheet authorized) still applies unless the variable is set.
+os.environ.setdefault("INGESTION_ALLOWED_SHEETS", "*")
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 

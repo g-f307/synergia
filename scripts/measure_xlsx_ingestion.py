@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import resource
 import sys
 import tempfile
@@ -26,6 +27,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
+# Offline tool over local files chosen by the operator; set the variable to
+# restrict the sheets (the service default authorizes none).
+os.environ.setdefault("INGESTION_ALLOWED_SHEETS", "*")
 
 from app.ingestion_budget import IngestionLimitError  # noqa: E402
 from app.normalization import normalize_tables  # noqa: E402

@@ -35,6 +35,8 @@ export default defineConfig({
         ...process.env,
         DATABASE_URL: databaseUrl,
         SYNERGIA_ENV: 'test',
+        // Synthetic workbooks use arbitrary sheet names; production authorizes none by default.
+        INGESTION_ALLOWED_SHEETS: process.env.INGESTION_ALLOWED_SHEETS ?? '*',
         SYNERGIA_LOCAL_AUTH_ENABLED: 'true',
         AUTH_JWT_SIGNING_KEY: 'synthetic-e2e-signing-key-at-least-32-bytes',
         AUTH_JWT_ISSUER: 'synergia-e2e',

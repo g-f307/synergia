@@ -38,6 +38,7 @@ def process_normalized_records(
     catalog: dict[str, Any] = RULE_CATALOG,
     on_consolidated: Callable[[], None] | None = None,
     defer_rule_details: bool = False,
+    checkpoint: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Consolidate and classify eligible normalized records from one execution."""
     eligible = _validated_records(records, execution_id)
@@ -48,7 +49,9 @@ def process_normalized_records(
     deferred_rule_counts: Counter[str] = Counter()
     deferred_classification_count = 0
     deferred_active_count = 0
-    for workorder in consolidation["workorders"]:
+    for position, workorder in enumerate(consolidation["workorders"]):
+        if checkpoint is not None and position % 256 == 0:
+            checkpoint()
         workorder_number = workorder["workorder_number"]
         workorder_issues = [
             issue

@@ -114,6 +114,7 @@ class LazySheetRows:
     def __iter__(self) -> Iterator[LocatedRow]:
         budget = self.run.budget
         cells = 0
+        last_row = 0
         try:
             with open_workbook(self.path) as workbook:
                 worksheet = workbook[self.sheet]
@@ -145,12 +146,25 @@ class LazySheetRows:
                             observed=cells,
                             sheet=self.sheet,
                         )
+                    last_row = number
+                    self._check_memory(budget.minimum_memory(number, cells))
                     self.run.tick()
                     yield LocatedRow(list(values), number)
+                self._check_memory(budget.estimated_memory(last_row, cells))
         except IngestionLimitError:
             raise
         except Exception as exc:
             raise IngestionLimitError("unreadable_workbook", sheet=self.sheet) from exc
+
+    def _check_memory(self, estimate: int) -> None:
+        limit = self.run.budget.max_memory_bytes
+        if estimate > limit:
+            raise IngestionLimitError(
+                "workbook_memory_limit",
+                limit=limit,
+                observed=estimate,
+                sheet=self.sheet,
+            )
 
     def count(self) -> int:
         """Count rows with one extra pass.

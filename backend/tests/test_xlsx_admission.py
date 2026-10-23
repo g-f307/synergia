@@ -9,7 +9,13 @@ import pytest
 from openpyxl import Workbook
 from starlette.datastructures import Headers, UploadFile
 
-from app.ingestion_budget import IngestionBudget
+from app import ingestion_budget
+from app.ingestion_budget import (
+    CELL_COST_BYTES,
+    DEFERRED_ROW_COST_BYTES,
+    ROW_COST_BYTES,
+    IngestionBudget,
+)
 from app.upload_security import receive_and_inspect
 from app.xlsx_package import (
     READ_BLOCK,
@@ -87,9 +93,51 @@ def _clean_budget(monkeypatch):
         "INGESTION_MAX_CELLS",
         "INGESTION_MAX_FORMULAS",
         "INGESTION_MAX_SECONDS",
-        "INGESTION_ALLOWED_SHEETS",
     ):
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_rejects_every_workbook_when_no_sheet_is_authorized(
+    tmp_path, monkeypatch, value
+) -> None:
+    if value is None:
+        monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
+    else:
+        monkeypatch.setenv("INGESTION_ALLOWED_SHEETS", value)
+
+    result = _inspect(tmp_path, _workbook_bytes())
+
+    assert result.reason_code == "no_authorized_sheet"
+    assert "INGESTION_ALLOWED_SHEETS" in result.reason_details["guidance"]
+
+
+def test_memory_estimate_bounds_narrow_sheets_with_many_rows(
+    tmp_path, monkeypatch
+) -> None:
+    per_row = ROW_COST_BYTES + 2 * CELL_COST_BYTES
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(per_row * 50))
+
+    at_limit = _inspect(tmp_path, _workbook_bytes(rows=50, columns=2))
+    above_limit = _inspect(tmp_path, _workbook_bytes(rows=51, columns=2))
+
+    assert at_limit.accepted, at_limit.reason_code
+    assert above_limit.reason_code == "workbook_memory_limit"
+    assert above_limit.reason_details["limit"] == per_row * 50
+
+
+def test_memory_check_does_not_reject_a_large_sheet_by_its_prefix(
+    tmp_path, monkeypatch
+) -> None:
+    # Past the rule-detail deferral threshold each row is cheaper, so a prefix of
+    # the sheet must not be priced with the pre-deferral row cost.
+    monkeypatch.setattr(ingestion_budget, "RULE_DETAIL_DEFER_ROWS", 40)
+    limit = 100 * DEFERRED_ROW_COST_BYTES + 200 * CELL_COST_BYTES
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(limit))
+
+    result = _inspect(tmp_path, _workbook_bytes(rows=100, columns=2))
+
+    assert result.accepted, result.reason_code
 
 
 def test_accepts_a_workbook_within_every_limit(tmp_path) -> None:

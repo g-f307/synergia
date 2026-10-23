@@ -6,7 +6,12 @@ import tracemalloc
 import pytest
 from openpyxl import Workbook
 
-from app.ingestion_budget import IngestionBudget, IngestionLimitError
+from app.ingestion_budget import (
+    CELL_COST_BYTES,
+    ROW_COST_BYTES,
+    IngestionBudget,
+    IngestionLimitError,
+)
 from app.normalization import normalize_file
 from app.spreadsheet_reader import (
     CLOCK_CHECK_INTERVAL,
@@ -54,7 +59,6 @@ def _clean_budget(monkeypatch):
         "INGESTION_MAX_COLUMNS",
         "INGESTION_MAX_CELLS",
         "INGESTION_MAX_ISSUES",
-        "INGESTION_ALLOWED_SHEETS",
         "INGESTION_PROGRESS_INTERVAL",
     ):
         monkeypatch.delenv(name, raising=False)
@@ -150,6 +154,20 @@ def test_reading_enforces_the_budget_with_boundary_values(
         list(big_rows)
     assert excinfo.value.code == reason
     assert excinfo.value.limit == limit
+
+
+def test_reading_enforces_the_memory_estimate_for_narrow_sheets(
+    tmp_path, monkeypatch
+) -> None:
+    per_row = ROW_COST_BYTES + 2 * CELL_COST_BYTES
+    monkeypatch.setenv("INGESTION_MAX_MEMORY_BYTES", str(per_row * 20))
+    within = _save(tmp_path, _simple(19), "within.xlsx")
+    above = _save(tmp_path, _simple(25), "above.xlsx")
+
+    assert len(list(_table(within)[2])) == 19
+    with pytest.raises(IngestionLimitError) as excinfo:
+        list(_table(above)[2])
+    assert excinfo.value.code == "workbook_memory_limit"
 
 
 def test_reading_enforces_the_time_budget_every_check_interval(tmp_path) -> None:

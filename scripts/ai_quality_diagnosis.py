@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
 import re
 import sys
@@ -26,6 +27,9 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
+# Offline tool over local files chosen by the operator; set the variable to
+# restrict the sheets (the service default authorizes none).
+os.environ.setdefault("INGESTION_ALLOWED_SHEETS", "*")
 
 from app.normalization import RULES_PATH, STATE_MAP, normalize_tables  # noqa: E402
 from app.validation import SCHEMAS, read_tables, validate_tables  # noqa: E402

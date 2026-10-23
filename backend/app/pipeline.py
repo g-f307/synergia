@@ -72,6 +72,8 @@ def read_source(
 
     try:
         return importer.read(path, extension, source)
+    except IngestionLimitError:
+        raise
     except DataReadError as exc:
         report = failed_validation_report(
             source, "read_error", exc.reason, sheet=exc.sheet, row=exc.row
@@ -209,6 +211,7 @@ def run_pipeline_batch(
     blocked_files: set[int] = set()
     valid_records = 0
     rejected_records = 0
+    lazy_budget = None
 
     for item in inputs:
         source = str(item["source"])
@@ -218,6 +221,7 @@ def run_pipeline_batch(
         run = _run_of(tables)
         # CSV and JSON have no lazy sheets or budget, but are still measured.
         meter = run or IngestionRun(source)
+        lazy_budget = lazy_budget or (run.budget if run is not None else None)
         max_issues = run.budget.max_issues if run is not None else None
         try:
             if run is not None:
@@ -320,6 +324,8 @@ def run_pipeline_batch(
         # the parsed worksheet.
         item["tables"] = []
 
+    # Consolidation and rules get their own time window under the same budget.
+    checkpoint = lazy_budget.start().check if lazy_budget is not None else None
     if blocked_files and not normalized_records:
         processing = process_normalized_records(
             normalized_records,
@@ -341,6 +347,7 @@ def run_pipeline_batch(
             defer_rule_details=(
                 len(normalized_records) >= RULE_DETAIL_DEFER_THRESHOLD
             ),
+            checkpoint=checkpoint,
             on_consolidated=(
                 None
                 if resume

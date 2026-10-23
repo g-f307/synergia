@@ -889,3 +889,58 @@ def test_successful_import_records_duration_rows_and_peak_memory(api, kind) -> N
     assert processed._value.get() == rows_before + 7
     assert sum(bucket.get() for bucket in duration._buckets) == count_before + 1
     assert INGESTION_PEAK_MEMORY._value.get() > 0
+
+
+def test_upload_fails_closed_when_no_sheet_is_authorized(api, monkeypatch) -> None:
+    client, _, storage = api
+    monkeypatch.delenv("INGESTION_ALLOWED_SHEETS", raising=False)
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("entrada.xlsx", xlsx_bytes(), XLSX_TYPE)},
+    )
+
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "no_authorized_sheet"
+    assert "INGESTION_ALLOWED_SHEETS" in error["details"]["guidance"]
+    assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]
+
+
+@pytest.mark.parametrize(
+    ("code", "status_code"),
+    [
+        ("ingestion_time_limit", 422),
+        ("unreadable_workbook", 422),
+        ("workbook_memory_limit", 413),
+    ],
+)
+def test_structured_rejection_from_the_reader_reaches_the_response(
+    api, monkeypatch, code, status_code
+) -> None:
+    from app.ingestion_budget import IngestionLimitError
+
+    client, repository, storage = api
+
+    class RejectingImporter:
+        def read(self, path, extension, source):
+            raise IngestionLimitError(code, limit=1, observed=2, sheet="Dados")
+
+    monkeypatch.setitem(pipeline.IMPORTERS, "N-FP", RejectingImporter())
+
+    response = client.post(
+        "/imports",
+        data={"source": "N-FP"},
+        files={"file": ("entrada.xlsx", xlsx_bytes(), XLSX_TYPE)},
+    )
+
+    assert response.status_code == status_code
+    error = response.json()["error"]
+    assert error["code"] == code
+    assert error["details"]["limit"] == 1
+    assert error["details"]["observed"] == 2
+    assert error["details"]["guidance"]
+    execution_id = error["details"]["execution_id"]
+    assert repository.get(execution_id)["failure_reason"] == code
+    assert not [path for path in storage.glob("accepted/**/*") if path.is_file()]

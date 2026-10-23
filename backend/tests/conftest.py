@@ -52,6 +52,13 @@ ALL_PERMISSIONS["session.revoke.own"] = frozenset({None})
 
 
 @pytest.fixture(autouse=True)
+def authorize_synthetic_sheets(monkeypatch):
+    # The production default authorizes no sheet; tests use synthetic workbooks
+    # with arbitrary sheet names and opt in explicitly.
+    monkeypatch.setenv("INGESTION_ALLOWED_SHEETS", "*")
+
+
+@pytest.fixture(autouse=True)
 def isolate_rate_limiter(request, monkeypatch):
     if request.node.get_closest_marker("real_rate_limit") is None:
         monkeypatch.setenv("RATE_LIMIT_ENABLED", "false")
