@@ -23,17 +23,23 @@ segurança, abuso, observabilidade, recuperação, volume de referência e jorna
 integrada possuem evidência reproduzível. O resultado consolidado está em
 [stage-5-validation-report.md](stage-5-validation-report.md).
 
-A release candidate continua **não aprovada** e a entrada na Etapa 6 está
+A release candidate continua **não aprovada** e a liberação para produção está
 **não autorizada**. Faltam os aceites do PO e do responsável técnico no PR e as
 decisões corporativas de capacidade, identidade, e-mail, alçadas,
 observabilidade e disaster recovery registradas em
 [stage-5-release-decision.json](stage-5-release-decision.json). Esses portões
 não são substituídos por serviços locais ou mocks.
 
-## Próximas capacidades planejadas
+## Etapa 6 — homologação com dados reais e liberação assistida
 
-- Etapa 6: contratos de integrações e automação RPA, após autorização formal;
-- integrações corporativas definitivas.
+A preparação documental da Etapa 6 está em andamento. Ela inclui contratos
+sanitizados dos workbooks reais autorizados, leitura incremental, adapters,
+corpus reproduzível, correção da expiração de sessão, SMTP substituível,
+observabilidade e piloto assistido. O início dessa preparação não aprova a
+release candidate nem remove os portões corporativos da Etapa 5.
+
+Integrações corporativas definitivas e automação RPA permanecem planejadas e
+dependem de autorização formal.
 
 Essas capacidades não são simuladas na aplicação atual. Cada uma exige contrato
 de API, controle de acesso, persistência, rastreabilidade e evidência própria.
