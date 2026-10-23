@@ -31,9 +31,10 @@ legível por máquina e sanitizada do contrato está em
 
 As duas cópias recebidas de `WO Status` são idênticas byte a byte. A família
 possui 17 abas, aproximadamente 1,57 milhão de células com fórmulas, mais de
-420 mil células com resultado de erro, 11 tabelas dinâmicas e quatro caches de
-pivot. Não foram encontrados links externos no pacote. Isso caracteriza um
-workbook misto, não uma fonte tabular única.
+420 mil ocorrências de tokens de erro (aproximadamente 228 mil células com
+resultado de erro), 11 tabelas dinâmicas e quatro caches de pivot. Não foram
+encontrados links externos no pacote. Isso caracteriza um workbook misto, não
+uma fonte tabular única.
 
 `OWM SN` concentra aproximadamente 1,38 milhão dessas fórmulas e mais de 220
 mil células com resultado de erro. A dimensão física de uma aba não pode,
@@ -86,9 +87,9 @@ valores nem garantem que arquivos futuros terão a mesma cobertura.
 
 | Fonte | Janela observada | Cobertura relevante | Limitação contratual |
 | --- | --- | --- | --- |
-| `NFP` | 8.309 linhas após o cabeçalho | U/Y/AM têm 8.309 valores literais; JV tem 4.672; `W/O` em IE tem 5.678 (68,3%) | G/I/L/M são espelhos por fórmula e não podem ser selecionadas; `W/O` não é obrigatório em toda linha |
+| `NFP` | 8.309 linhas após o cabeçalho | U/Y/AM têm 8.309 valores literais; JV tem 4.672; `W/O` em IE tem 5.678 (68,3%) | G/I/L são espelhos diretos por fórmula; M é uma coluna calculada de mesmo nome; nenhuma delas pode ser selecionada; `W/O` não é obrigatório em toda linha |
 | `OWM SN` | 93.495 linhas físicas | `Serial Number` e `W/O` têm 60.070 valores literais; `OQC Lot`, 44.722 | cerca de 33 mil linhas finais existem por causa de fórmulas; `Org` e `REASON` são 100% calculados |
-| `LOT PENDING_OQC` | 130 linhas físicas | 88 linhas têm campos predefinidos, mas apenas 18 têm `Status`, grupo, datas e quantidades operacionais | nas 18 linhas substantivas, `WO` e `Reason` dependem de fórmula; `Cause Dept.`, `Target Date` e `Change User` não têm evidência |
+| `LOT PENDING_OQC` | intervalo físico de 130 linhas (4–133), com 91 linhas materializadas no arquivo | 88 linhas têm campos predefinidos, mas apenas 18 têm `Status`, grupo, datas e quantidades operacionais | nas 18 linhas substantivas, `WO` e `Reason` dependem de fórmula; `Cause Dept.`, `Target Date` e `Change User` não têm evidência |
 | `CTNR STATUS` | 398 linhas | container, estado, modelo e quantidades têm 398 valores literais | `W/O`, `Inspection No` e `Inspection Status` estão vazios nas 398 linhas |
 | `Total Decision` | 551 linhas | `WO Name`, `WO_ID`, `OQC_LOT_ID`, `ORG_ID` e quantidades têm 551 valores literais | `Inspection ID`, `WOID` e todo o bloco `Approval` estão vazios |
 
@@ -101,8 +102,10 @@ com fórmula ou erro é rejeitada mesmo quando o nome esperado coincide.
 
 Em `NFP`, os seletores iniciais são U (`Plant`), Y (`Demand ID`), AM
 (`Lot Qty`) e JV (`OQC Pass`). G, I, L e M apresentam os mesmos nomes somente
-como espelhos por fórmula e estão proibidas. A confirmação do cliente ainda é
-necessária para declarar as quatro colunas literais como fontes oficiais.
+em colunas de fórmula e estão proibidas: G, I e L são referências diretas a U,
+Y e AM; M é uma coluna calculada de mesmo nome, não um espelho direto de JV. A
+confirmação do cliente ainda é necessária para declarar as quatro colunas
+literais como fontes oficiais.
 
 Em `Total Decision`, o caminho de cabeçalho multinível e a letra da coluna
 formam o seletor. Cabeçalhos repetidos como `C`, `Not in 6 Months`, `Result` e
@@ -139,10 +142,10 @@ devem ser rejeitados com código estável, sem publicar o valor original.
 | JV / `OQC Pass` | `oqc_pass_quantity` ou estado | literal em 4.672 linhas; tipo e unidade pendentes |
 | `Comment1`, `Comment2` | observações restritas | proibido em logs; persistência depende de necessidade aprovada |
 
-G / `Plant`, I / `Demand ID`, L / `Lot Qty` e M / `OQC Pass` são espelhos por
-fórmula e ficam proibidas. Colunas de bucket temporal, resultados calculados,
-totais e qualquer célula com fórmula ou erro também ficam fora da primeira
-versão.
+G / `Plant`, I / `Demand ID` e L / `Lot Qty` são espelhos diretos por fórmula;
+M / `OQC Pass` é uma coluna calculada de mesmo nome. As quatro ficam proibidas.
+Colunas de bucket temporal, resultados calculados, totais e qualquer célula
+com fórmula ou erro também ficam fora da primeira versão.
 
 ### OWM — aba `OWM SN`
 
@@ -228,7 +231,8 @@ sintéticas ou sanitizadas e possuir manifesto próprio.
 ## Questões para validação com o cliente
 
 1. U/Y/AM/JV são as fontes oficiais de `Plant`, `Demand ID`, `Lot Qty` e
-   `OQC Pass` em `NFP`? Os espelhos G/I/L/M devem ser sempre descartados?
+   `OQC Pass` em `NFP`? Os espelhos G/I/L e a coluna calculada M devem ser
+   sempre descartados?
 2. `OWM SN` é a fonte de autoridade para a relação entre Workorder, serial,
    lote OQC e pallet?
 3. Qual fonte prevalece quando `LOT PENDING_OQC`, `OWMS Hold` e `OWM SN`

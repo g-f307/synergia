@@ -72,7 +72,7 @@
             {"column": "G", "effective_header": "Plant", "reason": "formula mirror of U"},
             {"column": "I", "effective_header": "Demand ID", "reason": "formula mirror of Y"},
             {"column": "L", "effective_header": "Lot Qty", "reason": "formula mirror of AM"},
-            {"column": "M", "effective_header": "OQC Pass", "reason": "formula mirror of JV"}
+            {"column": "M", "effective_header": "OQC Pass", "reason": "calculated formula column with the same header; not a direct mirror of JV"}
           ]
         },
         {
@@ -141,7 +141,8 @@
           },
           "types": {"identifiers": "string", "quantities": "decimal_non_negative", "dates": "local_datetime_pending_timezone"},
           "observed_coverage": {
-            "physical_rows": 130,
+            "physical_interval_rows": 130,
+            "materialized_rows": 91,
             "prefilled_rows": 88,
             "substantive_rows": 18,
             "empty_cause_department": 130,

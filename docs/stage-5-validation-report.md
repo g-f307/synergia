@@ -9,6 +9,10 @@ técnico registrem aceite no PR e os portões corporativos aplicáveis tenham um
 decisão. O estado canônico e validável por máquina está em
 [`stage-5-release-decision.json`](stage-5-release-decision.json).
 
+A preparação documental e técnica de itens previstos para a Etapa 6 pode
+ocorrer antecipadamente para reduzir riscos. Ela não representa a entrada
+formal na Etapa 6, não encerra a Etapa 5 e não altera os portões abaixo.
+
 Isso não é uma aprovação de produção. Identidade, SMTP, observabilidade,
 infraestrutura e disaster recovery corporativos continuam fora do escopo; RPA
 e conectores não foram simulados como concluídos.
