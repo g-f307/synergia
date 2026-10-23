@@ -14,8 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT))
 
-from app.total_decision_spec import load_spec  # noqa: E402
 from scripts.generate_homologation_fixture import _stable_xlsx  # noqa: E402
+
+from app.total_decision_spec import load_spec  # noqa: E402
 
 SENSITIVE_SENTINEL = "SYNTHETIC-RESTRICTED-CONTENT"
 DENIED_SENTINEL = "SYNTHETIC-DENIED-CONTENT"
