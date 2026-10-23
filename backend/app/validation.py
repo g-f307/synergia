@@ -1,17 +1,29 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import unicodedata
 from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date, datetime
+from itertools import islice
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+
+from app.ingestion_budget import IngestionLimitError
+from app.spreadsheet_reader import (
+    HEADER_SCAN_ROWS,
+    IngestionRun,
+    LazySheetRows,
+    LocatedRow,
+    open_workbook,
+)
+
+__all__ = ["LocatedRow"]
 
 
 @dataclass(frozen=True)
@@ -74,14 +86,6 @@ class DataReadError(Exception):
         self.reason = reason
         self.sheet = sheet
         self.row = row
-
-
-class LocatedRow(list[Any]):
-    """Spreadsheet row that retains its physical position after preambles."""
-
-    def __init__(self, values: list[Any], row_number: int) -> None:
-        super().__init__(values)
-        self.row_number = row_number
 
 
 RELATIONSHIP_IDENTIFIERS = (
@@ -160,8 +164,51 @@ def _issue(
     }
 
 
+def _read_xlsx(
+    path: Path, source: str | None, run: IngestionRun
+) -> tuple[list[tuple[str, list[str], Any]], list[dict[str, Any]]]:
+    """List the authorized sheets and their headers without loading any rows."""
+    issues: list[dict[str, Any]] = []
+    tables: list[tuple[str, list[str], Any]] = []
+    budget = run.budget
+    with open_workbook(path) as workbook:
+        names = list(workbook.sheetnames)
+        if len(names) > budget.max_sheets:
+            raise IngestionLimitError(
+                "workbook_sheet_limit", limit=budget.max_sheets, observed=len(names)
+            )
+        authorized = [name for name in names if budget.authorizes(name)]
+        if budget.allowed_sheets is not None and not authorized:
+            raise IngestionLimitError("no_authorized_sheet")
+        for name in authorized:
+            run.clock.check()
+            window = [
+                list(row)
+                for row in islice(
+                    workbook[name].iter_rows(values_only=True), HEADER_SCAN_ROWS
+                )
+            ]
+            header_index = _xlsx_header_index(window, source)
+            if header_index is None:
+                issues.append(
+                    _issue("invalid_header", "Aba vazia ou sem cabeçalho", sheet=name)
+                )
+                continue
+            tables.append(
+                (
+                    name,
+                    window[header_index],
+                    LazySheetRows(path, name, header_index, run),
+                )
+            )
+    return tables, issues
+
+
 def _read(
-    path: Path, extension: str, source: str | None = None
+    path: Path,
+    extension: str,
+    source: str | None = None,
+    run: IngestionRun | None = None,
 ) -> tuple[list[tuple[str, list[str], list[list[Any]]]], list[dict[str, Any]]]:
     issues: list[dict[str, Any]] = []
     tables: list[tuple[str, list[str], list[list[Any]]]] = []
@@ -200,37 +247,7 @@ def _read(
                 )
             )
     else:
-        with path.open("rb") as stream:
-            workbook = load_workbook(stream, read_only=True, data_only=False)
-            try:
-                for worksheet in workbook.worksheets:
-                    values = [
-                        list(row) for row in worksheet.iter_rows(values_only=True)
-                    ]
-                    header_index = _xlsx_header_index(values, source)
-                    if header_index is None:
-                        issues.append(
-                            _issue(
-                                "invalid_header",
-                                "Aba vazia ou sem cabeçalho",
-                                sheet=worksheet.title,
-                            )
-                        )
-                        continue
-                    tables.append(
-                        (
-                            worksheet.title,
-                            values[header_index],
-                            [
-                                LocatedRow(row, row_number)
-                                for row_number, row in enumerate(
-                                    values[header_index + 1 :], header_index + 2
-                                )
-                            ],
-                        )
-                    )
-            finally:
-                workbook.close()
+        return _read_xlsx(path, source, run or IngestionRun(source or "default"))
     return tables, issues
 
 
@@ -278,11 +295,25 @@ def failed_validation_report(
     return _report(source, 0, [_issue(code, reason, sheet=sheet, row=row)])
 
 
+def _header_row(rows: Any) -> int:
+    explicit = getattr(rows, "header_row", None)
+    if explicit is not None:
+        return explicit
+    return max(1, getattr(rows[0], "row_number", 2) - 1) if rows else 1
+
+
+def _row_digest(values: Any) -> bytes:
+    joined = "\x1f".join(str(value).strip() for value in values)
+    payload = joined.encode("utf-8", "surrogatepass")
+    return hashlib.blake2b(payload, digest_size=16).digest()
+
+
 def validate_tables(
     tables: list[tuple[str, list[str], list[list[Any]]]],
     source: str,
     known_organizations: Collection[str] | None = None,
     initial_issues: list[dict[str, Any]] | None = None,
+    max_issues: int | None = None,
 ) -> dict[str, Any]:
     schema = SCHEMAS[source]
     allowed_organizations = (
@@ -297,12 +328,10 @@ def validate_tables(
         issues.append(_issue("empty_file", "Arquivo não contém linhas de dados"))
 
     for sheet, raw_headers, rows in tables:
-        seen_rows: dict[tuple[str, ...], int] = {}
+        seen_rows: dict[bytes, int] = {}
         normalized = [_header(value) for value in raw_headers]
         headers = [schema.aliases.get(value, value) for value in normalized]
-        header_row = (
-            max(1, getattr(rows[0], "row_number", 2) - 1) if rows else 1
-        )
+        header_row = _header_row(rows)
         for index, value in enumerate(normalized, 1):
             if not value:
                 issues.append(
@@ -338,6 +367,13 @@ def validate_tables(
             )
         for offset, values in enumerate(rows, 2):
             offset = getattr(values, "row_number", offset)
+            if max_issues is not None and len(issues) > max_issues:
+                raise IngestionLimitError(
+                    "ingestion_issue_limit",
+                    limit=max_issues,
+                    observed=len(issues),
+                    sheet=sheet,
+                )
             if not any(value not in (None, "") for value in values):
                 issues.append(
                     _issue(
@@ -350,7 +386,7 @@ def validate_tables(
                 )
                 continue
             row_count += 1
-            row_key = tuple(str(value).strip() for value in values)
+            row_key = _row_digest(values)
             if row_key in seen_rows:
                 issues.append(
                     _issue(

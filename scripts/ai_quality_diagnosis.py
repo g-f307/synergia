@@ -120,7 +120,13 @@ def build_context(
                 "column": None,
             }
         ]
-    if sum(len(rows) for _, _, rows in tables) > 10_000:
+    if (
+        sum(
+            len(rows) if isinstance(rows, list) else rows.count()
+            for _, _, rows in tables
+        )
+        > 10_000
+    ):
         raise PoCFoundationError("too_many_rows")
     report = validate_tables(tables, source, initial_issues=initial)
     issues = report["issues"] if read_success else initial

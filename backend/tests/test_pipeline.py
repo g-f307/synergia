@@ -238,7 +238,10 @@ def test_reads_xlsx_from_temporary_path_without_xlsx_suffix(tmp_path) -> None:
     tables, read_issues = read_source(path, ".xlsx", "N-FP")
 
     assert read_issues == []
-    assert tables == [("Sheet", ["workorder", "status"], [["WO-1", "open"]])]
+    assert [(sheet, headers, list(rows)) for sheet, headers, rows in tables] == [
+        ("Sheet", ["workorder", "status"], [["WO-1", "open"]])
+    ]
+    assert not isinstance(tables[0][2], list)
 
 
 def test_reads_multisheet_quality_workbook_with_titles_and_real_row_numbers(
