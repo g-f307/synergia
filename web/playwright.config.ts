@@ -43,9 +43,10 @@ export default defineConfig({
         AUTH_JWT_AUDIENCE: 'synergia-web-e2e',
         AUTH_REFRESH_COOKIE_SECURE: 'false',
         AUTH_ALLOWED_ORIGINS: webOrigin,
-        // This serial journey creates fresh sessions repeatedly to isolate its
-        // scenarios. Dedicated backend tests still exercise the real limit.
+        // This serial journey creates and restores sessions repeatedly to isolate
+        // its scenarios. Dedicated backend tests still exercise the real limits.
         RATE_LIMIT_LOGIN_LIMIT: '1000',
+        RATE_LIMIT_REFRESH_LIMIT: '1000',
         IMPORT_STORAGE_DIR: '../.test-tmp/e2e-imports',
       },
     },
