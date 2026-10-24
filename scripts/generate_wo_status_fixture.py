@@ -279,8 +279,8 @@ def _ctnr(book: Workbook, rows: int, edge: bool) -> dict[str, int]:
         _put(sheet, "D", row, "Loading")
         _put(sheet, "I", row, f"MODEL-{index % 5}")
         _put(sheet, "J", row, 100)
-        _put(sheet, "K", row, 40 + index)
-        _put(sheet, "P", row, 60 - index)
+        _put(sheet, "K", row, 40 + index % 61)
+        _put(sheet, "P", row, 60 - index % 61)
         _put(sheet, "AH", row, datetime(2026, 2, 1 + index % 20))
         if index % 3:
             _put(sheet, "AK", row, datetime(2026, 2, 2 + index % 20))
@@ -310,6 +310,8 @@ def build_workbook(
 ) -> tuple[bytes, dict[str, dict[str, int]]]:
     """Return the deterministic workbook bytes and the counts it was built with."""
     book = Workbook()
+    book.properties.created = datetime(2026, 1, 1)
+    book.properties.modified = datetime(2026, 1, 1)
     book.remove(book.active)
     for name in SHEET_ORDER:
         book.create_sheet(name)

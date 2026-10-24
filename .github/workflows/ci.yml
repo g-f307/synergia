@@ -94,6 +94,10 @@ jobs:
         run: pytest -q -m "not integration" --junitxml=reports/pytest.xml
       - name: Validar contratos e avaliação sintética das PoCs de IA
         run: pytest -q tests/test_ai_poc_evaluation.py
+      - name: Validar corpus e orçamento de ingestão dos adapters
+        run: |
+          python ../scripts/build_ingestion_corpus.py
+          python ../scripts/run_ingestion_validation.py --profile ci --output reports/ingestion-validation.json
       - name: Validar matriz e executar regressão de segurança
         run: |
           python ../scripts/validate_access_matrix.py
@@ -112,6 +116,13 @@ jobs:
           name: testes-fastapi
           path: backend/reports/pytest.xml
           if-no-files-found: error
+      - name: Publicar evidência sintética de ingestão
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ingestao-sintetica
+          path: backend/reports/ingestion-validation.json
+          if-no-files-found: warn
       - name: Publicar relatório de segurança
         if: always() && hashFiles('backend/reports/security.xml', 'docs/security-test-report.md') != ''
         uses: actions/upload-artifact@v4

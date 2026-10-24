@@ -1,0 +1,75 @@
+{
+  "balanced": true,
+  "blocking": false,
+  "codes": {
+    "contract_blocked": 6,
+    "duplicate_row": 1,
+    "duplicate_serial": 1,
+    "formula_not_allowed": 1,
+    "gap_in_active_region": 1,
+    "identifier_stored_as_number": 1,
+    "invalid_quantity": 2,
+    "missing_identity": 1,
+    "sheet_ignored": 13,
+    "unknown_state": 1,
+    "unparsed_date": 1
+  },
+  "contains_source_values": false,
+  "normalized_sha256": "b4b2cff15d412f62c15395fca4126396a185c4840dc82438dba9ec1d1cc38a5a",
+  "sheets": [
+    {
+      "accepted": 8,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 1,
+      "imported": 11,
+      "normalized": 8,
+      "present": true,
+      "read": 12,
+      "rejected": 3,
+      "sheet": "NFP",
+      "source": "N-FP"
+    },
+    {
+      "accepted": 8,
+      "balanced": true,
+      "duplicated": 1,
+      "ignored": 2,
+      "imported": 10,
+      "normalized": 8,
+      "present": true,
+      "read": 12,
+      "rejected": 2,
+      "sheet": "OWM SN",
+      "source": "OWM"
+    },
+    {
+      "accepted": 0,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 10,
+      "imported": 6,
+      "normalized": 0,
+      "present": true,
+      "read": 16,
+      "rejected": 6,
+      "sheet": "LOT PENDING_OQC",
+      "source": "GMES/OQC"
+    },
+    {
+      "accepted": 5,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 6,
+      "normalized": 5,
+      "present": true,
+      "read": 6,
+      "rejected": 1,
+      "sheet": "CTNR STATUS",
+      "source": "TMS"
+    }
+  ],
+  "source": "WO Status",
+  "status": "completed_with_errors"
+}

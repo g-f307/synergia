@@ -1,0 +1,27 @@
+{
+  "balanced": true,
+  "blocking": true,
+  "codes": {
+    "contract_drift": 4,
+    "empty_file": 1
+  },
+  "contains_source_values": false,
+  "normalized_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "sheets": [
+    {
+      "accepted": 0,
+      "balanced": true,
+      "duplicated": 0,
+      "ignored": 0,
+      "imported": 0,
+      "normalized": 0,
+      "present": true,
+      "read": 0,
+      "rejected": 0,
+      "sheet": "Sheet1",
+      "source": "GMES/OQC"
+    }
+  ],
+  "source": "Total Decision",
+  "status": "validation_failed"
+}

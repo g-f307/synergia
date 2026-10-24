@@ -135,3 +135,12 @@ preservam a estrutura e alteram valores gerados.
 `total-decision_minimal.xlsx` é inteiramente sintético: duas linhas de cabeçalhos mesclados, linha de totais, quatro registros válidos e sentinelas inventadas em campos restritos e negados. Os totais e sentinelas nunca devem aparecer nos registros normalizados.
 
 Regeneração determinística: `python scripts/generate_total_decision_fixture.py data/synthetic/total-decision_minimal.xlsx`. Use `--edge` para gerar separadamente casos de data não interpretável, estado desconhecido, quantidade negativa, identidade ausente e fórmula. Nenhum valor foi copiado dos arquivos reais. Corpus, manifestos e testes amplos de volume pertencem à #141.
+
+## Corpus de ingestão (#141)
+
+[`ingestion-v1/`](ingestion-v1/README.md) congela onze casos inteiramente
+inventados de WO Status e Total Decision, com hashes, gabaritos, reconciliação
+e casos de erro. Verificação: `python scripts/build_ingestion_corpus.py`.
+Perfis maiores são temporários: `python scripts/run_ingestion_validation.py
+--profile local`. Procedimentos, concorrência, opt-in de arquivos integrais e
+limitações estão em [ingestion-corpus-validation.md](../../docs/ingestion-corpus-validation.md).
