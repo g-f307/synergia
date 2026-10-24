@@ -107,15 +107,47 @@ acessar uma rota protegida sem access token, tenta uma única renovação silenc
   retorna o `401` para decisão explícita da tela;
 - refresh expirado ou revogado limpa token, perfil, sessão e aparência antes de
   exibir somente o login público;
-- indisponibilidade do backend é apresentada separadamente de credencial
-  inválida e de sessão expirada;
+- o marcador não sensível em `sessionStorage` é apenas uma pista para distinguir
+  uma sessão anterior: leitura, gravação ou remoção bloqueada pelo navegador não
+  impede login, renovação ou limpeza do estado mantido em memória;
+- credencial inválida (`401`), excesso de tentativas (`429`), indisponibilidade
+  de rede/servidor (`0` ou `5xx`) e as demais recusas `4xx` recebem mensagens
+  distintas;
 - o retorno após novo login aceita apenas rotas internas conhecidas. URLs
   externas, relativas ao protocolo, codificadas para outro host ou apontando
   novamente para `/login` caem em `/profile`.
 
 Esse fluxo evita replay de mutações, tempestade de refresh, navegação privada
-residual e redirecionamento aberto. A regressão é coberta pelos testes de
-`session.service`, `auth.interceptor`, guards, login e pela jornada E2E.
+residual e redirecionamento aberto.
+
+O cookie de refresh é `HttpOnly`, portanto uma aba nova não consegue detectar
+localmente se ele existe. Por decisão de produto, cada abertura de `/login` sem
+access token faz uma única tentativa de refresh para impedir que uma sessão
+válida exiba novamente o formulário. O limite padrão é de 30 tentativas por 60
+segundos e contabiliza tanto a origem quanto, quando presente, a credencial do
+cookie. Em redes corporativas com NAT, o limite por origem deve ser dimensionado
+para a concorrência esperada e `RATE_LIMIT_TRUSTED_PROXY_CIDRS` deve listar
+somente proxies efetivamente confiáveis. A configuração elevada usada pela
+jornada Playwright é exclusiva do ambiente E2E e não altera o padrão de
+produção.
+
+O `returnUrl` preserva a query para restaurar filtros, abas e paginação da tela
+operacional. Somente caminhos internos conhecidos são aceitos; credenciais,
+segredos e dados pessoais não devem ser colocados em URLs. Identificadores
+operacionais presentes na query podem aparecer no histórico do navegador e nos
+logs de acesso, consequência aceita para manter o contexto de navegação.
+
+Quando a renovação falha por indisponibilidade, o estado `unavailable` informa o
+problema durante a execução atual e o marcador é removido junto com o restante
+da sessão. Após recarregar, sem outra evidência de autenticação anterior, uma
+rejeição posterior do refresh degrada para visita anônima, sem aviso incorreto
+de expiração.
+
+A regressão é coberta pelos testes de `session.service`, `auth.interceptor`,
+guards e login. A jornada E2E cobre sessão revogada e acesso a `/login` com
+sessão válida; concorrência single-flight, indisponibilidade e ausência de replay
+de mutações ficam em testes unitários determinísticos, para evitar depender de
+corridas e falhas artificiais no navegador.
 
 ## Limitação de tentativas
 
