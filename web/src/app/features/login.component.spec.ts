@@ -125,6 +125,58 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.querySelector('.card')).toBeNull();
   });
 
+  it('centers the form when it fits and keeps its start reachable when it overflows', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const access = (fixture.nativeElement.querySelector('.login-access') as HTMLElement)
+      .getBoundingClientRect();
+    const content = (fixture.nativeElement.querySelector('.login-content') as HTMLElement)
+      .getBoundingClientRect();
+    const accessCenter = access.top + access.height / 2;
+    const contentCenter = content.top + content.height / 2;
+
+    expect(window.innerWidth).toBeGreaterThan(760);
+    if (content.height <= access.height) {
+      expect(Math.abs(contentCenter - accessCenter)).toBeLessThanOrEqual(1);
+    } else {
+      expect(content.top).toBeGreaterThanOrEqual(access.top);
+      expect((fixture.nativeElement.querySelector('.login-access') as HTMLElement).scrollHeight)
+        .toBeGreaterThan((fixture.nativeElement.querySelector('.login-access') as HTMLElement).clientHeight);
+    }
+  });
+
+  it('centers the framed surface when desktop spacing reaches its maximum', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement.querySelector('.login-page') as HTMLElement;
+    page.style.padding = '52px';
+    page.style.setProperty('--login-page-gap', '52px');
+
+    const pageBounds = page.getBoundingClientRect();
+    const shellBounds = (fixture.nativeElement.querySelector('.login-shell') as HTMLElement)
+      .getBoundingClientRect();
+    const pageCenter = pageBounds.top + pageBounds.height / 2;
+    const shellCenter = shellBounds.top + shellBounds.height / 2;
+    const availableHeight = pageBounds.height - 104;
+
+    expect(window.innerWidth).toBeGreaterThan(760);
+    expect(shellBounds.height).toBeLessThanOrEqual(availableHeight);
+    expect(Math.abs(shellCenter - pageCenter)).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps overflow reachable when zoom reduces the available height', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement.querySelector('.login-page') as HTMLElement;
+    const access = fixture.nativeElement.querySelector('.login-access') as HTMLElement;
+
+    expect(getComputedStyle(page).overflowY).toBe('auto');
+    expect(getComputedStyle(access).overflowY).toBe('auto');
+  });
+
   it('groups language and theme controls in the login utility area', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
