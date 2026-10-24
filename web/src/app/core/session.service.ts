@@ -51,6 +51,9 @@ export class SessionService {
 
   refresh(): Observable<boolean> {
     if (this.refreshRequest) return this.refreshRequest;
+    const hadAuthenticatedSession = this.state() === 'authenticated'
+      || Boolean(this.accessToken())
+      || Boolean(this.profile());
     this.state.set('loading');
     this.refreshRequest = this.http.post<TokenResponse>(
       `${environment.apiUrl}/auth/refresh`, {}, { withCredentials: true }
@@ -59,7 +62,10 @@ export class SessionService {
       switchMap(() => this.loadProfile()),
       map(() => true),
       catchError((error: HttpErrorResponse) => {
-        this.clear(error.status === 0 || error.status >= 500 ? 'unavailable' : 'expired');
+        const nextState = error.status === 0 || error.status >= 500
+          ? 'unavailable'
+          : hadAuthenticatedSession ? 'expired' : 'anonymous';
+        this.clear(nextState);
         return of(false);
       }),
       finalize(() => { this.refreshRequest = undefined; }),

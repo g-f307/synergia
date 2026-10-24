@@ -119,7 +119,7 @@ describe('SessionService', () => {
     expect(TestBed.inject(I18nService).locale()).toBe('en-US');
   });
 
-  it('clears local state when refresh expires', () => {
+  it('keeps a first anonymous visit anonymous when no refresh session exists', () => {
     let refreshed = true;
     service.refresh().subscribe((value) => { refreshed = value; });
     const request = http.expectOne('http://localhost:8000/auth/refresh');
@@ -127,6 +127,23 @@ describe('SessionService', () => {
     request.flush({}, { status: 401, statusText: 'Unauthorized' });
 
     expect(refreshed).toBeFalse();
+    expect(service.state()).toBe('anonymous');
+    expect(service.profile()).toBeNull();
+  });
+
+  it('marks a previously authenticated session as expired when refresh is rejected', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
     expect(service.state()).toBe('expired');
     expect(service.profile()).toBeNull();
   });
