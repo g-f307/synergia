@@ -148,6 +148,28 @@ describe('SessionService', () => {
     expect(service.profile()).toBeNull();
   });
 
+  it('preserves an expired session state when a later refresh is also rejected', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+    expect(service.state()).toBe('expired');
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('expired');
+  });
+
   it('shares one refresh request among concurrent subscribers', () => {
     const results: boolean[] = [];
     service.refresh().subscribe((value) => results.push(value));

@@ -52,6 +52,7 @@ export class SessionService {
   refresh(): Observable<boolean> {
     if (this.refreshRequest) return this.refreshRequest;
     const hadAuthenticatedSession = this.state() === 'authenticated'
+      || this.state() === 'expired'
       || Boolean(this.accessToken())
       || Boolean(this.profile());
     this.state.set('loading');
