@@ -32,6 +32,8 @@
   "auth.submitting": "Entrando…",
   "auth.errorCredentials": "Credenciais inválidas.",
   "auth.errorExpired": "Sua sessão expirou. Entre novamente para continuar.",
+  "auth.errorRateLimited": "Muitas tentativas de acesso. Aguarde antes de tentar novamente.",
+  "auth.errorRequest": "Não foi possível concluir o acesso. Verifique a solicitação e tente novamente.",
   "auth.errorUnavailable": "O serviço de autenticação está temporariamente indisponível.",
   "profile.title": "Meu perfil",
   "profile.displayName": "Nome exibido",

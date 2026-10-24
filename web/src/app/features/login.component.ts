@@ -9,7 +9,12 @@ import { safeReturnUrl } from '../core/auth-navigation';
 import { ThemeService } from '../core/theme.service';
 import { I18nService } from '../shared/i18n/i18n.service';
 
-type LoginMessageKey = 'auth.errorCredentials' | 'auth.errorExpired' | 'auth.errorUnavailable';
+type LoginMessageKey =
+  | 'auth.errorCredentials'
+  | 'auth.errorExpired'
+  | 'auth.errorRateLimited'
+  | 'auth.errorRequest'
+  | 'auth.errorUnavailable';
 
 export { safeReturnUrl } from '../core/auth-navigation';
 
@@ -118,10 +123,15 @@ export class LoginComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'))),
-        error: (error: HttpErrorResponse) => this.errorKey.set(
-          error.status === 401 ? 'auth.errorCredentials' : 'auth.errorUnavailable'
-        )
+        error: (error: HttpErrorResponse) => this.errorKey.set(this.loginErrorMessage(error))
       });
+  }
+
+  private loginErrorMessage(error: HttpErrorResponse): LoginMessageKey {
+    if (error.status === 401) return 'auth.errorCredentials';
+    if (error.status === 429) return 'auth.errorRateLimited';
+    if (error.status === 0 || error.status >= 500) return 'auth.errorUnavailable';
+    return 'auth.errorRequest';
   }
 
   private sessionStateMessage(): LoginMessageKey | null {

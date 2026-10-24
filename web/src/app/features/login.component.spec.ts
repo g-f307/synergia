@@ -44,7 +44,7 @@ describe('LoginComponent', () => {
     TestBed.inject(I18nService).configure('pt-BR');
   });
 
-  it('distinguishes rejected credentials from an unavailable authentication service', () => {
+  it('reports rejected credentials for a 401 login response', () => {
     session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.componentInstance.form.setValue({
@@ -54,11 +54,59 @@ describe('LoginComponent', () => {
     fixture.componentInstance.submit();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Credenciais inválidas');
+  });
+
+  it('reports authentication unavailability for network and server failures', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.componentInstance.form.setValue({
+      email: 'anonymous@example.invalid',
+      password: 'synthetic-password'
+    });
 
     session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     fixture.componentInstance.submit();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('indisponível');
+
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('indisponível');
+  });
+
+  it('asks the user to wait after a rate-limited login response', () => {
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.componentInstance.form.setValue({
+      email: 'anonymous@example.invalid',
+      password: 'synthetic-password'
+    });
+
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent)
+      .toContain('Muitas tentativas');
+  });
+
+  it('uses a generic rejection message for other client errors', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.componentInstance.form.setValue({
+      email: 'anonymous@example.invalid',
+      password: 'synthetic-password'
+    });
+
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent)
+      .toContain('Não foi possível concluir o acesso');
+
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 422 })));
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent)
+      .toContain('Não foi possível concluir o acesso');
   });
 
   it('explains that the prior session expired before asking for credentials again', () => {
