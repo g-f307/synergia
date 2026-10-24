@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import socket
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -52,12 +54,14 @@ class MemoryTemplateRepository:
         self.item = revision()
 
     def policies(self):
-        return [{
-            "notification_type": "execution.completed",
-            "required_permission": "execution.read",
-            "resource_type": "execution",
-            "allowed_placeholders": ["execution_id"],
-        }]
+        return [
+            {
+                "notification_type": "execution.completed",
+                "required_permission": "execution.read",
+                "resource_type": "execution",
+                "allowed_placeholders": ["execution_id"],
+            }
+        ]
 
     def list(self, **_filters):
         return [self.item], 1
@@ -181,5 +185,58 @@ def test_unknown_revision_is_not_enumerated() -> None:
             )
             assert response.status_code == 404
             assert response.json()["error"]["code"] == "template_not_found"
+    finally:
+        app.dependency_overrides.pop(get_notification_template_repository, None)
+
+
+@pytest.mark.parametrize(
+    "provider,enabled,invalid,expected",
+    [
+        ("smtp", "false", False, "disabled"),
+        ("local_capture", "true", False, "local_capture"),
+        ("smtp", "true", False, "smtp"),
+        ("smtp", "true", True, "unavailable"),
+    ],
+)
+def test_delivery_policy_reports_configuration_without_connecting_or_disclosing_secrets(
+    monkeypatch, tmp_path, provider, enabled, invalid, expected
+):
+    for key in tuple(os.environ):
+        if key.startswith("EMAIL_"):
+            monkeypatch.delenv(key)
+    environment = {
+        "EMAIL_DELIVERY_ENABLED": enabled,
+        "EMAIL_PROVIDER": provider,
+        "EMAIL_FROM_ADDRESS": "sender@example.invalid",
+        "EMAIL_CAPTURE_PATH": str(tmp_path / "capture.jsonl"),
+        "EMAIL_SMTP_HOST": "smtp.example.invalid",
+        "EMAIL_SMTP_USERNAME": "synthetic-private-login",
+        "EMAIL_SMTP_PASSWORD": "synthetic-private-secret",
+        "EMAIL_SMTP_ALLOWED_RECIPIENTS": "allowed@example.invalid",
+        "EMAIL_SMTP_PORT": "invalid" if invalid else "587",
+    }
+    for key, value in environment.items():
+        monkeypatch.setenv(key, value)
+
+    def no_network(*args, **kwargs):
+        raise AssertionError("Delivery policy must never connect")
+
+    monkeypatch.setattr(socket, "create_connection", no_network)
+    monkeypatch.setattr(socket, "getaddrinfo", no_network)
+    app.dependency_overrides[get_notification_template_repository] = (
+        MemoryTemplateRepository
+    )
+    try:
+        with TestClient(app) as client:
+            response = client.get("/admin/notification-templates/policy")
+        assert response.status_code == 200
+        assert response.json()["external_delivery"] == expected
+        assert response.json()["external_delivery_corporate"] is False
+        for private in (
+            "@example.invalid",
+            "smtp.example.invalid",
+            "synthetic-private",
+        ):
+            assert private not in response.text
     finally:
         app.dependency_overrides.pop(get_notification_template_repository, None)

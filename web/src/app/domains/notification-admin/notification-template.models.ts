@@ -13,7 +13,7 @@ export interface NotificationTemplatePolicy {
   events: NotificationEventPolicy[];
   channels: NotificationTemplateChannel[];
   locales: NotificationTemplateLocale[];
-  external_delivery: 'disabled' | 'local_capture' | 'unavailable';
+  external_delivery: 'disabled' | 'local_capture' | 'smtp' | 'unavailable';
   external_delivery_corporate: false;
 }
 

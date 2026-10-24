@@ -37,6 +37,7 @@
           <div class="template-document-heading template-section-heading">
             <h2 [id]="item() ? 'template-composer-title' : 'template-content-title'">{{ i18n.t('notificationAdmin.content') }}</h2>
             <p>{{ i18n.t('notificationAdmin.contentDescription') }}</p>
+            @if (channel === 'email') { <p class="template-delivery-status" role="status">{{ i18n.t(deliveryKey()) }}</p> }
           </div>
           <div class="template-composer-grid">
             <div class="template-document">

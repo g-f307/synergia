@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiFailure } from '../../shared/api/api-error';
 import { NotificationTemplateEditorComponent } from './notification-template-editor.component';
 import { NotificationTemplateService } from './notification-template.service';
+import { NotificationTemplatePolicy } from './notification-template.models';
 
 const policy = {
   events: [{ notification_type: 'execution.completed', required_permission: 'execution.read', resource_type: 'execution', allowed_placeholders: ['execution_id'] }],
@@ -45,6 +46,35 @@ describe('NotificationTemplateEditorComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(NotificationTemplateEditorComponent);
     fixture.detectChanges();
+  });
+
+  const deliveryStates: [NotificationTemplatePolicy['external_delivery'], string][] = [
+    ['smtp', 'Envio de e-mail configurado'],
+    ['local_capture', 'Captura local'],
+    ['disabled', 'Envio de e-mail desabilitado'],
+    ['unavailable', 'Configuração de e-mail indisponível']
+  ];
+  for (const [state, label] of deliveryStates) {
+    it(`shows ${state} only in the email editor`, () => {
+      const component = fixture.componentInstance;
+      component.policy.update(value => value ? { ...value, external_delivery: state } : value);
+      expect(fixture.nativeElement.querySelector('.template-delivery-status')).toBeNull();
+      component.channel = 'email';
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.template-delivery-status')?.textContent).toContain(label);
+    });
+  }
+
+  it('describes configured delivery in English without claiming receipt or corporate validation', () => {
+    const component = fixture.componentInstance;
+    component.policy.update(value => value ? { ...value, external_delivery: 'smtp' } : value);
+    component.channel = 'email';
+    component.i18n.configure('en-US');
+    fixture.detectChanges();
+    const text = fixture.nativeElement.querySelector('.template-delivery-status')?.textContent;
+    expect(text).toContain('Email delivery configured');
+    expect(text).toContain('Preview does not send messages');
+    expect(text).not.toContain('corporate');
   });
 
   it('keeps published content readonly and exposes immutable history', () => {

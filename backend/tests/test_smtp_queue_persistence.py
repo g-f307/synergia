@@ -28,6 +28,7 @@ from app.email_delivery import (
     EmailDeliveryService,
 )
 from app.email_reconciliation import EmailReconciliationRepository
+from app.email_smoke import SMTPEmailSmoke
 
 ROOT = Path(__file__).resolve().parents[2]
 SENSITIVE = "SYNTHETIC-SMTP-PRIVATE-RESPONSE-143"
@@ -593,3 +594,65 @@ def test_rollback_before_first_smtp_delivery_preserves_internal_notifications(sc
         assert conn.execute(
             "SELECT to_regclass('synergia.email_delivery_reconciliations')"
         ).fetchone() == (None,)
+
+
+def test_smoke_is_read_only_by_default_and_targets_one_notification(scene):
+    scene.enqueue()
+    service, provider = scene.service()
+    smoke = SMTPEmailSmoke(service.config, scene.database, provider=provider)
+    target = scene.notifications[1]
+    inspected = smoke.run(target)
+    assert inspected["ready"] and inspected["mode"] == "dry_run"
+    assert not provider.messages
+    assert scene.delivery() is None and scene.delivery(target) is None
+    result = smoke.run(target, send=True)
+    assert result["outcome"] == "accepted" and len(provider.messages) == 1
+    assert scene.delivery() is None and scene.delivery(target)["state"] == "sent"
+    assert smoke.run(target, send=True)["outcome"] == "already_accepted"
+    assert len(provider.messages) == 1
+    for private in (*scene.addresses, "synthetic-secret", "sender@example.invalid"):
+        assert private not in json.dumps(inspected) + json.dumps(result)
+
+
+def test_targeted_smoke_does_not_recover_other_expired_reservations(scene):
+    first = scene.repository.claim(
+        limit=1, provider="smtp", max_attempts=3, consolidation_seconds=0
+    )[0]
+    with psycopg.connect(scene.database) as conn:
+        conn.execute(
+            "UPDATE synergia.email_deliveries "
+            "SET claimed_at = now() - interval '6 minutes'"
+        )
+    scene.enqueue()
+    service, provider = scene.service()
+    smoke = SMTPEmailSmoke(service.config, scene.database, provider=provider)
+    assert smoke.run(scene.notifications[1], send=True)["outcome"] == "accepted"
+    assert scene.delivery()["state"] == "processing"
+    assert [m.delivery_id for m in provider.messages] != [first["id"]]
+
+
+@pytest.mark.parametrize("blocker", ["allowlist", "uncertain", "capture", "window"])
+def test_smoke_refuses_ineligible_or_unresolved_deliveries(scene, blocker):
+    config = scene.config()
+    if blocker == "allowlist":
+        config = replace(
+            config,
+            smtp=replace(
+                config.smtp, allowed_recipients=frozenset({"other@example.invalid"})
+            ),
+        )
+    elif blocker == "uncertain":
+        scene.uncertain()
+    elif blocker == "capture":
+        scene.repository.claim(
+            limit=1,
+            provider="local_capture",
+            max_attempts=3,
+            consolidation_seconds=3600,
+        )
+    else:
+        config = replace(config, consolidation_seconds=3600)
+    provider = FakeSMTPProvider(config.smtp)
+    smoke = SMTPEmailSmoke(config, scene.database, provider=provider)
+    result = smoke.run(scene.notifications[0], send=True)
+    assert result["outcome"] == "blocked" and not provider.messages

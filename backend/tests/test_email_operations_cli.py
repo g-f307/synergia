@@ -88,3 +88,51 @@ def test_worker_cli_does_not_log_configuration_or_database_details(
         assert function() == code
     assert PRIVATE not in caplog.text
     assert "email_worker.failed" in caplog.text
+
+
+@pytest.mark.parametrize("flag", ["--send", "--allow-real-send"])
+def test_smoke_requires_both_opt_in_flags_before_configuration(
+    offline, monkeypatch, flag
+):
+    module = runpy.run_path(str(ROOT / "scripts/smoke_smtp_delivery.py"))
+    monkeypatch.setattr(sys, "argv", ["smoke", "--notification-id", str(uuid4()), flag])
+    with pytest.raises(SystemExit) as exit_info:
+        module["main"]()
+    assert exit_info.value.code == 2
+
+
+@pytest.mark.parametrize("send", [False, True])
+def test_smoke_cli_passes_explicit_send_choice_and_redacts_errors(
+    offline, monkeypatch, capsys, send
+):
+    from app.email_smoke import SMTPEmailSmoke
+
+    choices = []
+
+    def fail(self, notification_id, *, send=False):
+        choices.append(send)
+        raise RuntimeError(PRIVATE)
+
+    module = runpy.run_path(str(ROOT / "scripts/smoke_smtp_delivery.py"))
+    monkeypatch.setitem(
+        module["main"].__globals__,
+        "EmailConfig",
+        type("Config", (), {"from_env": staticmethod(lambda: None)}),
+    )
+    monkeypatch.setattr(SMTPEmailSmoke, "__init__", lambda *args: None)
+    monkeypatch.setattr(SMTPEmailSmoke, "run", fail)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "smoke",
+            "--notification-id",
+            str(uuid4()),
+            *(["--send", "--allow-real-send"] if send else []),
+        ],
+    )
+    assert module["main"]() == 1
+    assert choices == [send]
+    captured = capsys.readouterr()
+    assert PRIVATE not in captured.out + captured.err
+    assert json.loads(captured.out)["error_code"] == "smtp_smoke_unavailable"

@@ -84,6 +84,7 @@ class EmailDeliveryRepository:
         provider: str,
         max_attempts: int,
         consolidation_seconds: int,
+        notification_id: UUID | None = None,
     ) -> list[dict[str, Any]]:
         if provider not in {"local_capture", "smtp"}:
             raise ValueError("unsupported email provider")
@@ -141,6 +142,7 @@ class EmailDeliveryRepository:
                     ORDER BY id DESC LIMIT 1
                 ) event ON true
                 WHERE n.state IN ('unread', 'read')
+                  AND (%s::uuid IS NULL OR n.id = %s)
                   AND (
                     NOT EXISTS (
                       SELECT 1 FROM synergia.email_deliveries existing
@@ -170,7 +172,13 @@ class EmailDeliveryRepository:
                   AND synergia.email_deliveries.notification_version
                       < EXCLUDED.notification_version
                 """,
-                (provider, consolidation_seconds, limit),
+                (
+                    provider,
+                    consolidation_seconds,
+                    notification_id,
+                    notification_id,
+                    limit,
+                ),
             )
             cursor.execute(
                 """
@@ -179,10 +187,11 @@ class EmailDeliveryRepository:
                 WHERE state = 'processing'
                   AND claimed_at < now() - interval '5 minutes'
                   AND provider = %s
+                  AND (%s::uuid IS NULL OR notification_id = %s)
                   AND (provider = 'smtp' OR attempt_count >= %s)
                 FOR UPDATE SKIP LOCKED
                 """,
-                (provider, max_attempts),
+                (provider, notification_id, notification_id, max_attempts),
             )
             exhausted = cursor.fetchall()
             for delivery in exhausted:
@@ -215,7 +224,8 @@ class EmailDeliveryRepository:
                 """
                 WITH selected AS (
                     SELECT id FROM synergia.email_deliveries
-                    WHERE provider = %s AND (
+                    WHERE provider = %s
+                      AND (%s::uuid IS NULL OR notification_id = %s) AND (
                            (state = 'queued' AND available_at <= now()) OR (
                              state = 'retry' AND available_at <= now()
                            ) OR (
@@ -232,7 +242,7 @@ class EmailDeliveryRepository:
                 FROM selected WHERE d.id = selected.id
                 RETURNING d.*
                 """,
-                (provider, max_attempts, limit),
+                (provider, notification_id, notification_id, max_attempts, limit),
             )
             deliveries = cursor.fetchall()
             for delivery in deliveries:
@@ -527,13 +537,15 @@ class EmailDeliveryService:
         )
         return 0, int(smtp), smtp
 
-    def run_once(self) -> dict[str, int | str]:
+    def run_once(self, *, notification_id: UUID | None = None) -> dict[str, int | str]:
         if not self.config.enabled:
             return {"status": "disabled", "processed": 0, "sent": 0, "failed": 0}
         if self.provider is None:
             raise RuntimeError("enabled email delivery requires a provider")
         if self.provider.name != self.config.provider:
             raise ConfigurationEmailError("email_provider_mismatch")
+        if notification_id is not None and not isinstance(notification_id, UUID):
+            raise ValueError("invalid_email_notification_id")
         smtp = self.provider.name == "smtp"
         processed = sent = failed = 0
         # Reserve SMTP just before sending, rather than leasing a whole batch
@@ -544,6 +556,7 @@ class EmailDeliveryService:
                 provider=self.provider.name,
                 max_attempts=self.config.max_attempts,
                 consolidation_seconds=self.config.consolidation_seconds,
+                **({"notification_id": notification_id} if notification_id else {}),
             )
             if not deliveries:
                 break
