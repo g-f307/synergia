@@ -94,6 +94,29 @@ Duas rotações concorrentes são serializadas. Uma pode receber o sucessor, mas
 detecção de replay pela outra revoga a família inteira; nenhuma falha é exposta
 como erro interno.
 
+### Contrato do cliente web
+
+O shell autenticado e o login público são estados mutuamente exclusivos. Ao
+abrir `/login` com uma sessão válida, o cliente retorna para `/profile`. Ao
+acessar uma rota protegida sem access token, tenta uma única renovação silenciosa:
+
+- chamadas idempotentes concorrentes compartilham o mesmo refresh e só são
+  repetidas uma vez depois da renovação;
+- `POST`, `PUT`, `PATCH` e `DELETE` nunca são repetidos automaticamente; o
+  refresh pode restaurar a sessão para a próxima ação, mas a operação original
+  retorna o `401` para decisão explícita da tela;
+- refresh expirado ou revogado limpa token, perfil, sessão e aparência antes de
+  exibir somente o login público;
+- indisponibilidade do backend é apresentada separadamente de credencial
+  inválida e de sessão expirada;
+- o retorno após novo login aceita apenas rotas internas conhecidas. URLs
+  externas, relativas ao protocolo, codificadas para outro host ou apontando
+  novamente para `/login` caem em `/profile`.
+
+Esse fluxo evita replay de mutações, tempestade de refresh, navegação privada
+residual e redirecionamento aberto. A regressão é coberta pelos testes de
+`session.service`, `auth.interceptor`, guards, login e pela jornada E2E.
+
 ## Limitação de tentativas
 
 O padrão aceita cinco falhas em uma janela de 15 minutos e aplica bloqueio de
