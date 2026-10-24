@@ -1,5 +1,10 @@
 # Entrega segura de notificações por e-mail
 
+> A evolução SMTP da #143 está descrita em
+> [smtp-email-provider.md](smtp-email-provider.md). No checkpoint do bloco 1,
+> contrato e configuração estão preparados, mas somente a captura local está
+> habilitada no worker. O restante deste documento descreve esse fluxo vigente.
+
 O canal de e-mail consome as notificações internas persistidas e não participa
 da transação que originou uma execução, pendência ou relatório. Uma falha de
 entrega nunca desfaz o evento operacional. Esta etapa fornece o contrato de

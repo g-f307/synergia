@@ -2,92 +2,23 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 from uuid import UUID
 
 import psycopg
 from psycopg.rows import dict_row
 
+# Re-export the existing public imports for workers, tests and integrations.
+from app.email_config import EmailConfig as EmailConfig
+from app.email_contracts import EmailMessage as EmailMessage
+from app.email_contracts import EmailProvider as EmailProvider
+from app.email_contracts import PermanentEmailError as PermanentEmailError
+from app.email_contracts import TemporaryEmailError as TemporaryEmailError
 from app.observability.telemetry import safe_log
 
 SAFE_PARAMETERS = frozenset({"execution_id", "count", "version"})
-
-
-class TemporaryEmailError(RuntimeError):
-    """A provider failure that may be retried without changing the source event."""
-
-
-class PermanentEmailError(RuntimeError):
-    """A provider rejection that must not be retried."""
-
-
-@dataclass(frozen=True)
-class EmailConfig:
-    enabled: bool = False
-    provider: str = "disabled"
-    sender: str = ""
-    capture_path: Path | None = None
-    batch_size: int = 50
-    max_attempts: int = 3
-    retry_seconds: int = 60
-    consolidation_seconds: int = 60
-
-    @classmethod
-    def from_env(cls) -> EmailConfig:
-        enabled = os.getenv("EMAIL_DELIVERY_ENABLED", "false").lower() == "true"
-        provider = os.getenv("EMAIL_PROVIDER", "disabled").strip().lower()
-        sender = os.getenv("EMAIL_FROM_ADDRESS", "").strip()
-        capture = os.getenv("EMAIL_CAPTURE_PATH", "").strip()
-        if not enabled:
-            return cls()
-        if provider != "local_capture":
-            raise ValueError("EMAIL_PROVIDER must be local_capture in this release")
-        if not sender:
-            raise ValueError("EMAIL_FROM_ADDRESS is required when email is enabled")
-        if not capture:
-            raise ValueError("EMAIL_CAPTURE_PATH is required for local_capture")
-        return cls(
-            enabled=True,
-            provider=provider,
-            sender=sender,
-            capture_path=Path(capture),
-            batch_size=_bounded_env("EMAIL_BATCH_SIZE", 50, 1, 500),
-            max_attempts=_bounded_env("EMAIL_MAX_ATTEMPTS", 3, 1, 10),
-            retry_seconds=_bounded_env("EMAIL_RETRY_SECONDS", 60, 1, 86_400),
-            consolidation_seconds=_bounded_env(
-                "EMAIL_CONSOLIDATION_SECONDS", 60, 0, 86_400
-            ),
-        )
-
-
-def _bounded_env(name: str, default: int, minimum: int, maximum: int) -> int:
-    value = int(os.getenv(name, str(default)))
-    if not minimum <= value <= maximum:
-        raise ValueError(f"{name} must be between {minimum} and {maximum}")
-    return value
-
-
-@dataclass(frozen=True)
-class EmailMessage:
-    delivery_id: UUID
-    recipient: str
-    sender: str
-    subject: str
-    body: str
-    locale: str
-    correlation_id: UUID | None
-
-
-class EmailProvider(Protocol):
-    """Provider contract: ``delivery_id`` is the mandatory idempotency key."""
-
-    name: str
-
-    def send(self, message: EmailMessage) -> str: ...
 
 
 class LocalCaptureEmailProvider:
