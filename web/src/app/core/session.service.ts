@@ -76,7 +76,8 @@ export class SessionService {
   }
 
   ensureSession(): Observable<boolean> {
-    return this.accessToken() ? of(true) : this.refresh();
+    if (this.accessToken()) return of(true);
+    return this.state() === 'expired' ? of(false) : this.refresh();
   }
 
   loadProfile(): Observable<UserProfile> {
