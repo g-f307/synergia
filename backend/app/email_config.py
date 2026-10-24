@@ -221,6 +221,17 @@ class EmailConfig:
     max_attempts: int = 3
     retry_seconds: int = 60
     consolidation_seconds: int = 60
+    smtp: SMTPConfig | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.enabled and self.provider == "smtp":
+            if (
+                self.smtp is None
+                or normalize_smtp_mailbox(self.sender) != self.smtp.sender
+            ):
+                raise ValueError(
+                    "SMTP delivery requires matching transport configuration"
+                )
 
     @classmethod
     def from_env(cls) -> EmailConfig:
@@ -230,19 +241,18 @@ class EmailConfig:
         capture = os.getenv("EMAIL_CAPTURE_PATH", "").strip()
         if not enabled:
             return cls()
-        # SMTP configuration is prepared separately; activation requires the
-        # transport and queue safeguards delivered in the next blocks.
-        if provider != "local_capture":
-            raise ValueError("EMAIL_PROVIDER must be local_capture in this release")
+        if provider not in {"local_capture", "smtp"}:
+            raise ValueError("EMAIL_PROVIDER must be local_capture or smtp")
         if not sender:
             raise ValueError("EMAIL_FROM_ADDRESS is required when email is enabled")
-        if not capture:
+        if provider == "local_capture" and not capture:
             raise ValueError("EMAIL_CAPTURE_PATH is required for local_capture")
         return cls(
             enabled=True,
             provider=provider,
             sender=sender,
-            capture_path=Path(capture),
+            capture_path=Path(capture) if provider == "local_capture" else None,
+            smtp=SMTPConfig.from_env() if provider == "smtp" else None,
             batch_size=_bounded_env("EMAIL_BATCH_SIZE", 50, 1, 500),
             max_attempts=_bounded_env("EMAIL_MAX_ATTEMPTS", 3, 1, 10),
             retry_seconds=_bounded_env("EMAIL_RETRY_SECONDS", 60, 1, 86400),

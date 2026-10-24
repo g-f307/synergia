@@ -23,6 +23,41 @@ from app.email_contracts import (
     UncertainEmailError,
 )
 
+SAFE_SMTP_FAILURE_CODES = frozenset(
+    {
+        "invalid_smtp_envelope",
+        "invalid_smtp_subject",
+        "invalid_smtp_body",
+        "invalid_smtp_delivery_id",
+        "invalid_smtp_locale",
+        "smtp_sender_mismatch",
+        "smtp_recipient_not_allowed",
+        "smtp_auth_encoding_unsupported",
+        "smtp_protocol_invalid",
+        "smtp_confirmation_unknown",
+        "smtp_tls_certificate_invalid",
+        "smtp_capability_unavailable",
+        "smtp_tls_negotiation_failed",
+        "smtp_tls_configuration_invalid",
+        "smtp_connection_unavailable",
+        "smtp_transport_invalid",
+        *(
+            f"smtp_{phase}_{outcome}"
+            for phase in (
+                "connection",
+                "greeting",
+                "tls",
+                "authentication",
+                "sender",
+                "recipient",
+                "data",
+                "data_command",
+            )
+            for outcome in ("rejected", "temporarily_unavailable")
+        ),
+    }
+)
+
 
 class SMTPAuthenticator(Protocol):
     """Authentication may evolve without changing templates or delivery use cases."""

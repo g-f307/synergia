@@ -2,16 +2,15 @@
 
 ## Estado da implementação
 
-Os blocos 1 e 2 preparam contrato, configuração e transporte SMTP isolado.
-**SMTP ainda não está habilitado no worker**: `EMAIL_PROVIDER=smtp` continua
-recusado por `EmailConfig` até a migration e os controles de recuperação da fila
-do bloco 3. Nenhuma conexão SMTP externa ou mensagem real foi realizada.
-Ainda não há migration nova; a regressão do bloco 1 usa as migrations existentes
-em banco isolado.
+Os blocos 1 a 3 implementam contrato, configuração, transporte e integração
+segura com a fila. `EMAIL_PROVIDER=smtp` requer a migration `0033` e configuração
+SMTP válida. O canal permanece desabilitado por padrão; `local_capture` continua
+disponível. Nenhuma conexão SMTP externa ou mensagem real foi realizada.
 
-O canal permanece desabilitado por padrão e `local_capture` continua disponível.
-As variáveis SMTP em `.env.example` são a configuração reservada do adapter;
-sua validação offline está em `SMTPConfig.from_env()`.
+O bloco 4 ainda deve concluir a apresentação coordenada de SMTP na API/frontend,
+a configuração operacional e o smoke real opt-in. Até essa atualização, a política
+de templates apresenta `unavailable` para SMTP, preservando o contrato atual sem
+identificar incorretamente o transporte como captura local.
 
 ## Contrato independente do transporte
 
@@ -26,8 +25,8 @@ de `app.email_delivery` permanecem compatíveis por reexportação.
 - `UncertainEmailError`: aceitação desconhecida, exige reconciliação explícita.
 
 O identificador estável de entrega permite correlação. Não é uma garantia de
-deduplicação do servidor remoto. A fila e a recuperação específicas de SMTP,
-incluindo bloqueio de retries incertos, serão integradas no bloco 3. A captura
+deduplicação do servidor remoto. A fila bloqueia retries de resultados SMTP incertos até reconciliação
+explícita, conforme o procedimento abaixo. A captura
 local mantém sua deduplicação por `delivery_id`.
 
 Destinatário, remetente, assunto, corpo, usuário e segredo SMTP são omitidos de
@@ -111,8 +110,8 @@ No STARTTLS, ocorre novo EHLO após a negociação. Autenticação e envelope s�
 seguem depois de TLS; não há fallback para uma sessão aberta.
 
 O timeout configurado é passado ao socket e limita operações bloqueantes; não
-é um prazo global para o processamento do lote. A integração com leases e
-reservas da fila será tratada no bloco 3. A conexão é criada antes do connect
+é um prazo global para o processamento do lote. A fila reserva uma entrega SMTP de cada vez, imediatamente antes do envio;
+reservas expiradas são retidas para reconciliação, sem reenvio automático. A conexão é criada antes do connect
 para permitir fechamento também em falhas parciais.
 
 ### Autenticação substituível
@@ -183,3 +182,137 @@ Validação local do bloco 2 em 24/10/2026:
   de idioma; sua definição foi corrigida e a leitura MIME pt/en foi validada;
 - sem envio externo, credenciais reais, migration ou alteração da fila, da API
   e do frontend. A ativação SMTP e sua persistência aguardam o bloco 3.
+
+
+## Fila e reconciliação explícita — bloco 3
+
+A numeração `0033` foi conferida antes da criação: a base e o remoto terminavam
+em `0032`. A migration amplia o CHECK do provider e cria auditoria de
+reconciliação append-only. Não altera migrations anteriores. Seu rollback só é
+permitido antes de existir qualquer entrega SMTP ou histórico de reconciliação;
+não apaga histórico para viabilizar downgrade.
+
+O worker constrói o provider sem conectar. Cada entrega SMTP é reservada
+individualmente e tem posse/validade verificadas antes do transporte. Workers
+concorrentes usam `FOR UPDATE SKIP LOCKED`. Cada entrega preserva seu provider:
+um worker SMTP não consome capturas locais pendentes, e vice-versa. Trocar a
+configuração não reclassifica nem retransmite entregas existentes.
+
+- Rejeição temporária conhecida: backoff exponencial, limitado por
+  `EMAIL_MAX_ATTEMPTS`, sem alterar o UUID da entrega.
+- Rejeição permanente: falha terminal; problema de configuração também interrompe
+  o lote para evitar repetir a mesma configuração em outros destinatários.
+- Resultado incerto, exceção inesperada no transporte ou falha ao persistir a
+  confirmação: sem retry automático; estado `failed` com
+  `smtp_confirmation_unknown` quando o banco permite gravar.
+- Banco totalmente indisponível após transmissão: a reserva pode permanecer em
+  `processing`. Ao expirar em cinco minutos, o próximo worker SMTP a coloca em
+  `failed/smtp_confirmation_unknown`, independentemente do orçamento restante.
+  Nunca recupera esse caso transmitindo novamente.
+- Aceitação SMTP já gravada continua `sent`, inclusive quando a confirmação da
+  transação se perde para o worker. `sent` não significa recebimento na caixa.
+
+A finalização usa UUID e número da tentativa: um worker atrasado não sobrescreve
+uma entrega já finalizada. Os contadores do lote representam tentativas
+processadas nessa execução; a retenção de reservas expiradas é registrada na
+fila/auditoria e deve ser monitorada por `failure_code`, mesmo com zero envios
+no lote. Logs e falhas persistidas usam códigos estáveis autorizados; não usam
+texto da exceção/resposta SMTP, conteúdo, destinatário ou segredo.
+
+### Procedimento de reconciliação
+
+Execute com privilégios operacionais de banco e a mesma `DATABASE_URL` do worker.
+O comando não depende de credenciais SMTP e nunca transmite mensagens.
+
+1. Pare todos os workers SMTP, incluindo agendadores, e termine processos antigos
+   que ainda possam estar transmitindo. A flag `--workers-stopped` registra uma
+   declaração operacional; não encerra processos. Se a entrega ainda estiver em
+   `processing`, aguarde a expiração da reserva de cinco minutos. A reconciliação
+   explícita admite essa reserva expirada e registra a tentativa como incerta
+   na mesma transação, sem precisar retomar um worker. Reservas vigentes são
+   recusadas. Não mantenha um transmissor antigo ativo.
+2. Inspecione somente os metadados técnicos. Por padrão, o comando é de leitura:
+
+   ```bash
+   backend/.venv/bin/python scripts/reconcile_smtp_delivery.py <delivery-uuid>
+   ```
+
+3. Obtenha evidência em canal restrito: confirmação de recebimento ou registro do
+   servidor associado ao Message-ID `<synergia.UUIDsemhifens@dominio-remetente>`.
+   Ausência na caixa de entrada, spam ou ausência de registro não prova rejeição.
+   Se a evidência continuar inconclusiva, mantenha a entrega bloqueada. Não faça
+   UPDATE manual, não limpe tentativas e não crie outra notificação para reenviar.
+4. Com aceitação comprovada, marque como enviada sem retransmissão:
+
+   ```bash
+   backend/.venv/bin/python scripts/reconcile_smtp_delivery.py <delivery-uuid> \
+     --apply --resolution accepted --evidence recipient_confirmation \
+     --request-id <request-uuid> --actor-id <operator-uuid> --workers-stopped
+   ```
+
+   Use `--evidence smtp_log` quando a evidência for aceitação registrada no servidor.
+   `sent_at` será o instante da reconciliação, não uma estimativa do envio original.
+5. Somente com prova positiva de **não aceitação** nos registros do servidor,
+   libere uma nova tentativa:
+
+   ```bash
+   backend/.venv/bin/python scripts/reconcile_smtp_delivery.py <delivery-uuid> \
+     --apply --resolution not_accepted --evidence smtp_log \
+     --request-id <request-uuid> --actor-id <operator-uuid> \
+     --workers-stopped --max-attempts 3
+   ```
+
+   Informe o mesmo limite de tentativas do worker. A contagem não é zerada: a
+   entrega passa a `retry` apenas se ainda houver orçamento; senão, permanece
+   `failed/max_attempts_exceeded`. O comando não envia; a transmissão depende da
+   retomada explícita do worker.
+6. Guarde a referência à evidência no registro operacional de acesso restrito,
+   associada ao `request-id`. Não inclua conteúdo da mensagem, endereços, respostas
+   SMTP ou segredos no comando, no Git ou nos logs. `actor-id` é um UUID técnico
+   do operador. Confirme o resultado antes de retomar os workers.
+
+A alteração de estado e a auditoria são atômicas. Repetir os mesmos argumentos
+com o mesmo `request-id` retorna o resultado original; reutilizar a chave com
+outra decisão é recusado. O histórico de tentativas não é reescrito. A auditoria
+registra decisão, categoria da evidência, UUID técnico do operador e correlação;
+não guarda o conteúdo sensível da prova. UPDATE/DELETE na auditoria são recusados.
+
+### Validação do bloco 3
+
+Os testes usam PostgreSQL 16 isolado, bancos descartáveis por cenário e provider
+sintético sem DNS/SMTP real. Cobrem concorrência, templates pt/en, retries
+limitados, isolamento de providers, expiração de reserva, falha após aceitação,
+reconciliação concorrente/idempotente, CLI de inspeção e proteção de rollback.
+
+```bash
+backend/.venv/bin/python -m pytest -q -m integration \
+  backend/tests/test_smtp_queue_persistence.py \
+  backend/tests/test_email_delivery_persistence.py \
+  backend/tests/test_migration_runner.py
+```
+
+Configure `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` e `DATABASE_URL` para uma
+instância exclusiva de testes com permissão de criar bancos. Não use dados de
+homologação real nesta suíte.
+
+Resultados locais em 24/10/2026:
+
+- 872 testes não integrados e 664 de integração aprovados, sem credenciais ou
+  serviço SMTP externo; 31 cenários novos de integração e oito testes novos dos
+  comandos operacionais;
+- 33 migrations aplicadas em PostgreSQL 16 isolado; baseline parcial e rollback
+  protegidos, concorrência e cenários de falha/reconciliação aprovados;
+- Ruff a partir de `backend/`, compilação Python, matrizes de acesso/segurança,
+  modelo de ameaças, baseline HTTP, validador da Etapa 5 e `git diff --check`
+  aprovados;
+- a primeira regressão integrada identificou duas expectativas antigas a
+  atualizar para a `0033` (inventário de tabelas e ordem de rollback). Foram
+  corrigidas e a suíte repetida em banco vazio;
+- `pg_dump`/`pg_restore` não estão instalados no host. A regressão de backup e
+  restauração passou usando os clientes PostgreSQL 16 do container isolado,
+  encaminhados por scripts temporários ignorados, restritos aos bancos de teste;
+- execuções restritas de testes HTTP locais ficaram paradas no sandbox e foram
+  encerradas. A execução autorizada com os acessos locais necessários passou;
+- nenhum envio real, configuração de credencial real, alteração do banco de
+  desenvolvimento ou modificação do frontend neste bloco. O smoke real permanece
+  dependente de configuração e autorização específicas no bloco final.

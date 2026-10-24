@@ -237,11 +237,14 @@ def test_disabled_channel_ignores_transport_configuration(monkeypatch):
     assert EmailConfig.from_env() == EmailConfig()
 
 
-def test_smtp_activation_waits_for_transport_block(monkeypatch):
+def test_smtp_configuration_builds_provider_without_connecting(monkeypatch):
     monkeypatch.setenv("EMAIL_DELIVERY_ENABLED", "true")
     monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
-    with pytest.raises(ValueError, match="local_capture"):
-        EmailConfig.from_env()
+    config = EmailConfig.from_env()
+    provider = build_provider(config)
+    assert config.provider == provider.name == "smtp"
+    assert config.smtp is not None and config.capture_path is None
+    assert provider.config is config.smtp
 
 
 @pytest.mark.parametrize(

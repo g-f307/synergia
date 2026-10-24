@@ -105,6 +105,27 @@ def test_adopts_completely_legacy_database(migration_database: str) -> None:
     assert migration_count(migration_database) == len(MIGRATIONS)
 
 
+@pytest.mark.parametrize("missing", ["provider", "reconciliations"])
+def test_smtp_baseline_requires_provider_and_reconciliation_schema(
+    migration_database: str, missing: str
+) -> None:
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    with psycopg.connect("", dbname=migration_database) as connection:
+        if missing == "provider":
+            connection.execute(
+                "ALTER TABLE synergia.email_deliveries "
+                "DROP CONSTRAINT email_deliveries_provider_check, "
+                "ADD CONSTRAINT email_deliveries_provider_check "
+                "CHECK (provider IN ('local_capture'))"
+            )
+        else:
+            connection.execute("DROP TABLE synergia.email_delivery_reconciliations")
+    result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert migration_count(migration_database) == 0
+
+
 def test_runs_migrations_after_partial_baseline(migration_database: str) -> None:
     baseline_count = 25
     apply_legacy_schema(migration_database, baseline_count)

@@ -613,7 +613,9 @@ def _external_delivery() -> Literal["disabled", "local_capture", "unavailable"]:
         return "unavailable"
     if not config.enabled:
         return "disabled"
-    return "local_capture"
+    # SMTP presentation is added with the coordinated API/frontend contract.
+    # Never mislabel the SMTP worker as local capture for existing clients.
+    return "local_capture" if config.provider == "local_capture" else "unavailable"
 
 
 @router.get("/policy", response_model=TemplatePolicyResponse, responses=ERROR_RESPONSES)
