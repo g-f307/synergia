@@ -131,6 +131,35 @@ describe('SessionService', () => {
     expect(service.profile()).toBeNull();
   });
 
+  it('shares one refresh request among concurrent subscribers', () => {
+    const results: boolean[] = [];
+    service.refresh().subscribe((value) => results.push(value));
+    service.refresh().subscribe((value) => results.push(value));
+
+    const requests = http.match('http://localhost:8000/auth/refresh');
+    expect(requests.length).toBe(1);
+    requests[0].flush({
+      access_token: 'refreshed-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000003'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    expect(results).toEqual([true, true]);
+    expect(service.state()).toBe('authenticated');
+  });
+
+  it('marks authentication as unavailable without retaining prior user context', () => {
+    service.profile.set(profile);
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 503, statusText: 'Service Unavailable' }
+    );
+
+    expect(service.state()).toBe('unavailable');
+    expect(service.profile()).toBeNull();
+    expect(service.accessToken()).toBeNull();
+  });
+
   it('lists sessions without exposing credentials and clears the revoked current session', () => {
     const current: ActiveSession = {
       id: '00000000-0000-4000-8000-000000000002', current: true,

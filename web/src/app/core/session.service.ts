@@ -63,7 +63,7 @@ export class SessionService {
         return of(false);
       }),
       finalize(() => { this.refreshRequest = undefined; }),
-      shareReplay(1)
+      shareReplay({ bufferSize: 1, refCount: false })
     );
     return this.refreshRequest;
   }

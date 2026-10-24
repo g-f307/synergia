@@ -1,17 +1,17 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { SessionService } from '../core/session.service';
+import { safeReturnUrl } from '../core/auth-navigation';
 import { ThemeService } from '../core/theme.service';
 import { I18nService } from '../shared/i18n/i18n.service';
 
-const INTERNAL_DESTINATIONS = ['/dashboard', '/imports', '/executions', '/search', '/workorders', '/lots', '/serials', '/pending-items', '/profile', '/admin'];
-export function safeReturnUrl(value: string | null): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/profile';
-  return INTERNAL_DESTINATIONS.some((path) => value === path || value.startsWith(`${path}/`) || value.startsWith(`${path}?`)) ? value : '/profile';
-}
+type LoginMessageKey = 'auth.errorCredentials' | 'auth.errorExpired' | 'auth.errorUnavailable';
+
+export { safeReturnUrl } from '../core/auth-navigation';
 
 @Component({
   imports: [ReactiveFormsModule],
@@ -74,8 +74,8 @@ export function safeReturnUrl(value: string | null): string {
                 }
               </div>
 
-              @if (error()) {
-                <p class="login-error error" role="alert">{{ i18n.t('auth.error') }}</p>
+              @if (errorKey(); as messageKey) {
+                <p class="login-error error" role="alert">{{ i18n.t(messageKey) }}</p>
               }
 
               <button class="login-submit" type="submit" [disabled]="loading()">
@@ -96,7 +96,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly loading = signal(false);
-  readonly error = signal(false);
+  readonly errorKey = signal<LoginMessageKey | null>(this.sessionStateMessage());
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
@@ -112,13 +112,21 @@ export class LoginComponent {
       return;
     }
     this.loading.set(true);
-    this.error.set(false);
+    this.errorKey.set(null);
     const { email, password } = this.form.getRawValue();
     this.session.login(email, password)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'))),
-        error: () => this.error.set(true)
+        error: (error: HttpErrorResponse) => this.errorKey.set(
+          error.status === 401 ? 'auth.errorCredentials' : 'auth.errorUnavailable'
+        )
       });
+  }
+
+  private sessionStateMessage(): LoginMessageKey | null {
+    if (this.session.state() === 'expired') return 'auth.errorExpired';
+    if (this.session.state() === 'unavailable') return 'auth.errorUnavailable';
+    return null;
   }
 }

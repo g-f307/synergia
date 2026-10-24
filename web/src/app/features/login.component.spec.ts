@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { NEVER } from 'rxjs';
+import { NEVER, throwError } from 'rxjs';
 
 import { SessionService } from '../core/session.service';
 import { I18nService } from '../shared/i18n/i18n.service';
@@ -10,21 +12,28 @@ describe('safeReturnUrl', () => {
   it('accepts only known internal destinations', () => {
     expect(safeReturnUrl('/executions/exec-1?tab=history')).toBe('/executions/exec-1?tab=history');
     expect(safeReturnUrl('/pending-items')).toBe('/pending-items');
+    expect(safeReturnUrl('/reports/report-1')).toBe('/reports/report-1');
   });
 
   it('rejects external, protocol-relative and unknown destinations', () => {
     expect(safeReturnUrl('https://example.invalid')).toBe('/profile');
     expect(safeReturnUrl('//example.invalid/path')).toBe('/profile');
-    expect(safeReturnUrl('/reports')).toBe('/profile');
+    expect(safeReturnUrl('/%2Fexample.invalid/path')).toBe('/profile');
+    expect(safeReturnUrl('/login')).toBe('/profile');
   });
 });
 
 describe('LoginComponent', () => {
-  const session = { login: jasmine.createSpy('login').and.returnValue(NEVER) };
+  const session = {
+    state: signal('anonymous'),
+    login: jasmine.createSpy('login').and.returnValue(NEVER)
+  };
 
   beforeEach(async () => {
     document.documentElement.dataset['theme'] = 'light';
     session.login.calls.reset();
+    session.login.and.returnValue(NEVER);
+    session.state.set('anonymous');
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
@@ -33,6 +42,31 @@ describe('LoginComponent', () => {
       ]
     }).compileComponents();
     TestBed.inject(I18nService).configure('pt-BR');
+  });
+
+  it('distinguishes rejected credentials from an unavailable authentication service', () => {
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.componentInstance.form.setValue({
+      email: 'anonymous@example.invalid',
+      password: 'wrong-password'
+    });
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Credenciais inválidas');
+
+    session.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('indisponível');
+  });
+
+  it('explains that the prior session expired before asking for credentials again', () => {
+    session.state.set('expired');
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('sessão expirou');
   });
 
   it('updates the login brand when the active theme changes', () => {

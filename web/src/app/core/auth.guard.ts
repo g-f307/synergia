@@ -4,11 +4,21 @@ import { map, of, switchMap } from 'rxjs';
 
 import { SessionService } from './session.service';
 
-export const authenticatedGuard: CanActivateFn = () => {
+export const authenticatedGuard: CanActivateFn = (_route, state) => {
   const session = inject(SessionService);
   const router = inject(Router);
   return session.ensureSession().pipe(
-    map((authenticated) => authenticated || router.createUrlTree(['/login']))
+    map((authenticated) => authenticated || router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url }
+    }))
+  );
+};
+
+export const publicOnlyGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  return session.ensureSession().pipe(
+    map((authenticated) => authenticated ? router.createUrlTree(['/profile']) : true)
   );
 };
 
@@ -16,8 +26,12 @@ export const adminGuard: CanActivateFn = () => {
   const session = inject(SessionService);
   const router = inject(Router);
   return session.ensureSession().pipe(
-    switchMap(() => session.profile() ? of(session.profile()!) : session.loadProfile()),
-    map(() => session.isAdministrator() || router.createUrlTree(['/profile']))
+    switchMap((authenticated) => authenticated
+      ? (session.profile() ? of(session.profile()!) : session.loadProfile())
+      : of(null)),
+    map((profile) => profile && session.isAdministrator()
+      ? true
+      : router.createUrlTree(['/profile']))
   );
 };
 
@@ -26,8 +40,12 @@ export function permissionGuard(permission: string): CanActivateFn {
     const session = inject(SessionService);
     const router = inject(Router);
     return session.ensureSession().pipe(
-      switchMap(() => session.profile() ? of(session.profile()!) : session.loadProfile()),
-      map(() => session.hasPermission(permission) || router.createUrlTree(['/profile']))
+      switchMap((authenticated) => authenticated
+        ? (session.profile() ? of(session.profile()!) : session.loadProfile())
+        : of(null)),
+      map((profile) => profile && session.hasPermission(permission)
+        ? true
+        : router.createUrlTree(['/profile']))
     );
   };
 }
