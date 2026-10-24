@@ -4,7 +4,7 @@
 
 | Imagem | Função | Processo | Usuário |
 |---|---|---|---|
-| `synergia-backend:<versão>` | API e migrations | Uvicorn ou `apply_migrations.py` | `10001:10001` |
+| `synergia-backend:<versão>` | API, migrations e e-mail | Uvicorn ou tarefa Python finita | `10001:10001` |
 | `synergia-web:<versão>` | Angular estático | Nginx na porta 8080 | `nginx` |
 | `postgres:16-alpine` | banco local | PostgreSQL | imagem oficial |
 
@@ -72,3 +72,14 @@ essa variável em bancos novos nem como configuração permanente.
 
 Nenhuma integração corporativa deve ser considerada pronta apenas porque a
 aplicação executa em containers.
+
+
+## Worker de e-mail opt-in
+
+A mesma imagem inclui `process_email_notifications.py`, `reconcile_smtp_delivery.py`
+e `smoke_smtp_delivery.py`. O serviço `email-worker` pertence ao perfil `email`,
+executa um lote e não reinicia nem é agendado automaticamente. SMTP permanece
+desabilitado por padrão. `docker-compose.smtp.yml` é um overlay opcional para
+montar segredo externo, com leitura restrita ao usuário `10001:10001`; não é
+carregado pelo Compose base. Configuração, rotação, diagnóstico, migração de
+provedor e autorização do smoke estão no [runbook SMTP](smtp-email-provider.md).

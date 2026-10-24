@@ -157,6 +157,15 @@ export class NotificationTemplateEditorComponent {
     if (!current || page < 1 || page > this.historyPages()) return;
     this.loadHistory(current, page);
   }
+  deliveryKey(): TranslationKey {
+    switch (this.policy()?.external_delivery) {
+      case 'smtp': return 'notificationAdmin.delivery.smtp';
+      case 'local_capture': return 'notificationAdmin.delivery.localCapture';
+      case 'disabled': return 'notificationAdmin.delivery.disabled';
+      default: return 'notificationAdmin.delivery.unavailable';
+    }
+  }
+
   failureKey(): TranslationKey {
     if (this.failure()?.kind === 'forbidden') return 'notificationAdmin.forbidden';
     if (this.failure()?.kind === 'conflict') return 'notificationAdmin.conflict';

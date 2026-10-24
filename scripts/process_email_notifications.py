@@ -18,8 +18,7 @@ from app.observability import configure_logging  # noqa: E402
 from app.observability.telemetry import safe_log  # noqa: E402
 
 
-def main() -> int:
-    configure_logging()
+def _run() -> int:
     config = EmailConfig.from_env()
     if not config.enabled:
         safe_log(
@@ -48,6 +47,28 @@ def main() -> int:
         failed_count=result["failed"],
     )
     return 0 if result["failed"] == 0 else 1
+
+
+def main() -> int:
+    configure_logging()
+    try:
+        return _run()
+    except ValueError:
+        safe_log(
+            logging.ERROR,
+            "email_worker.failed",
+            error_code="email_configuration_invalid",
+            outcome="failure",
+        )
+        return 2
+    except Exception:
+        safe_log(
+            logging.ERROR,
+            "email_worker.failed",
+            error_code="email_state_unavailable",
+            outcome="failure",
+        )
+        return 1
 
 
 if __name__ == "__main__":

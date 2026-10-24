@@ -34,9 +34,12 @@ paginação e histórico. A tela de detalhe permite editar rascunho, gerar prév
 publicar e desativar com confirmação e justificativa. Conflitos `409` preservam
 o trabalho persistido e oferecem recarga; `403` é distinto de indisponibilidade.
 
-O estado de entrega externa exibido vem do backend. Nesta entrega, e-mail pode
-estar desabilitado ou usar captura local; a interface declara explicitamente
-que SMTP corporativo não foi habilitado.
+O estado de entrega externa vem do backend: `disabled`, `local_capture`, `smtp`
+ou `unavailable`. O editor mostra o estado apenas no canal e-mail e mantém a
+prévia sem transmissão. `smtp` significa configuração válida, não teste de
+conectividade ou recebimento. `external_delivery_corporate` permanece `false`: o
+Gmail de homologação não comprova integração corporativa. Consulte o
+[runbook SMTP](smtp-email-provider.md).
 
 ## Invariantes
 

@@ -23,6 +23,9 @@ RUN addgroup --gid 10001 --system synergia \
 COPY --chown=synergia:synergia backend/app app
 COPY --chown=synergia:synergia scripts/apply_migrations.py scripts/apply_migrations.py
 COPY --chown=synergia:synergia scripts/container_entrypoint.py scripts/container_entrypoint.py
+COPY --chown=synergia:synergia scripts/process_email_notifications.py scripts/process_email_notifications.py
+COPY --chown=synergia:synergia scripts/reconcile_smtp_delivery.py scripts/reconcile_smtp_delivery.py
+COPY --chown=synergia:synergia scripts/smoke_smtp_delivery.py scripts/smoke_smtp_delivery.py
 COPY --chown=synergia:synergia database/migrations database/migrations
 
 USER 10001:10001

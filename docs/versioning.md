@@ -137,3 +137,10 @@ O PR deve informar versão anterior e nova, compatibilidade, migrations ou
 contratos afetados, testes executados e instruções de migração. A
 [matriz de rastreabilidade](traceability-matrix.md) é atualizada quando uma
 capacidade ou regra muda.
+
+
+A API `0.9.0` acrescenta o estado de configuração `smtp` na política de templates
+(#143), com atualização coordenada dos modelos OpenAPI e Angular. A migration
+`0033` permite o provider SMTP e cria auditoria imutável de reconciliação.
+Configuração válida não significa recebimento homologado; esse aceite depende
+do smoke real autorizado e de confirmação do destinatário.

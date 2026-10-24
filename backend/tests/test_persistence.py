@@ -127,6 +127,7 @@ def test_creates_all_operational_entities() -> None:
         "executions",
         "email_deliveries",
         "email_delivery_attempts",
+        "email_delivery_reconciliations",
         "email_notification_templates",
         "execution_idempotency",
         "execution_state_transitions",
