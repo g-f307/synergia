@@ -234,3 +234,12 @@ git status --short
 A CI repete os testes/builds em Linux, cria PostgreSQL 16 vazio, aplica todas as
 migrations, valida dados e verifica a branch `prototype-pages`. Não altere o
 protótipo durante este procedimento.
+
+
+## Canal de e-mail opcional
+
+O ambiente funciona com `EMAIL_DELIVERY_ENABLED=false`. Para testes e
+desenvolvimento, preserve `local_capture`; SMTP real exige configuração privada
+e autorização. O worker finito do perfil Compose `email` e o smoke direcionado
+estão no [runbook de entrega SMTP](smtp-email-provider.md). A ausência de
+credenciais reais não impede as suítes automatizadas.

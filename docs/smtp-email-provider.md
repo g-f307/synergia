@@ -2,15 +2,25 @@
 
 ## Estado da implementação
 
-Os blocos 1 a 3 implementam contrato, configuração, transporte e integração
-segura com a fila. `EMAIL_PROVIDER=smtp` requer a migration `0033` e configuração
-SMTP válida. O canal permanece desabilitado por padrão; `local_capture` continua
-disponível. Nenhuma conexão SMTP externa ou mensagem real foi realizada.
+Os quatro blocos implementam contrato, configuração, transporte, fila segura,
+reconciliação, worker em container e smoke direcionado. `EMAIL_PROVIDER=smtp`
+requer a migration `0033` e configuração válida. O canal permanece desabilitado
+por padrão; `local_capture` continua disponível.
 
-O bloco 4 ainda deve concluir a apresentação coordenada de SMTP na API/frontend,
-a configuração operacional e o smoke real opt-in. Até essa atualização, a política
-de templates apresenta `unavailable` para SMTP, preservando o contrato atual sem
-identificar incorretamente o transporte como captura local.
+A API `0.9.0` informa `smtp` apenas como estado de configuração. O editor do
+canal e-mail mostra esse estado em pt/en e esclarece que a prévia não envia.
+Não comprova conexão, recebimento ou integração corporativa.
+
+**Smoke assistido realizado em 24/10/2026:** uma mensagem foi aceita pelo SMTP,
+registrada como `sent` em uma tentativa e teve recebimento confirmado pelo
+responsável. A repetição da entrega confirmada retornou `already_accepted`, com
+transporte bloqueado e sem nova tentativa ou alteração da auditoria. Veja a
+[evidência sanitizada](evidence/issue-143-smtp-homologation.md).
+CI remota, revisão e merge permanecem pendentes; a integração corporativa LG
+continua dependendo de configuração e homologação próprias.
+O encerramento local foi validado e a revogação da senha de app foi confirmada
+pelo responsável. A [revisão final](evidence/issue-143-final-review.md) registra
+aderência aos critérios, regressões adicionais e limitações conhecidas.
 
 ## Contrato independente do transporte
 
@@ -25,8 +35,8 @@ de `app.email_delivery` permanecem compatíveis por reexportação.
 - `UncertainEmailError`: aceitação desconhecida, exige reconciliação explícita.
 
 O identificador estável de entrega permite correlação. Não é uma garantia de
-deduplicação do servidor remoto. A fila bloqueia retries de resultados SMTP incertos até reconciliação
-explícita, conforme o procedimento abaixo. A captura
+deduplicação do servidor remoto. A fila bloqueia retries de resultados SMTP
+incertos até reconciliação explícita, conforme o procedimento abaixo. A captura
 local mantém sua deduplicação por `delivery_id`.
 
 Destinatário, remetente, assunto, corpo, usuário e segredo SMTP são omitidos de
@@ -110,9 +120,10 @@ No STARTTLS, ocorre novo EHLO após a negociação. Autenticação e envelope s�
 seguem depois de TLS; não há fallback para uma sessão aberta.
 
 O timeout configurado é passado ao socket e limita operações bloqueantes; não
-é um prazo global para o processamento do lote. A fila reserva uma entrega SMTP de cada vez, imediatamente antes do envio;
-reservas expiradas são retidas para reconciliação, sem reenvio automático. A conexão é criada antes do connect
-para permitir fechamento também em falhas parciais.
+é um prazo global para o processamento do lote. A fila reserva uma entrega SMTP
+de cada vez, imediatamente antes do envio; reservas expiradas são retidas para
+reconciliação, sem reenvio automático. A conexão é criada antes do connect para
+permitir fechamento também em falhas parciais.
 
 ### Autenticação substituível
 
@@ -316,3 +327,229 @@ Resultados locais em 24/10/2026:
 - nenhum envio real, configuração de credencial real, alteração do banco de
   desenvolvimento ou modificação do frontend neste bloco. O smoke real permanece
   dependente de configuração e autorização específicas no bloco final.
+
+
+## Configuração e operação — bloco 4
+
+### Ambiente local e containers
+
+Aplique migrations pelo procedimento existente antes de habilitar SMTP. No host,
+os scripts recebem configuração pelo ambiente do processo; não carregam `.env`
+automaticamente. Use o mecanismo de injeção de segredos aprovado para o ambiente,
+sem copiar valores para comandos, histórico, capturas ou relatórios.
+
+No Compose, backend e `email-worker` recebem a configuração de e-mail; frontend e
+migrate não recebem as credenciais SMTP. A API lê a configuração para a política,
+mas não inicia um transmissor. O worker é uma tarefa finita no perfil `email`,
+sem restart ou agendamento automático. O Compose carrega o arquivo privado `.env`
+por seu mecanismo normal; a imagem não inclui arquivos `.env`.
+
+```bash
+# Valida a configuração sem imprimir o ambiente/segredos.
+docker compose --profile email config --quiet
+# Constrói a imagem e aplica as migrations pelo fluxo normal.
+docker compose build backend
+docker compose up migrate
+# Somente após configurar e autorizar o processamento do lote:
+docker compose --profile email run --rm email-worker
+```
+
+O worker processa um lote por execução. Um agendador externo só deve ser ativado
+após homologação e definição da frequência. Em `local_capture`, usa o volume
+existente em `/var/lib/synergia/email-capture`. Uma troca de provider não converte
+capturas pendentes nem reenvia mensagens já confirmadas. Entregas SMTP incertas
+continuam exigindo reconciliação, inclusive ao trocar o host SMTP.
+
+Para arquivo de segredo, `docker-compose.smtp.yml` é um overlay **opcional**.
+Configure `EMAIL_SMTP_SECRET_PATH` com caminho privado fora deste repositório;
+backend e worker o recebem como `/run/secrets/smtp_password`. O overlay limpa a
+senha em variável e seleciona essa fonte única. O conteúdo não entra na imagem.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.smtp.yml \
+  --profile email config --quiet
+```
+
+Use os mesmos `-f` nos comandos posteriores. A identidade `10001:10001` precisa
+ter leitura do segredo; confira permissões/ACL no host ou no mecanismo de secrets
+do orquestrador. No Compose local, secrets baseados em arquivo usam bind mount:
+não presuma remapeamento automático de owner/modo. Não dê leitura pública para
+contornar permissões. Se optar por segredo em variável, use o Compose base com
+`EMAIL_SMTP_PASSWORD_FILE` vazio, sem o overlay. Não exiba `docker compose config`
+completo nem `docker inspect` de ambientes com credenciais reais.
+
+### Gmail exclusivo de homologação
+
+Crie/utilize uma conta dedicada, nunca a conta pessoal de um desenvolvedor. A
+configuração permanece somente no ambiente privado. Para o adapter por senha,
+a conta precisa permitir senha de app e verificação em duas etapas; políticas
+da organização podem impedir essa opção. Não use a senha principal nem reduza
+as proteções da conta. Se senha de app não estiver disponível, registre essa
+limitação e use relay autorizado ou planeje o adapter de autenticação apropriado.
+Essas condições e a revogação após troca da senha principal constam na
+[documentação oficial de senhas de app](https://support.google.com/accounts/answer/185833?hl=en).
+
+Parâmetros sem credenciais:
+
+```dotenv
+EMAIL_DELIVERY_ENABLED=true
+EMAIL_PROVIDER=smtp
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_TLS_MODE=starttls
+EMAIL_SMTP_TIMEOUT_SECONDS=15
+EMAIL_SMTP_AUTH_MODE=password
+EMAIL_MAX_ATTEMPTS=3
+```
+
+Configure privadamente `EMAIL_SMTP_USERNAME`, `EMAIL_FROM_ADDRESS`, uma fonte de
+segredo e `EMAIL_SMTP_ALLOWED_RECIPIENTS` com os endereços exatos autorizados. Para
+Gmail, use o endereço completo da conta dedicada e o mesmo remetente autorizado.
+A alternativa é porta 465 com `EMAIL_SMTP_TLS_MODE=implicit`, conforme os
+[parâmetros SMTP oficiais](https://knowledge.workspace.google.com/admin/gmail/send-email-from-a-printer-scanner-or-app?hl=en).
+Não configure relay sem aprovação do administrador. Gmail é uma configuração de
+homologação; o código não seleciona regras pelo domínio.
+
+### Smoke direcionado, sem drenar a fila
+
+Pré-requisitos: migration `0033`, configuração privada válida e autorização do
+responsável para o destinatário-alvo. Mantenha os demais workers/agendadores
+parados. Em uma base exclusiva de homologação, use um usuário de teste ativo,
+com endereço verificado e preferência de e-mail habilitada. Gere uma notificação
+por um evento do domínio existente com parâmetros sintéticos e revisão de e-mail
+publicada; não altere ocorrências históricas nem use dados das planilhas reais
+no assunto/corpo. Identifique seu UUID em canal restrito.
+
+Execute primeiro a consulta, sem conexão SMTP e sem escrita na fila:
+
+```bash
+backend/.venv/bin/python scripts/smoke_smtp_delivery.py \
+  --notification-id <notification-uuid>
+```
+
+A resposta contém apenas UUID e indicadores técnicos: provider, estado da fila,
+elegibilidade, pertencimento à allowlist e disponibilidade. `ready=true` significa
+que a notificação é candidata ao processamento naquele instante; não é teste de
+conectividade. Uma notificação ainda na espera de consolidação/disponibilidade, sem orçamento,
+de outro provider ou incerta não pode ser enviada pelo smoke.
+Para um evento novo de teste, pode-se configurar `EMAIL_CONSOLIDATION_SECONDS=0`
+somente no processo de homologação; não edite registros para antecipar retries.
+
+**Após autorização específica do envio real**, execute:
+
+```bash
+backend/.venv/bin/python scripts/smoke_smtp_delivery.py \
+  --notification-id <notification-uuid> --send --allow-real-send
+```
+
+Em container, use `docker compose --profile email run --rm email-worker python
+scripts/smoke_smtp_delivery.py --notification-id <notification-uuid>` e acrescente
+as duas flags apenas ao autorizar transmissão. Use também o overlay se aplicável.
+
+As duas flags são obrigatórias em conjunto. O script processa no máximo uma
+entrega da notificação selecionada através do serviço/fila normal, sem criar
+usuário ou evento. Não projeta, transmite nem recupera reservas de outros UUIDs.
+Uma segunda execução para a entrega `sent` retorna `already_accepted` sem rede.
+Um resultado incerto fica bloqueado; não repita o smoke para tentar recuperar
+recebimento. Use o procedimento de reconciliação anterior.
+
+`outcome=accepted` confirma aceitação SMTP, **não** chegada à caixa. Confirme
+manualmente recebimento, idioma, assunto e as duas partes MIME com o destinatário
+permitido. Guarde em evidência sanitizada somente commit, horário, UUID da
+notificação/entrega, resultado técnico e confirmação de recebimento, sem
+endereço, corpo, captura da caixa ou resposta SMTP. Não foi implementada leitura
+de inbox/IMAP. O smoke não é executado na CI e seus testes usam provider falso.
+
+Códigos de saída: consulta pronta ou aceitação confirmada `0`; configuração/alvo
+inválido ou consulta não pronta `2`; envio bloqueado/não confirmado ou falha de
+infraestrutura `1`. O worker geral mantém `0` para lote sem falhas/canal desligado,
+`1` para falhas de processamento e `2` para configuração inválida. Consulte o
+estado persistido e o `failure_code` antes de decidir por qualquer nova execução.
+
+### Rotação, revogação e desativação
+
+1. Pare workers e agendadores; inspecione tentativas em andamento/incertas. Não
+   resete contadores, referências ou auditoria para trocar uma credencial.
+2. Provisione o novo segredo no mecanismo privado e atualize a fonte única.
+   Recrie os processos/containers para aplicar variáveis ou mounts novos. Mesmo
+   em arquivo, a configuração é carregada no início da execução do worker.
+3. Faça consulta de preflight e um smoke aprovado com notificação de teste própria.
+   Se houver incerteza, resolva antes de autorizar outro envio da mesma entrega.
+4. Revogue a credencial anterior no provedor e retire sua versão antiga do secret
+   manager/arquivo conforme a política do ambiente. No Gmail, gerencie a senha de
+   app da conta dedicada pelo controle oficial; trocar a senha principal também
+   revoga senhas de app. Em incidente, revogue imediatamente e mantenha o canal
+   parado até reconfigurar.
+5. Para encerrar homologação, configure `EMAIL_DELIVERY_ENABLED=false`, pare o
+   agendamento e revogue o segredo de teste. O worker desabilitado não consulta
+   banco nem envia; as notificações internas continuam independentes. Reativar
+   exige revisar a fila pendente e a allowlist; não equivale a descartar backlog.
+
+### Migração para SMTP corporativo/OAuth
+
+Mantenha `EMAIL_PROVIDER=smtp` e altere host, porta, TLS, remetente, allowlist e
+fonte de credenciais conforme o contrato fornecido pela LG. Revise autorização
+de remetente, certificados, firewall e DNS com o administrador. `password` usa
+autenticação SMTP sobre TLS; `none` requer relay previamente autorizado e não
+permite credenciais. Não desabilite validação TLS nem remova a allowlist.
+
+Se a infraestrutura exigir OAuth ou outro SASL, implemente `SMTPAuthenticator`
+com gestão privada de obtenção/renovação/revogação de tokens e injete-o na
+construção do provider. Esse adapter ainda não existe; trocar somente uma
+variável não habilita OAuth. Mensagens, templates versionados, fila e casos de
+uso permanecem iguais. O [mecanismo XOAUTH2 oficial](https://developers.google.com/workspace/gmail/imap/xoauth2-protocol)
+é referência de protocolo, sem introduzir SDK do Google nesta implementação.
+
+Antes da troca, pare os transmissores e reconcilie resultados incertos no servidor
+original. Depois, faça o smoke autorizado no destino corporativo e só então retome
+o agendador. A referência SMTP permanece técnica; não garante deduplicação entre
+servidores distintos. A aceitação corporativa deve ser registrada separadamente.
+
+### Diagnóstico por código técnico
+
+| Estado/código | Ação operacional |
+| --- | --- |
+| `disabled` | conferir habilitação explícita; não é falha de notificações internas |
+| `unavailable` na política | validar variáveis, fonte única de segredo e permissões do arquivo; a política não testa a rede |
+| `smtp_recipient_not_allowed` | revisar autorização e endereço exato; não ampliar allowlist automaticamente |
+| `smtp_authentication_rejected` | verificar credencial de app/relay/política; corrigir configuração antes de tratar a entrega terminal |
+| `smtp_tls_*` / `smtp_capability_unavailable` | conferir host, porta, cadeia confiável e modo TLS; não usar fallback aberto |
+| `smtp_connection_unavailable` / `*_temporarily_unavailable` | não aceitação conhecida; conferir rede/limites e aguardar backoff dentro do orçamento |
+| `smtp_recipient_rejected` / `smtp_data_rejected` | rejeição definitiva; investigar em canal restrito, sem retry automático |
+| `smtp_confirmation_unknown` | parar transmissores e reconciliar; não inferir rejeição por ausência na inbox |
+| `processing` com worker perdido | aguardar expiração e reconciliar explicitamente ou deixar o próximo worker reter como incerto |
+| `max_attempts_exceeded` | orçamento encerrado; investigar sem zerar tentativas ou fabricar nova entrega |
+| `sent`, mas sem recebimento | consultar evidência SMTP/destinatário; aceitação não garante inbox; não reenviar automaticamente |
+
+Os detalhes do servidor ficam no canal restrito do administrador. Logs da
+aplicação usam somente códigos permitidos. Falha terminal de configuração ou
+rejeição definitiva não é resolvida pela ferramenta de incerteza: ela recusa
+entregas que não aguardem reconciliação SMTP.
+
+
+### Checkpoint técnico do bloco 4 — 24/10/2026
+
+- Backend: **880 testes não integrados e 670 de integração aprovados**; PostgreSQL
+  16 isolado com as 33 migrations. O smoke automatizado usa provider falso e
+  prova consulta sem escrita, seleção de um UUID, bloqueios e repetição sem envio.
+- Angular: **313 testes aprovados**, incluindo os estados do canal e-mail e os
+  textos pt/en; lint e build aprovados. O build mantém avisos de orçamento de
+  estilos já existentes em outros componentes, sem introduzir CSS neste bloco.
+- Ruff, compilação Python, i18n (843 chaves por idioma), sistema visual, matrizes
+  de acesso/segurança, modelo de ameaças, baseline HTTP, validador da Etapa 5 e
+  `git diff --check` aprovados.
+- Imagem `synergia-backend:issue143-block4` construída; worker desabilitado e
+  comandos smoke/reconciliação disponíveis, verificados com `--network none`.
+  Compose base/perfil e overlay de segredo validados somente com dados sintéticos;
+  migrate/frontend não recebem o segredo SMTP. Serviços existentes preservados.
+- Revisão visual em pt/en, claro/escuro e 1440/390 px com API sintética: o trecho
+  alterado não apresentou violações no axe e a largura não muda ao remover o
+  novo status. Desktop aprovado. Em 390 px, a área de conteúdo do shell existente
+  excede o viewport, inclusive sem esse status; correção do shell fica fora da
+  #143 e requer tratamento próprio. A responsividade completa não é declarada
+  aprovada por este checkpoint. Capturas temporárias permanecem ignoradas.
+- Até o encerramento técnico do bloco 4, não houve configuração de segredo real,
+  SMTP externo, envio, recebimento confirmado, push, PR ou CI remota. O smoke
+  permaneceu pendente naquele checkpoint. Posteriormente, o responsável
+  configurou o ambiente e autorizou um envio; o recebimento foi confirmado em
+  24/10/2026, conforme a [evidência sanitizada](evidence/issue-143-smtp-homologation.md).

@@ -212,6 +212,56 @@ def test_known_nonacceptance_retries_once_with_the_same_delivery_id(scene):
     ]
 
 
+def test_known_smtp_nonacceptance_stops_at_attempt_limit(scene):
+    service, provider = scene.service(
+        TemporaryEmailError("smtp_recipient_temporarily_unavailable"), max_attempts=2
+    )
+    assert service.run_once()["failed"] == 1
+    row = scene.delivery()
+    assert row["state"] == "retry" and row["attempt_count"] == 1
+    with psycopg.connect(scene.database) as conn:
+        conn.execute(
+            "UPDATE synergia.email_deliveries SET available_at = now() WHERE id = %s",
+            (row["id"],),
+        )
+    assert service.run_once()["failed"] == 1
+    assert scene.delivery()["state"] == "failed"
+    assert scene.delivery()["attempt_count"] == 2
+    assert service.run_once()["processed"] == 0
+    assert len(provider.messages) == 2 and not provider.accepted
+    assert {m.delivery_id for m in provider.messages} == {row["id"]}
+    assert [a[1] for a in scene.attempts(row["id"])] == [
+        "started",
+        "retry",
+        "started",
+        "failed",
+    ]
+
+
+def test_disabled_channel_preserves_new_internal_notifications_without_email(scene):
+    service = EmailDeliveryService(EmailConfig(), scene.repository)
+    scene.enqueue()
+    assert service.run_once() == {
+        "status": "disabled",
+        "processed": 0,
+        "sent": 0,
+        "failed": 0,
+    }
+    with psycopg.connect(scene.database) as conn:
+        notifications = conn.execute(
+            "SELECT id, state FROM synergia.notifications WHERE id = ANY(%s)",
+            (scene.notifications,),
+        ).fetchall()
+        assert {row[0] for row in notifications} == set(scene.notifications)
+        assert all(row[1] == "unread" for row in notifications)
+        assert conn.execute(
+            "SELECT count(*) FROM synergia.email_deliveries"
+        ).fetchone() == (0,)
+        assert conn.execute(
+            "SELECT count(*) FROM synergia.email_delivery_attempts"
+        ).fetchone() == (0,)
+
+
 @pytest.mark.parametrize(
     "error", [UncertainEmailError(SENSITIVE), RuntimeError(SENSITIVE)]
 )
