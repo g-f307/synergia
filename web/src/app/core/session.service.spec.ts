@@ -30,6 +30,7 @@ describe('SessionService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -41,7 +42,10 @@ describe('SessionService', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    sessionStorage.clear();
+  });
 
   it('keeps the access token in memory and loads the authenticated profile', () => {
     service.login('user@example.invalid', 'synthetic-password').subscribe();
@@ -129,6 +133,18 @@ describe('SessionService', () => {
     expect(refreshed).toBeFalse();
     expect(service.state()).toBe('anonymous');
     expect(service.profile()).toBeNull();
+  });
+
+  it('recognizes an expired persisted browser session after the application reloads', () => {
+    sessionStorage.setItem('synergia.session.authenticated', 'true');
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('expired');
+    expect(sessionStorage.getItem('synergia.session.authenticated')).toBeNull();
   });
 
   it('marks a previously authenticated session as expired when refresh is rejected', () => {

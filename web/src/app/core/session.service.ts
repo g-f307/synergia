@@ -8,6 +8,8 @@ import { ActiveSession, SessionState, TokenResponse, UserProfile } from './sessi
 import { I18nService } from '../shared/i18n/i18n.service';
 import { AppearanceService } from './appearance.service';
 
+const authenticatedSessionMarker = 'synergia.session.authenticated';
+
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly http = inject(HttpClient);
@@ -54,7 +56,8 @@ export class SessionService {
     const hadAuthenticatedSession = this.state() === 'authenticated'
       || this.state() === 'expired'
       || Boolean(this.accessToken())
-      || Boolean(this.profile());
+      || Boolean(this.profile())
+      || sessionStorage.getItem(authenticatedSessionMarker) === 'true';
     this.state.set('loading');
     this.refreshRequest = this.http.post<TokenResponse>(
       `${environment.apiUrl}/auth/refresh`, {}, { withCredentials: true }
@@ -159,6 +162,7 @@ export class SessionService {
     this.currentSessionId.set(null);
     this.profile.set(null);
     this.state.set(state);
+    sessionStorage.removeItem(authenticatedSessionMarker);
     if (resetLocale) this.i18n.configure('pt-BR');
     this.appearance.configure();
   }
@@ -166,5 +170,6 @@ export class SessionService {
   private acceptToken(token: TokenResponse): void {
     this.tokenState.set(token.access_token);
     this.currentSessionId.set(token.session_id);
+    sessionStorage.setItem(authenticatedSessionMarker, 'true');
   }
 }
