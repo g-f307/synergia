@@ -67,6 +67,30 @@ describe('SessionService', () => {
     expect(localStorage.length).toBe(0);
   });
 
+  it('completes login when browser session storage rejects writes', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+    let authenticatedProfile: UserProfile | undefined;
+    let loginError: unknown;
+
+    service.login('user@example.invalid', 'synthetic-password').subscribe({
+      next: (value) => { authenticatedProfile = value; },
+      error: (error) => { loginError = error; }
+    });
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token',
+      token_type: 'Bearer',
+      expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    expect(loginError).toBeUndefined();
+    expect(authenticatedProfile).toEqual(profile);
+    expect(service.state()).toBe('authenticated');
+  });
+
   it('applies the persisted locale again after loading a new session', () => {
     service.login('user@example.invalid', 'synthetic-password').subscribe();
     http.expectOne('http://localhost:8000/auth/login').flush({
@@ -133,6 +157,34 @@ describe('SessionService', () => {
     expect(refreshed).toBeFalse();
     expect(service.state()).toBe('anonymous');
     expect(service.profile()).toBeNull();
+  });
+
+  it('refreshes without failing when browser session storage rejects reads', () => {
+    spyOn(Storage.prototype, 'getItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+    let refreshed = true;
+
+    expect(() => service.refresh().subscribe((value) => { refreshed = value; })).not.toThrow();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(refreshed).toBeFalse();
+    expect(service.state()).toBe('anonymous');
+  });
+
+  it('clears the in-memory session when browser session storage rejects removals', () => {
+    service.profile.set(profile);
+    spyOn(Storage.prototype, 'removeItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+
+    expect(() => service.clear('expired')).not.toThrow();
+
+    expect(service.state()).toBe('expired');
+    expect(service.profile()).toBeNull();
+    expect(service.accessToken()).toBeNull();
   });
 
   it('recognizes an expired persisted browser session after the application reloads', () => {

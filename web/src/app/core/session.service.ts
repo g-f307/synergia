@@ -57,7 +57,7 @@ export class SessionService {
       || this.state() === 'expired'
       || Boolean(this.accessToken())
       || Boolean(this.profile())
-      || sessionStorage.getItem(authenticatedSessionMarker) === 'true';
+      || this.hasPersistedAuthenticatedSession();
     this.state.set('loading');
     this.refreshRequest = this.http.post<TokenResponse>(
       `${environment.apiUrl}/auth/refresh`, {}, { withCredentials: true }
@@ -162,7 +162,7 @@ export class SessionService {
     this.currentSessionId.set(null);
     this.profile.set(null);
     this.state.set(state);
-    sessionStorage.removeItem(authenticatedSessionMarker);
+    this.clearAuthenticatedSessionMarker();
     if (resetLocale) this.i18n.configure('pt-BR');
     this.appearance.configure();
   }
@@ -170,6 +170,35 @@ export class SessionService {
   private acceptToken(token: TokenResponse): void {
     this.tokenState.set(token.access_token);
     this.currentSessionId.set(token.session_id);
-    sessionStorage.setItem(authenticatedSessionMarker, 'true');
+    this.persistAuthenticatedSession();
+  }
+
+  private hasPersistedAuthenticatedSession(): boolean {
+    try {
+      return typeof sessionStorage !== 'undefined'
+        && sessionStorage.getItem(authenticatedSessionMarker) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistAuthenticatedSession(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(authenticatedSessionMarker, 'true');
+      }
+    } catch {
+      // Browser storage is only a best-effort session hint; authentication stays in memory.
+    }
+  }
+
+  private clearAuthenticatedSessionMarker(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(authenticatedSessionMarker);
+      }
+    } catch {
+      // Restricted browsers may deny storage access; in-memory state is already cleared.
+    }
   }
 }
