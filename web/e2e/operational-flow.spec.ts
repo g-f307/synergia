@@ -316,7 +316,19 @@ test.describe.serial('integrated operational journey', () => {
     await login(page);
     revokeSessions(operatorEmail);
     await page.goto('/pending-items');
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/login\?returnUrl=%2Fpending-items/);
+    await expect(page.locator('.shell')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /entrar|sign in/i })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/sessão expirou|session expired/i);
+  });
+
+  test('does not render public login inside an authenticated shell', async ({ page }) => {
+    await login(page);
+    await page.goto('/login');
+
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.locator('.login-page')).toHaveCount(0);
+    await expect(page.locator('.shell')).toBeVisible();
   });
 
   test('enforces role and organization scope', async ({ page }) => {

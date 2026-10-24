@@ -6,7 +6,7 @@ import {
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 
 import { authInterceptor } from './auth.interceptor';
 import { SessionService } from './session.service';
@@ -72,6 +72,34 @@ describe('authInterceptor', () => {
     retry.flush({});
   });
 
+  it('joins one refresh when concurrent idempotent requests receive unauthorized responses', () => {
+    const refreshResult = new Subject<boolean>();
+    const refresh = spyOn(session, 'refresh').and.callFake(() => {
+      session.state.set('loading');
+      return refreshResult;
+    });
+    const responses: string[] = [];
+
+    http.get<{ request: string }>('/protected/one').subscribe((value) => responses.push(value.request));
+    http.get<{ request: string }>('/protected/two').subscribe((value) => responses.push(value.request));
+    controller.expectOne('/protected/one').flush({}, { status: 401, statusText: 'Unauthorized' });
+    controller.expectOne('/protected/two').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(refresh).toHaveBeenCalledTimes(2);
+    session.token = 'refreshed-token';
+    refreshResult.next(true);
+    refreshResult.complete();
+
+    const retries = controller.match((request) => request.url.startsWith('/protected/'));
+    expect(retries.length).toBe(2);
+    for (const retry of retries) {
+      expect(retry.request.headers.get('Authorization')).toBe('Bearer refreshed-token');
+      retry.flush({ request: retry.request.url });
+    }
+    expect(responses).toEqual(['/protected/one', '/protected/two']);
+    expect(session.clear).not.toHaveBeenCalled();
+  });
+
   it('preserves forbidden responses without attempting refresh', () => {
     let receivedStatus = 0;
     http.get('/protected').subscribe({
@@ -85,7 +113,24 @@ describe('authInterceptor', () => {
     controller.expectNone('http://localhost:8000/auth/refresh');
   });
 
-  it('never refreshes or replays a non-idempotent request', () => {
+  it('does not recursively refresh when profile bootstrap rejects the renewed token', () => {
+    const refresh = spyOn(session, 'refresh').and.callThrough();
+    session.state.set('loading');
+    let receivedStatus = 0;
+
+    http.get('http://localhost:8000/me').subscribe({
+      error: (error) => { receivedStatus = error.status; }
+    });
+    controller.expectOne('http://localhost:8000/me').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(receivedStatus).toBe(401);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('may restore the session but never replays a non-idempotent request', () => {
+    const refresh = spyOn(session, 'refresh').and.callThrough();
     let receivedStatus = 0;
     http.post('/protected', { decision: 'approve' }).subscribe({
       error: (error) => { receivedStatus = error.status; }
@@ -95,7 +140,8 @@ describe('authInterceptor', () => {
     );
 
     expect(receivedStatus).toBe(401);
-    expect(session.clear).toHaveBeenCalledWith('expired');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(session.clear).not.toHaveBeenCalled();
     controller.expectNone('/protected');
   });
 });

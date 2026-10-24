@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
 
-import { adminGuard, authenticatedGuard, permissionGuard } from './core/auth.guard';
+import { adminGuard, authenticatedGuard, publicOnlyGuard, permissionGuard } from './core/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
+    canActivate: [publicOnlyGuard],
     loadComponent: () => import('./features/login.component').then((value) => value.LoginComponent)
   },
   {

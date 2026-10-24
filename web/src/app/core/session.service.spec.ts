@@ -30,6 +30,7 @@ describe('SessionService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -41,7 +42,10 @@ describe('SessionService', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    sessionStorage.clear();
+  });
 
   it('keeps the access token in memory and loads the authenticated profile', () => {
     service.login('user@example.invalid', 'synthetic-password').subscribe();
@@ -61,6 +65,30 @@ describe('SessionService', () => {
     expect(TestBed.inject(I18nService).locale()).toBe('pt-BR');
     expect(TestBed.inject(AppearanceService).preferences()).toEqual(profile.appearance);
     expect(localStorage.length).toBe(0);
+  });
+
+  it('completes login when browser session storage rejects writes', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+    let authenticatedProfile: UserProfile | undefined;
+    let loginError: unknown;
+
+    service.login('user@example.invalid', 'synthetic-password').subscribe({
+      next: (value) => { authenticatedProfile = value; },
+      error: (error) => { loginError = error; }
+    });
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token',
+      token_type: 'Bearer',
+      expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    expect(loginError).toBeUndefined();
+    expect(authenticatedProfile).toEqual(profile);
+    expect(service.state()).toBe('authenticated');
   });
 
   it('applies the persisted locale again after loading a new session', () => {
@@ -119,7 +147,7 @@ describe('SessionService', () => {
     expect(TestBed.inject(I18nService).locale()).toBe('en-US');
   });
 
-  it('clears local state when refresh expires', () => {
+  it('keeps a first anonymous visit anonymous when no refresh session exists', () => {
     let refreshed = true;
     service.refresh().subscribe((value) => { refreshed = value; });
     const request = http.expectOne('http://localhost:8000/auth/refresh');
@@ -127,8 +155,137 @@ describe('SessionService', () => {
     request.flush({}, { status: 401, statusText: 'Unauthorized' });
 
     expect(refreshed).toBeFalse();
+    expect(service.state()).toBe('anonymous');
+    expect(service.profile()).toBeNull();
+  });
+
+  it('refreshes without failing when browser session storage rejects reads', () => {
+    spyOn(Storage.prototype, 'getItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+    let refreshed = true;
+
+    expect(() => service.refresh().subscribe((value) => { refreshed = value; })).not.toThrow();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(refreshed).toBeFalse();
+    expect(service.state()).toBe('anonymous');
+  });
+
+  it('clears the in-memory session when browser session storage rejects removals', () => {
+    service.profile.set(profile);
+    spyOn(Storage.prototype, 'removeItem').and.throwError(
+      new DOMException('Storage is blocked', 'SecurityError')
+    );
+
+    expect(() => service.clear('expired')).not.toThrow();
+
     expect(service.state()).toBe('expired');
     expect(service.profile()).toBeNull();
+    expect(service.accessToken()).toBeNull();
+  });
+
+  it('recognizes an expired persisted browser session after the application reloads', () => {
+    sessionStorage.setItem('synergia.session.authenticated', 'true');
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('expired');
+    expect(sessionStorage.getItem('synergia.session.authenticated')).toBeNull();
+  });
+
+  it('marks a previously authenticated session as expired when refresh is rejected', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('expired');
+    expect(service.profile()).toBeNull();
+  });
+
+  it('preserves an expired session state when a later refresh is also rejected', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+    expect(service.state()).toBe('expired');
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    expect(service.state()).toBe('expired');
+  });
+
+  it('does not start another refresh after the session is already expired', () => {
+    service.login('user@example.invalid', 'synthetic-password').subscribe();
+    http.expectOne('http://localhost:8000/auth/login').flush({
+      access_token: 'memory-only-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000002'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 401, statusText: 'Unauthorized' }
+    );
+
+    let authenticated = true;
+    service.ensureSession().subscribe((value) => { authenticated = value; });
+
+    http.expectNone('http://localhost:8000/auth/refresh');
+    expect(authenticated).toBeFalse();
+    expect(service.state()).toBe('expired');
+  });
+
+  it('shares one refresh request among concurrent subscribers', () => {
+    const results: boolean[] = [];
+    service.refresh().subscribe((value) => results.push(value));
+    service.refresh().subscribe((value) => results.push(value));
+
+    const requests = http.match('http://localhost:8000/auth/refresh');
+    expect(requests.length).toBe(1);
+    requests[0].flush({
+      access_token: 'refreshed-token', token_type: 'Bearer', expires_in: 900,
+      session_id: '00000000-0000-4000-8000-000000000003'
+    });
+    http.expectOne('http://localhost:8000/me').flush(profile);
+
+    expect(results).toEqual([true, true]);
+    expect(service.state()).toBe('authenticated');
+  });
+
+  it('marks authentication as unavailable without retaining prior user context', () => {
+    service.profile.set(profile);
+    service.refresh().subscribe();
+    http.expectOne('http://localhost:8000/auth/refresh').flush(
+      {}, { status: 503, statusText: 'Service Unavailable' }
+    );
+
+    expect(service.state()).toBe('unavailable');
+    expect(service.profile()).toBeNull();
+    expect(service.accessToken()).toBeNull();
   });
 
   it('lists sessions without exposing credentials and clears the revoked current session', () => {

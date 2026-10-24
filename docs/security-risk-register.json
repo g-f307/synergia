@@ -129,8 +129,8 @@
     {
       "id": "R-02", "journey": "J-01", "category": "spoofing", "threat": "Access or refresh token replay extends unauthorized access.",
       "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
-      "controls": ["Short-lived JWT", "Opaque rotated refresh token", "Hashed refresh token", "Family revocation on replay", "Access token held only in memory"],
-      "evidence": ["backend/tests/test_auth_persistence.py", "backend/tests/test_security_regression.py", "web/src/app/core/session.service.spec.ts"],
+      "controls": ["Short-lived JWT", "Opaque rotated refresh token", "Hashed refresh token", "Family revocation on replay", "Access token held only in memory", "Single-flight browser refresh", "No automatic replay of non-idempotent requests", "Public and authenticated shells are mutually exclusive"],
+      "evidence": ["backend/tests/test_auth_persistence.py", "backend/tests/test_security_regression.py", "web/src/app/core/session.service.spec.ts", "web/src/app/core/auth.interceptor.spec.ts", "web/e2e/operational-flow.spec.ts"],
       "owner": "identity", "treatment_issue": 92
     },
     {

@@ -8,6 +8,8 @@ import { ActiveSession, SessionState, TokenResponse, UserProfile } from './sessi
 import { I18nService } from '../shared/i18n/i18n.service';
 import { AppearanceService } from './appearance.service';
 
+const authenticatedSessionMarker = 'synergia.session.authenticated';
+
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly http = inject(HttpClient);
@@ -51,6 +53,11 @@ export class SessionService {
 
   refresh(): Observable<boolean> {
     if (this.refreshRequest) return this.refreshRequest;
+    const hadAuthenticatedSession = this.state() === 'authenticated'
+      || this.state() === 'expired'
+      || Boolean(this.accessToken())
+      || Boolean(this.profile())
+      || this.hasPersistedAuthenticatedSession();
     this.state.set('loading');
     this.refreshRequest = this.http.post<TokenResponse>(
       `${environment.apiUrl}/auth/refresh`, {}, { withCredentials: true }
@@ -59,17 +66,21 @@ export class SessionService {
       switchMap(() => this.loadProfile()),
       map(() => true),
       catchError((error: HttpErrorResponse) => {
-        this.clear(error.status === 0 || error.status >= 500 ? 'unavailable' : 'expired');
+        const nextState = error.status === 0 || error.status >= 500
+          ? 'unavailable'
+          : hadAuthenticatedSession ? 'expired' : 'anonymous';
+        this.clear(nextState);
         return of(false);
       }),
       finalize(() => { this.refreshRequest = undefined; }),
-      shareReplay(1)
+      shareReplay({ bufferSize: 1, refCount: false })
     );
     return this.refreshRequest;
   }
 
   ensureSession(): Observable<boolean> {
-    return this.accessToken() ? of(true) : this.refresh();
+    if (this.accessToken()) return of(true);
+    return this.state() === 'expired' ? of(false) : this.refresh();
   }
 
   loadProfile(): Observable<UserProfile> {
@@ -151,6 +162,7 @@ export class SessionService {
     this.currentSessionId.set(null);
     this.profile.set(null);
     this.state.set(state);
+    this.clearAuthenticatedSessionMarker();
     if (resetLocale) this.i18n.configure('pt-BR');
     this.appearance.configure();
   }
@@ -158,5 +170,35 @@ export class SessionService {
   private acceptToken(token: TokenResponse): void {
     this.tokenState.set(token.access_token);
     this.currentSessionId.set(token.session_id);
+    this.persistAuthenticatedSession();
+  }
+
+  private hasPersistedAuthenticatedSession(): boolean {
+    try {
+      return typeof sessionStorage !== 'undefined'
+        && sessionStorage.getItem(authenticatedSessionMarker) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistAuthenticatedSession(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(authenticatedSessionMarker, 'true');
+      }
+    } catch {
+      // Browser storage is only a best-effort session hint; authentication stays in memory.
+    }
+  }
+
+  private clearAuthenticatedSessionMarker(): void {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(authenticatedSessionMarker);
+      }
+    } catch {
+      // Restricted browsers may deny storage access; in-memory state is already cleared.
+    }
   }
 }
