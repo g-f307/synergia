@@ -137,7 +137,7 @@ class TemplatePolicyResponse(BaseModel):
     events: list[EventPolicy]
     channels: list[TemplateChannel]
     locales: list[TemplateLocale]
-    external_delivery: Literal["disabled", "local_capture", "unavailable"]
+    external_delivery: Literal["disabled", "local_capture", "smtp", "unavailable"]
     external_delivery_corporate: bool = False
 
 
@@ -606,14 +606,15 @@ AdminActor = Annotated[
 ]
 
 
-def _external_delivery() -> Literal["disabled", "local_capture", "unavailable"]:
+def _external_delivery() -> Literal["disabled", "local_capture", "smtp", "unavailable"]:
     try:
-        config = EmailConfig.from_env()
+        # The API never transmits, so it must not read the SMTP secret.
+        config = EmailConfig.from_env(load_secret=False)
     except (ValueError, OSError):
         return "unavailable"
     if not config.enabled:
         return "disabled"
-    return "local_capture"
+    return "smtp" if config.provider == "smtp" else "local_capture"
 
 
 @router.get("/policy", response_model=TemplatePolicyResponse, responses=ERROR_RESPONSES)

@@ -223,3 +223,18 @@ curl -X POST http://localhost:8000/imports \
 ```
 
 A seleção da fonte pela interface Angular fica para issue própria; este incremento é de backend. Consulte [o contrato do adapter](total-decision-adapter.md).
+
+
+## Entrega externa de e-mail — API 0.9.0
+
+`GET /admin/notification-templates/policy` acrescenta `smtp` aos valores de
+`external_delivery`: `disabled`, `local_capture`, `smtp`, `unavailable`. A resposta
+é apenas de configuração, sem conexão SMTP, envio, endereço ou segredo. Uma
+configuração inválida retorna `unavailable`; o canal desabilitado ignora parâmetros
+SMTP. `external_delivery_corporate` permanece `false` e não é inferido pelo host.
+
+O incremento de `0.8.0` para `0.9.0` acompanha modelos OpenAPI, Angular e testes.
+Implante backend e frontend da mesma revisão. A prévia de templates continua
+sintética e sem envio. A execução opt-in fica nos comandos operacionais, sem
+novo endpoint HTTP de transmissão. Configuração e aceite pendente do smoke real
+estão em [smtp-email-provider.md](smtp-email-provider.md).

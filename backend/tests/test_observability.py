@@ -54,6 +54,31 @@ def test_enabled_email_worker_reports_unavailable_state(monkeypatch, tmp_path) -
     assert (result.status, result.reason) == ("degraded", "state_unavailable")
 
 
+def test_email_probe_does_not_read_the_smtp_secret(monkeypatch, tmp_path) -> None:
+    for name, value in {
+        "EMAIL_DELIVERY_ENABLED": "true",
+        "EMAIL_PROVIDER": "smtp",
+        "EMAIL_FROM_ADDRESS": "noreply@example.invalid",
+        "EMAIL_SMTP_HOST": "smtp.example.invalid",
+        "EMAIL_SMTP_USERNAME": "synthetic-login",
+        "EMAIL_SMTP_ALLOWED_RECIPIENTS": "allowed@example.invalid",
+        "EMAIL_SMTP_PASSWORD_FILE": str(tmp_path / "missing" / "secret"),
+    }.items():
+        monkeypatch.setenv(name, value)
+
+    result = probe_email_worker(
+        ObservabilityConfig(
+            "postgresql://invalid:invalid@127.0.0.1:1/invalid",
+            tmp_path,
+            "",
+            probe_timeout_seconds=1,
+        )
+    )
+
+    # The API-side probe reaches the queue check; it never fails on the secret.
+    assert (result.status, result.reason) == ("degraded", "state_unavailable")
+
+
 def test_structured_log_keeps_only_allowlisted_fields() -> None:
     record = logging.LogRecord(
         "test", logging.ERROR, __file__, 1, "import.failed", (), None

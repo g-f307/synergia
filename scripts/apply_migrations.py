@@ -11,6 +11,12 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0033": (
+        "checks_contain",
+        "",
+        "email_deliveries.email_deliveries_provider_check:smtp;"
+        "email_delivery_reconciliations.email_delivery_reconciliations_resolution_check:accepted",
+    ),
     "0032": (
         "checks_contain",
         "",

@@ -22,6 +22,28 @@ x-backend-environment: &backend-environment
   OBSERVABILITY_LOG_LEVEL: ${OBSERVABILITY_LOG_LEVEL:-INFO}
   MIGRATION_BASELINE_THROUGH: ${MIGRATION_BASELINE_THROUGH:-}
 
+# Public e-mail settings: enough for the API to report the provider state.
+x-email-environment: &email-environment
+  EMAIL_DELIVERY_ENABLED: ${EMAIL_DELIVERY_ENABLED:-false}
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
+  EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
+  EMAIL_BATCH_SIZE: ${EMAIL_BATCH_SIZE:-50}
+  EMAIL_MAX_ATTEMPTS: ${EMAIL_MAX_ATTEMPTS:-3}
+  EMAIL_RETRY_SECONDS: ${EMAIL_RETRY_SECONDS:-60}
+  EMAIL_CONSOLIDATION_SECONDS: ${EMAIL_CONSOLIDATION_SECONDS:-60}
+  EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+  EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
+  EMAIL_SMTP_TLS_MODE: ${EMAIL_SMTP_TLS_MODE:-starttls}
+  EMAIL_SMTP_TIMEOUT_SECONDS: ${EMAIL_SMTP_TIMEOUT_SECONDS:-15}
+  EMAIL_SMTP_AUTH_MODE: ${EMAIL_SMTP_AUTH_MODE:-password}
+  EMAIL_SMTP_USERNAME: ${EMAIL_SMTP_USERNAME:-}
+  EMAIL_SMTP_ALLOWED_RECIPIENTS: ${EMAIL_SMTP_ALLOWED_RECIPIENTS:-}
+
+# The SMTP secret reaches only the process that transmits, never the HTTP API.
+x-email-secret-environment: &email-secret-environment
+  EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+  EMAIL_SMTP_PASSWORD_FILE: ${EMAIL_SMTP_PASSWORD_FILE:-}
+
 services:
   postgres:
     image: docker.io/library/postgres:16-alpine
@@ -58,7 +80,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    environment: *backend-environment
+    environment:
+      <<: [*backend-environment, *email-environment]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -79,6 +102,24 @@ services:
       retries: 12
       start_period: 10s
     restart: unless-stopped
+
+  email-worker:
+    profiles: [email]
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "scripts/process_email_notifications.py"]
+    environment:
+      <<: [*backend-environment, *email-environment, *email-secret-environment]
+    volumes:
+      - synergia-application-data:/var/lib/synergia
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 
   web:
     image: synergia-web:${SYNERGIA_IMAGE_TAG:-local}

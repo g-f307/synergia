@@ -1,0 +1,13 @@
+# Optional secret-file overlay. Supply a private path outside this repository.
+# Only the e-mail worker (and the operational commands run through it) mounts the
+# secret; the HTTP API reports the provider state from public settings alone.
+services:
+  email-worker:
+    environment:
+      EMAIL_SMTP_PASSWORD: ""
+      EMAIL_SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+    secrets: [smtp_password]
+
+secrets:
+  smtp_password:
+    file: ${EMAIL_SMTP_SECRET_PATH:?Set the external SMTP secret file path}

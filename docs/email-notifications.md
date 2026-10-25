@@ -1,10 +1,13 @@
 # Entrega segura de notificações por e-mail
 
+> Configuração SMTP, smoke opt-in e reconciliação estão no
+> [runbook de entrega SMTP](smtp-email-provider.md).
+
 O canal de e-mail consome as notificações internas persistidas e não participa
 da transação que originou uma execução, pendência ou relatório. Uma falha de
-entrega nunca desfaz o evento operacional. Esta etapa fornece o contrato de
-provedor e um capturador estritamente local para desenvolvimento e CI; nenhum
-provedor externo ou leitura de caixa postal é realizado.
+entrega nunca desfaz o evento operacional. O contrato de
+provedor tem captura local para desenvolvimento/CI e transporte SMTP genérico
+para homologação autorizada. Não há leitura de caixa postal.
 
 ## Habilitação explícita
 
@@ -18,10 +21,9 @@ EMAIL_FROM_ADDRESS=no-reply@example.invalid
 EMAIL_CAPTURE_PATH=./data/email-capture/messages.jsonl
 ```
 
-Esses valores são exemplos sem credenciais. Segredos de um futuro adaptador
-corporativo deverão vir exclusivamente do gerenciador de segredos do ambiente.
-Eles não pertencem ao banco, frontend, documentação ou repositório. Nesta
-versão, qualquer provedor diferente de `local_capture` é rejeitado.
+Esses valores são exemplos sem credenciais. Para SMTP, use `EMAIL_PROVIDER=smtp`
+e siga o runbook. Segredos pertencem ao gerenciador de segredos/arquivo externo
+do ambiente, nunca ao banco, frontend, documentação ou repositório.
 
 O lote, máximo de tentativas e intervalo inicial são limitados por
 `EMAIL_BATCH_SIZE`, `EMAIL_MAX_ATTEMPTS` e `EMAIL_RETRY_SECONDS`. A janela
@@ -62,16 +64,19 @@ senha, corpo ou autenticação. A captura local contém a mensagem para inspeç�
 controlada e sua pasta está excluída do versionamento.
 
 A tentativa é incrementada e registrada como `started` na mesma transação que
-reserva a entrega, antes da chamada ao provedor. Recuperações de leases vencidos
-também consomem tentativa e nunca ultrapassam `EMAIL_MAX_ATTEMPTS`. Todo adaptador
-de provedor deve usar `delivery_id` como chave de idempotência; o capturador local
-devolve a primeira referência sem duplicar a mensagem.
+reserva a entrega, antes da chamada ao provedor. Na captura local, a recuperação
+de reserva vencida consome tentativa e o capturador devolve a primeira referência
+sem duplicar a mensagem. Em SMTP, reserva vencida ou confirmação incerta exige
+reconciliação explícita, sem retry automático. O `delivery_id` é estável, mas o
+Message-ID não oferece deduplicação remota. Retries automáticos SMTP só ocorrem
+após não aceitação conhecida e respeitam `EMAIL_MAX_ATTEMPTS`.
 
 Cada finalização também informa o número da tentativa reservada. A atualização
 só ocorre se a entrega ainda estiver em `processing` e continuar pertencendo à
 mesma tentativa. Assim, um worker cujo lease expirou não pode concluir, falhar
 ou produzir auditoria em nome do worker que recuperou a entrega.
 
-A interface administrativa informa apenas `desabilitado`, `captura local` ou
-`indisponível`. Captura local não representa SMTP corporativo, que permanece
-fora do escopo e exige integração e credenciais próprias.
+O editor do canal e-mail informa configuração desabilitada, captura local,
+envio configurado (`smtp`) ou indisponível. A prévia nunca transmite. O estado
+de configuração não comprova conexão, recebimento ou integração corporativa;
+nesses casos, o aceite requer evidência operacional.

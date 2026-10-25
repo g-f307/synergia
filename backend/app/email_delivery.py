@@ -2,92 +2,26 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 from uuid import UUID
 
 import psycopg
 from psycopg.rows import dict_row
 
+# Re-export the existing public imports for workers, tests and integrations.
+from app.email_config import EmailConfig as EmailConfig
+from app.email_contracts import ConfigurationEmailError, UncertainEmailError
+from app.email_contracts import EmailMessage as EmailMessage
+from app.email_contracts import EmailProvider as EmailProvider
+from app.email_contracts import PermanentEmailError as PermanentEmailError
+from app.email_contracts import TemporaryEmailError as TemporaryEmailError
 from app.observability.telemetry import safe_log
+from app.smtp_email_provider import SAFE_SMTP_FAILURE_CODES, SMTPEmailProvider
 
 SAFE_PARAMETERS = frozenset({"execution_id", "count", "version"})
-
-
-class TemporaryEmailError(RuntimeError):
-    """A provider failure that may be retried without changing the source event."""
-
-
-class PermanentEmailError(RuntimeError):
-    """A provider rejection that must not be retried."""
-
-
-@dataclass(frozen=True)
-class EmailConfig:
-    enabled: bool = False
-    provider: str = "disabled"
-    sender: str = ""
-    capture_path: Path | None = None
-    batch_size: int = 50
-    max_attempts: int = 3
-    retry_seconds: int = 60
-    consolidation_seconds: int = 60
-
-    @classmethod
-    def from_env(cls) -> EmailConfig:
-        enabled = os.getenv("EMAIL_DELIVERY_ENABLED", "false").lower() == "true"
-        provider = os.getenv("EMAIL_PROVIDER", "disabled").strip().lower()
-        sender = os.getenv("EMAIL_FROM_ADDRESS", "").strip()
-        capture = os.getenv("EMAIL_CAPTURE_PATH", "").strip()
-        if not enabled:
-            return cls()
-        if provider != "local_capture":
-            raise ValueError("EMAIL_PROVIDER must be local_capture in this release")
-        if not sender:
-            raise ValueError("EMAIL_FROM_ADDRESS is required when email is enabled")
-        if not capture:
-            raise ValueError("EMAIL_CAPTURE_PATH is required for local_capture")
-        return cls(
-            enabled=True,
-            provider=provider,
-            sender=sender,
-            capture_path=Path(capture),
-            batch_size=_bounded_env("EMAIL_BATCH_SIZE", 50, 1, 500),
-            max_attempts=_bounded_env("EMAIL_MAX_ATTEMPTS", 3, 1, 10),
-            retry_seconds=_bounded_env("EMAIL_RETRY_SECONDS", 60, 1, 86_400),
-            consolidation_seconds=_bounded_env(
-                "EMAIL_CONSOLIDATION_SECONDS", 60, 0, 86_400
-            ),
-        )
-
-
-def _bounded_env(name: str, default: int, minimum: int, maximum: int) -> int:
-    value = int(os.getenv(name, str(default)))
-    if not minimum <= value <= maximum:
-        raise ValueError(f"{name} must be between {minimum} and {maximum}")
-    return value
-
-
-@dataclass(frozen=True)
-class EmailMessage:
-    delivery_id: UUID
-    recipient: str
-    sender: str
-    subject: str
-    body: str
-    locale: str
-    correlation_id: UUID | None
-
-
-class EmailProvider(Protocol):
-    """Provider contract: ``delivery_id`` is the mandatory idempotency key."""
-
-    name: str
-
-    def send(self, message: EmailMessage) -> str: ...
+SMTP_UNCERTAIN = "smtp_confirmation_unknown"
 
 
 class LocalCaptureEmailProvider:
@@ -124,8 +58,14 @@ class LocalCaptureEmailProvider:
 
 
 def build_provider(config: EmailConfig) -> EmailProvider:
-    if not config.enabled or config.provider != "local_capture":
+    if not config.enabled:
         raise ValueError("email delivery is disabled")
+    if config.provider == "smtp":
+        if config.smtp is None:
+            raise ValueError("SMTP transport configuration is required")
+        return SMTPEmailProvider(config.smtp)
+    if config.provider != "local_capture":
+        raise ValueError("unsupported email provider")
     assert config.capture_path is not None
     return LocalCaptureEmailProvider(config.capture_path)
 
@@ -144,7 +84,11 @@ class EmailDeliveryRepository:
         provider: str,
         max_attempts: int,
         consolidation_seconds: int,
+        notification_id: UUID | None = None,
     ) -> list[dict[str, Any]]:
+        if provider not in {"local_capture", "smtp"}:
+            raise ValueError("unsupported email provider")
+        limit = 1 if provider == "smtp" else limit
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -198,6 +142,7 @@ class EmailDeliveryRepository:
                     ORDER BY id DESC LIMIT 1
                 ) event ON true
                 WHERE n.state IN ('unread', 'read')
+                  AND (%s::uuid IS NULL OR n.id = %s)
                   AND (
                     NOT EXISTS (
                       SELECT 1 FROM synergia.email_deliveries existing
@@ -227,37 +172,51 @@ class EmailDeliveryRepository:
                   AND synergia.email_deliveries.notification_version
                       < EXCLUDED.notification_version
                 """,
-                (provider, consolidation_seconds, limit),
+                (
+                    provider,
+                    consolidation_seconds,
+                    notification_id,
+                    notification_id,
+                    limit,
+                ),
             )
             cursor.execute(
                 """
-                SELECT id, attempt_count, correlation_id
+                SELECT id, attempt_count, correlation_id, provider
                 FROM synergia.email_deliveries
                 WHERE state = 'processing'
                   AND claimed_at < now() - interval '5 minutes'
-                  AND attempt_count >= %s
-                FOR UPDATE
+                  AND provider = %s
+                  AND (%s::uuid IS NULL OR notification_id = %s)
+                  AND (provider = 'smtp' OR attempt_count >= %s)
+                FOR UPDATE SKIP LOCKED
                 """,
-                (max_attempts,),
+                (provider, notification_id, notification_id, max_attempts),
             )
             exhausted = cursor.fetchall()
             for delivery in exhausted:
+                code = (
+                    SMTP_UNCERTAIN
+                    if delivery["provider"] == "smtp"
+                    else "max_attempts_exceeded"
+                )
                 cursor.execute(
                     """UPDATE synergia.email_deliveries
-                       SET state = 'failed', failure_code = 'max_attempts_exceeded',
+                       SET state = 'failed', failure_code = %s,
                            claimed_at = NULL, updated_at = now()
                        WHERE id = %s""",
-                    (delivery["id"],),
+                    (code, delivery["id"]),
                 )
                 cursor.execute(
                     """INSERT INTO synergia.email_delivery_attempts (
                          delivery_id, attempt_number, outcome, failure_code,
                          correlation_id
-                       ) VALUES (%s, %s, 'failed', 'max_attempts_exceeded', %s)
+                       ) VALUES (%s, %s, 'failed', %s, %s)
                        ON CONFLICT DO NOTHING""",
                     (
                         delivery["id"],
                         delivery["attempt_count"],
+                        code,
                         delivery["correlation_id"],
                     ),
                 )
@@ -265,10 +224,13 @@ class EmailDeliveryRepository:
                 """
                 WITH selected AS (
                     SELECT id FROM synergia.email_deliveries
-                    WHERE ((state = 'queued' AND available_at <= now()) OR (
+                    WHERE provider = %s
+                      AND (%s::uuid IS NULL OR notification_id = %s) AND (
+                           (state = 'queued' AND available_at <= now()) OR (
                              state = 'retry' AND available_at <= now()
                            ) OR (
                              state = 'processing'
+                             AND provider = 'local_capture'
                              AND claimed_at < now() - interval '5 minutes'
                            )) AND attempt_count < %s
                     ORDER BY available_at, created_at, id
@@ -280,7 +242,7 @@ class EmailDeliveryRepository:
                 FROM selected WHERE d.id = selected.id
                 RETURNING d.*
                 """,
-                (max_attempts, limit),
+                (provider, notification_id, notification_id, max_attempts, limit),
             )
             deliveries = cursor.fetchall()
             for delivery in deliveries:
@@ -337,6 +299,20 @@ class EmailDeliveryRepository:
                 delivery.update(content)
             return [item for item in deliveries if "recipient" in item]
 
+    def owns_attempt(
+        self, delivery_id: UUID, attempt_number: int, provider: str
+    ) -> bool:
+        with self._connect() as connection:
+            return (
+                connection.execute(
+                    "SELECT 1 FROM synergia.email_deliveries WHERE id = %s "
+                    "AND state = 'processing' AND attempt_count = %s AND provider = %s "
+                    "AND claimed_at >= now() - interval '5 minutes'",
+                    (delivery_id, attempt_number, provider),
+                ).fetchone()
+                is not None
+            )
+
     def complete(
         self, delivery_id: UUID, attempt_number: int, provider_reference: str
     ) -> bool:
@@ -358,6 +334,8 @@ class EmailDeliveryRepository:
         retry: bool,
         retry_after: datetime | None,
     ) -> bool:
+        if code == SMTP_UNCERTAIN and retry:
+            raise ValueError("Uncertain SMTP results cannot be retried automatically")
         return self._finish(
             delivery_id,
             attempt_number,
@@ -443,107 +421,160 @@ class EmailDeliveryService:
         except (KeyError, ValueError):
             return template
 
-    def run_once(self) -> dict[str, int | str]:
+    def _code(self, error: Exception, fallback: str) -> str:
+        # Only adapter-owned constants may enter audit/logs, never exception text.
+        if self.provider is not None and self.provider.name == "smtp":
+            code = str(error)
+            if code in SAFE_SMTP_FAILURE_CODES:
+                return code
+        return fallback
+
+    def _failure(self, delivery: dict, code: str, retry: bool) -> bool:
+        attempt = delivery["attempt_count"]
+        try:
+            finalized = self.repository.fail(
+                delivery["id"],
+                attempt,
+                code=code,
+                retry=retry,
+                retry_after=(
+                    datetime.now(UTC)
+                    + timedelta(
+                        seconds=self.config.retry_seconds * (2 ** (attempt - 1))
+                    )
+                )
+                if retry
+                else None,
+            )
+        except Exception:
+            # A database outage must not create a new transport attempt. SMTP
+            # processing left behind will be quarantined on lease expiration.
+            raise RuntimeError("email_state_unavailable") from None
+        safe_log(
+            logging.WARNING,
+            "email_delivery.failed",
+            correlation_id=delivery["correlation_id"],
+            attempt=attempt,
+            outcome=("retry" if retry else "failed") if finalized else "ignored",
+            error_code=code,
+        )
+        return finalized
+
+    def _process(self, delivery: dict) -> tuple[int, int, bool]:
+        assert self.provider is not None
+        smtp = self.provider.name == "smtp"
+        if smtp:
+            try:
+                owned = self.repository.owns_attempt(
+                    delivery["id"], delivery["attempt_count"], "smtp"
+                )
+            except Exception:
+                raise RuntimeError("email_state_unavailable") from None
+            if not owned:
+                self._failure(delivery, SMTP_UNCERTAIN, False)
+                return 0, 1, True
+        message = EmailMessage(
+            delivery_id=delivery["id"],
+            recipient=delivery["recipient"],
+            sender=self.config.sender,
+            subject=self._render(delivery["subject_template"], delivery["parameters"]),
+            body=self._render(delivery["body_template"], delivery["parameters"]),
+            locale=delivery["locale"],
+            correlation_id=delivery["correlation_id"],
+        )
+        try:
+            reference = self.provider.send(message)
+        except UncertainEmailError:
+            code = SMTP_UNCERTAIN if smtp else "provider_confirmation_unknown"
+            finalized = self._failure(delivery, code, False)
+            return 0, int(finalized) if not smtp else 1, True
+        except ConfigurationEmailError as error:
+            finalized = self._failure(
+                delivery, self._code(error, "provider_configuration_invalid"), False
+            )
+            return 0, int(finalized), True
+        except TemporaryEmailError as error:
+            retry = delivery["attempt_count"] < self.config.max_attempts
+            finalized = self._failure(
+                delivery, self._code(error, "provider_temporarily_unavailable"), retry
+            )
+            return 0, int(finalized), smtp
+        except PermanentEmailError as error:
+            finalized = self._failure(
+                delivery, self._code(error, "provider_rejected"), False
+            )
+            return 0, int(finalized), False
+        except Exception:
+            retry = not smtp and delivery["attempt_count"] < self.config.max_attempts
+            finalized = self._failure(
+                delivery, SMTP_UNCERTAIN if smtp else "provider_unavailable", retry
+            )
+            return 0, int(finalized) if not smtp else 1, smtp
+
+        # Finalization is separate from transport. Never schedule a resend just
+        # because a server-confirmed message could not be recorded as sent.
+        if smtp and reference != f"smtp-{delivery['id']}":
+            self._failure(delivery, SMTP_UNCERTAIN, False)
+            return 0, 1, True
+        try:
+            completed = self.repository.complete(
+                delivery["id"], delivery["attempt_count"], reference
+            )
+        except Exception:
+            retry = not smtp and delivery["attempt_count"] < self.config.max_attempts
+            finalized = self._failure(
+                delivery, SMTP_UNCERTAIN if smtp else "provider_unavailable", retry
+            )
+            return 0, int(finalized) if not smtp else 1, smtp
+        if completed:
+            return 1, 0, False
+        safe_log(
+            logging.WARNING if smtp else logging.INFO,
+            "email_delivery.stale_completion",
+            attempt=delivery["attempt_count"],
+            correlation_id=delivery["correlation_id"],
+            outcome="ignored",
+        )
+        return 0, int(smtp), smtp
+
+    def run_once(self, *, notification_id: UUID | None = None) -> dict[str, int | str]:
         if not self.config.enabled:
             return {"status": "disabled", "processed": 0, "sent": 0, "failed": 0}
         if self.provider is None:
             raise RuntimeError("enabled email delivery requires a provider")
-        deliveries = self.repository.claim(
-            limit=self.config.batch_size,
-            provider=self.provider.name,
-            max_attempts=self.config.max_attempts,
-            consolidation_seconds=self.config.consolidation_seconds,
-        )
-        sent = failed = 0
-        for delivery in deliveries:
-            message = EmailMessage(
-                delivery_id=delivery["id"],
-                recipient=delivery["recipient"],
-                sender=self.config.sender,
-                subject=self._render(
-                    delivery["subject_template"], delivery["parameters"]
-                ),
-                body=self._render(delivery["body_template"], delivery["parameters"]),
-                locale=delivery["locale"],
-                correlation_id=delivery["correlation_id"],
+        if self.provider.name != self.config.provider:
+            raise ConfigurationEmailError("email_provider_mismatch")
+        if notification_id is not None and not isinstance(notification_id, UUID):
+            raise ValueError("invalid_email_notification_id")
+        smtp = self.provider.name == "smtp"
+        processed = sent = failed = 0
+        # Reserve SMTP just before sending, rather than leasing a whole batch
+        # whose later messages could expire before their network call starts.
+        for _ in range(self.config.batch_size if smtp else 1):
+            deliveries = self.repository.claim(
+                limit=1 if smtp else self.config.batch_size,
+                provider=self.provider.name,
+                max_attempts=self.config.max_attempts,
+                consolidation_seconds=self.config.consolidation_seconds,
+                **({"notification_id": notification_id} if notification_id else {}),
             )
-            try:
-                reference = self.provider.send(message)
-                completed = self.repository.complete(
-                    delivery["id"], delivery["attempt_count"], reference
-                )
-                if completed:
-                    sent += 1
-                else:
-                    safe_log(
-                        logging.INFO,
-                        "email_delivery.stale_completion",
-                        attempt=delivery["attempt_count"],
-                        outcome="ignored",
-                    )
-            except TemporaryEmailError:
-                attempt = delivery["attempt_count"]
-                can_retry = attempt < self.config.max_attempts
-                delay = self.config.retry_seconds * (2 ** (attempt - 1))
-                finalized = self.repository.fail(
-                    delivery["id"],
-                    attempt,
-                    code="provider_temporarily_unavailable",
-                    retry=can_retry,
-                    retry_after=datetime.now(UTC) + timedelta(seconds=delay),
-                )
-                if finalized:
-                    failed += 1
-                    safe_log(
-                        logging.WARNING,
-                        "email_delivery.failed",
-                        correlation_id=delivery["correlation_id"],
-                        attempt=attempt,
-                        outcome="retry" if can_retry else "failed",
-                        error_code="provider_temporarily_unavailable",
-                    )
-            except PermanentEmailError:
-                finalized = self.repository.fail(
-                    delivery["id"],
-                    delivery["attempt_count"],
-                    code="provider_rejected",
-                    retry=False,
-                    retry_after=None,
-                )
-                if finalized:
-                    failed += 1
-                    safe_log(
-                        logging.WARNING,
-                        "email_delivery.failed",
-                        correlation_id=delivery["correlation_id"],
-                        attempt=delivery["attempt_count"],
-                        outcome="failed",
-                        error_code="provider_rejected",
-                    )
-            except Exception:
-                attempt = delivery["attempt_count"]
-                can_retry = attempt < self.config.max_attempts
-                delay = self.config.retry_seconds * (2 ** (attempt - 1))
-                finalized = self.repository.fail(
-                    delivery["id"],
-                    attempt,
-                    code="provider_unavailable",
-                    retry=can_retry,
-                    retry_after=datetime.now(UTC) + timedelta(seconds=delay),
-                )
-                if finalized:
-                    failed += 1
-                    safe_log(
-                        logging.WARNING,
-                        "email_delivery.failed",
-                        correlation_id=delivery["correlation_id"],
-                        attempt=attempt,
-                        outcome="retry" if can_retry else "failed",
-                        error_code="provider_unavailable",
-                    )
+            if not deliveries:
+                break
+            for delivery in deliveries:
+                processed += 1
+                delivered, rejected, stop = self._process(delivery)
+                sent += delivered
+                failed += rejected
+                if stop:
+                    return {
+                        "status": "enabled",
+                        "processed": processed,
+                        "sent": sent,
+                        "failed": failed,
+                    }
         return {
             "status": "enabled",
-            "processed": len(deliveries),
+            "processed": processed,
             "sent": sent,
             "failed": failed,
         }

@@ -30,6 +30,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [contratos sanitizados dos workbooks reais de homologação](docs/real-workbook-contracts.md);
 - [adapter de Total Decision para GMES/OQC](docs/total-decision-adapter.md);
 - [corpus, reconciliação e volume de ingestão](docs/ingestion-corpus-validation.md);
+- [entrega SMTP substituível, smoke e reconciliação](docs/smtp-email-provider.md);
 - [relatórios persistentes, versões e estados](docs/reports.md);
 - [plano de desempenho e confiabilidade pré-RPA](docs/performance-test-plan.md);
 - [síntese da baseline exploratória e decisão pré-RPA](docs/performance-baseline-pre-rpa.md);
