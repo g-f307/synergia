@@ -44,6 +44,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [orçamento de recursos, medição e operação da ingestão de XLSX](docs/xlsx-ingestion-budget.md);
 - [adapters da planilha WO Status, validação sem persistência e reconciliação](docs/wo-status-adapters.md);
 - [ADR da estratégia de identidade e sessão](docs/adr/0001-identity-strategy.md);
+- [contrato de identidade corporativa, decisões e plano de transição](docs/corporate-identity-contract.md) e [ADR 0002](docs/adr/0002-corporate-identity-contract.md);
+- [runbook de ativação da identidade corporativa](docs/runbooks/corporate-identity-activation.md);
 - [matriz de papéis, permissões, recursos e rotas](docs/access-control-matrix.md);
 - [modelo de ameaças e baseline de riscos](docs/threat-model.md);
 - [checklist de revisão de segurança](docs/security-review-checklist.md);

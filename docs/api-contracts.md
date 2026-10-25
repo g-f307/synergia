@@ -26,7 +26,7 @@ escopo organizacional a todas as operações existentes será incremental.
 | `GET /health/ready` | confirma PostgreSQL, schema e armazenamento; falha fechada | `200`/`503` |
 | `GET /health` | apresenta estado sanitizado de dependências críticas e opcionais | `200`/`503` |
 | `GET /metrics` | métricas Prometheus com credencial técnica dedicada | `200` |
-| `POST /auth/login` | cria sessão e emite access/refresh | `200` |
+| `POST /auth/login` | cria sessão e emite access/refresh pelo adaptador configurado; hoje só o local (desenvolvimento, teste e homologação temporária); `503 identity_adapter_unavailable` quando desabilitado e `503 auth_configuration_invalid` com configuração inválida; contrato corporativo em [corporate-identity-contract.md](corporate-identity-contract.md) | `200` |
 | `GET /me` | consulta identidade e preferências próprias | `200` |
 | `PATCH /me` | atualiza perfil, notificações e aparência próprias com versão otimista | `200` |
 | `POST /me/avatar` | valida e grava avatar próprio | `201` |

@@ -19,6 +19,13 @@ SYNERGIA_ENV=development|test|homologation
 SYNERGIA_LOCAL_AUTH_ENABLED=true
 ```
 
+Em `homologation` o login local é temporário: exige também
+`AUTH_LOCAL_LOGIN_EXPIRES_AT` (data com fuso, no máximo 90 dias à frente) e é
+recusado a cada tentativa depois dela; sem a data, permanece desligado. O contrato
+da identidade corporativa, o registro de decisões e o plano de remoção do login
+local estão em [corporate-identity-contract.md](corporate-identity-contract.md) e
+na [ADR 0002](adr/0002-corporate-identity-contract.md).
+
 Usuários precisam estar `active`, possuir e-mail ativo e um hash Argon2id já
 provisionado. A API administrativa não recebe nem retorna senhas.
 
