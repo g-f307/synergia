@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "method": {
     "likelihood": ["unlikely", "possible", "likely"],
     "impact": ["low", "medium", "high", "critical"],
@@ -136,8 +136,8 @@
     {
       "id": "R-03", "journey": "J-01", "category": "spoofing", "threat": "Production lacks an approved corporate identity provider while local login remains restricted to non-production environments.",
       "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "high", "disposition": "blocked",
-      "controls": ["Local login blocked by production configuration", "Identity provider gate documented in ADR 0001"],
-      "evidence": ["docs/adr/0001-identity-strategy.md", "backend/tests/test_auth.py"],
+      "controls": ["Local login blocked by production configuration", "Identity provider gate documented in ADR 0001", "Fail-closed claims contract with synthetic examples", "Reviewed group-to-role mapping, no automatic provisioning", "Temporary local login with a mandatory end date outside production", "Decision register with owner and state for every identity gate"],
+      "evidence": ["docs/adr/0001-identity-strategy.md", "backend/tests/test_auth.py", "docs/adr/0002-corporate-identity-contract.md", "docs/corporate-identity-contract.md", "docs/corporate-identity-decisions.json", "backend/tests/test_corporate_identity_contract.py"],
       "owner": "platform", "treatment_issue": 96, "decision": "Production deployment remains blocked until the corporate identity gate is approved."
     },
     {
@@ -307,6 +307,35 @@
       "controls": ["Refresh cookie uses HttpOnly and SameSite Strict", "Credentialed CORS uses an explicit origin allowlist", "Business mutations require an in-memory Bearer token"],
       "evidence": ["backend/tests/test_auth.py", "docs/authentication.md", "backend/app/main.py"],
       "owner": "security", "treatment_issue": 90
+    },
+    {
+      "id": "R-28", "journey": "J-01", "category": "denial-of-service", "threat": "An identity provider outage blocks sign-in or pushes operators toward a local-login bypass.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Provider outage rejects new sign-ins without a local fallback in production", "Valid sessions continue until expiry and renewal does not call the provider", "Activation runbook with an outage procedure"],
+      "evidence": ["backend/app/auth/identity_provider.py", "backend/tests/test_corporate_identity_contract.py", "docs/runbooks/corporate-identity-activation.md"],
+      "owner": "platform", "treatment_issue": 144
+    },
+    {
+      "id": "R-29", "journey": "J-07", "category": "elevation-of-privilege", "threat": "Forged, stale or mis-mapped claims or groups grant organizations or roles the person should not have.",
+      "likelihood": "possible", "impact": "critical", "inherent_severity": "critical", "residual_severity": "medium", "disposition": "mitigated",
+      "controls": ["Issuer, audience, expiry, subject, verified e-mail and MFA validated before mapping", "Groups grant nothing outside a reviewed mapping table with exact matching", "Global roles require an explicit review mark", "Unknown organizations are ignored and an empty scope rejects the identity", "Users are linked by an administrator, never created from a claim"],
+      "evidence": ["backend/app/auth/identity_provider.py", "backend/tests/test_corporate_identity_contract.py", "docs/corporate-identity-claims-examples.json"],
+      "owner": "identity", "treatment_issue": 144
+    },
+    {
+      "id": "R-30", "journey": "J-07", "category": "elevation-of-privilege", "threat": "A person removed in the corporate directory keeps SYNERGIA access until the session expires.",
+      "likelihood": "likely", "impact": "high", "inherent_severity": "high", "residual_severity": "high", "disposition": "blocked",
+      "controls": ["Deactivate and block revoke SYNERGIA sessions immediately", "Access token lifetime of 15 minutes bounds the remaining window", "Rotating refresh tokens with idle and absolute limits"],
+      "evidence": ["docs/user-administration.md", "docs/corporate-identity-decisions.json", "docs/corporate-identity-contract.md"],
+      "owner": "identity", "treatment_issue": 144,
+      "decision": "Production use of corporate sign-in stays blocked until the offboarding SLA and a synchronization mechanism are defined (ID-P03)."
+    },
+    {
+      "id": "R-31", "journey": "J-01", "category": "spoofing", "threat": "Temporary local login remains enabled after the corporate adapter is accepted.",
+      "likelihood": "possible", "impact": "high", "inherent_severity": "high", "residual_severity": "low", "disposition": "mitigated",
+      "controls": ["Local login is ignored in production", "Homologation requires a timezone-aware end date within 90 days and refuses sign-in after it", "Removal is a step of the adapter acceptance runbook"],
+      "evidence": ["backend/app/auth/config.py", "backend/app/auth/service.py", "backend/tests/test_corporate_identity_contract.py", "backend/tests/test_auth.py", "docs/runbooks/corporate-identity-activation.md"],
+      "owner": "platform", "treatment_issue": 144
     }
   ]
 }

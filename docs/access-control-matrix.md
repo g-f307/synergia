@@ -247,9 +247,26 @@ na interface administrativa.
 | Acesso horizontal | regra `org` em cada rota e comportamento de listas/detalhes | implementado e coberto em PostgreSQL |
 | Acesso vertical | permissão por ação, negação padrão e papéis não hierárquicos | implementado e coberto em PostgreSQL |
 
+## Identidade corporativa e grupos
+
+A matriz de papéis e permissões não muda com a identidade corporativa. O contrato
+([corporate-identity-contract.md](corporate-identity-contract.md)) define apenas
+como uma asserção chega ao `ActorContext`:
+
+- grupo corporativo **não** é permissão: só uma entrada revisada `{grupo, papel,
+  organização}` o transforma em papel, e a correspondência é exata;
+- papel sem organização (global) exige marca explícita de revisão e jamais é
+  derivado por convenção; `access.admin` segue sendo concedido por ação
+  administrativa auditável, com a segregação de função acima;
+- organização ou grupo desconhecido não concede nada, e identidade sem escopo
+  efetivo é rejeitada;
+- o escopo continua sendo verificado no servidor a cada requisição, e a interface
+  não altera as concessões.
+
 ## Pendências para implementação
 
-Além dos portões `ID-P01` a `ID-P07` da ADR:
+Além dos portões `ID-P01` a `ID-P07` da ADR (registro em
+[corporate-identity-decisions.json](corporate-identity-decisions.json)):
 
 | ID | Pendência | Responsável |
 | --- | --- | --- |
