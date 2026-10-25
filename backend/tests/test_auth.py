@@ -228,6 +228,31 @@ def test_local_login_is_disabled_and_rate_limit_has_retry_after() -> None:
     assert limited.value.headers == {"Retry-After": "120"}
 
 
+def test_temporary_local_login_stops_at_its_end_date() -> None:
+    repository = FakeRepository()
+    expired = service(
+        repository,
+        environment="homologation",
+        local_login_expires_at=NOW - timedelta(seconds=1),
+    )
+    boundary = service(
+        repository, environment="homologation", local_login_expires_at=NOW
+    )
+    open_window = service(
+        repository,
+        environment="homologation",
+        local_login_expires_at=NOW + timedelta(days=1),
+    )
+
+    for closed in (expired, boundary):
+        with pytest.raises(Exception) as error:
+            closed.login("user@example.invalid", "correct-password", None)
+        assert error.value.code == "identity_adapter_unavailable"
+    assert repository.failed == []
+    session, _, _ = open_window.login("user@example.invalid", "correct-password", None)
+    assert session.user_id == USER_ID
+
+
 def test_refresh_hashes_secret_and_replay_is_rejected() -> None:
     repository = FakeRepository()
     repository.refresh_result = RefreshResult(status="replayed")

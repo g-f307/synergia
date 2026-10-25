@@ -77,13 +77,16 @@ class AuthService:
         self, email: str, password: str, client_ip: str | None,
         user_agent: str | None = None,
     ) -> tuple[SessionResult, str, int]:
-        if not self.config.local_auth_enabled:
+        now = self.clock()
+        expires_at = self.config.local_login_expires_at
+        if not self.config.local_auth_enabled or (
+            expires_at is not None and now >= expires_at
+        ):
             raise ApiError(
                 503,
                 "identity_adapter_unavailable",
                 "Adaptador de identidade indisponivel",
             )
-        now = self.clock()
         identifier_hash = protected_identifier(email, self.config.signing_key)
         ip_hash = (
             protected_identifier(client_ip, self.config.signing_key)

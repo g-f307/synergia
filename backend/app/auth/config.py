@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
+from app.auth.identity_provider import (
+    CorporateIdentityConfig,
+    IdentityConfigurationError,
+)
 from app.errors import ApiError
 
 NON_PRODUCTION_ENVIRONMENTS = frozenset({"development", "test", "homologation"})
 DEFAULT_ALLOWED_ORIGINS = "http://localhost:4200"
+# Local login in homologation is temporary: it needs an explicit end date.
+LOCAL_LOGIN_MAX_DAYS = 90
 
 
 def _boolean(name: str, default: bool = False) -> bool:
@@ -29,12 +36,33 @@ def _integer(name: str, default: int, minimum: int) -> int:
     return value
 
 
+def _local_login_expiry(environment: str, local_enabled: bool) -> datetime | None:
+    """The end date of temporary local login, required in homologation."""
+    raw = os.getenv("AUTH_LOCAL_LOGIN_EXPIRES_AT", "").strip()
+    if not local_enabled or environment != "homologation":
+        return None
+    if not raw:
+        return None
+    try:
+        expires = datetime.fromisoformat(raw)
+    except ValueError as exc:
+        raise ApiError(
+            503, "auth_configuration_invalid", "Autenticacao indisponivel"
+        ) from exc
+    if expires.tzinfo is None:
+        raise ApiError(503, "auth_configuration_invalid", "Autenticacao indisponivel")
+    horizon = datetime.now(UTC) + timedelta(days=LOCAL_LOGIN_MAX_DAYS)
+    if expires > horizon:
+        raise ApiError(503, "auth_configuration_invalid", "Autenticacao indisponivel")
+    return expires
+
+
 def configured_allowed_origins() -> tuple[str, ...]:
     origins = tuple(
         item.strip()
-        for item in os.getenv(
-            "AUTH_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS
-        ).split(",")
+        for item in os.getenv("AUTH_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(
+            ","
+        )
         if item.strip()
     )
     if not origins:
@@ -64,6 +92,8 @@ class AuthConfig:
     login_max_attempts: int = 5
     login_window_seconds: int = 900
     login_block_seconds: int = 900
+    identity_provider: str = "local"
+    local_login_expires_at: datetime | None = None
 
     @classmethod
     def from_env(cls) -> AuthConfig:
@@ -71,6 +101,15 @@ class AuthConfig:
         local_enabled = _boolean("SYNERGIA_LOCAL_AUTH_ENABLED")
         if local_enabled and environment not in NON_PRODUCTION_ENVIRONMENTS:
             local_enabled = False
+        local_expires_at = _local_login_expiry(environment, local_enabled)
+        if local_enabled and environment == "homologation" and local_expires_at is None:
+            local_enabled = False
+        try:
+            identity_mode = CorporateIdentityConfig.from_env(environment).mode
+        except IdentityConfigurationError as exc:
+            raise ApiError(
+                503, "auth_configuration_invalid", "Autenticacao indisponivel"
+            ) from exc
 
         algorithm = os.getenv("AUTH_JWT_ALGORITHM", "HS256").strip()
         signing_key = os.getenv("AUTH_JWT_SIGNING_KEY", "")
@@ -130,4 +169,6 @@ class AuthConfig:
             login_max_attempts=_integer("AUTH_LOGIN_MAX_ATTEMPTS", 5, 1),
             login_window_seconds=_integer("AUTH_LOGIN_WINDOW_SECONDS", 900, 1),
             login_block_seconds=_integer("AUTH_LOGIN_BLOCK_SECONDS", 900, 1),
+            identity_provider=identity_mode,
+            local_login_expires_at=local_expires_at,
         )
