@@ -176,6 +176,32 @@ def test_clock_skew_tolerates_small_drift_but_not_more() -> None:
         map_claims(_claims(exp=long_expired), policy, provider_key="fake", now=NOW)
 
 
+@pytest.mark.parametrize("claim", ["exp", "nbf", "iat", "auth_time"])
+@pytest.mark.parametrize(
+    "value",
+    [float("nan"), float("inf"), float("-inf"), 10**30, 1e300, -1],
+)
+def test_non_finite_or_out_of_range_timestamps_are_rejected_as_invalid(
+    claim, value
+) -> None:
+    with pytest.raises(IdentityRejected) as rejection:
+        map_claims(_claims(**{claim: value}), _policy(), provider_key="fake", now=NOW)
+
+    assert rejection.value.code == "identity_claims_invalid"
+
+
+def test_authentication_time_in_the_future_is_rejected_beyond_the_skew() -> None:
+    policy = _policy(clock_skew_seconds=30)
+    within_skew = int((NOW + timedelta(seconds=20)).timestamp())
+    far_future = int((NOW + timedelta(days=30)).timestamp())
+
+    map_claims(_claims(auth_time=within_skew), policy, provider_key="fake", now=NOW)
+    with pytest.raises(IdentityRejected) as rejection:
+        map_claims(_claims(auth_time=far_future), policy, provider_key="fake", now=NOW)
+
+    assert rejection.value.code == "identity_assertion_expired"
+
+
 def test_mfa_can_only_be_relaxed_by_explicit_policy() -> None:
     relaxed = _policy(require_mfa=False)
 

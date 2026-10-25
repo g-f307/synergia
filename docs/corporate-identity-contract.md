@@ -78,8 +78,8 @@ conhecidos; os padrões abaixo são os do OIDC.
 | --- | --- | --- | --- | --- | --- |
 | emissor | `iss` | texto | sim | igual ao `issuer` configurado | `identity_issuer_mismatch` |
 | audiência | `aud` | texto ou lista | sim | contém uma audiência configurada | `identity_audience_mismatch` |
-| expiração | `exp` | inteiro (epoch) | sim | não vencida, com tolerância | `identity_assertion_expired`; tipo inválido, `identity_claims_invalid` |
-| início e emissão | `nbf`, `iat` | inteiro | não | não futuros além da tolerância | `identity_assertion_expired` |
+| expiração | `exp` | inteiro (epoch) | sim | não vencida, com tolerância | `identity_assertion_expired`; tipo inválido, não finito ou fora do intervalo, `identity_claims_invalid` |
+| início e emissão | `nbf`, `iat` | inteiro | não | não futuros além da tolerância | `identity_assertion_expired`; tipo inválido, não finito ou fora do intervalo, `identity_claims_invalid` |
 | assunto | `sub` | texto | sim | 1 a 255 caracteres, sem espaço nas bordas nem controle | `identity_subject_invalid` |
 | e-mail | `email` | texto | sim | endereço válido; normalizado | `identity_email_invalid` |
 | e-mail verificado | `email_verified` | booleano | sim por padrão | exatamente `true` | `identity_email_invalid` |
@@ -87,7 +87,7 @@ conhecidos; os padrões abaixo são os do OIDC.
 | organizações | `organizations` | lista de texto | sim, para escopo | até 100; só as presentes no mapeamento contam | escopo vazio: `identity_scope_missing` |
 | grupos | `groups` | lista de texto | não | até 200; comparação exata sem diferenciar caixa | grupo desconhecido é ignorado |
 | métodos | `amr` | lista de texto | sim com MFA exigido | interseção com os métodos de MFA | `identity_mfa_required` |
-| autenticação | `auth_time` | inteiro | não | idade máxima de 24 h | `identity_assertion_expired` |
+| autenticação | `auth_time` | inteiro | não | idade máxima de 24 h e não futuro além da tolerância | `identity_assertion_expired` |
 
 Claims adicionais são ignoradas. Exemplos **exclusivamente sintéticos**, que também
 são executados como teste, estão em

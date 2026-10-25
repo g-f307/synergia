@@ -9,6 +9,7 @@ rejects the identity: a missing or invalid claim never widens access.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 from collections.abc import Mapping
@@ -24,6 +25,8 @@ ORGANIZATION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
 MAX_ORGANIZATIONS = 100
 MAX_GROUPS = 200
 MAX_METHODS = 20
+# Last second of year 9999: the largest instant ``datetime`` can represent.
+MAX_EPOCH_SECONDS = 253_402_300_799
 DEFAULT_MFA_METHODS = frozenset({"mfa", "otp", "hwk", "swk", "fpt", "pop"})
 PROVIDER_MODES = frozenset({"local", "fake", "corporate"})
 OFFLINE_ENVIRONMENTS = frozenset({"development", "test"})
@@ -167,6 +170,10 @@ def _timestamp(claims: Mapping[str, Any], name: str) -> int | None:
         return None
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise IdentityRejected("identity_claims_invalid")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise IdentityRejected("identity_claims_invalid")
+    if not 0 <= value <= MAX_EPOCH_SECONDS:
+        raise IdentityRejected("identity_claims_invalid")
     return int(value)
 
 
@@ -248,7 +255,10 @@ def map_claims(
     authenticated = _timestamp(claims, names.authenticated_at)
     authenticated_at = None
     if authenticated is not None:
-        if current - authenticated > policy.max_authentication_age_seconds + skew:
+        if (
+            authenticated > current + skew
+            or current - authenticated > policy.max_authentication_age_seconds + skew
+        ):
             raise IdentityRejected("identity_assertion_expired")
         authenticated_at = datetime.fromtimestamp(authenticated, UTC)
 
