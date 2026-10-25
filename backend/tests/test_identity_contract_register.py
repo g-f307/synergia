@@ -80,7 +80,7 @@ def test_register_rejects_incomplete_decisions(tmp_path, change, message) -> Non
         "password = hunter2hunter2",
         "senha: umaSenhaReal1",
         "Authorization: Bearer abcdefghijklmnop1234",
-        "-----BEGIN PRIVATE KEY-----",
+        "-----BEGIN " + "PRIVATE KEY-----",
         "token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.signature",
     ],
 )
