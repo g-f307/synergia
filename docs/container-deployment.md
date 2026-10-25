@@ -80,6 +80,6 @@ A mesma imagem inclui `process_email_notifications.py`, `reconcile_smtp_delivery
 e `smoke_smtp_delivery.py`. O serviço `email-worker` pertence ao perfil `email`,
 executa um lote e não reinicia nem é agendado automaticamente. SMTP permanece
 desabilitado por padrão. `docker-compose.smtp.yml` é um overlay opcional para
-montar segredo externo, com leitura restrita ao usuário `10001:10001`; não é
-carregado pelo Compose base. Configuração, rotação, diagnóstico, migração de
+montar segredo externo somente no `email-worker` (o backend não recebe a senha),
+com leitura restrita ao usuário `10001:10001`; não é carregado pelo Compose base. Configuração, rotação, diagnóstico, migração de
 provedor e autorização do smoke estão no [runbook SMTP](smtp-email-provider.md).

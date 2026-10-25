@@ -69,6 +69,8 @@ class SMTPAuthenticator(Protocol):
 
 class PasswordSMTPAuthenticator:
     def __init__(self, config: SMTPConfig) -> None:
+        if not config.secret_loaded:
+            raise ConfigurationEmailError("smtp_secret_not_loaded")
         self.config = config
 
     def validate(self) -> None:

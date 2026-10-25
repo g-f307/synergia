@@ -608,7 +608,8 @@ AdminActor = Annotated[
 
 def _external_delivery() -> Literal["disabled", "local_capture", "smtp", "unavailable"]:
     try:
-        config = EmailConfig.from_env()
+        # The API never transmits, so it must not read the SMTP secret.
+        config = EmailConfig.from_env(load_secret=False)
     except (ValueError, OSError):
         return "unavailable"
     if not config.enabled:

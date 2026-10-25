@@ -338,9 +338,16 @@ os scripts recebem configuração pelo ambiente do processo; não carregam `.env
 automaticamente. Use o mecanismo de injeção de segredos aprovado para o ambiente,
 sem copiar valores para comandos, histórico, capturas ou relatórios.
 
-No Compose, backend e `email-worker` recebem a configuração de e-mail; frontend e
-migrate não recebem as credenciais SMTP. A API lê a configuração para a política,
-mas não inicia um transmissor. O worker é uma tarefa finita no perfil `email`,
+No Compose, backend e `email-worker` recebem as configurações **públicas** de
+e-mail (provedor, host, porta, remetente, usuário e destinatários permitidos); a
+**senha SMTP** (`EMAIL_SMTP_PASSWORD` ou `EMAIL_SMTP_PASSWORD_FILE`) vai somente ao
+`email-worker`. Frontend, migrate e backend não a recebem: a API informa o estado do
+provedor (`disabled`, `local_capture`, `smtp` ou `unavailable`) lendo apenas as
+configurações públicas e nunca lê o segredo nem inicia um transmissor. Por isso, uma
+senha ausente ou ilegível não aparece no estado da API; ela é recusada pelo worker
+ao iniciar (`email_configuration_invalid`). Um comprometimento do processo da API não
+concede acesso à credencial da conta de e-mail. `backend/tests/test_compose_secret_isolation.py`
+impede a regressão desse isolamento. O worker é uma tarefa finita no perfil `email`,
 sem restart ou agendamento automático. O Compose carrega o arquivo privado `.env`
 por seu mecanismo normal; a imagem não inclui arquivos `.env`.
 
@@ -362,8 +369,8 @@ continuam exigindo reconciliação, inclusive ao trocar o host SMTP.
 
 Para arquivo de segredo, `docker-compose.smtp.yml` é um overlay **opcional**.
 Configure `EMAIL_SMTP_SECRET_PATH` com caminho privado fora deste repositório;
-backend e worker o recebem como `/run/secrets/smtp_password`. O overlay limpa a
-senha em variável e seleciona essa fonte única. O conteúdo não entra na imagem.
+somente o `email-worker` o recebe como `/run/secrets/smtp_password`; o backend não
+monta o segredo. O overlay limpa a senha em variável e seleciona essa fonte única. O conteúdo não entra na imagem.
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.smtp.yml \

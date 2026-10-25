@@ -261,3 +261,69 @@ def test_smtp_configuration_builds_provider_without_connecting(monkeypatch):
 def test_programmatic_configuration_cannot_bypass_policy(overrides):
     with pytest.raises(ValueError):
         replace(SMTPConfig.from_env(), **overrides)
+
+
+def test_public_configuration_never_reads_the_secret(monkeypatch, tmp_path):
+    monkeypatch.setenv("EMAIL_DELIVERY_ENABLED", "true")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    unreadable = tmp_path / "ausente" / "smtp-secret"
+    monkeypatch.delenv("EMAIL_SMTP_PASSWORD")
+    monkeypatch.setenv("EMAIL_SMTP_PASSWORD_FILE", str(unreadable))
+    opened: list[str] = []
+    real_open = type(unreadable).open
+
+    def tracking_open(self, *args, **kwargs):
+        opened.append(str(self))
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(type(unreadable), "open", tracking_open)
+
+    public = EmailConfig.from_env(load_secret=False)
+
+    assert opened == []
+    assert public.provider == "smtp" and public.smtp is not None
+    assert public.smtp.password is None and not public.smtp.secret_loaded
+    with pytest.raises(ValueError, match="unreadable"):
+        EmailConfig.from_env()
+
+
+def test_public_configuration_ignores_even_conflicting_secret_sources(monkeypatch):
+    monkeypatch.setenv("EMAIL_DELIVERY_ENABLED", "true")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    monkeypatch.setenv("EMAIL_SMTP_PASSWORD_FILE", "/run/secrets/anything")
+
+    assert EmailConfig.from_env(load_secret=False).smtp is not None
+    with pytest.raises(ValueError, match="only one"):
+        EmailConfig.from_env()
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("EMAIL_SMTP_HOST", "not a host"),
+        ("EMAIL_SMTP_PORT", "abc"),
+        ("EMAIL_SMTP_TLS_MODE", "plaintext"),
+        ("EMAIL_SMTP_ALLOWED_RECIPIENTS", "*"),
+        ("EMAIL_SMTP_USERNAME", ""),
+    ],
+)
+def test_public_configuration_still_rejects_invalid_public_settings(
+    monkeypatch, key, value
+):
+    monkeypatch.setenv("EMAIL_DELIVERY_ENABLED", "true")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    monkeypatch.setenv(key, value)
+
+    with pytest.raises(ValueError):
+        EmailConfig.from_env(load_secret=False)
+
+
+def test_transmitting_provider_refuses_a_configuration_without_the_secret(
+    monkeypatch,
+):
+    monkeypatch.setenv("EMAIL_DELIVERY_ENABLED", "true")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    public = EmailConfig.from_env(load_secret=False)
+
+    with pytest.raises(Exception, match="smtp_secret_not_loaded"):
+        build_provider(public)

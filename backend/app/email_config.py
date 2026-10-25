@@ -89,7 +89,9 @@ class SMTPConfig:
     timeout_seconds: float = 15.0
     auth_mode: str = "password"
     username: str = field(default="", repr=False)
-    password: str = field(default="", repr=False)
+    # ``None`` means the secret was deliberately not loaded: processes that never
+    # transmit (the API) validate the public settings without reading it.
+    password: str | None = field(default="", repr=False)
 
     def __post_init__(self) -> None:
         if (
@@ -121,7 +123,9 @@ class SMTPConfig:
             raise ValueError("EMAIL_SMTP_TIMEOUT_SECONDS must be finite in (0, 30]")
         if self.auth_mode not in {"password", "none"}:
             raise ValueError("EMAIL_SMTP_AUTH_MODE must be password or none")
-        if self.auth_mode == "password" and (not self.username or not self.password):
+        if self.auth_mode == "password" and (
+            not self.username or (self.password is not None and not self.password)
+        ):
             raise ValueError(
                 "SMTP password authentication requires username and secret"
             )
@@ -131,11 +135,14 @@ class SMTPConfig:
             )
         if (
             not isinstance(self.username, str)
-            or not isinstance(self.password, str)
+            or not isinstance(self.password, str | None)
             or len(self.username) > 320
-            or not _utf8_fits(self.password, 4096)
+            or (self.password is not None and not _utf8_fits(self.password, 4096))
             or not _utf8_fits(self.username, 1280)
-            or any(c in self.username + self.password for c in ("\r", "\n", "\x00"))
+            or any(
+                c in self.username + (self.password or "")
+                for c in ("\r", "\n", "\x00")
+            )
         ):
             raise ValueError("Invalid SMTP credentials")
         object.__setattr__(self, "sender", normalize_smtp_mailbox(self.sender))
@@ -155,8 +162,12 @@ class SMTPConfig:
             ),
         )
 
+    @property
+    def secret_loaded(self) -> bool:
+        return self.password is not None
+
     @classmethod
-    def from_env(cls) -> SMTPConfig:
+    def from_env(cls, *, load_secret: bool = True) -> SMTPConfig:
         try:
             timeout = float(os.getenv("EMAIL_SMTP_TIMEOUT_SECONDS", "15"))
         except ValueError:
@@ -176,7 +187,7 @@ class SMTPConfig:
             timeout_seconds=timeout,
             auth_mode=os.getenv("EMAIL_SMTP_AUTH_MODE", "password").strip().lower(),
             username=os.getenv("EMAIL_SMTP_USERNAME", ""),
-            password=_smtp_password(),
+            password=_smtp_password() if load_secret else None,
         )
 
     def validate_message(self, message: EmailMessage) -> tuple[str, str]:
@@ -234,7 +245,14 @@ class EmailConfig:
                 )
 
     @classmethod
-    def from_env(cls) -> EmailConfig:
+    def from_env(cls, *, load_secret: bool = True) -> EmailConfig:
+        """Read the e-mail settings from the environment.
+
+        Only the process that transmits (the worker and the operational
+        commands) loads the SMTP secret. The API and the health probes call this
+        with ``load_secret=False``: they report the provider state from the
+        public settings and never read ``EMAIL_SMTP_PASSWORD`` or its file.
+        """
         enabled = os.getenv("EMAIL_DELIVERY_ENABLED", "false").lower() == "true"
         provider = os.getenv("EMAIL_PROVIDER", "disabled").strip().lower()
         sender = os.getenv("EMAIL_FROM_ADDRESS", "").strip()
@@ -252,7 +270,11 @@ class EmailConfig:
             provider=provider,
             sender=sender,
             capture_path=Path(capture) if provider == "local_capture" else None,
-            smtp=SMTPConfig.from_env() if provider == "smtp" else None,
+            smtp=(
+                SMTPConfig.from_env(load_secret=load_secret)
+                if provider == "smtp"
+                else None
+            ),
             batch_size=_bounded_env("EMAIL_BATCH_SIZE", 50, 1, 500),
             max_attempts=_bounded_env("EMAIL_MAX_ATTEMPTS", 3, 1, 10),
             retry_seconds=_bounded_env("EMAIL_RETRY_SECONDS", 60, 1, 86400),

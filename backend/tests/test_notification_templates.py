@@ -240,3 +240,32 @@ def test_delivery_policy_reports_configuration_without_connecting_or_disclosing_
             assert private not in response.text
     finally:
         app.dependency_overrides.pop(get_notification_template_repository, None)
+
+
+def test_delivery_policy_does_not_read_the_smtp_secret(monkeypatch, tmp_path):
+    for key in tuple(os.environ):
+        if key.startswith("EMAIL_"):
+            monkeypatch.delenv(key)
+    for key, value in {
+        "EMAIL_DELIVERY_ENABLED": "true",
+        "EMAIL_PROVIDER": "smtp",
+        "EMAIL_FROM_ADDRESS": "sender@example.invalid",
+        "EMAIL_SMTP_HOST": "smtp.example.invalid",
+        "EMAIL_SMTP_USERNAME": "synthetic-login",
+        # A secret file that does not exist: only a process that transmits would
+        # fail on it, so the API must still report the provider state.
+        "EMAIL_SMTP_PASSWORD_FILE": str(tmp_path / "missing" / "secret"),
+        "EMAIL_SMTP_ALLOWED_RECIPIENTS": "allowed@example.invalid",
+    }.items():
+        monkeypatch.setenv(key, value)
+    app.dependency_overrides[get_notification_template_repository] = (
+        MemoryTemplateRepository
+    )
+    try:
+        with TestClient(app) as client:
+            response = client.get("/admin/notification-templates/policy")
+    finally:
+        app.dependency_overrides.pop(get_notification_template_repository, None)
+
+    assert response.status_code == 200
+    assert response.json()["external_delivery"] == "smtp"

@@ -22,6 +22,7 @@ x-backend-environment: &backend-environment
   OBSERVABILITY_LOG_LEVEL: ${OBSERVABILITY_LOG_LEVEL:-INFO}
   MIGRATION_BASELINE_THROUGH: ${MIGRATION_BASELINE_THROUGH:-}
 
+# Public e-mail settings: enough for the API to report the provider state.
 x-email-environment: &email-environment
   EMAIL_DELIVERY_ENABLED: ${EMAIL_DELIVERY_ENABLED:-false}
   EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
@@ -36,9 +37,12 @@ x-email-environment: &email-environment
   EMAIL_SMTP_TIMEOUT_SECONDS: ${EMAIL_SMTP_TIMEOUT_SECONDS:-15}
   EMAIL_SMTP_AUTH_MODE: ${EMAIL_SMTP_AUTH_MODE:-password}
   EMAIL_SMTP_USERNAME: ${EMAIL_SMTP_USERNAME:-}
+  EMAIL_SMTP_ALLOWED_RECIPIENTS: ${EMAIL_SMTP_ALLOWED_RECIPIENTS:-}
+
+# The SMTP secret reaches only the process that transmits, never the HTTP API.
+x-email-secret-environment: &email-secret-environment
   EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
   EMAIL_SMTP_PASSWORD_FILE: ${EMAIL_SMTP_PASSWORD_FILE:-}
-  EMAIL_SMTP_ALLOWED_RECIPIENTS: ${EMAIL_SMTP_ALLOWED_RECIPIENTS:-}
 
 services:
   postgres:
@@ -107,7 +111,7 @@ services:
       dockerfile: backend/Dockerfile
     command: ["python", "scripts/process_email_notifications.py"]
     environment:
-      <<: [*backend-environment, *email-environment]
+      <<: [*backend-environment, *email-environment, *email-secret-environment]
     volumes:
       - synergia-application-data:/var/lib/synergia
     depends_on:

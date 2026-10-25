@@ -98,7 +98,7 @@ def probe_email_worker(config: ObservabilityConfig) -> ComponentStatus:
     from app.email_delivery import EmailConfig
 
     try:
-        email_config = EmailConfig.from_env()
+        email_config = EmailConfig.from_env(load_secret=False)
     except (TypeError, ValueError):
         return _result(
             "email_worker", "degraded", False, started_at, "invalid_configuration"
