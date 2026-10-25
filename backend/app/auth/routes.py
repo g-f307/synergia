@@ -29,7 +29,14 @@ ERROR_RESPONSES = {
     401: {"model": ErrorResponse, "description": "Credencial ou sessao invalida"},
     403: {"model": ErrorResponse, "description": "Origem nao autorizada"},
     429: {"model": ErrorResponse, "description": "Limite de tentativas excedido"},
-    503: {"model": ErrorResponse, "description": "Autenticacao indisponivel"},
+    503: {
+        "model": ErrorResponse,
+        "description": (
+            "Autenticacao indisponivel: adaptador de identidade desabilitado "
+            "(identity_adapter_unavailable) ou configuracao invalida "
+            "(auth_configuration_invalid)"
+        ),
+    },
 }
 
 
@@ -107,6 +114,15 @@ CurrentClaims = Annotated[AccessClaims, Depends(_claims)]
     "/login",
     response_model=TokenResponse,
     responses=ERROR_RESPONSES,
+    summary="Autenticar pelo adaptador de identidade configurado",
+    description=(
+        "Hoje o unico adaptador ativo e o login local, restrito a desenvolvimento, "
+        "teste e homologacao temporaria com data de termino; em producao o "
+        "adaptador local nunca e habilitado. A identidade corporativa seguira o "
+        "contrato em docs/corporate-identity-contract.md e falhara de forma "
+        "fechada. A resposta de falha e generica: nao informa qual verificacao "
+        "falhou."
+    ),
 )
 def login(
     payload: LoginRequest,

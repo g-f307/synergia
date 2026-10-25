@@ -95,7 +95,7 @@
       "mitigation": "Keep local authentication disabled in production; use it only with synthetic identities in disposable homologation environments.",
       "deadline": "before_production_deployment",
       "retest_criterion": "Approve the corporate IdP contract and rerun authentication, session, role and organization-isolation suites through the production adapter.",
-      "related_risks": ["R-03"]
+      "related_risks": ["R-03", "R-30"]
     },
     {
       "id": "corporate-email-provider",

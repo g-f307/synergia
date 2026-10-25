@@ -1,0 +1,178 @@
+{
+  "contract": "corporate-identity-claims/1.0.0-draft",
+  "synthetic": true,
+  "note": "Valores inventados. Nenhum emissor, audiência, grupo ou usuário aqui existe em um provedor real.",
+  "policy": {
+    "issuer": "https://idp.example.invalid/synthetic",
+    "audiences": ["synergia-api-synthetic"],
+    "organizations": {
+      "org-a-idp": "ORG-A",
+      "org-b-idp": "ORG-B"
+    },
+    "group_roles": [
+      {"group": "synergia-analysts-a", "role_key": "analyst", "organization_code": "ORG-A"},
+      {"group": "synergia-operators-b", "role_key": "operator", "organization_code": "ORG-B"},
+      {"group": "synergia-platform-admins", "role_key": "platform_admin", "global_reviewed": true}
+    ]
+  },
+  "examples": [
+    {
+      "id": "valid-analyst-org-a",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0001",
+        "email": "analista.sintetico@example.invalid",
+        "email_verified": true,
+        "name": "Analista Sintético",
+        "organizations": ["org-a-idp", "org-desconhecida"],
+        "groups": ["synergia-analysts-a", "grupo-sem-mapeamento"],
+        "amr": ["pwd", "mfa"]
+      },
+      "expect": {
+        "outcome": "accepted",
+        "organizations": ["ORG-A"],
+        "roles": [["analyst", "ORG-A"]]
+      }
+    },
+    {
+      "id": "valid-group-without-organization-grants-no-role",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": ["outro-servico", "synergia-api-synthetic"],
+        "sub": "synthetic-subject-0002",
+        "email": "operador.sintetico@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-a-idp"],
+        "groups": ["synergia-operators-b"],
+        "amr": ["mfa"]
+      },
+      "expect": {
+        "outcome": "accepted",
+        "organizations": ["ORG-A"],
+        "roles": []
+      }
+    },
+    {
+      "id": "valid-reviewed-global-role-without-organization",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0003",
+        "email": "plataforma.sintetica@example.invalid",
+        "email_verified": true,
+        "groups": ["synergia-platform-admins"],
+        "amr": ["hwk"]
+      },
+      "expect": {
+        "outcome": "accepted",
+        "organizations": [],
+        "roles": [["platform_admin", null]]
+      }
+    },
+    {
+      "id": "missing-organization-claim",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0004",
+        "email": "sem.organizacao@example.invalid",
+        "email_verified": true,
+        "groups": ["synergia-analysts-a"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_scope_missing"}
+    },
+    {
+      "id": "only-unknown-organizations",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0005",
+        "email": "org.desconhecida@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-que-nao-existe"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_scope_missing"}
+    },
+    {
+      "id": "wrong-issuer",
+      "claims": {
+        "iss": "https://outro.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0006",
+        "email": "emissor.errado@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-a-idp"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_issuer_mismatch"}
+    },
+    {
+      "id": "wrong-audience",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "outro-servico",
+        "sub": "synthetic-subject-0007",
+        "email": "audiencia.errada@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-a-idp"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_audience_mismatch"}
+    },
+    {
+      "id": "single-factor-authentication-only",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0008",
+        "email": "sem.mfa@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-a-idp"],
+        "amr": ["pwd"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_mfa_required"}
+    },
+    {
+      "id": "unverified-email",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0009",
+        "email": "nao.verificado@example.invalid",
+        "email_verified": false,
+        "organizations": ["org-a-idp"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_email_invalid"}
+    },
+    {
+      "id": "subject-with-surrounding-space",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": " synthetic-subject-0010",
+        "email": "assunto.invalido@example.invalid",
+        "email_verified": true,
+        "organizations": ["org-a-idp"],
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_subject_invalid"}
+    },
+    {
+      "id": "organizations-claim-is-not-a-list",
+      "claims": {
+        "iss": "https://idp.example.invalid/synthetic",
+        "aud": "synergia-api-synthetic",
+        "sub": "synthetic-subject-0011",
+        "email": "claim.invalida@example.invalid",
+        "email_verified": true,
+        "organizations": {"org-a-idp": true},
+        "amr": ["mfa"]
+      },
+      "expect": {"outcome": "rejected", "code": "identity_claims_invalid"}
+    }
+  ]
+}

@@ -129,7 +129,7 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R-01 | J-01 | stuffing e enumeração de identidade | alto | médio | mitigado | security | #91 |
 | R-02 | J-01 | replay de token ou refresh | crítico | médio | mitigado | identity | #92 |
-| R-03 | J-01 | identidade corporativa não homologada; login local restrito a ambientes não produtivos | crítico | alto | bloqueado | platform | #96 |
+| R-03 | J-01 | identidade corporativa não homologada; login local restrito a ambientes não produtivos; contrato em [#144](https://github.com/g-f307/synergia/issues/144) | crítico | alto | bloqueado | platform | #96 / #144 |
 | R-04 | J-02 | conteúdo ativo ou arquivo disfarçado | alto | médio | mitigado | backend | #92 |
 | R-05 | J-02 | fuga do armazenamento controlado | alto | baixo | mitigado | backend | #92 |
 | R-06 | J-02 | exaustão por uploads | alto | médio | mitigado | security | #91 |
@@ -154,6 +154,10 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-25 | J-01 | CORS, cache ou política do navegador permissiva | crítico | médio | mitigado | security | #90 |
 | R-26 | J-04 | conteúdo operacional executado como XSS | crítico | médio | mitigado | security | #90 |
 | R-27 | J-01 | ação de sessão induzida por CSRF | alto | médio | mitigado | security | #90 |
+| R-28 | J-01 | indisponibilidade do IdP ou desvio por login local | alto | médio | mitigado | platform | #144 |
+| R-29 | J-07 | claims ou grupos forjados, vencidos ou mal mapeados concedendo acesso | crítico | médio | mitigado | identity | #144 |
+| R-30 | J-07 | acesso residual após desligamento no diretório corporativo | alto | alto | bloqueado | identity | #144 |
+| R-31 | J-01 | login local temporário que permanece após o aceite do adaptador | alto | baixo | mitigado | platform | #144 |
 
 Detalhes de ameaça, controles e evidências são mantidos no registro JSON. Um
 controle só reduz a severidade residual quando sua evidência existe no
@@ -177,9 +181,15 @@ da decisão da Etapa 5.
 
 ## Portões e riscos transferidos
 
-- R-03 bloqueia produção enquanto o adaptador local não estiver proibido pela
-  configuração e a identidade corporativa não estiver homologada; não bloqueia
-  homologação descartável com identidades sintéticas.
+- R-03 bloqueia produção enquanto a identidade corporativa não estiver homologada
+  (portões `ID-P01` a `ID-P07`); o adaptador local já é proibido em produção por
+  código e não bloqueia a homologação descartável com identidades sintéticas. O
+  contrato, o registro de decisões e a regra de transição estão em
+  [corporate-identity-contract.md](corporate-identity-contract.md) e na
+  [ADR 0002](adr/0002-corporate-identity-contract.md).
+- R-30 bloqueia o uso produtivo do login corporativo até o SLA de desligamento e o
+  mecanismo de sincronização serem definidos (`ID-P03`); até lá, desativar ou
+  bloquear o usuário no SYNERGIA revoga as sessões.
 - R-15 retorna antes de habilitar qualquer provedor corporativo de e-mail. A
   retomada exige custódia de segredo, política de destinatário e monitoramento.
 - R-24 retorna antes do uso produtivo das aprovações. O negócio deve homologar

@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0",
+  "issue": 144,
+  "adr": "docs/adr/0002-corporate-identity-contract.md",
+  "contract": "docs/corporate-identity-contract.md",
+  "states": {
+    "pending_external": "depende de informação ou decisão da LG; nada foi inventado",
+    "proposed": "proposta da equipe SYNERGIA aguardando confirmação externa",
+    "decided": "decisão interna vigente, com evidência no repositório"
+  },
+  "decisions": [
+    {
+      "id": "ID-P01",
+      "title": "IdP, protocolo (OIDC ou SAML), issuer, audience e discovery",
+      "scope_item": "Confirmar IdP, protocolo, issuer, audience e discovery",
+      "owner": "TI/Segurança LG",
+      "state": "pending_external",
+      "required_input": "nome do provedor, protocolo, issuer, audiência registrada para o SYNERGIA e URL de discovery",
+      "blocks": "adaptador corporativo",
+      "interim_behavior": "AUTH_IDENTITY_PROVIDER permanece local; o modo corporativo valida a configuração, mas não existe adaptador ativo e nunca é habilitado por padrão",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "backend/tests/test_corporate_identity_contract.py"
+      ]
+    },
+    {
+      "id": "ID-P02",
+      "title": "MFA, acesso condicional, VPN e duração máxima de sessão corporativa",
+      "scope_item": "Definir MFA, acesso condicional, VPN e duração de sessões",
+      "owner": "TI/Segurança LG",
+      "state": "pending_external",
+      "required_input": "métodos exigidos (valores de amr/acr), política de acesso condicional, exigência de rede e sessão máxima do IdP",
+      "blocks": "homologação da política de sessão",
+      "interim_behavior": "o SYNERGIA exige uma asserção de MFA (AUTH_CORPORATE_REQUIRE_MFA, não desativável em produção) e mantém access de 15 min e refresh de 8 h ocioso e 24 h absoluto; a rede e o acesso condicional são aplicados pelo IdP, nunca inferidos de cabeçalhos do cliente",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "backend/app/auth/config.py",
+        "docs/adr/0001-identity-strategy.md"
+      ]
+    },
+    {
+      "id": "ID-P03",
+      "title": "Origem dos grupos, provisionamento, desativação e remoção de acesso",
+      "scope_item": "Definir provisioning, desativação e remoção de acesso",
+      "owner": "TI/Gestor LG",
+      "state": "pending_external",
+      "required_input": "fonte dos grupos, método de provisionamento (administrativo, SCIM ou evento) e SLA de desligamento",
+      "blocks": "administração de acessos corporativos",
+      "interim_behavior": "sem provisionamento automático: o vínculo é criado por administrador; um grupo só vira papel por tabela revisada; a desativação no IdP não encerra sessão do SYNERGIA sozinha, então o desligamento exige `POST /admin/users/{id}/deactivate` ou `/block`, que revogam as sessões, até o SLA ser definido",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "docs/access-control-matrix.md",
+        "docs/user-administration.md"
+      ]
+    },
+    {
+      "id": "ID-P04",
+      "title": "Login local em produção: autorização ou proibição definitiva",
+      "scope_item": "Decidir se login local é permitido em homologação e como será desativado depois",
+      "owner": "TI/Segurança LG e Gestor",
+      "state": "pending_external",
+      "required_input": "decisão formal sobre manter ou proibir definitivamente o login local em produção",
+      "blocks": "adaptador local de produção e recuperação de senha",
+      "interim_behavior": "login local é recusado em produção por código, qualquer que seja a configuração",
+      "evidence": [
+        "backend/app/auth/config.py",
+        "backend/tests/test_corporate_identity_contract.py"
+      ]
+    },
+    {
+      "id": "ID-P05",
+      "title": "Segredo do cliente, rotação, cofre e responsáveis",
+      "scope_item": "Definir segredo, rotação, cofre e responsáveis",
+      "owner": "TI/DevOps LG",
+      "state": "pending_external",
+      "required_input": "cofre corporativo, método de injeção, frequência de rotação e responsáveis pela custódia",
+      "blocks": "emissão de tokens e ativação do adaptador",
+      "interim_behavior": "o segredo é lido de arquivo montado apenas no processo da API (AUTH_CORPORATE_CLIENT_SECRET_FILE), nunca de variável, repositório ou imagem; a configuração não abre o arquivo",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "docs/runbooks/corporate-identity-activation.md"
+      ]
+    },
+    {
+      "id": "ID-P06",
+      "title": "Organizações existentes, escopos e quem os concede",
+      "scope_item": "Definir escopos organizacionais e comportamento para claim ausente ou inválido",
+      "owner": "Gestor LG",
+      "state": "pending_external",
+      "required_input": "lista oficial de organizações, valores que o IdP emite para cada uma e responsáveis por conceder escopo",
+      "blocks": "carga de escopos de produção",
+      "interim_behavior": "claim de organização ausente, inválida ou desconhecida resulta em escopo vazio e a identidade é rejeitada (identity_scope_missing); organização desconhecida nunca concede acesso",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "docs/corporate-identity-claims-examples.json"
+      ]
+    },
+    {
+      "id": "ID-P07",
+      "title": "Retenção de sessões, eventos de segurança e identificadores pessoais",
+      "scope_item": "Registrar decisões e pendências externas sem credenciais reais",
+      "owner": "DPO/TI/Gestor LG",
+      "state": "pending_external",
+      "required_input": "prazos de retenção para sessões, eventos de segurança e identificadores pessoais vindos do IdP",
+      "blocks": "política de retenção",
+      "interim_behavior": "vale a política de retenção vigente; o SYNERGIA persiste apenas o identificador interno e o subject do vínculo, não grupos nem e-mail da asserção",
+      "evidence": [
+        "docs/data-retention.md",
+        "docs/identity-data-model.md"
+      ]
+    },
+    {
+      "id": "ID-P08",
+      "title": "Regra do login local temporário em homologação e sua remoção",
+      "scope_item": "Decidir se login local é permitido em homologação e como será desativado depois",
+      "owner": "Equipe SYNERGIA",
+      "state": "decided",
+      "required_input": "confirmação da TI de que o uso temporário é aceitável",
+      "blocks": "nada: vigora com data de término obrigatória",
+      "interim_behavior": "permitido em development e test; em homologation somente com AUTH_LOCAL_LOGIN_EXPIRES_AT (fuso explícito, no máximo 90 dias) e recusado após a data; removido ao aceitar o adaptador corporativo, conforme o runbook",
+      "evidence": [
+        "backend/app/auth/config.py",
+        "backend/app/auth/service.py",
+        "backend/tests/test_corporate_identity_contract.py",
+        "backend/tests/test_auth.py",
+        "docs/runbooks/corporate-identity-activation.md"
+      ]
+    },
+    {
+      "id": "ID-P09",
+      "title": "Contrato de claims, nomes configuráveis e mapeamento para usuário, organização e papéis",
+      "scope_item": "Definir claims obrigatórios e mapeamento para usuário, organização, grupos e papéis",
+      "owner": "Equipe SYNERGIA",
+      "state": "proposed",
+      "required_input": "nomes reais das claims e confirmação dos tipos pelo IdP",
+      "blocks": "adaptador corporativo",
+      "interim_behavior": "contrato lógico com nomes configuráveis (AUTH_CLAIM_*), exemplos sintéticos executados como teste e mapeamento de grupos somente por tabela revisada",
+      "evidence": [
+        "docs/corporate-identity-contract.md",
+        "docs/corporate-identity-claims-examples.json",
+        "backend/tests/test_corporate_identity_contract.py"
+      ]
+    },
+    {
+      "id": "ID-P10",
+      "title": "Logout, revogação e indisponibilidade do IdP",
+      "scope_item": "Mapear logout, revogação e indisponibilidade do IdP",
+      "owner": "Equipe SYNERGIA",
+      "state": "decided",
+      "required_input": "se o IdP oferece logout iniciado pelo cliente e logout por canal de retorno",
+      "blocks": "nada: o comportamento fail-closed vigora",
+      "interim_behavior": "logout e revogação encerram a sessão do SYNERGIA sem depender do IdP; com o IdP indisponível não há novo login nem fallback para login local em produção, e sessões válidas continuam até expirar; a renovação não consulta o IdP",
+      "evidence": [
+        "docs/corporate-identity-contract.md",
+        "backend/app/auth/identity_provider.py",
+        "backend/tests/test_corporate_identity_contract.py"
+      ]
+    },
+    {
+      "id": "ID-P11",
+      "title": "Configuração e provider falso para testes offline",
+      "scope_item": "Preparar configuração e provider falso para testes offline",
+      "owner": "Equipe SYNERGIA",
+      "state": "decided",
+      "required_input": "nenhuma",
+      "blocks": "nada",
+      "interim_behavior": "FakeIdentityProvider sem rede e sem segredos, proibido fora de development e test",
+      "evidence": [
+        "backend/app/auth/identity_provider.py",
+        "backend/tests/test_corporate_identity_contract.py"
+      ]
+    }
+  ]
+}

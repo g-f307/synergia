@@ -52,6 +52,8 @@ riscos altos restantes são deliberadamente externos ao escopo pré-RPA:
 
 - R-03: identidade corporativa; bloqueia produção, com autenticação local
   desabilitada em produção como mitigação;
+- R-30: desligamento no diretório corporativo sem sincronização definida
+  (ID-P03); bloqueia produção com login corporativo;
 - R-15: provedor corporativo de e-mail; entrega externa permanece desabilitada
   e a homologação usa somente captura local sintética.
 
