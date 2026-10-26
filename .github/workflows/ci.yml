@@ -209,6 +209,7 @@ jobs:
         run: pytest -q -m integration backend/tests/test_data_operations_persistence.py
       - name: Validar configuração, alertas e recuperação da observabilidade
         run: |
+          python scripts/validate_homologation_observability.py
           docker run --rm --entrypoint promtool \
             -v "$PWD/observability/prometheus:/etc/prometheus" \
             -v "$PWD/observability/secrets.example/metrics-token:/run/secrets/synergia_metrics_token:ro" \

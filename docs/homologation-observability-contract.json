@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "status": "ready_for_assisted_homologation",
+  "scope": "stage_6_assisted_homologation",
+  "temporary_destinations": {
+    "logs": "structured_json_stdout",
+    "metrics": "local_prometheus",
+    "dashboards": "local_grafana"
+  },
+  "corporate_destination": {
+    "status": "pending_external",
+    "decision_owner": "corporate_platform",
+    "required_before": "production_release"
+  },
+  "service_levels": {
+    "status": "measurement_only",
+    "decision": "No SLO is approved until homologation produces an observed baseline."
+  },
+  "retention": {
+    "metrics": {"duration_days": 15, "scope": "local_homologation"},
+    "logs": {"status": "pending_external", "temporary_policy": "container_lifecycle"}
+  },
+  "access": {
+    "network": "loopback_only",
+    "grafana_role": "viewer",
+    "metrics_authentication": "bearer_technical_token"
+  },
+  "logging": {
+    "format": "json",
+    "allowed_fields": [
+      "timestamp",
+      "level",
+      "event",
+      "correlation_id",
+      "execution_id",
+      "source",
+      "outcome",
+      "error_code",
+      "reason_code",
+      "status_code",
+      "file_count",
+      "processed_count",
+      "rejected_count",
+      "duration_ms",
+      "peak_memory_bytes",
+      "exception_type"
+    ],
+    "prohibited_content": [
+      "credentials",
+      "tokens",
+      "spreadsheet_cells",
+      "business_payloads",
+      "original_file_names",
+      "internal_storage_paths"
+    ]
+  },
+  "correlation": {
+    "fields": ["correlation_id", "execution_id"],
+    "journey": ["request", "inspection", "ingestion", "persistence", "notification"]
+  },
+  "readiness": {
+    "mandatory": ["configuration", "postgresql", "storage"],
+    "degraded_non_blocking": ["email_worker", "data_recovery"]
+  },
+  "dashboard_views": {
+    "business_rejections": {
+      "panel": "Import volume",
+      "metric": "synergia_import_rows_total"
+    },
+    "system_failures": {
+      "panel": "Journey outcomes (1h)",
+      "metric": "synergia_operational_events_total"
+    },
+    "resource_budget": {
+      "panel": "Ingestion memory budget",
+      "metric": "synergia_ingestion_memory_budget_bytes"
+    }
+  },
+  "alerts": [
+    {"name": "SynergiaApiUnavailable", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/api-unavailable.md"},
+    {"name": "SynergiaCriticalDependencyUnavailable", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/api-unavailable.md"},
+    {"name": "SynergiaEmailWorkerDegraded", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/report-notification-recovery.md"},
+    {"name": "SynergiaMetricsCollectionFailed", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/database-unavailable.md"},
+    {"name": "SynergiaHttpErrorRateHigh", "severity": "critical", "owner": "backend", "runbook": "docs/runbooks/api-unavailable.md"},
+    {"name": "SynergiaExecutionFailuresDetected", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
+    {"name": "SynergiaImportRejectionRateHigh", "severity": "warning", "owner": "data", "runbook": "docs/runbooks/invalid-file.md"},
+    {"name": "SynergiaQueueStalled", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
+    {"name": "SynergiaIngestionMemoryBudgetExceeded", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/processing-interrupted.md"},
+    {"name": "SynergiaRateLimitDenialsHigh", "severity": "warning", "owner": "security", "runbook": "docs/runbooks/abuse-response.md"}
+  ],
+  "controlled_drills": [
+    {"scenario": "storage_unavailable", "expected": ["ready", "not_ready", "ready"], "runbook": "docs/runbooks/storage-unavailable.md"},
+    {"scenario": "database_unavailable", "expected": ["ready", "not_ready", "ready"], "runbook": "docs/runbooks/database-unavailable.md"},
+    {"scenario": "email_worker_degraded", "expected": ["healthy", "degraded", "healthy"], "runbook": "docs/runbooks/report-notification-recovery.md"}
+  ]
+}
