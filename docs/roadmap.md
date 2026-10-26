@@ -38,6 +38,11 @@ corpus reproduzível, correção da expiração de sessão, SMTP substituível,
 observabilidade e piloto assistido. O início dessa preparação não aprova a
 release candidate nem remove os portões corporativos da Etapa 5.
 
+A observabilidade da homologação possui contrato versionado, destinos locais
+temporários, painel, alertas, runbooks e exercício sintético de recuperação. A
+plataforma, retenção, grupos de acesso e SLOs corporativos continuam pendentes;
+os limiares atuais servem apenas para medir e proteger a homologação assistida.
+
 Integrações corporativas definitivas e automação RPA permanecem planejadas e
 dependem de autorização formal.
 

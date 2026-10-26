@@ -145,6 +145,16 @@
       "targets": [{"expr": "increase(synergia_data_operation_failures_total[24h])", "legendFormat": "{{operation}}", "refId": "A"}],
       "title": "Data operation failures (24h)",
       "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 32},
+      "id": 15,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "synergia_ingestion_estimated_memory_bytes / clamp_min(synergia_ingestion_memory_budget_bytes, 1)", "legendFormat": "estimated / configured", "refId": "A"}],
+      "title": "Ingestion estimated memory budget",
+      "type": "timeseries"
     }
   ],
   "refresh": "15s",

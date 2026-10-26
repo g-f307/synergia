@@ -2,8 +2,10 @@
 
 A issue #93 entrega uma base local e reproduzível: logs JSON, sondas HTTP,
 métricas Prometheus, alertas preliminares e painel Grafana. A #94 acrescenta o
-estado de recuperação, runbooks e retenção operacional. A plataforma
-corporativa definitiva e SLOs permanecem para validação posterior.
+estado de recuperação, runbooks e retenção operacional. A #145 consolida o
+[contrato da homologação assistida](homologation-observability.md), a validação
+cruzada dos ativos e o exercício controlado de recuperação. A plataforma
+corporativa definitiva e SLOs permanecem como portões externos.
 
 ## Contratos e segurança
 
@@ -44,7 +46,10 @@ proibidos. Rotas de métricas usam templates, nunca URL ou query concreta.
   `synergia_data_operation_failures_total`;
 - `synergia_ingestion_duration_seconds`, `synergia_ingestion_rows_total`,
   `synergia_ingestion_rejections_total` e
-  `synergia_ingestion_peak_memory_bytes`, descritas em
+  `synergia_ingestion_estimated_memory_bytes`;
+- `synergia_ingestion_memory_budget_bytes`, que expõe o limite efetivamente
+  configurado para comparar uma estimativa calculada pelo mesmo modelo,
+  descrita em
   [xlsx-ingestion-budget.md](xlsx-ingestion-budget.md).
 
 Labels são limitadas a método, template de rota, classe HTTP, componente,
@@ -73,12 +78,14 @@ O Prometheus fica em `127.0.0.1:19090` e o Grafana em `127.0.0.1:13000`. Seu
 volume possui retenção explícita de 15 dias e não integra o backup de dados. O painel
 provisionado cobre disponibilidade, volume, latência, erros, rejeições,
 processamento, relatórios, notificações/e-mail, aprovações, filas,
-reprocessamento e bloqueios de limite.
+reprocessamento e bloqueios de limite. Rejeições válidas, falhas sistêmicas e
+uso do orçamento de memória aparecem em leituras separadas.
 
 As regras em `observability/prometheus/alerts.yml` detectam indisponibilidade
 total da API pelo `up` do scrape, dependência crítica, coleta indisponível,
 worker degradado, taxa HTTP 5xx, falhas das jornadas, rejeição elevada, filas
-paradas, backlog de aprovação e bloqueios abusivos.
+paradas, backlog de aprovação, excesso do orçamento configurado de memória e
+bloqueios abusivos.
 Limiares são iniciais, versionados e validados por `promtool`; não constituem
 SLO. As regras também detectam backup ausente/atrasado e falhas persistidas de
 backup, verificação e retenção. Falhas de restauração anteriores à existência
@@ -94,6 +101,7 @@ readiness permanece restrita às dependências necessárias para atender tráfeg
 ## Validação
 
 ```bash
+python scripts/validate_homologation_observability.py
 cd backend && pytest -q -m "not integration" tests/test_health.py tests/test_observability.py
 pytest -q -m integration tests/test_observability_persistence.py
 docker run --rm --entrypoint promtool \

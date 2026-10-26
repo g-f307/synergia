@@ -940,23 +940,30 @@ INSPECTION_MESSAGES = {
 
 
 def _observe_terminal(
-    outcome: str, started: float, reason: str | None = None
+    outcome: str,
+    started: float,
+    reason: str | None = None,
+    *,
+    estimated_memory_bytes: int = 0,
+    memory_budget_bytes: int = 0,
 ) -> None:
     """Record a terminal outcome decided before or outside the pipeline."""
-    peak = observe_ingestion(
+    estimate = observe_ingestion(
         outcome=outcome,
         duration_seconds=time.monotonic() - started,
         rows_processed=0,
         rows_rejected=0,
         reason=reason if outcome == "rejected" else None,
         allowed_reasons=frozenset(LIMIT_GUIDANCE),
+        estimated_memory_bytes=estimated_memory_bytes,
+        memory_budget_bytes=memory_budget_bytes,
     )
     safe_log(
         logging.WARNING,
         f"ingestion.{outcome}",
         reason_code=reason,
         duration_ms=int((time.monotonic() - started) * 1000),
-        peak_memory_bytes=peak,
+        estimated_memory_bytes=estimate,
     )
 
 
@@ -1111,7 +1118,22 @@ async def upload_import(
                     inspection.quarantine_path.unlink(missing_ok=True)
                 raise
             if not inspection.accepted:
-                _observe_terminal("rejected", started, inspection.reason_code)
+                details = inspection.reason_details or {}
+                _observe_terminal(
+                    "rejected",
+                    started,
+                    inspection.reason_code,
+                    estimated_memory_bytes=(
+                        int(details.get("observed", 0))
+                        if inspection.reason_code == "workbook_memory_limit"
+                        else 0
+                    ),
+                    memory_budget_bytes=(
+                        int(details.get("limit", 0))
+                        if inspection.reason_code == "workbook_memory_limit"
+                        else 0
+                    ),
+                )
                 for stored in destinations:
                     stored.unlink(missing_ok=True)
                 if pipeline_inputs:
@@ -1289,7 +1311,17 @@ async def upload_import(
         if pipeline_inputs:
             repository.abort_claim(execution_id, exc.code)
         if not exc.recorded:
-            _observe_terminal("rejected", started, exc.code)
+            _observe_terminal(
+                "rejected",
+                started,
+                exc.code,
+                estimated_memory_bytes=(
+                    int(exc.observed or 0) if exc.code == "workbook_memory_limit" else 0
+                ),
+                memory_budget_bytes=(
+                    int(exc.limit or 0) if exc.code == "workbook_memory_limit" else 0
+                ),
+            )
         _error(
             repository,
             execution_id,

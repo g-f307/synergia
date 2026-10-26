@@ -151,7 +151,8 @@ Logs estruturados (`app/observability/telemetry.py`):
   `importing`, `normalizing`), `processed_count` e `duration_ms`, a cada
   `INGESTION_PROGRESS_INTERVAL` linhas;
 - `ingestion.completed` e `ingestion.rejected`: `source`, `reason_code`,
-  `processed_count`, `rejected_count`, `duration_ms` e `peak_memory_bytes`.
+  `processed_count`, `rejected_count`, `duration_ms` e
+  `estimated_memory_bytes`.
 
 Métricas Prometheus:
 
@@ -160,9 +161,11 @@ Métricas Prometheus:
 - `synergia_ingestion_rows_total{result}` (`processed`, `rejected`);
 - `synergia_ingestion_rejections_total{reason}`, com os códigos desta tabela e
   `other`;
-- `synergia_ingestion_peak_memory_bytes`: pico de memória residente do
-  processo (`ru_maxrss`), registrado ao final de cada ingestão. É uma marca
-  d'água do processo, não o consumo isolado do arquivo.
+- `synergia_ingestion_estimated_memory_bytes`: estimativa da última ingestão
+  XLSX calculada por `IngestionBudget.estimated_memory`;
+- `synergia_ingestion_memory_budget_bytes`: limite aplicado à mesma ingestão.
+  Resultados anteriores ao pipeline e execuções sem orçamento XLSX zeram ambos
+  os valores, evitando combinar medições de execuções diferentes.
 
 Todo caminho terminal de uma ingestão registra um resultado: limite de arquivos
 por requisição, rejeição na admissão, arquivo ilegível (`invalid_file`),
@@ -318,4 +321,5 @@ medições integradas atualizadas estão em
   orçamento de metadados limita esse custo, mas ele continua proporcional ao tamanho
   dessas partes (cerca de 9 bytes por byte de XML no workbook medido).
 - O progresso é emitido em logs e métricas; não há consulta de progresso na API.
-- O pico de memória é do processo, não do arquivo.
+- A métrica operacional é uma estimativa do modelo de orçamento, não uma medida
+  do RSS do processo. Ajustes do modelo exigem nova medição controlada.

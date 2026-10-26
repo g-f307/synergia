@@ -257,6 +257,25 @@ tests:
 
   - interval: 1m
     input_series:
+      - series: 'synergia_ingestion_estimated_memory_bytes'
+        values: '1200000000x3 500000000x2'
+      - series: 'synergia_ingestion_memory_budget_bytes'
+        values: '1000000000x5'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SynergiaIngestionMemoryBudgetExceeded
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Ingestion exceeded its configured memory budget
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ingestion-memory-budget.md
+      - eval_time: 4m
+        alertname: SynergiaIngestionMemoryBudgetExceeded
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
       - series: 'synergia_rate_limit_denials_total{operation="upload",dimension="user"}'
         values: '0+60x8 480x8'
     alert_rule_test:
