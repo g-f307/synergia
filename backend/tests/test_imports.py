@@ -956,6 +956,10 @@ def test_structured_rejection_from_the_reader_reaches_the_response(
 
 def test_files_accepted_individually_are_budgeted_together(api, monkeypatch) -> None:
     from app.ingestion_budget import CELL_COST_BYTES, ROW_COST_BYTES
+    from app.observability.metrics import (
+        INGESTION_ESTIMATED_MEMORY,
+        INGESTION_MEMORY_BUDGET,
+    )
 
     client, repository, storage = api
     # Each file holds 30 normalized records; two of them exceed the limit.
@@ -981,6 +985,10 @@ def test_files_accepted_individually_are_budgeted_together(api, monkeypatch) -> 
     error = together.json()["error"]
     assert error["code"] == "workbook_memory_limit"
     assert error["details"]["observed"] > error["details"]["limit"]
+    assert (
+        INGESTION_ESTIMATED_MEMORY._value.get()
+        > INGESTION_MEMORY_BUDGET._value.get()
+    )
     assert repository.get(error["details"]["execution_id"])["status"] == "failed"
     assert not [
         path
@@ -994,6 +1002,10 @@ def test_aggregate_budget_uses_the_most_restrictive_source_in_any_order(
     api, monkeypatch, order
 ) -> None:
     from app.ingestion_budget import CELL_COST_BYTES, ROW_COST_BYTES
+    from app.observability.metrics import (
+        INGESTION_ESTIMATED_MEMORY,
+        INGESTION_MEMORY_BUDGET,
+    )
 
     client, repository, storage = api
     one_file = 30 * ROW_COST_BYTES + 60 * CELL_COST_BYTES
@@ -1020,6 +1032,10 @@ def test_aggregate_budget_uses_the_most_restrictive_source_in_any_order(
     error = together.json()["error"]
     assert error["code"] == "workbook_memory_limit"
     assert error["details"]["limit"] == one_file + one_file // 10
+    assert (
+        INGESTION_ESTIMATED_MEMORY._value.get()
+        > INGESTION_MEMORY_BUDGET._value.get()
+    )
 
 
 def test_request_is_rejected_before_processing_when_it_has_too_many_files(
