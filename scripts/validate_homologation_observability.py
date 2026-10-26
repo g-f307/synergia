@@ -84,7 +84,9 @@ def validate(root: Path) -> dict[str, Any]:
     expected_alerts = {item["name"] for item in contract["alerts"]}
     missing_alerts = expected_alerts - alert_names
     if missing_alerts:
-        raise ValueError(f"alerts missing from Prometheus rules: {sorted(missing_alerts)}")
+        raise ValueError(
+            f"alerts missing from Prometheus rules: {sorted(missing_alerts)}"
+        )
     for item in contract["alerts"]:
         runbook = root / item["runbook"]
         if not runbook.is_file():
@@ -120,7 +122,9 @@ def evaluate_recovery_drill(
         ("unavailable", 503),
         ("ok", 200),
     )
-    actual = tuple((item.get("status"), item.get("http_status")) for item in observations)
+    actual = tuple(
+        (item.get("status"), item.get("http_status")) for item in observations
+    )
     if actual != expected:
         raise ValueError("recovery was not proven by the controlled drill")
     return {"scenario": scenario, "result": "recovered", "phases": phases}
@@ -128,7 +132,9 @@ def evaluate_recovery_drill(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--root", type=Path, default=Path(__file__).resolve().parents[1]
+    )
     args = parser.parse_args()
     result = validate(args.root.resolve())
     print(json.dumps({**result, "dashboard_views": sorted(result["dashboard_views"])}))
