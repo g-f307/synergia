@@ -14,7 +14,7 @@
     {"id": "PC-03", "description": "Arquivos de homologação autorizados pelo responsável, mantidos fora do Git", "owner": "product-owner", "state": "pending"},
     {"id": "PC-04", "description": "Identidade temporária ou corporativa autorizada e data de fim do login local registrada", "owner": "identity", "state": "pending"},
     {"id": "PC-05", "description": "Destino de logs, métricas e alertas da homologação confirmado", "owner": "platform", "state": "pending"},
-    {"id": "PC-06", "description": "SMTP incluído ou excluído do roteiro aprovado do piloto", "owner": "product-owner", "state": "pending"}
+    {"id": "PC-06", "description": "SMTP incluído ou excluído do roteiro aprovado do piloto", "owner": "product-owner", "state": "pending", "smtp": "excluded"}
   ],
   "dependencies": [
     {"issue": 137, "subject": "Contratos dos workbooks reais", "state": "delivered", "evidence": ["docs/real-workbook-contracts.md"]},

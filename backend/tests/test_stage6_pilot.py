@@ -32,8 +32,13 @@ def _released(outcome: str = "release") -> dict:
     for item in record["scenarios"]:
         item["stakeholder_execution"] = {
             "status": "passed",
-            "evidence": ["docs/stage-6-pilot.md"],
+            "scenario_id": item["id"],
+            "sanitized": True,
+            "evidence": [f"docs/evidence/issue-143-smtp-homologation.md"],
         }
+    for criterion in record["acceptance_criteria"]:
+        if criterion["status"] == "pending":
+            criterion["status"] = "accepted"
     return record
 
 
@@ -86,6 +91,35 @@ def test_an_optional_scenario_may_stay_pending() -> None:
     record["scenarios"][-1]["stakeholder_execution"] = {"status": "pending"}
 
     assert pilot.validate(record)["decision"] == "release"
+
+
+def test_required_scenario_cannot_be_removed() -> None:
+    record = _released()
+    record["scenarios"].pop()
+
+    with pytest.raises(ValueError, match="exactly S-01 through S-12"):
+        pilot.validate(record)
+
+
+def test_smtp_inclusion_requires_s12_to_pass_and_failed_rehearsal_is_limited_release() -> None:
+    record = _released()
+    record["preconditions"][-1]["smtp"] = "included"
+    record["scenarios"][-1]["required"] = True
+    record["scenarios"][-1]["stakeholder_execution"]["status"] = "failed"
+    with pytest.raises(ValueError, match="required scenario not passed"):
+        pilot.validate(record)
+
+    record["decision"]["pilot"] = "release_with_limitations"
+    record["limitations"] = [{"id": "L-1", "state": "accepted", "owner": "product", "deadline": "before-scale-up"}]
+    assert pilot.validate(record)["decision"] == "release_with_limitations"
+
+
+def test_release_rejects_pending_acceptance_criteria() -> None:
+    record = _released()
+    record["acceptance_criteria"][0]["status"] = "pending"
+
+    with pytest.raises(ValueError, match="acceptance criterion"):
+        pilot.validate(record)
 
 
 def test_release_requires_every_precondition_ready() -> None:
@@ -202,7 +236,7 @@ def test_duplicate_scenario_ids_are_rejected() -> None:
         pilot.validate(record)
 
 
-@pytest.mark.parametrize("field", ["password", "token", "email", "secret"])
+@pytest.mark.parametrize("field", ["password", "token", "email", "secret", "smtp_password", "access_token", "refresh_token", "user_email"])
 def test_credential_shaped_fields_are_forbidden(field) -> None:
     record = _record()
     record["preconditions"][0][field] = "x"
@@ -216,4 +250,12 @@ def test_undelivered_dependency_is_rejected() -> None:
     record["dependencies"][0]["state"] = "open"
 
     with pytest.raises(ValueError, match="not delivered"):
+        pilot.validate(record)
+
+
+def test_execution_evidence_must_be_in_evidence_directory() -> None:
+    record = _released()
+    record["scenarios"][0]["stakeholder_execution"]["evidence"] = ["README.md"]
+
+    with pytest.raises(ValueError, match="under docs/evidence"):
         pilot.validate(record)

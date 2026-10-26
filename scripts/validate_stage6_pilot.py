@@ -19,26 +19,34 @@ SEVERITIES = {"critical", "high", "medium", "low"}
 DEFECT_STATES = {"open", "treated", "accepted"}
 LIMITATION_STATES = {"open", "accepted"}
 REQUIRED_SIGNOFFS = {"product_owner", "technical_owner"}
-FORBIDDEN_KEYS = frozenset({"password", "secret", "token", "email", "authorization"})
+FORBIDDEN_FRAGMENTS = ("password", "secret", "token", "email", "authorization")
+EXPECTED_PRECONDITIONS = {f"PC-{number:02d}" for number in range(1, 7)}
+EXPECTED_DEPENDENCIES = set(range(137, 146))
+EXPECTED_SCENARIOS = {f"S-{number:02d}" for number in range(1, 13)}
+EXPECTED_CRITERIA = {f"AC-{number:02d}" for number in range(1, 10)}
+CRITERION_STATES = {"pending", "rehearsed", "accepted", "blocked", "ci_gate"}
 
 
 def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _check_evidence(paths: Any, subject: str, root: Path) -> None:
+def _check_evidence(paths: Any, subject: str, root: Path, *, execution: bool = False) -> None:
     if not isinstance(paths, list) or not paths:
         raise ValueError(f"{subject} has no evidence")
     for relative in paths:
         pure = PurePosixPath(str(relative))
         if pure.is_absolute() or ".." in pure.parts or not (root / pure).is_file():
             raise ValueError(f"{subject} references missing evidence: {relative}")
+        if execution and (len(pure.parts) < 3 or pure.parts[:2] != ("docs", "evidence")):
+            raise ValueError(f"{subject} execution evidence must be under docs/evidence/: {relative}")
 
 
 def _reject_forbidden_keys(value: Any) -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
-            if str(key).lower() in FORBIDDEN_KEYS:
+            normalized = "".join(char for char in str(key).lower() if char.isalnum())
+            if any(fragment in normalized for fragment in FORBIDDEN_FRAGMENTS):
                 raise ValueError(f"forbidden field in pilot record: {key}")
             _reject_forbidden_keys(item)
     elif isinstance(value, list):
@@ -62,6 +70,15 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
         raise ValueError("unsupported Stage 6 pilot schema")
     _reject_forbidden_keys(document)
 
+    if {item.get("id") for item in document.get("preconditions", [])} != EXPECTED_PRECONDITIONS:
+        raise ValueError("preconditions must contain exactly PC-01 through PC-06")
+    if {item.get("issue") for item in document.get("dependencies", [])} != EXPECTED_DEPENDENCIES:
+        raise ValueError("dependencies must contain exactly issues #137 through #145")
+    if {item.get("id") for item in document.get("scenarios", [])} != EXPECTED_SCENARIOS:
+        raise ValueError("scenarios must contain exactly S-01 through S-12")
+    if {item.get("id") for item in document.get("acceptance_criteria", [])} != EXPECTED_CRITERIA:
+        raise ValueError("acceptance criteria must contain exactly AC-01 through AC-09")
+
     for item in document.get("preconditions", []):
         if item.get("state") not in PRECONDITION_STATES or not item.get("owner"):
             raise ValueError(f"invalid precondition: {item.get('id')}")
@@ -83,9 +100,18 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
         if state not in SCENARIO_STATES:
             raise ValueError(f"invalid execution state: {item['id']}")
         if state != "pending":
+            if execution.get("scenario_id") != item["id"] or execution.get("sanitized") is not True:
+                raise ValueError(f"scenario {item['id']} execution must identify the scenario and be sanitized")
             _check_evidence(
-                execution.get("evidence"), f"scenario {item['id']} execution", root
+                execution.get("evidence"), f"scenario {item['id']} execution", root, execution=True
             )
+
+    smtp_decision = next(item for item in document["preconditions"] if item["id"] == "PC-06").get("smtp")
+    if smtp_decision not in {"included", "excluded"}:
+        raise ValueError("PC-06 must record smtp as included or excluded")
+    smtp_scenario = next(item for item in scenarios if item["id"] == "S-12")
+    if smtp_scenario.get("required") != (smtp_decision == "included"):
+        raise ValueError("S-12 required flag must match the PC-06 SMTP decision")
 
     for item in document.get("defects", []):
         if (
@@ -113,6 +139,8 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
             raise ValueError(
                 f"criterion references unknown scenario: {criterion['id']}"
             )
+        if criterion.get("status") not in CRITERION_STATES:
+            raise ValueError(f"invalid acceptance criterion status: {criterion['id']}")
 
 
 def _validate_outcome(document: Mapping[str, Any]) -> str:
@@ -133,8 +161,15 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         raise ValueError("release requires product owner and technical owner approval")
     for item in document["scenarios"]:
         state = item["stakeholder_execution"]["status"]
-        if item["required"] and state != "passed":
+        if item["required"] and state != "passed" and not (
+            outcome == "release_with_limitations" and state == "failed"
+        ):
             raise ValueError(f"required scenario not passed: {item['id']}")
+    if any(item["status"] == "pending" for item in document["acceptance_criteria"]):
+        raise ValueError("release requires every acceptance criterion to be resolved")
+    failed = [item["id"] for item in document["scenarios"] if item["stakeholder_execution"]["status"] == "failed"]
+    if failed and outcome != "release_with_limitations":
+        raise ValueError("failed scenario requires release_with_limitations")
     for item in document.get("defects", []):
         if item["severity"] in {"critical", "high"} and item["state"] == "open":
             raise ValueError(f"untreated {item['severity']} defect: {item['id']}")
