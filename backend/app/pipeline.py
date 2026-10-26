@@ -109,15 +109,18 @@ def _record_ingestion(
     rows_rejected: int,
     duration: float,
     reason: str | None = None,
+    estimated_memory_bytes: int | None = None,
+    memory_budget_bytes: int | None = None,
 ) -> None:
-    peak = observe_ingestion(
+    estimate = observe_ingestion(
         outcome=outcome,
         duration_seconds=duration,
         rows_processed=rows_processed,
         rows_rejected=rows_rejected,
         reason=reason,
         allowed_reasons=frozenset(LIMIT_GUIDANCE),
-        memory_budget_bytes=run.budget.max_memory_bytes,
+        estimated_memory_bytes=estimated_memory_bytes,
+        memory_budget_bytes=memory_budget_bytes,
     )
     safe_log(
         logging.INFO if outcome == "completed" else logging.WARNING,
@@ -127,12 +130,17 @@ def _record_ingestion(
         processed_count=rows_processed,
         rejected_count=rows_rejected,
         duration_ms=int(duration * 1000),
-        peak_memory_bytes=peak,
+        estimated_memory_bytes=estimate,
     )
 
 
 def _record_execution(
-    stats: list[dict[str, Any]], outcome: str, reason: str | None = None
+    stats: list[dict[str, Any]],
+    outcome: str,
+    reason: str | None = None,
+    *,
+    estimated_memory_bytes: int = 0,
+    memory_budget_bytes: int = 0,
 ) -> None:
     """Record every file of an execution under the execution's terminal outcome.
 
@@ -140,6 +148,18 @@ def _record_execution(
     files and the consolidation never inflate it. The rejection reason is
     counted once per execution.
     """
+    if not stats:
+        observe_ingestion(
+            outcome=outcome,
+            duration_seconds=0,
+            rows_processed=0,
+            rows_rejected=0,
+            reason=reason,
+            allowed_reasons=frozenset(LIMIT_GUIDANCE),
+            estimated_memory_bytes=estimated_memory_bytes,
+            memory_budget_bytes=memory_budget_bytes,
+        )
+        return
     for position, stat in enumerate(stats):
         meter: IngestionRun = stat["meter"]
         duration = stat["duration"]
@@ -152,7 +172,22 @@ def _record_execution(
                 meter.clock.elapsed - stat["offset"] if duration is None else duration
             ),
             reason=reason if position == 0 else None,
+            estimated_memory_bytes=estimated_memory_bytes if position == 0 else None,
+            memory_budget_bytes=memory_budget_bytes if position == 0 else None,
         )
+
+
+def _completed_memory_measurement(stats: list[dict[str, Any]]) -> tuple[int, int]:
+    """Return estimate and limit from the same model for one execution."""
+    budgeted = [stat for stat in stats if stat["budgeted"]]
+    if not budgeted:
+        return 0, 0
+    budget = IngestionBudget.most_restrictive(
+        [stat["meter"].budget for stat in budgeted]
+    )
+    rows = sum(stat["normalized_rows"] for stat in budgeted)
+    cells = sum(stat["normalized_cells"] for stat in budgeted)
+    return budget.estimated_memory(rows, cells), budget.max_memory_bytes
 
 
 def _check_issue_total(budget: IngestionBudget, issues: list[dict[str, Any]]) -> None:
@@ -274,13 +309,32 @@ def run_pipeline_batch(
             stats=stats,
         )
     except IngestionLimitError as exc:
-        _record_execution(stats, "rejected", exc.code)
+        if exc.code == "workbook_memory_limit":
+            estimate = int(exc.observed or 0)
+            budget = int(exc.limit or 0)
+        else:
+            estimate = budget = 0
+        _record_execution(
+            stats,
+            "rejected",
+            exc.code,
+            estimated_memory_bytes=estimate,
+            memory_budget_bytes=budget,
+        )
         exc.recorded = True
         raise
     except Exception:
-        _record_execution(stats, "failed")
+        _record_execution(
+            stats, "failed", estimated_memory_bytes=0, memory_budget_bytes=0
+        )
         raise
-    _record_execution(stats, "completed")
+    estimate, budget = _completed_memory_measurement(stats)
+    _record_execution(
+        stats,
+        "completed",
+        estimated_memory_bytes=estimate,
+        memory_budget_bytes=budget,
+    )
     return result
 
 
@@ -344,6 +398,9 @@ def _run_pipeline_batch(
             "rejected": 0,
             "duration": None,
             "offset": 0.0,
+            "normalized_rows": 0,
+            "normalized_cells": 0,
+            "budgeted": run is not None,
         }
         stats.append(stat)
         if run is not None:
@@ -395,6 +452,10 @@ def _run_pipeline_batch(
         if run is not None:
             run.begin("normalizing")
         normalized = normalize_tables(tables, source, eligible_rows, max_issues)
+        stat["normalized_rows"] = len(normalized["records"])
+        stat["normalized_cells"] = sum(
+            len(record["values"]) for record in normalized["records"]
+        )
         normalized_records.extend(
             {
                 **record,

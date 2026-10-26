@@ -865,11 +865,13 @@ def test_capacity_rejections_are_counted_by_stable_reason(api, monkeypatch) -> N
 
 
 @pytest.mark.parametrize("kind", ["xlsx", "csv"])
-def test_successful_import_records_duration_rows_and_peak_memory(api, kind) -> None:
+def test_successful_import_records_duration_rows_and_estimated_memory(
+    api, kind
+) -> None:
     from app.observability.metrics import (
         INGESTION_DURATION,
+        INGESTION_ESTIMATED_MEMORY,
         INGESTION_MEMORY_BUDGET,
-        INGESTION_PEAK_MEMORY,
         INGESTION_ROWS,
     )
 
@@ -889,8 +891,12 @@ def test_successful_import_records_duration_rows_and_peak_memory(api, kind) -> N
     assert response.status_code == 201
     assert processed._value.get() == rows_before + 7
     assert sum(bucket.get() for bucket in duration._buckets) == count_before + 1
-    assert INGESTION_PEAK_MEMORY._value.get() > 0
-    assert INGESTION_MEMORY_BUDGET._value.get() > 0
+    if kind == "xlsx":
+        assert INGESTION_ESTIMATED_MEMORY._value.get() > 0
+        assert INGESTION_MEMORY_BUDGET._value.get() > 0
+    else:
+        assert INGESTION_ESTIMATED_MEMORY._value.get() == 0
+        assert INGESTION_MEMORY_BUDGET._value.get() == 0
 
 
 def test_upload_fails_closed_when_no_sheet_is_authorized(api, monkeypatch) -> None:
@@ -1019,8 +1025,15 @@ def test_aggregate_budget_uses_the_most_restrictive_source_in_any_order(
 def test_request_is_rejected_before_processing_when_it_has_too_many_files(
     api, monkeypatch
 ) -> None:
+    from app.observability.metrics import (
+        INGESTION_ESTIMATED_MEMORY,
+        INGESTION_MEMORY_BUDGET,
+    )
+
     client, repository, storage = api
     monkeypatch.setenv("INGESTION_MAX_FILES", "2")
+    INGESTION_ESTIMATED_MEMORY.set(123)
+    INGESTION_MEMORY_BUDGET.set(456)
     files = [
         ("file", (f"f{index}.xlsx", _workbook_with_rows(3), XLSX_TYPE))
         for index in range(3)
@@ -1038,6 +1051,8 @@ def test_request_is_rejected_before_processing_when_it_has_too_many_files(
     assert error["details"]["observed"] == 3
     assert error["details"]["guidance"]
     assert _outcome_count("rejected") == rejected_before + 1
+    assert INGESTION_ESTIMATED_MEMORY._value.get() == 0
+    assert INGESTION_MEMORY_BUDGET._value.get() == 0
     assert repository.executions == {}
     assert not [path for path in storage.glob("**/*") if path.is_file()]
 
@@ -1055,11 +1070,18 @@ def _outcome_count(outcome: str) -> int:
     return sum(bucket.get() for bucket in INGESTION_DURATION.labels(outcome)._buckets)
 
 
-def test_admission_rejection_records_duration_and_peak_memory(api, monkeypatch) -> None:
-    from app.observability.metrics import INGESTION_PEAK_MEMORY
+def test_admission_rejection_records_duration_and_clears_memory_pair(
+    api, monkeypatch
+) -> None:
+    from app.observability.metrics import (
+        INGESTION_ESTIMATED_MEMORY,
+        INGESTION_MEMORY_BUDGET,
+    )
 
     client, _, _ = api
     monkeypatch.setenv("INGESTION_MAX_ROWS", "5")
+    INGESTION_ESTIMATED_MEMORY.set(123)
+    INGESTION_MEMORY_BUDGET.set(456)
     before = _outcome_count("rejected")
 
     response = client.post(
@@ -1070,7 +1092,8 @@ def test_admission_rejection_records_duration_and_peak_memory(api, monkeypatch) 
 
     assert response.status_code == 413
     assert _outcome_count("rejected") == before + 1
-    assert INGESTION_PEAK_MEMORY._value.get() > 0
+    assert INGESTION_ESTIMATED_MEMORY._value.get() == 0
+    assert INGESTION_MEMORY_BUDGET._value.get() == 0
 
 
 def test_consolidation_timeout_is_a_structured_rejection_with_metrics(

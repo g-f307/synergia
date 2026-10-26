@@ -37,7 +37,7 @@ SAFE_FIELDS = frozenset(
         "method",
         "operation",
         "outcome",
-        "peak_memory_bytes",
+        "estimated_memory_bytes",
         "processed_count",
         "reason_code",
         "rejected_count",

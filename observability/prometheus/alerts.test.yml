@@ -257,7 +257,7 @@ tests:
 
   - interval: 1m
     input_series:
-      - series: 'synergia_ingestion_peak_memory_bytes'
+      - series: 'synergia_ingestion_estimated_memory_bytes'
         values: '1200000000x3 500000000x2'
       - series: 'synergia_ingestion_memory_budget_bytes'
         values: '1000000000x5'
@@ -269,7 +269,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: Ingestion exceeded its configured memory budget
-              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
+              runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ingestion-memory-budget.md
       - eval_time: 4m
         alertname: SynergiaIngestionMemoryBudgetExceeded
         exp_alerts: []

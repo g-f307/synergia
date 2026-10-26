@@ -46,9 +46,10 @@ proibidos. Rotas de métricas usam templates, nunca URL ou query concreta.
   `synergia_data_operation_failures_total`;
 - `synergia_ingestion_duration_seconds`, `synergia_ingestion_rows_total`,
   `synergia_ingestion_rejections_total` e
-  `synergia_ingestion_peak_memory_bytes`;
+  `synergia_ingestion_estimated_memory_bytes`;
 - `synergia_ingestion_memory_budget_bytes`, que expõe o limite efetivamente
-  configurado para comparar o pico observado, descrita em
+  configurado para comparar uma estimativa calculada pelo mesmo modelo,
+  descrita em
   [xlsx-ingestion-budget.md](xlsx-ingestion-budget.md).
 
 Labels são limitadas a método, template de rota, classe HTTP, componente,

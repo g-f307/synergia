@@ -73,9 +73,9 @@ INGESTION_REJECTIONS = Counter(
     ("reason",),
     registry=REGISTRY,
 )
-INGESTION_PEAK_MEMORY = Gauge(
-    "synergia_ingestion_peak_memory_bytes",
-    "Process peak resident memory observed when the last ingestion finished.",
+INGESTION_ESTIMATED_MEMORY = Gauge(
+    "synergia_ingestion_estimated_memory_bytes",
+    "Estimated memory of the last ingestion using the configured budget model.",
     registry=REGISTRY,
 )
 INGESTION_MEMORY_BUDGET = Gauge(
@@ -184,17 +184,6 @@ def observe_http_request(
     HTTP_DURATION.labels(safe_method, safe_route).observe(max(duration_seconds, 0))
 
 
-def peak_memory_bytes() -> int | None:
-    """Return the process resident-memory high-water mark, when measurable."""
-    try:
-        import resource
-        import sys
-    except ImportError:  # pragma: no cover - platforms without ``resource``
-        return None
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return int(peak if sys.platform == "darwin" else peak * 1024)
-
-
 def record_ingestion_rejection(
     reason: str, allowed_reasons: frozenset[str] = frozenset()
 ) -> None:
@@ -209,21 +198,21 @@ def observe_ingestion(
     rows_rejected: int,
     reason: str | None = None,
     allowed_reasons: frozenset[str] = frozenset(),
+    estimated_memory_bytes: int | None = None,
     memory_budget_bytes: int | None = None,
 ) -> int | None:
-    """Record one ingestion with bounded labels and return the peak memory."""
+    """Record one ingestion and comparable memory estimate/budget gauges."""
     safe_outcome = outcome if outcome in _INGESTION_OUTCOMES else "failed"
     INGESTION_DURATION.labels(safe_outcome).observe(max(duration_seconds, 0))
     INGESTION_ROWS.labels("processed").inc(max(rows_processed, 0))
     INGESTION_ROWS.labels("rejected").inc(max(rows_rejected, 0))
     if reason is not None:
         record_ingestion_rejection(reason, allowed_reasons)
-    peak = peak_memory_bytes()
-    if peak is not None:
-        INGESTION_PEAK_MEMORY.set(peak)
+    if estimated_memory_bytes is not None:
+        INGESTION_ESTIMATED_MEMORY.set(max(estimated_memory_bytes, 0))
     if memory_budget_bytes is not None:
         INGESTION_MEMORY_BUDGET.set(max(memory_budget_bytes, 0))
-    return peak
+    return estimated_memory_bytes
 
 
 def record_dependency(component: str, status: str) -> None:

@@ -152,8 +152,8 @@
       "gridPos": {"h": 7, "w": 12, "x": 0, "y": 32},
       "id": 15,
       "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-      "targets": [{"expr": "synergia_ingestion_peak_memory_bytes / clamp_min(synergia_ingestion_memory_budget_bytes, 1)", "legendFormat": "used / configured", "refId": "A"}],
-      "title": "Ingestion memory budget",
+      "targets": [{"expr": "synergia_ingestion_estimated_memory_bytes / clamp_min(synergia_ingestion_memory_budget_bytes, 1)", "legendFormat": "estimated / configured", "refId": "A"}],
+      "title": "Ingestion estimated memory budget",
       "type": "timeseries"
     }
   ],

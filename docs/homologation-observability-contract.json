@@ -42,7 +42,7 @@
       "processed_count",
       "rejected_count",
       "duration_ms",
-      "peak_memory_bytes",
+      "estimated_memory_bytes",
       "exception_type"
     ],
     "prohibited_content": [
@@ -72,7 +72,7 @@
       "metric": "synergia_operational_events_total"
     },
     "resource_budget": {
-      "panel": "Ingestion memory budget",
+      "panel": "Ingestion estimated memory budget",
       "metric": "synergia_ingestion_memory_budget_bytes"
     }
   },
@@ -85,7 +85,7 @@
     {"name": "SynergiaExecutionFailuresDetected", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
     {"name": "SynergiaImportRejectionRateHigh", "severity": "warning", "owner": "data", "runbook": "docs/runbooks/invalid-file.md"},
     {"name": "SynergiaQueueStalled", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
-    {"name": "SynergiaIngestionMemoryBudgetExceeded", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/processing-interrupted.md"},
+    {"name": "SynergiaIngestionMemoryBudgetExceeded", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/ingestion-memory-budget.md"},
     {"name": "SynergiaRateLimitDenialsHigh", "severity": "warning", "owner": "security", "runbook": "docs/runbooks/abuse-response.md"}
   ],
   "controlled_drills": [
