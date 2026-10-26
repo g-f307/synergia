@@ -34,7 +34,7 @@ def _released(outcome: str = "release") -> dict:
             "status": "passed",
             "scenario_id": item["id"],
             "sanitized": True,
-            "evidence": [f"docs/evidence/issue-143-smtp-homologation.md"],
+            "evidence": ["docs/evidence/issue-143-smtp-homologation.md"],
         }
     for criterion in record["acceptance_criteria"]:
         if criterion["status"] == "pending":
@@ -101,7 +101,7 @@ def test_required_scenario_cannot_be_removed() -> None:
         pilot.validate(record)
 
 
-def test_smtp_inclusion_requires_s12_to_pass_and_failed_rehearsal_is_limited_release() -> None:
+def test_included_smtp_failure_requires_limited_release() -> None:
     record = _released()
     record["preconditions"][-1]["smtp"] = "included"
     record["scenarios"][-1]["required"] = True
@@ -110,7 +110,14 @@ def test_smtp_inclusion_requires_s12_to_pass_and_failed_rehearsal_is_limited_rel
         pilot.validate(record)
 
     record["decision"]["pilot"] = "release_with_limitations"
-    record["limitations"] = [{"id": "L-1", "state": "accepted", "owner": "product", "deadline": "before-scale-up"}]
+    record["limitations"] = [
+        {
+            "id": "L-1",
+            "state": "accepted",
+            "owner": "product",
+            "deadline": "before-scale-up",
+        }
+    ]
     assert pilot.validate(record)["decision"] == "release_with_limitations"
 
 
@@ -204,6 +211,8 @@ def test_executed_scenario_needs_existing_evidence() -> None:
     record = _record()
     record["scenarios"][0]["stakeholder_execution"] = {
         "status": "passed",
+        "scenario_id": "S-01",
+        "sanitized": True,
         "evidence": ["docs/does-not-exist.md"],
     }
 
@@ -236,7 +245,19 @@ def test_duplicate_scenario_ids_are_rejected() -> None:
         pilot.validate(record)
 
 
-@pytest.mark.parametrize("field", ["password", "token", "email", "secret", "smtp_password", "access_token", "refresh_token", "user_email"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "password",
+        "token",
+        "email",
+        "secret",
+        "smtp_password",
+        "access_token",
+        "refresh_token",
+        "user_email",
+    ],
+)
 def test_credential_shaped_fields_are_forbidden(field) -> None:
     record = _record()
     record["preconditions"][0][field] = "x"
