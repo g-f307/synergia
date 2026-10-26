@@ -44,7 +44,11 @@ def validate_contract(root: Path) -> dict[str, Any]:
         raise ValueError("homologation contract is not ready")
 
     allowed = set(contract.get("logging", {}).get("allowed_fields", []))
-    unsafe = allowed & SENSITIVE_FIELDS
+    unsafe = {
+        field
+        for field in allowed
+        if any(marker in field.casefold() for marker in SENSITIVE_FIELDS)
+    }
     if unsafe:
         raise ValueError(f"sensitive field in logging allowlist: {sorted(unsafe)}")
 
@@ -60,10 +64,19 @@ def validate_contract(root: Path) -> dict[str, Any]:
     return contract
 
 
-def _alert_names_and_runbooks(text: str) -> tuple[set[str], set[str]]:
-    names = set(re.findall(r"^\s*- alert:\s*([A-Za-z0-9_]+)\s*$", text, re.M))
-    runbooks = set(re.findall(r"^\s*runbook:\s*(\S+)\s*$", text, re.M))
-    return names, runbooks
+def _alert_runbooks(text: str) -> dict[str, str]:
+    """Map each alert to its own runbook annotation."""
+    matches = list(re.finditer(r"^\s*- alert:\s*([A-Za-z0-9_]+)\s*$", text, re.M))
+    mapping: dict[str, str] = {}
+    for position, match in enumerate(matches):
+        end = (
+            matches[position + 1].start() if position + 1 < len(matches) else len(text)
+        )
+        block = text[match.end() : end]
+        runbook = re.search(r"^\s*runbook:\s*(\S+)\s*$", block, re.M)
+        if runbook is not None:
+            mapping[match.group(1)] = runbook.group(1)
+    return mapping
 
 
 def _dashboard_panels(document: dict[str, Any]) -> dict[str, str]:
@@ -76,11 +89,12 @@ def _dashboard_panels(document: dict[str, Any]) -> dict[str, str]:
     return panels
 
 
-def validate(root: Path) -> dict[str, Any]:
-    contract = validate_contract(root)
-    alerts_text = (root / ALERTS).read_text(encoding="utf-8")
-    alert_names, runbook_urls = _alert_names_and_runbooks(alerts_text)
-
+def validate_alerts(
+    root: Path, contract: dict[str, Any], alerts_text: str
+) -> set[str]:
+    """Validate existence and exact alert-to-runbook relationships."""
+    alert_runbooks = _alert_runbooks(alerts_text)
+    alert_names = set(alert_runbooks)
     expected_alerts = {item["name"] for item in contract["alerts"]}
     missing_alerts = expected_alerts - alert_names
     if missing_alerts:
@@ -92,8 +106,16 @@ def validate(root: Path) -> dict[str, Any]:
         if not runbook.is_file():
             raise ValueError(f"missing runbook: {item['runbook']}")
         expected_url_suffix = f"/blob/main/{item['runbook']}"
-        if not any(url.endswith(expected_url_suffix) for url in runbook_urls):
+        configured_url = alert_runbooks.get(item["name"], "")
+        if not configured_url.endswith(expected_url_suffix):
             raise ValueError(f"alert has no matching runbook URL: {item['name']}")
+    return expected_alerts
+
+
+def validate(root: Path) -> dict[str, Any]:
+    contract = validate_contract(root)
+    alerts_text = (root / ALERTS).read_text(encoding="utf-8")
+    expected_alerts = validate_alerts(root, contract, alerts_text)
 
     panels = _dashboard_panels(_load_json(root / DASHBOARD))
     dashboard_views: set[str] = set()

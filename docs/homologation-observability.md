@@ -25,8 +25,8 @@ O painel separa três sinais que não devem ser confundidos:
   ou ignoradas e alerta de taxa de rejeição;
 - **falha sistêmica:** painel `Journey outcomes (1h)`, readiness e alertas de
   falha de execução, HTTP, coleta ou dependência;
-- **orçamento de recurso:** painel `Ingestion memory budget`, que compara o pico
-  observado com o limite configurado para a ingestão.
+- **orçamento de recurso:** painel `Ingestion estimated memory budget`, que
+  compara a estimativa da última ingestão ao limite aplicado pelo mesmo modelo.
 
 Uma importação é rastreável sem consulta direta ao banco por
 `X-Correlation-ID`/`correlation_id` e `execution_id`. Os logs registram somente
@@ -50,9 +50,12 @@ entre documentação e configuração.
 
 O exercício mínimo tem três observações ordenadas: baseline pronta, falha com
 readiness `503` e recuperação com readiness `200`. O teste
-`test_storage_probe_controlled_failure_and_recovery` executa esse ciclo com um
-diretório temporário e sem dados de cliente. Banco, storage e worker/e-mail têm
-procedimentos próprios em [`runbooks/`](runbooks/homologation-observability.md).
+`test_storage_probe_controlled_failure_and_recovery` executa esse ciclo contra
+o endpoint real `/health/ready`, com um diretório temporário e sem dados de
+cliente. Nesta entrega, somente o cenário de storage é exercitado de ponta a
+ponta. Banco e worker/e-mail permanecem cenários documentados para a execução
+assistida no ambiente autorizado, com procedimentos próprios em
+[`runbooks/`](runbooks/homologation-observability.md).
 
 Em ambiente de homologação, cada exercício deve registrar apenas data, cenário,
 correlation ID, estados, tempos e responsável. Nunca anexar DSN, segredo,

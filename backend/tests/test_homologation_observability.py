@@ -17,7 +17,7 @@ def test_homologation_contract_matches_operational_assets():
 
     assert result["status"] == "ready_for_assisted_homologation"
     assert result["validated_alerts"] >= 10
-    assert result["validated_runbooks"] >= 6
+    assert result["validated_runbooks"] >= 7
     assert result["dashboard_views"] == {
         "business_rejections",
         "system_failures",
@@ -39,7 +39,15 @@ def test_contract_keeps_external_decisions_explicit():
 
 @pytest.mark.parametrize(
     "forbidden",
-    ["password", "authorization", "access_token", "refresh_token", "cell_value"],
+    [
+        "password",
+        "authorization",
+        "access_token",
+        "refresh_token",
+        "session_token",
+        "id_token",
+        "cell_value",
+    ],
 )
 def test_validator_rejects_sensitive_observability_fields(tmp_path, forbidden):
     contract = json.loads(
@@ -76,11 +84,22 @@ def test_controlled_storage_drill_proves_failure_and_recovery():
 
 
 def test_storage_probe_controlled_failure_and_recovery(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
     from app.observability.config import ObservabilityConfig
     from app.observability.health import probe_storage
 
     config = ObservabilityConfig("database", tmp_path / "storage", "x" * 32)
-    baseline = probe_storage(config)
+    monkeypatch.setattr(
+        "app.observability.routes.ObservabilityConfig.from_env", lambda: config
+    )
+    monkeypatch.setattr(
+        "app.observability.routes.critical_health",
+        lambda active: [probe_storage(active)],
+    )
+    client = TestClient(app)
+    baseline = client.get("/health/ready")
     original_write = Path.write_bytes
 
     def fail_health_write(path: Path, content: bytes) -> int:
@@ -90,21 +109,31 @@ def test_storage_probe_controlled_failure_and_recovery(tmp_path, monkeypatch):
 
     with monkeypatch.context() as failure:
         failure.setattr(Path, "write_bytes", fail_health_write)
-        unavailable = probe_storage(config)
-    recovered = probe_storage(config)
+        unavailable = client.get("/health/ready")
+    recovered = client.get("/health/ready")
 
     evidence = validation.evaluate_recovery_drill(
         scenario="storage_unavailable",
         observations=[
-            {"phase": "baseline", "status": "ok", "http_status": 200}
-            if baseline.status == "healthy"
-            else {},
-            {"phase": "failure", "status": "unavailable", "http_status": 503}
-            if unavailable.status == "unavailable"
-            else {},
-            {"phase": "recovery", "status": "ok", "http_status": 200}
-            if recovered.status == "healthy"
-            else {},
+            {
+                "phase": "baseline",
+                "status": "ok" if baseline.json()["status"] == "ready" else "invalid",
+                "http_status": baseline.status_code,
+            },
+            {
+                "phase": "failure",
+                "status": (
+                    "unavailable"
+                    if unavailable.json()["status"] == "not_ready"
+                    else "invalid"
+                ),
+                "http_status": unavailable.status_code,
+            },
+            {
+                "phase": "recovery",
+                "status": "ok" if recovered.json()["status"] == "ready" else "invalid",
+                "http_status": recovered.status_code,
+            },
         ],
     )
 
@@ -123,19 +152,44 @@ def test_controlled_drill_rejects_false_recovery():
         )
 
 
-def test_ingestion_metric_exposes_observed_peak_and_configured_budget(monkeypatch):
+def test_ingestion_metric_compares_estimate_with_the_same_configured_budget():
     from app.observability import metrics
 
-    monkeypatch.setattr(metrics, "peak_memory_bytes", lambda: 640_000_000)
-
-    peak = metrics.observe_ingestion(
+    estimate = metrics.observe_ingestion(
         outcome="completed",
         duration_seconds=2,
         rows_processed=10,
         rows_rejected=0,
+        estimated_memory_bytes=640_000_000,
         memory_budget_bytes=1_000_000_000,
     )
 
-    assert peak == 640_000_000
-    assert metrics.INGESTION_PEAK_MEMORY._value.get() == 640_000_000
+    assert estimate == 640_000_000
+    assert metrics.INGESTION_ESTIMATED_MEMORY._value.get() == 640_000_000
     assert metrics.INGESTION_MEMORY_BUDGET._value.get() == 1_000_000_000
+
+
+def test_alert_runbook_mapping_is_bound_to_each_alert():
+    alerts = (ROOT / "observability/prometheus/alerts.yml").read_text(encoding="utf-8")
+
+    mapping = validation._alert_runbooks(alerts)
+
+    assert mapping["SynergiaIngestionMemoryBudgetExceeded"].endswith(
+        "/docs/runbooks/ingestion-memory-budget.md"
+    )
+
+
+def test_validator_rejects_runbook_borrowed_from_another_alert():
+    contract = json.loads(
+        (ROOT / "docs/homologation-observability-contract.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    alerts = (ROOT / "observability/prometheus/alerts.yml").read_text(encoding="utf-8")
+    alerts = alerts.replace(
+        "/docs/runbooks/ingestion-memory-budget.md",
+        "/docs/runbooks/processing-interrupted.md",
+    )
+
+    with pytest.raises(ValueError, match="SynergiaIngestionMemoryBudgetExceeded"):
+        validation.validate_alerts(ROOT, contract, alerts)
