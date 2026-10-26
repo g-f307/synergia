@@ -148,6 +148,18 @@ groups:
           summary: An operational queue is not progressing
           runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
 
+      - alert: SynergiaIngestionMemoryBudgetExceeded
+        expr: |
+          synergia_ingestion_memory_budget_bytes > 0
+          and synergia_ingestion_peak_memory_bytes
+            > synergia_ingestion_memory_budget_bytes
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Ingestion exceeded its configured memory budget
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/processing-interrupted.md
+
       - alert: SynergiaApprovalBacklogOld
         expr: |
           synergia_queue_oldest_age_seconds{queue="approval"} > 86400

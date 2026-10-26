@@ -117,6 +117,7 @@ def _record_ingestion(
         rows_rejected=rows_rejected,
         reason=reason,
         allowed_reasons=frozenset(LIMIT_GUIDANCE),
+        memory_budget_bytes=run.budget.max_memory_bytes,
     )
     safe_log(
         logging.INFO if outcome == "completed" else logging.WARNING,

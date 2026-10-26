@@ -78,6 +78,11 @@ INGESTION_PEAK_MEMORY = Gauge(
     "Process peak resident memory observed when the last ingestion finished.",
     registry=REGISTRY,
 )
+INGESTION_MEMORY_BUDGET = Gauge(
+    "synergia_ingestion_memory_budget_bytes",
+    "Configured memory budget for the last ingestion.",
+    registry=REGISTRY,
+)
 
 _INGESTION_OUTCOMES = frozenset({"completed", "rejected", "failed"})
 
@@ -204,6 +209,7 @@ def observe_ingestion(
     rows_rejected: int,
     reason: str | None = None,
     allowed_reasons: frozenset[str] = frozenset(),
+    memory_budget_bytes: int | None = None,
 ) -> int | None:
     """Record one ingestion with bounded labels and return the peak memory."""
     safe_outcome = outcome if outcome in _INGESTION_OUTCOMES else "failed"
@@ -215,6 +221,8 @@ def observe_ingestion(
     peak = peak_memory_bytes()
     if peak is not None:
         INGESTION_PEAK_MEMORY.set(peak)
+    if memory_budget_bytes is not None:
+        INGESTION_MEMORY_BUDGET.set(max(memory_budget_bytes, 0))
     return peak
 
 

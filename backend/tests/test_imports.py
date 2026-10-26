@@ -868,6 +868,7 @@ def test_capacity_rejections_are_counted_by_stable_reason(api, monkeypatch) -> N
 def test_successful_import_records_duration_rows_and_peak_memory(api, kind) -> None:
     from app.observability.metrics import (
         INGESTION_DURATION,
+        INGESTION_MEMORY_BUDGET,
         INGESTION_PEAK_MEMORY,
         INGESTION_ROWS,
     )
@@ -889,6 +890,7 @@ def test_successful_import_records_duration_rows_and_peak_memory(api, kind) -> N
     assert processed._value.get() == rows_before + 7
     assert sum(bucket.get() for bucket in duration._buckets) == count_before + 1
     assert INGESTION_PEAK_MEMORY._value.get() > 0
+    assert INGESTION_MEMORY_BUDGET._value.get() > 0
 
 
 def test_upload_fails_closed_when_no_sheet_is_authorized(api, monkeypatch) -> None:
