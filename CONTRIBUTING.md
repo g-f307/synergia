@@ -74,12 +74,38 @@ git status --short
 O PR deve conter:
 
 - `Closes #<issue>`;
-- resumo objetivo do que mudou;
-- comandos realmente executados e seus resultados;
-- limitações e passos manuais;
-- impacto em API, dados, migrations, regras e documentação;
+- resumo executivo com o resultado e o valor da entrega;
+- problema anterior e comportamento esperado depois da mudança;
+- escopo organizado por responsabilidades lógicas, com fluxo ou tabela quando
+  houver três ou mais etapas relacionadas;
+- relação entre critérios de aceite, implementação e evidências;
+- comandos realmente executados, quantidade de testes e resultados;
+- roteiro reproduzível para validação manual, integrada ou operacional;
+- limitações, itens fora do escopo, decisões pendentes e passos manuais;
+- impacto em API, dados, migrations, segurança, observabilidade, frontend,
+  compatibilidade e documentação;
+- arquivos ou áreas principais e uma ordem sugerida de revisão quando o PR
+  atravessar mais de uma responsabilidade;
 - atualização da matriz quando uma capacidade ou estado mudar;
 - checklist de ausência de segredos, dados reais, caches e temporários.
+
+A profundidade da descrição deve ser proporcional à mudança:
+
+| Impacto do PR | Descrição mínima esperada |
+| --- | --- |
+| baixo e localizado | resultado, arquivos afetados, validação e limitações |
+| médio ou entre camadas | problema, fluxo, impactos, critérios de aceite, evidências e roteiro de revisão |
+| alto, transversal ou de release | resumo executivo, arquitetura/fluxo, contratos, segurança, operação, rollout/rollback, matriz de critérios, testes, portões e decisões pendentes |
+
+Quantidade de texto não substitui qualidade. A descrição deve permitir que o
+revisor entenda o comportamento, encontre os pontos de risco e reproduza a
+validação sem reconstruir o contexto pela leitura integral do diff. Não use
+frases genéricas como “ajustes diversos”, não cole apenas a lista de commits e
+não declare validações que não foram executadas.
+
+Se uma seção do template não for aplicável, registre `Não se aplica` e uma
+justificativa curta. Se o PR mudar de escopo durante a revisão, atualize a
+descrição antes de solicitar nova análise.
 
 Quando houver alteração visual, o PR também deve informar a tela equivalente
 usada como referência e preencher o checklist da
@@ -101,6 +127,8 @@ Uma issue pode ser encerrada quando todos os itens aplicáveis forem verdadeiros
 - CI com os quatro jobs verdes;
 - nenhuma credencial, segredo, dado real ou informação pessoal incluída;
 - nenhum cache, ambiente virtual, relatório local ou temporário versionado;
+- descrição do PR proporcional ao escopo, atualizada e suficiente para que o
+  revisor compreenda os riscos e reproduza a validação;
 - PR revisado e conversas bloqueantes resolvidas;
 - critérios de aceite comprovados no PR;
 - norma visual atendida ou desvios explicitamente justificados e aprovados,
