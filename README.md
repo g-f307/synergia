@@ -51,6 +51,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [checklist de revisão de segurança](docs/security-review-checklist.md);
 - [baseline de segurança HTTP e navegador](docs/http-security-baseline.md);
 - [observabilidade, sondas, métricas, alertas e painel técnico](docs/observability.md);
+- [contrato e exercícios de observabilidade da homologação](docs/homologation-observability.md);
 - [retenção, minimização e expurgo](docs/data-retention.md);
 - [backup, restauração e integridade](docs/data-recovery.md);
 - [runbooks operacionais](docs/runbooks/backup-restore.md);
