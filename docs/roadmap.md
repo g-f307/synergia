@@ -38,6 +38,11 @@ corpus reproduzível, correção da expiração de sessão, SMTP substituível,
 observabilidade e piloto assistido. O início dessa preparação não aprova a
 release candidate nem remove os portões corporativos da Etapa 5.
 
+A homologação assistida possui roteiro, ensaios sintéticos por cenário, checklist
+de suporte e registro de decisão do piloto em
+[stage-6-pilot.md](stage-6-pilot.md). A decisão permanece **não tomada**: depende
+da execução com os stakeholders e dos aceites do PO e do responsável técnico.
+
 A observabilidade da homologação possui contrato versionado, destinos locais
 temporários, painel, alertas, runbooks e exercício sintético de recuperação. A
 plataforma, retenção, grupos de acesso e SLOs corporativos continuam pendentes;

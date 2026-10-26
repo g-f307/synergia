@@ -61,6 +61,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [relatório final e demonstração reproduzível da Etapa 3](docs/stage-3-validation-report.md);
 - [relatório final, decisão e demonstração da Etapa 5](docs/stage-5-validation-report.md);
 - [roteiro operacional reproduzível da Etapa 5](docs/stage-5-demonstration.md);
+- [roteiro da homologação assistida e decisão do piloto da Etapa 6](docs/stage-6-pilot.md) e [checklist de suporte da janela](docs/runbooks/pilot-support-window.md);
 - [auditoria de paridade entre FastAPI e Angular](docs/web-api-parity.md);
 - [design system, ativos e fundação web](docs/web-design-system.md);
 - [norma obrigatória de implementação visual do frontend](docs/frontend-implementation-standard.md);
