@@ -778,3 +778,42 @@ def test_public_reference_is_not_confused_with_windows_path(release_root):
         release_root, observations=["Reference checked: https://example.invalid/pilot"]
     )
     assert pilot.validate(record, root=release_root)["decision"] == "release"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("schema_version", True),
+        ("schema_version", 1.0),
+        ("stage", 6.0),
+        ("issue", 146.0),
+    ],
+)
+def test_schema_header_requires_actual_integers(field, value, release_root):
+    record = _synthetic_release_record(release_root)
+    record[field] = value
+    with pytest.raises(ValueError, match="unsupported Stage 6 pilot schema"):
+        pilot.validate(record, root=release_root)
+
+
+def test_circular_evidence_symlink_is_rejected_clearly(release_root):
+    record = _synthetic_release_record(release_root)
+    path = release_root / "docs/evidence/stage-6/S-01.json"
+    path.unlink()
+    path.symlink_to(path.name)
+    with pytest.raises(ValueError, match="missing evidence"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("content", ["invalid JSON synthetic-only", "[]"])
+def test_cli_invalid_document_is_rejected_without_traceback(
+    content, tmp_path, monkeypatch, capsys
+):
+    path = tmp_path / "decision.json"
+    path.write_text(content)
+    monkeypatch.setattr(pilot, "DECISION", path)
+    assert pilot.main() == 1
+    output = capsys.readouterr()
+    assert json.loads(output.out) == {"error": "invalid Stage 6 pilot record"}
+    assert not output.err
+    assert content not in output.out

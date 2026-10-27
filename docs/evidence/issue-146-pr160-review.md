@@ -47,6 +47,14 @@ abaixo foi exercitada na revisão consolidada, além da leitura do código.
 - Datas futuras e links simbólicos para fora do repositório são recusados
   (`test_execution_metadata_and_result_contract`,
   `test_external_symlink_cannot_supply_execution_evidence`).
+- Na autorrevisão, foram conferidas 1.638 alterações de valores nas folhas do
+  registro, sem exceções inesperadas nesses casos. Dois casos complementares
+  revelaram lacunas e foram corrigidos: cabeçalhos que aceitavam booleanos ou
+  decimais em lugar de inteiros e links simbólicos circulares que causavam
+  `RuntimeError`. Há regressões específicas para ambos e para o CLI lendo JSON
+  inválido (`test_schema_header_requires_actual_integers`,
+  `test_circular_evidence_symlink_is_rejected_clearly`,
+  `test_cli_invalid_document_is_rejected_without_traceback`).
 - O relógio dos testes é fixo, sem dependência de SMTP, credenciais ou serviços
   externos. A fixture copia somente os arquivos de referência declarados no
   contrato, sem copiar todo `docs/`, arquivos ignorados ou planilhas locais.
@@ -58,8 +66,8 @@ Depois das correções:
 
 | Verificação | Resultado |
 | --- | --- |
-| `backend/.venv/bin/python -m pytest -q backend/tests/test_stage6_pilot.py` | **239 aprovados** (46 existentes e 193 adicionais) |
-| `backend/.venv/bin/python -m pytest -q -m 'not integration' backend/tests` | **1274 aprovados**, 672 testes de integração não selecionados; 15 avisos de depreciação Starlette |
+| `backend/.venv/bin/python -m pytest -q backend/tests/test_stage6_pilot.py` | **246 aprovados** (46 existentes e 200 adicionais) |
+| `backend/.venv/bin/python -m pytest -q -m 'not integration' backend/tests` | **1281 aprovados**, 672 testes de integração não selecionados; 15 avisos de depreciação Starlette |
 | `backend/.venv/bin/ruff check backend scripts` | Aprovado |
 | Validador Etapa 6 | `not_decided`, zero execuções, seis pré-condições pendentes, zero aceites |
 | Validadores Etapa 5, identidade e observabilidade da homologação | Aprovados; decisões externas continuam pendentes |

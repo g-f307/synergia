@@ -52,7 +52,9 @@ CREDENTIAL_PATTERN = re.compile(
     r"(?i)(?<![a-z])(password|passwd|secret|token|authorization|bearer|senha|segredo)"
     r"\b(?:\s*[:=]\s*|\s+)\S+"
 )
-INTERNAL_PATH_PATTERN = re.compile(r"(?<![\w/])/(?!/)[^\s]+|\b[a-zA-Z]:[\\/]|\\\\[^\s]+")
+INTERNAL_PATH_PATTERN = re.compile(
+    r"(?<![\w/])/(?!/)[^\s]+|\b[a-zA-Z]:[\\/]|\\\\[^\s]+"
+)
 COUNT_LABEL_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
 
 
@@ -100,10 +102,14 @@ def _check_evidence(
                 f"{subject} execution evidence must be under docs/evidence/"
             )
         target = root / pure
+        try:
+            inside_root = target.resolve().is_relative_to(root.resolve())
+        except (OSError, RuntimeError):
+            raise ValueError(f"{subject} references missing evidence") from None
         if (
             pure.is_absolute()
             or ".." in pure.parts
-            or not target.resolve().is_relative_to(root.resolve())
+            or not inside_root
             or not target.is_file()
         ):
             raise ValueError(f"{subject} references missing evidence")
@@ -267,7 +273,11 @@ def _validate_shape(document: Any) -> None:
 def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
     _validate_shape(document)
     if (
-        document.get("schema_version") != 1
+        any(
+            type(document.get(field)) is not int
+            for field in ("schema_version", "stage", "issue")
+        )
+        or document.get("schema_version") != 1
         or document.get("stage") != 6
         or document.get("issue") != 146
     ):
