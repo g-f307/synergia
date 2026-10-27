@@ -27,6 +27,7 @@ export class AppComponent {
   readonly menuOpen = signal(false);
   readonly isMobile = signal(this.mobileQuery.matches);
   readonly sidebarCollapsed = signal(localStorage.getItem('synergia.sidebar.collapsed') === 'true');
+  readonly tvMode = signal(this.router.url.split('?')[0] === '/tv');
   readonly currentNavigation = signal<NavigationContext>({ label: 'navigation.dashboard', icon: 'dashboard.svg' });
   readonly items: NavigationItem[] = [
     { label: 'navigation.dashboard', route: '/dashboard', permission: 'dashboard.read', icon: 'dashboard.svg', implemented: true },
@@ -47,6 +48,7 @@ export class AppComponent {
     this.destroyRef.onDestroy(() => this.mobileQuery.removeEventListener('change', this.syncMobile));
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe((event) => {
       this.menuOpen.set(false);
+      this.tvMode.set(event.urlAfterRedirects.split('?')[0] === '/tv');
       this.currentNavigation.set(this.navigationContextFor(event.urlAfterRedirects));
       if (this.session.isAuthenticated() && this.session.hasPermission('notification.read')) this.notifications.refreshUnreadCount();
       setTimeout(() => document.getElementById('main-content')?.focus({ preventScroll: true }));

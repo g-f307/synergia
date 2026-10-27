@@ -29,6 +29,11 @@ export const routes: Routes = [
     loadComponent: () => import('./domains/dashboard/dashboard.component').then((value) => value.DashboardComponent)
   },
   {
+    path: 'tv',
+    canActivate: [authenticatedGuard, permissionGuard('execution.read')],
+    loadComponent: () => import('./domains/tv/tv-monitor.component').then((value) => value.TvMonitorComponent)
+  },
+  {
     path: 'profile',
     canActivate: [authenticatedGuard],
     loadComponent: () => import('./features/profile.component').then((value) => value.ProfileComponent)

@@ -71,6 +71,36 @@ describe('AppComponent', () => {
     expect(executionsLink.querySelector('img')?.getAttribute('src')).toBe('/assets/icons/run.svg');
   });
 
+  it('offers TV Mode in the header only with execution access', () => {
+    authenticated.set(true);
+    executionPermission.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector('.tv-mode-button') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/tv');
+    expect(link.getAttribute('aria-label')).toContain('Modo TV');
+
+    executionPermission.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.tv-mode-button')).toBeNull();
+  });
+
+  it('removes the standard shell while the TV route owns the viewport', () => {
+    authenticated.set(true);
+    executionPermission.set(true);
+    profile.set({ display_name: 'Pessoa Sintética' });
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance as unknown as { tvMode: { set: (value: boolean) => void } };
+    component.tvMode.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.shell')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tv-shell')).not.toBeNull();
+  });
+
   it('adds the execution identifier to the executions context on a detail route', () => {
     authenticated.set(true);
     const fixture = TestBed.createComponent(AppComponent);

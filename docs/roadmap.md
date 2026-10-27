@@ -48,6 +48,12 @@ temporários, painel, alertas, runbooks e exercício sintético de recuperação
 plataforma, retenção, grupos de acesso e SLOs corporativos continuam pendentes;
 os limiares atuais servem apenas para medir e proteger a homologação assistida.
 
+O monitor operacional em Modo TV foi implementado para a validação com os
+stakeholders. Ele reutiliza o catálogo autorizado de execuções, sem criar dados
+ou uma API paralela, e permanece sujeito aos mesmos escopos organizacionais. A
+validação em ambiente de fábrica poderá ajustar densidade, intervalo e seleção
+dos painéis sem bloquear a primeira experiência de uso.
+
 Integrações corporativas definitivas e automação RPA permanecem planejadas e
 dependem de autorização formal.
 
