@@ -24,7 +24,9 @@ describe('ImportCreateComponent', () => {
         { source: 'N-FP', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
         { source: 'OWM', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
         { source: 'GMES/OQC', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
-        { source: 'TMS', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 }
+        { source: 'TMS', allowed_extensions: ['csv', 'json', 'xlsx'], max_bytes: 25 * 1024 * 1024 },
+        { source: 'WO Status', allowed_extensions: ['xlsx'], max_bytes: 64 * 1024 * 1024 },
+        { source: 'Total Decision', allowed_extensions: ['xlsx'], max_bytes: 25 * 1024 * 1024 }
       ],
       organizations: [{ id: 'org-1', organization_code: 'ORG-1', display_name: 'Organization 1' }]
     }));
@@ -243,6 +245,27 @@ describe('ImportCreateComponent', () => {
     component.selectSource('OWM');
     expect(component.acceptedExtensions()).toBe('.json');
     expect(component.fileError()).toBe('');
+  });
+
+  it('offers real workbook families and applies their backend policies', () => {
+    const fixture = TestBed.createComponent(ImportCreateComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const selector = fixture.nativeElement.querySelector('#import-source') as HTMLSelectElement;
+
+    expect([...selector.options].map((option) => option.value)).toContain('WO Status');
+    expect([...selector.options].map((option) => option.value)).toContain('Total Decision');
+
+    selector.value = 'WO Status';
+    selector.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(component.acceptedExtensions()).toBe('.xlsx');
+    expect(component.sizeLabel()).toBe('64 MiB');
+
+    const workbook = new File(['synthetic'], 'wo-status.xlsx');
+    component.selectFile({ target: { files: [workbook] } } as unknown as Event);
+    component.submit(new Event('submit'));
+    expect(upload).toHaveBeenCalledWith('WO Status', workbook, 'org-1');
   });
 
   it('revalidates a file selected while the upload policy is loading', () => {

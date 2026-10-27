@@ -1,4 +1,4 @@
-export const importSources = ['N-FP', 'OWM', 'GMES/OQC', 'TMS'] as const;
+export const importSources = ['N-FP', 'OWM', 'GMES/OQC', 'TMS', 'WO Status', 'Total Decision'] as const;
 export type ImportSource = typeof importSources[number];
 
 export interface ImportStatus {
