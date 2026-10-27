@@ -42,6 +42,35 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
   const executionId = page.url().split('/').pop() ?? '';
 
+  await page.route(/\/executions\?.*/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generated_at: '2026-10-27T03:00:00Z',
+        items: [
+          {
+            execution_id: executionId || 'e2e-active-execution',
+            organization_id: 'org-synthetic',
+            status: 'validating',
+            lifecycle: 'active',
+            attempt: 1,
+            source: 'N-FP',
+            file_types: ['xlsx'],
+            file_count: 1,
+            rows_read: 4,
+            error_count: 0,
+            warning_count: 0,
+            started_at: '2026-10-27T02:59:00Z',
+            finished_at: null
+          }
+        ],
+        pagination: { page: 1, page_size: 25, total: 1, pages: 1 },
+        sort: 'newest'
+      })
+    });
+  });
+
   await page.getByRole('link', { name: /abrir modo tv|open tv mode/i }).click();
   await expect(page).toHaveURL(/\/tv$/);
   await expect(page.locator('.shell')).toHaveCount(0);
@@ -86,6 +115,7 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   });
 
   await page.getByRole('button', { name: /execuções recentes|recent executions/i }).click();
+  await expect(page.locator('.tv-status[data-state="active"]').first()).toBeVisible();
   const executionsDarkAccessibility = await new AxeBuilder({ page }).analyze();
   expect(executionsDarkAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
   await page.setViewportSize({ width: 768, height: 1024 });
