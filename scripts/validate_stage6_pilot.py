@@ -93,7 +93,9 @@ def _check_execution_evidence(
     try:
         executed_at = datetime.fromisoformat(evidence["executed_at"])
     except (TypeError, ValueError) as error:
-        raise ValueError(f"{subject} evidence needs an ISO-8601 execution time") from error
+        raise ValueError(
+            f"{subject} evidence needs an ISO-8601 execution time"
+        ) from error
     if executed_at.tzinfo is None or executed_at.utcoffset() is None:
         raise ValueError(f"{subject} evidence execution time needs a timezone")
     if evidence["environment"] != "homologation":
