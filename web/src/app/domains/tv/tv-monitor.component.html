@@ -1,0 +1,64 @@
+<section class="tv-monitor" aria-labelledby="tv-title">
+  <header class="tv-header">
+    <div class="tv-brand">
+      <img src="/assets/logos/logo-negativa-horizontal.png" alt="SYNERGIA">
+      <span aria-hidden="true"></span>
+      <div><h1 id="tv-title">{{ i18n.t('tv.title') }}</h1><p>{{ i18n.t('tv.subtitle') }}</p></div>
+    </div>
+    <div class="tv-header-status">
+      <p aria-live="polite">
+        @if (result()) { {{ i18n.t('tv.updatedAt') }} <time [attr.datetime]="result()!.generated_at">{{ i18n.formatDate(result()!.generated_at,{dateStyle:'short',timeStyle:'short'}) }}</time> }
+        @else { {{ i18n.t('tv.waitingUpdate') }} }
+      </p>
+      <time class="tv-clock" [attr.datetime]="now().toISOString()">{{ clockLabel() }}</time>
+    </div>
+    <div class="tv-actions">
+      <button type="button" class="tv-icon-action tv-refresh" (click)="load()" [disabled]="refreshing()" [attr.aria-label]="i18n.t('tv.refresh')"><img src="/assets/icons/refresh.svg" alt="" aria-hidden="true"></button>
+      <button type="button" class="tv-icon-action" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button>
+      <button type="button" class="tv-fullscreen" (click)="requestFullscreen()">{{ i18n.t('tv.fullscreen') }}</button>
+      <button type="button" class="tv-exit" (click)="exit()" [attr.aria-label]="i18n.t('tv.exit')">{{ i18n.t('tv.exit') }}</button>
+    </div>
+  </header>
+
+  <div class="tv-toolbar">
+    <nav [attr.aria-label]="i18n.t('tv.panels')">
+      <button type="button" data-panel-target="executions" (click)="selectPanel('executions')" [attr.aria-pressed]="activePanel()==='executions'">{{ i18n.t('tv.executionsPanel') }}</button>
+      <button type="button" data-panel-target="sources" (click)="selectPanel('sources')" [attr.aria-pressed]="activePanel()==='sources'">{{ i18n.t('tv.sourcesPanel') }}</button>
+    </nav>
+    <p>{{ i18n.t('tv.autoRefresh') }}</p>
+  </div>
+
+  @if (state() === 'loading') {
+    <div class="tv-state" role="status"><img src="/assets/icons/processing.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.loading') }}</h2></div>
+  } @else if (state() === 'error') {
+    <div class="tv-state" role="alert"><img src="/assets/icons/state-unavailable.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.errorTitle') }}</h2><p>{{ i18n.t('tv.errorMessage') }}</p><button type="button" (click)="load()">{{ i18n.t('tv.tryAgain') }}</button></div>
+  } @else {
+    @if (state() === 'stale') { <p class="tv-stale" role="status">{{ i18n.t('tv.stale') }}</p> }
+    <main class="tv-stage">
+      <section data-panel="executions" [hidden]="activePanel()!=='executions'" aria-labelledby="tv-executions-heading">
+        <h2 id="tv-executions-heading" class="sr-only">{{ i18n.t('tv.executionsPanel') }}</h2>
+        <div class="tv-kpis" [attr.aria-label]="i18n.t('tv.summary')">
+          <article class="tv-kpi" data-tone="info"><span>{{ i18n.t('tv.active') }}</span><strong>{{ i18n.formatNumber(counts().active) }}</strong></article>
+          <article class="tv-kpi" data-tone="success"><span>{{ i18n.t('tv.completed') }}</span><strong>{{ i18n.formatNumber(counts().completed) }}</strong></article>
+          <article class="tv-kpi" data-tone="partial"><span>{{ i18n.t('tv.partial') }}</span><strong>{{ i18n.formatNumber(counts().partial) }}</strong></article>
+          <article class="tv-kpi" data-tone="error"><span>{{ i18n.t('tv.failed') }}</span><strong>{{ i18n.formatNumber(counts().failed) }}</strong></article>
+        </div>
+        @if (recent().length) {
+          <div class="tv-table-wrap">
+            <table class="tv-execution-table">
+              <thead><tr><th>{{ i18n.t('tv.execution') }}</th><th>{{ i18n.t('tv.source') }}</th><th>{{ i18n.t('tv.startedAt') }}</th><th>{{ i18n.t('tv.status') }}</th><th>{{ i18n.t('tv.rowsRead') }}</th></tr></thead>
+              <tbody>@for (item of recent(); track item.execution_id) {<tr><td class="tv-technical">{{ item.execution_id }}</td><td>{{ item.source || i18n.t('common.notAvailable') }}</td><td>{{ i18n.formatDate(item.started_at,{dateStyle:'short',timeStyle:'short'}) }}</td><td><span class="tv-status" [attr.data-state]="item.lifecycle">{{ statusLabel(item) }}</span></td><td>{{ i18n.formatNumber(item.rows_read) }}</td></tr>}</tbody>
+            </table>
+          </div>
+        } @else { <div class="tv-empty"><h3>{{ i18n.t('tv.emptyTitle') }}</h3><p>{{ i18n.t('tv.emptyMessage') }}</p></div> }
+      </section>
+
+      <section data-panel="sources" [hidden]="activePanel()!=='sources'" aria-labelledby="tv-sources-heading">
+        <div class="tv-panel-heading"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div><strong>{{ i18n.formatNumber(sourceSummaries().length) }}</strong></div>
+        @if (sourceSummaries().length) {
+          <div class="tv-source-grid">@for (source of sourceSummaries(); track source.name) {<article class="tv-source-card" [class.needs-attention]="source.attention>0"><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong><dl><div><dt>{{ i18n.t('tv.rowsRead') }}</dt><dd>{{ i18n.formatNumber(source.rowsRead) }}</dd></div><div><dt>{{ i18n.t('tv.latestActivity') }}</dt><dd>{{ i18n.formatDate(source.latestAt,{dateStyle:'short',timeStyle:'short'}) }}</dd></div><div><dt>{{ i18n.t('tv.attention') }}</dt><dd>{{ i18n.formatNumber(source.attention) }}</dd></div></dl></article>}</div>
+        } @else { <div class="tv-empty"><h3>{{ i18n.t('tv.noSourcesTitle') }}</h3><p>{{ i18n.t('tv.noSourcesMessage') }}</p></div> }
+      </section>
+    </main>
+  }
+</section>
