@@ -57,6 +57,7 @@ describe('TvMonitorComponent', () => {
     expect(panel.hidden).toBeFalse();
     expect(panel.querySelector('.tv-panel-heading')?.getAttribute('data-alignment')).toBe('start');
     expect(panel.querySelector('.tv-panel-heading > strong')).toBeNull();
+    expect(panel.querySelector('.tv-source-grid')?.getAttribute('data-layout')).toBe('comparison');
     expect(panel.textContent).toContain('N-FP');
     expect(panel.textContent).toContain('2 execuções observadas');
     const nfpCard = [...panel.querySelectorAll<HTMLElement>('.tv-source-card')]
@@ -65,6 +66,22 @@ describe('TvMonitorComponent', () => {
     expect(nfpCard?.querySelector('.tv-attention-ring')?.textContent).toContain('0 de 2');
     expect(panel.textContent).not.toContain('Disponível');
   });
+
+  it('shows the active page and advances its timed progress indicator', fakeAsync(() => {
+    createFixture();
+    response.next(executionPage());
+    fixture!.detectChanges();
+
+    const progress = fixture!.nativeElement.querySelector('.tv-page-progress') as HTMLElement;
+    expect(progress.querySelectorAll('.tv-page-segment').length).toBe(2);
+    expect(progress.querySelector('.tv-page-segment.is-active')?.getAttribute('data-progress-panel')).toBe('executions');
+    expect(progress.querySelector('.tv-page-fill')).not.toBeNull();
+
+    tick(15_000);
+    fixture!.detectChanges();
+
+    expect(progress.querySelector('.tv-page-segment.is-active')?.getAttribute('data-progress-panel')).toBe('sources');
+  }));
 
   it('refreshes automatically and replaces the displayed snapshot', fakeAsync(() => {
     createFixture();

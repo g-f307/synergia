@@ -39,6 +39,7 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
   readonly result = signal<ExecutionCatalogPage | null>(null);
   readonly state = signal<TvState>('loading');
   readonly activePanel = signal<TvPanel>('executions');
+  readonly carouselCycle = signal(0);
   readonly refreshing = signal(false);
   readonly now = signal(new Date());
   readonly recent = computed(() => this.result()?.items.slice(0, 6) ?? []);
@@ -148,9 +149,11 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
 
   private startCarousel(): void {
     this.stopCarousel();
+    this.carouselCycle.update((cycle) => cycle + 1);
     if (this.reduceMotion.matches || document.hidden) return;
     this.carouselTimer = window.setInterval(() => {
       this.activePanel.update((panel) => panel === 'executions' ? 'sources' : 'executions');
+      this.carouselCycle.update((cycle) => cycle + 1);
     }, 15_000);
   }
 

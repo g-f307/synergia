@@ -28,6 +28,15 @@
     <p>{{ i18n.t('tv.autoRefresh') }}</p>
   </div>
 
+  <div class="tv-page-progress" aria-hidden="true">
+    <span class="tv-page-segment" data-progress-panel="executions" [class.is-active]="activePanel()==='executions'">
+      <span class="tv-page-fill" [style.animation-name]="activePanel()==='executions' ? 'tv-page-fill-' + (carouselCycle()%2) : 'none'"></span>
+    </span>
+    <span class="tv-page-segment" data-progress-panel="sources" [class.is-active]="activePanel()==='sources'">
+      <span class="tv-page-fill" [style.animation-name]="activePanel()==='sources' ? 'tv-page-fill-' + (carouselCycle()%2) : 'none'"></span>
+    </span>
+  </div>
+
   @if (state() === 'loading') {
     <div class="tv-state" role="status"><img src="/assets/icons/processing.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.loading') }}</h2></div>
   } @else if (state() === 'error') {
@@ -56,7 +65,7 @@
       <section data-panel="sources" [hidden]="activePanel()!=='sources'" aria-labelledby="tv-sources-heading">
         <div class="tv-panel-heading" data-alignment="start"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div></div>
         @if (sourceSummaries().length) {
-          <div class="tv-source-grid">@for (source of sourceSummaries(); track source.name) {
+          <div class="tv-source-grid" data-layout="comparison">@for (source of sourceSummaries(); track source.name) {
             <article class="tv-source-card" [class.needs-attention]="source.attention>0">
               <header><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong></header>
               <div class="tv-source-visuals">
