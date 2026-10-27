@@ -16,7 +16,7 @@ foram alinhadas na #69 e são verificadas separadamente na
 | `detalhe-pendencia.html` | contexto, histórico, observações, execução e decisão | ID da pendência | reprocessar, atribuir, anotar, aprovar/rejeitar | contexto somente leitura #62; decisão, atribuição e anotação são adiadas |
 | `relatorios.html` | catálogo, cards, histórico e paginação | organização, tipo, estado, execução, ordenação e página | atualizar, gerar, visualizar e exportar | implementado #78 com filtros do contrato real |
 | `visualizar-relatorio.html` | resumo, abas de dados e histórico e paginação | ID, versão, aba e página | voltar, navegar para entidades, cancelar e exportar | implementado #78 sobre snapshots persistidos |
-| `configuracoes.html` | seletores, toggles e parâmetros bloqueados | tema, densidade, fonte, TV, atualização, período e tamanho de página | salvar preferências e solicitar acesso | `/profile` persiste densidade e escala na #108; período, página, atualização, TV e solicitação permanecem adiados |
+| `configuracoes.html` | seletores, toggles e parâmetros bloqueados | tema, densidade, fonte, TV, atualização, período e tamanho de página | salvar preferências e solicitar acesso | `/profile` persiste densidade e escala na #108; período, página, atualização e solicitação permanecem adiados; TV tornou-se rota própria na #147 |
 
 O menu observado contém Dashboard, Consulta, Monitor, Pendências, Relatórios e
 Configurações. A navegação alvo substitui Relatórios por Nova importação durante
@@ -39,6 +39,7 @@ a Etapa 3 e renomeia Configurações para Perfil e preferências.
 | `/admin` e rotas filhas | ausente | `/admin/users`, `/admin/access/*` | `access.admin` / global | implementado #106: gestão de usuários, grupos, papéis, associações e permissões efetivas |
 | `/reports` e detalhe | páginas de relatório | `/reports`, `/reports/policy` e versões/exportação | `report.read`, `report.generate`, `report.export`, `report.cancel` / `org` | implementado #78 |
 | `/notifications` | ícone de notificação | `/notifications`, contador e leitura | `notification.read` + permissão do recurso / `org` | implementado #79; somente canal interno |
+| `/tv` | `monitor.html` adaptado para longa distância | `GET /executions` | `execution.read` / `org` | implementado #147; atualização automática, rotação acessível e atividade observada por fonte |
 | `/admin/notification-templates` e detalhe | ausente | `/admin/notification-templates/*` | `access.admin` / global | implementado #110; versões publicadas imutáveis, sem criação manual de ocorrências |
 
 O inventário integral e validável de endpoints está em
@@ -73,7 +74,7 @@ O inventário integral e validável de endpoints está em
 | aprovação, rejeição, atribuição e decisão OQC | remover da etapa | Etapa 4 | decisão registrada |
 | relatórios e exportação final | implementado com CSV/JSON gerados pelo backend | #77/#78 | catálogo, versão, estados e exportação segura cobertos |
 | notificações externas | remover da etapa | Etapa 4 | decisão registrada |
-| Modo TV | adiar | futura | decisão registrada |
+| Modo TV | implementado | #147 | catálogo autorizado, atualização automática, tela cheia, estados de falha e redução de movimento cobertos |
 
 ## Critério de atualização
 

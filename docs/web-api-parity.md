@@ -70,7 +70,7 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
 
 - catálogo paginado de execuções: #107;
 - leitura administrativa de sessões: adiada até permissão explícita; sessões próprias implementadas na #109;
-- Modo TV: adiado;
+- Modo TV: implementado na #147 sobre o catálogo autorizado de execuções;
 - conectores corporativos e RPA: Etapa 6, ainda não autorizada.
 
 Notificações já emitidas não são CRUD administrativo: são ocorrências
@@ -88,7 +88,8 @@ do perfil; respostas antigas ou desconhecidas recebem fallback visual seguro.
 Tamanho padrão de página, período padrão de consultas e atualização automática
 foram adiados: exigem semântica por jornada, limites operacionais e critérios de
 atualização antes de virarem controles. Tema permanece uma opção local do shell,
-sem contrato de sincronização. Modo TV continua fora do escopo.
+sem contrato de sincronização. O Modo TV é uma rota operacional própria e não
+uma preferência persistida do perfil.
 
 ## Verificação automática
 

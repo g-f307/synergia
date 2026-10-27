@@ -1,6 +1,6 @@
 {
-  "version": "1.3.0",
-  "issue": 110,
+  "version": "1.4.0",
+  "issue": 147,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
     "loading",
@@ -46,7 +46,6 @@
   ],
   "planned_capabilities": [
     {"id": "admin-session-management", "status": "deferred", "target": "future-admin-session-permission", "decision": "Leitura administrativa de sessões não consta da matriz de acesso; não há interface nem listagem de terceiros sem permissão específica."},
-    {"id": "tv-mode", "status": "deferred", "target": "future-tv-mode", "decision": "Permanece adiado até possuir requisitos de autorização, atualização, exposição e acessibilidade."},
     {"id": "corporate-integrations-and-rpa", "status": "deferred", "target": "stage-6", "decision": "Conectores e RPA dependem de autorização formal para entrada na Etapa 6."}
   ],
   "routes": [
@@ -55,7 +54,7 @@
       "route": "/login",
       "status": "implemented",
       "issue": 44,
-      "prototype_pages": [],
+      "prototype_pages": ["monitor.html"],
       "menu": null,
       "permission": "public",
       "scope": "public",
@@ -149,13 +148,34 @@
       "menu": "Execucoes",
       "permission": "execution.read",
       "scope": "org",
-      "evidence": ["web/src/app/domains/executions/execution.service.ts"],
+      "evidence": [
+        "web/src/app/domains/tv/tv-monitor.component.ts",
+        "web/src/app/domains/executions/execution.service.ts"
+      ],
       "endpoints": [
         {"method": "GET", "path": "/executions", "permission": "execution.read"}
       ],
       "url_state": [],
       "states": ["empty"],
       "owner": "domains/executions"
+    },
+    {
+      "id": "tv-mode",
+      "route": "/tv",
+      "status": "implemented",
+      "exposure": "full",
+      "issue": 147,
+      "prototype_pages": [],
+      "menu": null,
+      "permission": "execution.read",
+      "scope": "org",
+      "evidence": ["web/src/app/domains/executions/execution.service.ts"],
+      "endpoints": [
+        {"method": "GET", "path": "/executions", "permission": "execution.read"}
+      ],
+      "url_state": [],
+      "states": ["loading", "empty", "stale", "error", "forbidden", "unavailable"],
+      "owner": "domains/tv"
     },
     {
       "id": "execution-detail",

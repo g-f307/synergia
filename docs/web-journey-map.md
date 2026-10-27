@@ -178,17 +178,25 @@ chaves. Mudança concorrente em arquivo compartilhado exige combinação prévia
 
 ## Modo TV
 
-O Modo TV é **adiado**. Ele não é necessário para o fluxo login → upload →
-execução → consulta → pendência, não possui requisito de autorização próprio e
-ampliaria o escopo de responsividade, atualização e acessibilidade. A #56 deve
-preservar componentes capazes de compor painéis, mas não oferecer botão ou
-preferência de Modo TV. Uma issue futura deverá definir páginas permitidas,
-atualização, proteção contra exposição e aceite do PO.
+O Modo TV foi implementado na #147 como monitor operacional autenticado em
+`/tv`. A entrada no cabeçalho e a própria rota exigem `execution.read`; os dados
+continuam limitados às organizações autorizadas pelo catálogo de execuções. A
+tela ocupa o viewport sem o shell convencional, atualiza o snapshot a cada 30
+segundos, alterna painéis a cada 15 segundos e oferece atualização manual,
+tela cheia e saída explícita para o dashboard.
+
+O painel apresenta indicadores e execuções recentes, além de um agrupamento da
+atividade observada por fonte. Esse agrupamento não afirma disponibilidade ou
+saúde técnica da fonte, pois não existe contrato de API para isso. Falha após
+uma carga bem-sucedida mantém o último snapshot marcado como desatualizado; a
+primeira falha usa estado de erro recuperável. A rotação respeita redução de
+movimento e pausa quando a página não está visível. Sessão anônima, playlist
+administrável e novo contrato de saúde de fontes permanecem fora do escopo.
 
 ## Revisão humana
 
 Antes do merge, o PO e ao menos um responsável técnico devem registrar no PR:
 
 - aceite das rotas e decisões `WEB-G01` a `WEB-G10`;
-- concordância com o contrato real de relatórios e com o adiamento de decisão humana e Modo TV;
+- concordância com o contrato real de relatórios e com o adiamento de decisão humana;
 - confirmação de que o protótipo continua referência funcional congelada.
