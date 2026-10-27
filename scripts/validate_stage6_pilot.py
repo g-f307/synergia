@@ -52,7 +52,7 @@ CREDENTIAL_PATTERN = re.compile(
     r"(?i)(?<![a-z])(password|passwd|secret|token|authorization|bearer|senha|segredo)"
     r"\b(?:\s*[:=]\s*|\s+)\S+"
 )
-INTERNAL_PATH_PATTERN = re.compile(r"(?<![\w/])/(?!/)[^\s]+|[a-zA-Z]:[\\/]|\\\\[^\s]+")
+INTERNAL_PATH_PATTERN = re.compile(r"(?<![\w/])/(?!/)[^\s]+|\b[a-zA-Z]:[\\/]|\\\\[^\s]+")
 COUNT_LABEL_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
 
 

@@ -80,8 +80,9 @@ dados reais.
   PC-06 registra `smtp: included`;
 - falha em qualquer cenário obrigatório impede a liberação, exceto S-12 quando
   o SMTP foi incluído: essa falha exige `release_with_limitations` e uma
-  limitação registrada. `release` exige todos os cenários obrigatórios
-  aprovados;
+  limitação `accepted`, com `scenarios: ["S-12"]`, responsável e prazo.
+  Uma limitação de outro cenário, ou ainda `open`, não justifica essa exceção.
+  `release` exige todos os cenários obrigatórios aprovados;
 - critérios AC-01–AC-09 resolvidos: todos devem estar `accepted`, exceto
   AC-08, que deve estar `ci_gate`; trocar esses estados entre critérios também
   impede a liberação. `rehearsed`, `pending` e `blocked` não autorizam
@@ -96,11 +97,22 @@ dados reais.
   sanitizado são verificados pelo validador. O registro contém exatamente
   `scenario_id`, `status`, `sanitized`, `executed_at` (ISO-8601 com fuso),
   `environment` (`homologation`), `responsible_role`, `counts` (inteiros não
-  negativos), `codes` e `observations` sanitizadas;
+  negativos), `codes` e `observations` sanitizadas. O horário não pode estar no
+  futuro, e links simbólicos para fora do repositório são recusados;
+- pelo menos um resultado deve estar preenchido: uma contagem (inclusive zero
+  quando esse for o resultado observado), um código ou uma observação não vazia.
+  Texto em branco não representa resultado;
+- contagens usam rótulos técnicos `[a-z][a-z0-9_]{0,63}` e valores inteiros não
+  negativos, sem booleanos; códigos usam `[A-Z0-9_.-]{1,64}`;
 - campos com forma de credencial (`password`, `token`, `secret`, `email`,
-  `authorization`).
+  `authorization`), inclusive nomes compostos. E-mails, formatos comuns de
+  credencial com separador ou espaço e caminhos absolutos Unix, Windows e UNC
+  são recusados em textos e rótulos, incluindo justificativas e observações.
 
-`block` exige apenas o motivo: bloquear nunca depende de aceite.
+`block` exige motivo, sem depender de aceite ou conclusão dos cenários; a
+estrutura do registro e as evidências já declaradas continuam sendo validadas.
+JSON malformado, tipos incorretos e referências inválidas impedem a validação.
+O comando retorna código 1 com erro genérico, sem imprimir o conteúdo recebido.
 
 ## Como registrar a execução assistida
 
@@ -122,6 +134,44 @@ dados reais.
 
 A janela de uso segue o
 [checklist de suporte](runbooks/pilot-support-window.md).
+
+## Modelo de registro de execução
+
+O modelo abaixo **não é evidência de execução**. Seus marcadores são
+deliberadamente inválidos para o validador. Preencha somente após a execução,
+com o cenário, instante e resultados realmente observados, e salve no arquivo
+dedicado correspondente. Os três campos de resultados são obrigatórios, mas
+somente um precisa conter resultado; os demais podem ficar vazios.
+
+```json
+{
+  "scenario_id": "S-XX",
+  "status": "<passed ou failed observado>",
+  "sanitized": true,
+  "executed_at": "<instante real ISO-8601 com fuso>",
+  "environment": "homologation",
+  "responsible_role": "stakeholder",
+  "counts": {"records_checked": "<inteiro observado>"},
+  "codes": [],
+  "observations": []
+}
+```
+
+Papéis permitidos: `stakeholder`, `product_owner`, `technical_owner`,
+`facilitator`, `platform` e `identity`. Observações devem descrever resultados
+agregados, como o retorno ao login público ou a rejeição controlada. Use códigos
+técnicos para registrar respostas; mantenha nomes, conteúdo de células,
+credenciais e caminhos de infraestrutura fora do registro.
+
+O validador comprova **estrutura e consistência**, não a autenticidade de uma
+execução ou de um aceite. A revisão humana deve conferir os resultados, a
+participação dos stakeholders e os aceites no PR. Os filtros reconhecem formatos
+comuns de informação sensível; sua aprovação não substitui a revisão de
+privacidade. Os arquivos temporários gerados por testes são exclusivamente
+sintéticos e não atualizam o registro oficial.
+
+A revisão consolidada e os testes das quatro rodadas estão registrados em
+[issue-146-pr160-review.md](evidence/issue-146-pr160-review.md).
 
 ## Fora do escopo
 

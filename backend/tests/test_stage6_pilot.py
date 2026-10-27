@@ -770,3 +770,11 @@ def test_criterion_status_cannot_be_swapped(criterion_index, release_root):
     criterion["status"] = "accepted" if criterion["id"] == "AC-08" else "ci_gate"
     with pytest.raises(ValueError, match="AC-01"):
         pilot.validate(record, root=release_root)
+
+
+def test_public_reference_is_not_confused_with_windows_path(release_root):
+    record = _synthetic_release_record(release_root)
+    _replace_execution_evidence(
+        release_root, observations=["Reference checked: https://example.invalid/pilot"]
+    )
+    assert pilot.validate(record, root=release_root)["decision"] == "release"

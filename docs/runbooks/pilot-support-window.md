@@ -11,6 +11,8 @@ segurança de imediato.
 
 - [ ] PC-01 a PC-06 de [`stage-6-pilot-decision.json`](../stage-6-pilot-decision.json) estão `ready`.
 - [ ] `python scripts/validate_stage6_pilot.py` passa.
+- [ ] A execução do validador foi entendida como conferência do registro;
+      a autorização da janela e os aceites humanos foram conferidos separadamente.
 - [ ] Snapshot de banco e arquivos feito e restauração validada em ambiente vazio
       ([backup e restauração](backup-restore.md)).
 - [ ] Login local com data de fim registrada, ou identidade corporativa
@@ -51,7 +53,13 @@ o motivo e o estado final em `docs/evidence/` sem dados reais.
 ## Depois da janela
 
 - [ ] Registrar cenários `passed`/`failed` e evidências sanitizadas.
+- [ ] Usar o [modelo de execução](../stage-6-pilot.md#modelo-de-registro-de-execução),
+      preenchendo horário, papel responsável e pelo menos um resultado observado;
+      revisar a privacidade antes de versionar.
 - [ ] Registrar defeitos (severidade, estado, responsável) e limitações
       (responsável e prazo).
 - [ ] Registrar a decisão e o motivo; aceites do PO e do técnico no PR.
+- [ ] Se SMTP incluído falhou, somente considerar `release_with_limitations`
+      com limitação aceita vinculada a S-12, responsável e prazo, além dos
+      demais critérios. Falha nos cenários S-01–S-11 impede a liberação.
 - [ ] Encerrar ou revogar o login local conforme a regra de fim.
