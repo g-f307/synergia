@@ -33,7 +33,7 @@ async function login(page: import('@playwright/test').Page, email = operatorEmai
 
 async function openPending(page: import('@playwright/test').Page) {
   await page.locator('a[href="/pending-items"]').click();
-  await page.locator(`a[href^="/pending-items/${pendingId}"]`).click();
+  await page.locator(`a[href^="/pending-items/${pendingId}?"]`).click();
   await expect(page).toHaveURL(new RegExp(`/pending-items/${pendingId}`));
 }
 
