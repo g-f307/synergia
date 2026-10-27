@@ -38,11 +38,19 @@ mesmo conteúdo recebe `duplicate_file` e aponta para a execução original.
 
 Antes da homologação dessas fontes, aplique as migrations `0031` e `0032` e
 mantenha os limites medidos de `WO Status`: até 64 MiB no arquivo, 640 MiB
-descompactados, 1 GiB estimado para o pipeline e 900 segundos. A execução local
-autorizada do workbook representativo observou cerca de 688 MiB de RSS e 190
-segundos; o contêiner deve possuir margem acima desses valores. O rollback das
-migrations deve ocorrer antes de qualquer ingestão dessas famílias, conforme os
-scripts de rollback recusam remover restrições que já possuem dados associados.
+descompactados, 1 GiB estimado para o modelo do pipeline e 900 segundos. A jornada
+HTTP autenticada do workbook representativo, incluindo persistência e consulta,
+observou pico de 1.631.219.712 bytes de RSS (aprox. 1,52 GiB) e 410 segundos com
+um worker. Esse RSS não é a mesma grandeza da estimativa do pipeline; reserve ao
+menos 2 GiB para o contêiner durante a homologação e monitore o consumo real. O
+rollback das migrations deve ocorrer antes de qualquer ingestão dessas famílias,
+conforme os scripts de rollback recusam remover restrições que já possuem dados
+associados.
+
+A evidência sanitizada da jornada real está em
+[`evidence/issue-162-http-validation.json`](evidence/issue-162-http-validation.json).
+Ela contém apenas configuração, tempos, RSS e contagens agregadas; não inclui
+workbooks, nomes originais, credenciais, respostas brutas nem valores de células.
 
 Os testes usam dados sintéticos equivalentes às fixtures homologadas em
 `data/synthetic/fixtures/homologated-workbook/` e às famílias congeladas em

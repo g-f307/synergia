@@ -99,6 +99,11 @@ e estado final também são conferidos pelos testes de reconciliação.
 - [Volume sintético e configuração dos doze cenários](evidence/ingestion-v1/synthetic-volume.json).
 - [Execução integral WO Status — somente agregados](evidence/ingestion-v1/restricted-wo.json).
 - [Execução integral Total Decision — somente agregados](evidence/ingestion-v1/restricted-td.json).
+- [Jornada HTTP autenticada com persistência — somente agregados](evidence/issue-162-http-validation.json).
+
+O último artefato complementa as execuções restritas anteriores: ele comprova o
+envio autenticado pelo endpoint público, a persistência em PostgreSQL, a consulta
+posterior, a reconciliação agregada e a recusa idempotente de arquivo duplicado.
 
 Os relatórios não incluem nome/caminho/hash do workbook real, nomes de abas
 desconhecidas nem conteúdo de células. Apenas o corpus inventado possui hashes
