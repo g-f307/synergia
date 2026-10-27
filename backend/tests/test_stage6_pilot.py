@@ -67,9 +67,20 @@ def _synthetic_release_record(root: Path, outcome: str = "release") -> dict:
 def release_root(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    shutil.copytree(ROOT / "docs", root / "docs")
-    (root / "backend").symlink_to(ROOT / "backend", target_is_directory=True)
-    (root / "web").symlink_to(ROOT / "web", target_is_directory=True)
+    record = _record()
+    references = {
+        path
+        for group, field in (
+            ("dependencies", "evidence"),
+            ("scenarios", "rehearsal_evidence"),
+        )
+        for item in record[group]
+        for path in item[field]
+    }
+    for relative in references:
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
     return root
 
 
@@ -160,6 +171,7 @@ def test_included_smtp_failure_requires_limited_release(release_root: Path) -> N
             "state": "accepted",
             "owner": "product",
             "deadline": "before-scale-up",
+            "scenarios": ["S-12"],
         }
     ]
     result = pilot.validate(record, root=release_root)
@@ -249,9 +261,7 @@ def test_release_with_limitations_requires_registered_limitations(
 ) -> None:
     with pytest.raises(ValueError, match="requires registered limitations"):
         pilot.validate(
-            _synthetic_release_record(
-                release_root, "release_with_limitations"
-            ),
+            _synthetic_release_record(release_root, "release_with_limitations"),
             root=release_root,
         )
 
@@ -434,3 +444,172 @@ def test_execution_evidence_must_be_in_evidence_directory(release_root: Path) ->
 
     with pytest.raises(ValueError, match="under docs/evidence"):
         pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize(
+    "collection", ["preconditions", "dependencies", "scenarios", "acceptance_criteria"]
+)
+@pytest.mark.parametrize("mutation", ["empty", "missing", "duplicate", "unknown"])
+def test_review_collection_contract(collection, mutation, release_root):
+    record = _synthetic_release_record(release_root)
+    items = record[collection]
+    if mutation == "empty":
+        items.clear()
+    elif mutation == "missing":
+        items.pop()
+    elif mutation == "duplicate":
+        items.append(copy.deepcopy(items[0]))
+    else:
+        key = "issue" if collection == "dependencies" else "id"
+        items[0][key] = 999 if key == "issue" else "UNKNOWN"
+    with pytest.raises(ValueError):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("scenario_index", range(11))
+def test_every_core_scenario_remains_required(scenario_index, release_root):
+    record = _synthetic_release_record(release_root)
+    record["scenarios"][scenario_index]["required"] = False
+    with pytest.raises(ValueError, match="must remain required"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("outcome", ["release", "release_with_limitations"])
+@pytest.mark.parametrize("scenario_index", range(11))
+def test_core_failure_blocks_both_release_decisions(
+    outcome, scenario_index, release_root
+):
+    record = _synthetic_release_record(release_root, outcome)
+    record["limitations"] = [
+        {"id": "L-1", "state": "accepted", "owner": "platform", "deadline": "later"}
+    ]
+    scenario = record["scenarios"][scenario_index]
+    scenario["stakeholder_execution"]["status"] = "failed"
+    path = release_root / scenario["stakeholder_execution"]["evidence"][0]
+    path.write_text(json.dumps(_execution_evidence(scenario["id"], "failed")))
+    with pytest.raises(ValueError, match="required scenario not passed"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("criterion_index", range(9))
+@pytest.mark.parametrize("state", ["pending", "blocked", "rehearsed"])
+def test_every_unresolved_criterion_blocks_release(
+    criterion_index, state, release_root
+):
+    record = _synthetic_release_record(release_root)
+    record["acceptance_criteria"][criterion_index]["status"] = state
+    with pytest.raises(ValueError, match="AC-01"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "preconditions",
+        "dependencies",
+        "scenarios",
+        "acceptance_criteria",
+        "defects",
+        "limitations",
+        "signoffs",
+        "decision",
+    ],
+)
+@pytest.mark.parametrize("value", [None, "invalid", 1, True])
+def test_malformed_collections_are_rejected_clearly(field, value):
+    record = _record()
+    record[field] = value
+    with pytest.raises(ValueError):
+        pilot.validate(record)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "preconditions",
+        "dependencies",
+        "scenarios",
+        "acceptance_criteria",
+        "defects",
+        "limitations",
+    ],
+)
+def test_malformed_collection_members_are_rejected_clearly(field):
+    record = _record()
+    record[field] = [None]
+    with pytest.raises(ValueError):
+        pilot.validate(record)
+
+
+@pytest.mark.parametrize("state", ["pending", "rejected"])
+@pytest.mark.parametrize("role", ["product_owner", "technical_owner"])
+def test_each_signoff_is_required(role, state, release_root):
+    record = _synthetic_release_record(release_root)
+    record["signoffs"][role]["status"] = state
+    with pytest.raises(ValueError, match="approval"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("smtp", ["included", "excluded"])
+@pytest.mark.parametrize("state", ["pending", "passed", "failed"])
+@pytest.mark.parametrize("outcome", ["release", "release_with_limitations"])
+def test_smtp_release_matrix(smtp, state, outcome, release_root):
+    record = _synthetic_release_record(release_root, outcome)
+    record["preconditions"][-1]["smtp"] = smtp
+    scenario = record["scenarios"][-1]
+    scenario["required"] = smtp == "included"
+    scenario["stakeholder_execution"]["status"] = state
+    if state != "pending":
+        path = release_root / scenario["stakeholder_execution"]["evidence"][0]
+        path.write_text(json.dumps(_execution_evidence("S-12", state)))
+    if outcome == "release_with_limitations":
+        record["limitations"] = [
+            {
+                "id": "L-1",
+                "state": "accepted",
+                "owner": "platform",
+                "deadline": "before-scale-up",
+                "scenarios": ["S-12"],
+            }
+        ]
+    allowed = (state != "failed" if smtp == "excluded" else state == "passed") or (
+        smtp == "included"
+        and state == "failed"
+        and outcome == "release_with_limitations"
+    )
+    if allowed:
+        assert pilot.validate(record, root=release_root)["decision"] == outcome
+    else:
+        with pytest.raises(ValueError):
+            pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize("limitation_state", ["open", "accepted"])
+@pytest.mark.parametrize("linked_scenarios", [[], ["S-01"], ["S-12"]])
+def test_smtp_exception_needs_accepted_related_limitation(
+    limitation_state, linked_scenarios, release_root
+):
+    record = _synthetic_release_record(release_root, "release_with_limitations")
+    record["preconditions"][-1]["smtp"] = "included"
+    scenario = record["scenarios"][-1]
+    scenario["required"] = True
+    scenario["stakeholder_execution"]["status"] = "failed"
+    path = release_root / scenario["stakeholder_execution"]["evidence"][0]
+    path.write_text(json.dumps(_execution_evidence("S-12", "failed")))
+    record["limitations"] = [
+        {
+            "id": "L-1",
+            "state": limitation_state,
+            "scenarios": linked_scenarios,
+            "owner": "platform",
+            "deadline": "before-scale-up",
+        }
+    ]
+    if limitation_state == "accepted" and linked_scenarios == ["S-12"]:
+        assert (
+            pilot.validate(record, root=release_root)["decision"]
+            == "release_with_limitations"
+        )
+    else:
+        with pytest.raises(ValueError, match="accepted limitation linked to S-12"):
+            pilot.validate(record, root=release_root)

@@ -149,7 +149,69 @@ def _unique(items: list[Mapping[str, Any]], key: str, subject: str) -> set[Any]:
     return set(identifiers)
 
 
+def _validate_shape(document: Any) -> None:
+    """Reject malformed JSON with a safe validation error before inspecting values."""
+    if not isinstance(document, Mapping):
+        raise ValueError("pilot record must be an object")
+    for field in (
+        "preconditions",
+        "dependencies",
+        "scenarios",
+        "acceptance_criteria",
+        "defects",
+        "limitations",
+    ):
+        items = document.get(field)
+        if not isinstance(items, list) or any(
+            not isinstance(item, Mapping) for item in items
+        ):
+            raise ValueError("pilot collections must be lists of objects")
+        for item in items:
+            for key in ("id", "state", "severity", "owner", "deadline", "status"):
+                if key in item and (
+                    not isinstance(item[key], str) or not item[key].strip()
+                ):
+                    raise ValueError("pilot labels must be non-empty strings")
+            if field == "dependencies" and type(item.get("issue")) is not int:
+                raise ValueError("dependency issue must be an integer")
+            if field == "scenarios":
+                execution = item.get("stakeholder_execution")
+                if (
+                    not isinstance(execution, Mapping)
+                    or not isinstance(execution.get("status"), str)
+                    or type(item.get("required")) is not bool
+                ):
+                    raise ValueError("invalid scenario execution structure")
+            if "scenarios" in item and (
+                not isinstance(item["scenarios"], list)
+                or any(not isinstance(value, str) for value in item["scenarios"])
+            ):
+                raise ValueError("scenario references must be a list of labels")
+    decision = document.get("decision")
+    signoffs = document.get("signoffs")
+    if (
+        not isinstance(decision, Mapping)
+        or not isinstance(decision.get("pilot"), str)
+        or not isinstance(decision.get("reason"), str)
+        or not isinstance(decision.get("allowed"), list)
+        or any(not isinstance(value, str) for value in decision["allowed"])
+        or not isinstance(signoffs, Mapping)
+        or any(
+            not isinstance(value, Mapping) or not isinstance(value.get("status"), str)
+            for value in signoffs.values()
+        )
+    ):
+        raise ValueError("invalid decision or sign-off structure")
+    pc06 = next(
+        (item for item in document["preconditions"] if item.get("id") == "PC-06"),
+        {},
+    )
+    if not isinstance(pc06.get("smtp"), str):
+        raise ValueError("PC-06 must record smtp as included or excluded")
+
+
 def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
+    _validate_shape(document)
     if (
         document.get("schema_version") != 1
         or document.get("stage") != 6
@@ -216,9 +278,7 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
     if smtp_scenario.get("required") != (smtp_decision == "included"):
         raise ValueError("S-12 required flag must match the PC-06 SMTP decision")
     if any(
-        item.get("required") is not True
-        for item in scenarios
-        if item["id"] != "S-12"
+        item.get("required") is not True for item in scenarios if item["id"] != "S-12"
     ):
         raise ValueError("scenarios S-01 through S-11 must remain required")
 
@@ -235,6 +295,10 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
             item.get("owner") and item.get("deadline")
         ):
             raise ValueError(f"limitation needs owner and deadline: {item.get('id')}")
+        if set(item.get("scenarios", [])) - EXPECTED_SCENARIOS:
+            raise ValueError("limitation references unknown scenario")
+    _unique(document["defects"], "id", "defect")
+    _unique(document["limitations"], "id", "limitation")
 
     signoffs = document.get("signoffs", {})
     if set(signoffs) != REQUIRED_SIGNOFFS or any(
@@ -259,7 +323,7 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         raise ValueError("invalid pilot decision")
     if outcome == "not_decided":
         return outcome
-    if not decision.get("reason"):
+    if not decision["reason"].strip():
         raise ValueError("a pilot decision needs a recorded reason")
     if outcome == "block":
         return outcome
@@ -281,8 +345,7 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
     invalid_criteria = [
         item["id"]
         for item in document["acceptance_criteria"]
-        if item["status"]
-        != ("ci_gate" if item["id"] == "AC-08" else "accepted")
+        if item["status"] != ("ci_gate" if item["id"] == "AC-08" else "accepted")
     ]
     if invalid_criteria:
         raise ValueError(
@@ -299,9 +362,7 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         if item["id"] == "PC-06"
     )
     if failed and not (
-        failed == ["S-12"]
-        and smtp_included
-        and outcome == "release_with_limitations"
+        failed == ["S-12"] and smtp_included and outcome == "release_with_limitations"
     ):
         raise ValueError(
             "only failed included SMTP scenario S-12 may be accepted with limitations"
@@ -314,6 +375,11 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         raise ValueError("release with limitations must use its own decision")
     if outcome == "release_with_limitations" and not limitations:
         raise ValueError("release with limitations requires registered limitations")
+    if failed and not any(
+        item["state"] == "accepted" and "S-12" in item.get("scenarios", [])
+        for item in limitations
+    ):
+        raise ValueError("SMTP failure requires an accepted limitation linked to S-12")
     return outcome
 
 
