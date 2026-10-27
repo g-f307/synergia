@@ -11,6 +11,8 @@ const managerId = '63000000-0000-4000-8000-000000000003';
 const password = process.env.E2E_PASSWORD ?? 'synthetic-e2e-password-63';
 const fixture = path.resolve('../data/synthetic/fixtures/minimal-comprehensive/n-fp.xlsx');
 const qualityFixture = path.resolve('../data/synthetic/fixtures/minimal-comprehensive/gmes-oqc.csv');
+const woStatusFixture = path.resolve('../data/synthetic/ingestion-v1/wo-composite.xlsx');
+const totalDecisionFixture = path.resolve('../data/synthetic/ingestion-v1/td-edge.xlsx');
 let executionId = '';
 let pendingId = '';
 
@@ -131,6 +133,35 @@ test.describe.serial('integrated operational journey', () => {
     expect(observableOutput).not.toMatch(
       /eyJ[A-Za-z0-9_-]+\.eyJ|storage[_-]?path|local_password_hash|password|[A-Z]:\\Users\\/i,
     );
+  });
+
+  test('imports the real workbook families and keeps duplicate uploads idempotent', async ({ page }) => {
+    await login(page);
+    const imports = [
+      { source: 'WO Status', workbook: woStatusFixture },
+      { source: 'Total Decision', workbook: totalDecisionFixture },
+    ];
+    let woStatusExecution = '';
+
+    for (const item of imports) {
+      await page.goto('/imports/new');
+      await page.getByLabel(/fonte|source/i).selectOption(item.source);
+      const fileInput = page.locator('#import-file');
+      await expect(fileInput).toHaveAttribute('accept', '.xlsx');
+      await fileInput.setInputFiles(item.workbook);
+      await page.getByRole('button', { name: /enviar|upload/i }).click();
+      await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
+      await expect(page.getByText(item.source, { exact: true })).toBeVisible();
+      await expect(page.locator('.status-pill')).toContainText(/concluída com erros|completed with errors/i);
+      if (item.source === 'WO Status') woStatusExecution = page.url().split('/').pop() ?? '';
+    }
+
+    await page.goto('/imports/new');
+    await page.getByLabel(/fonte|source/i).selectOption('WO Status');
+    await page.locator('#import-file').setInputFiles(woStatusFixture);
+    await page.getByRole('button', { name: /enviar|upload/i }).click();
+    await expect(page.getByRole('status')).toContainText(/arquivo já importado|file already imported/i);
+    await expect(page.locator(`a[href="/imports/${woStatusExecution}"]`)).toBeVisible();
   });
 
   test('shows internal notifications and persists individual and batch reads', async ({ page }, testInfo) => {
