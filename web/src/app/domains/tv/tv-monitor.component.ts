@@ -16,6 +16,8 @@ interface SourceSummary {
   rowsRead: number;
   latestAt: string;
   attention: number;
+  executionShare: number;
+  attentionShare: number;
 }
 
 @Component({
@@ -54,7 +56,9 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
         executions: 0,
         rowsRead: 0,
         latestAt: item.started_at,
-        attention: 0
+        attention: 0,
+        executionShare: 0,
+        attentionShare: 0
       };
       current.executions += 1;
       current.rowsRead += item.rows_read;
@@ -62,9 +66,15 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
       if (new Date(item.started_at) > new Date(current.latestAt)) current.latestAt = item.started_at;
       grouped.set(item.source, current);
     }
-    return [...grouped.values()].sort((left, right) =>
+    const summaries = [...grouped.values()].sort((left, right) =>
       right.attention - left.attention || right.executions - left.executions || left.name.localeCompare(right.name)
     );
+    const total = summaries.reduce((sum, source) => sum + source.executions, 0);
+    return summaries.map((source) => ({
+      ...source,
+      executionShare: total ? Math.round(source.executions / total * 100) : 0,
+      attentionShare: source.executions ? Math.round(source.attention / source.executions * 100) : 0
+    }));
   });
 
   ngOnInit(): void {

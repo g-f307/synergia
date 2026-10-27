@@ -54,9 +54,24 @@
       </section>
 
       <section data-panel="sources" [hidden]="activePanel()!=='sources'" aria-labelledby="tv-sources-heading">
-        <div class="tv-panel-heading"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div><strong>{{ i18n.formatNumber(sourceSummaries().length) }}</strong></div>
+        <div class="tv-panel-heading" data-alignment="start"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div></div>
         @if (sourceSummaries().length) {
-          <div class="tv-source-grid">@for (source of sourceSummaries(); track source.name) {<article class="tv-source-card" [class.needs-attention]="source.attention>0"><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong><dl><div><dt>{{ i18n.t('tv.rowsRead') }}</dt><dd>{{ i18n.formatNumber(source.rowsRead) }}</dd></div><div><dt>{{ i18n.t('tv.latestActivity') }}</dt><dd>{{ i18n.formatDate(source.latestAt,{dateStyle:'short',timeStyle:'short'}) }}</dd></div><div><dt>{{ i18n.t('tv.attention') }}</dt><dd>{{ i18n.formatNumber(source.attention) }}</dd></div></dl></article>}</div>
+          <div class="tv-source-grid">@for (source of sourceSummaries(); track source.name) {
+            <article class="tv-source-card" [class.needs-attention]="source.attention>0">
+              <header><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong></header>
+              <div class="tv-source-visuals">
+                <div class="tv-volume-figure">
+                  <div><span>{{ i18n.t('tv.sourceShare') }}</span><strong>{{ source.executionShare }}%</strong></div>
+                  <div class="tv-volume-bar" role="img" [attr.aria-label]="i18n.t('tv.sourceShareLabel',{source:source.name,value:source.executionShare})"><span [style.width.%]="source.executionShare"></span></div>
+                </div>
+                <div class="tv-attention-figure">
+                  <div class="tv-attention-ring" role="img" [style.--attention-angle]="source.attentionShare * 3.6 + 'deg'" [attr.aria-label]="i18n.t('tv.attentionLabel',{attention:source.attention,total:source.executions})"><span>{{ i18n.t('tv.attentionRatio',{attention:source.attention,total:source.executions}) }}</span></div>
+                  <p>{{ i18n.t('tv.attentionExecutions') }}</p>
+                </div>
+              </div>
+              <dl><div><dt>{{ i18n.t('tv.rowsRead') }}</dt><dd>{{ i18n.formatNumber(source.rowsRead) }}</dd></div><div><dt>{{ i18n.t('tv.latestActivity') }}</dt><dd>{{ i18n.formatDate(source.latestAt,{dateStyle:'short',timeStyle:'short'}) }}</dd></div></dl>
+            </article>
+          }</div>
         } @else { <div class="tv-empty"><h3>{{ i18n.t('tv.noSourcesTitle') }}</h3><p>{{ i18n.t('tv.noSourcesMessage') }}</p></div> }
       </section>
     </main>

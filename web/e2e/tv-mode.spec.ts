@@ -57,6 +57,17 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
     contentType: 'image/png',
   });
 
+  await page.getByRole('button', { name: /atividade por fonte|activity by source/i }).click();
+  await expect(page.getByRole('heading', { name: /atividade recente por fonte|recent activity by source/i })).toBeVisible();
+  await expect(page.locator('.tv-volume-bar').first()).toBeVisible();
+  await expect(page.locator('.tv-attention-ring').first()).toBeVisible();
+  const sourcesAccessibility = await new AxeBuilder({ page }).analyze();
+  expect(sourcesAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
+  await testInfo.attach('tv-mode-sources', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
+
   await page.getByRole('button', { name: /alternar tema|toggle theme/i }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const darkAccessibility = await new AxeBuilder({ page }).analyze();
@@ -66,6 +77,7 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
     contentType: 'image/png',
   });
 
+  await page.getByRole('button', { name: /execuções recentes|recent executions/i }).click();
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.locator('.tv-monitor')).toBeVisible();
   await expect(page.getByText(executionId)).toBeVisible();

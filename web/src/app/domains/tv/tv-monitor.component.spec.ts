@@ -55,8 +55,14 @@ describe('TvMonitorComponent', () => {
     const panel = fixture!.nativeElement.querySelector('[data-panel="sources"]') as HTMLElement;
     expect(sourceButton.getAttribute('aria-pressed')).toBe('true');
     expect(panel.hidden).toBeFalse();
+    expect(panel.querySelector('.tv-panel-heading')?.getAttribute('data-alignment')).toBe('start');
+    expect(panel.querySelector('.tv-panel-heading > strong')).toBeNull();
     expect(panel.textContent).toContain('N-FP');
     expect(panel.textContent).toContain('2 execuções observadas');
+    const nfpCard = [...panel.querySelectorAll<HTMLElement>('.tv-source-card')]
+      .find((card) => card.querySelector('h3')?.textContent?.trim() === 'N-FP');
+    expect((nfpCard?.querySelector('.tv-volume-bar span') as HTMLElement).style.width).toBe('67%');
+    expect(nfpCard?.querySelector('.tv-attention-ring')?.textContent).toContain('0 de 2');
     expect(panel.textContent).not.toContain('Disponível');
   });
 
