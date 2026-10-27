@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "stage": 6,
+  "issue": 146,
+  "prepared_on": "2026-10-26",
+  "decision": {
+    "pilot": "not_decided",
+    "allowed": ["not_decided", "release", "release_with_limitations", "block"],
+    "reason": "A execução assistida com os stakeholders ainda não ocorreu; este registro só reúne os ensaios sintéticos e as pendências."
+  },
+  "preconditions": [
+    {"id": "PC-01", "description": "Janela de homologação, ambiente e responsável pela operação definidos", "owner": "product-owner-and-platform", "state": "pending"},
+    {"id": "PC-02", "description": "Usuários, papéis e organizações do piloto autorizados e provisionados", "owner": "identity", "state": "pending"},
+    {"id": "PC-03", "description": "Arquivos de homologação autorizados pelo responsável, mantidos fora do Git", "owner": "product-owner", "state": "pending"},
+    {"id": "PC-04", "description": "Identidade temporária ou corporativa autorizada e data de fim do login local registrada", "owner": "identity", "state": "pending"},
+    {"id": "PC-05", "description": "Destino de logs, métricas e alertas da homologação confirmado", "owner": "platform", "state": "pending"},
+    {"id": "PC-06", "description": "SMTP incluído ou excluído do roteiro aprovado do piloto", "owner": "product-owner", "state": "pending", "smtp": "excluded"}
+  ],
+  "dependencies": [
+    {"issue": 137, "subject": "Contratos dos workbooks reais", "state": "delivered", "evidence": ["docs/real-workbook-contracts.md"]},
+    {"issue": 138, "subject": "Leitura incremental com orçamento de recursos", "state": "delivered", "evidence": ["docs/xlsx-ingestion-budget.md"]},
+    {"issue": 139, "subject": "Adapter WO Status", "state": "delivered", "evidence": ["docs/real-workbook-contracts.md"]},
+    {"issue": 140, "subject": "Adapter Total Decision", "state": "delivered", "evidence": ["docs/total-decision-adapter.md"]},
+    {"issue": 141, "subject": "Corpus sanitizado, reconciliação e volume", "state": "delivered", "evidence": ["docs/ingestion-corpus-validation.md"]},
+    {"issue": 142, "subject": "Sessão expirada isolada do login público", "state": "delivered", "evidence": ["docs/authentication.md"]},
+    {"issue": 143, "subject": "SMTP substituível com Gmail de homologação", "state": "delivered", "evidence": ["docs/evidence/issue-143-smtp-homologation.md"]},
+    {"issue": 144, "subject": "Contrato de identidade corporativa", "state": "delivered", "evidence": ["docs/corporate-identity-contract.md"]},
+    {"issue": 145, "subject": "Observabilidade e runbooks da homologação", "state": "delivered", "evidence": ["docs/homologation-observability-contract.json"]}
+  ],
+  "scenarios": [
+    {
+      "id": "S-01", "required": true, "title": "Login, upload, execução, consulta, pendência e relatório",
+      "rehearsal_evidence": ["web/e2e/operational-flow.spec.ts", "docs/web-e2e-demonstration.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-02", "required": true, "title": "Expiração de sessão durante a jornada retorna ao login público sem contexto residual",
+      "rehearsal_evidence": ["web/e2e/operational-flow.spec.ts", "backend/tests/test_auth.py", "docs/authentication.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-03", "required": true, "title": "Arquivo válido",
+      "rehearsal_evidence": ["docs/ingestion-corpus-validation.md", "backend/tests/test_ingestion_corpus.py"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-04", "required": true, "title": "Arquivo parcialmente válido (deriva de cabeçalho, linhas inválidas)",
+      "rehearsal_evidence": ["docs/ingestion-corpus-validation.md", "backend/tests/test_ingestion_corpus.py"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-05", "required": true, "title": "Arquivo com registros duplicados",
+      "rehearsal_evidence": ["docs/ingestion-corpus-validation.md", "backend/tests/test_ingestion_corpus.py"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-06", "required": true, "title": "Arquivo corrompido ou inválido não derruba a aplicação",
+      "rehearsal_evidence": ["backend/tests/test_imports.py", "web/e2e/operational-flow.spec.ts", "docs/runbooks/invalid-file.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-07", "required": true, "title": "Arquivo acima do orçamento é rejeitado de forma estruturada",
+      "rehearsal_evidence": ["backend/tests/test_ingestion_budget.py", "backend/tests/test_ingestion_volume.py", "docs/xlsx-ingestion-budget.md", "docs/runbooks/ingestion-memory-budget.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-08", "required": true, "title": "Falha de uma organização não bloqueia nem expõe outra",
+      "rehearsal_evidence": ["web/e2e/operational-flow.spec.ts", "backend/tests/test_authorization_persistence.py", "docs/access-control-matrix.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-09", "required": true, "title": "Reconciliação, proveniência e reprocessamento",
+      "rehearsal_evidence": ["docs/ingestion-corpus-validation.md", "backend/tests/test_ingestion_corpus.py", "backend/tests/test_execution.py"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-10", "required": true, "title": "Logs, métricas e alertas permitem diagnosticar falha sem conteúdo sensível",
+      "rehearsal_evidence": ["docs/homologation-observability-contract.json", "docs/evidence/issue-145-observability-drill.md", "docs/runbooks/homologation-observability.md"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-11", "required": true, "title": "Backup, restauração e rollback exercitados",
+      "rehearsal_evidence": ["docs/runbooks/backup-restore.md", "docs/data-recovery-validation-report.md", "backend/tests/test_data_operations_persistence.py"],
+      "stakeholder_execution": {"status": "pending"}
+    },
+    {
+      "id": "S-12", "required": false, "title": "Notificação por e-mail (somente se fizer parte do roteiro aprovado)",
+      "rehearsal_evidence": ["docs/evidence/issue-143-smtp-homologation.md", "docs/smtp-email-provider.md"],
+      "stakeholder_execution": {"status": "pending"}
+    }
+  ],
+  "acceptance_criteria": [
+    {"id": "AC-01", "text": "Nenhum defeito crítico ou alto permanece sem tratamento acordado", "basis": "defects", "status": "pending"},
+    {"id": "AC-02", "text": "Arquivo inválido não derruba a aplicação nem bloqueia outras organizações", "basis": "scenarios", "scenarios": ["S-06", "S-08"], "status": "rehearsed"},
+    {"id": "AC-03", "text": "Resultados podem ser reconciliados com a entrada autorizada", "basis": "scenarios", "scenarios": ["S-03", "S-09"], "status": "rehearsed"},
+    {"id": "AC-04", "text": "Sessão expirada retorna ao login público sem contexto residual", "basis": "scenarios", "scenarios": ["S-02"], "status": "rehearsed"},
+    {"id": "AC-05", "text": "A operação identifica e diagnostica falha sem consultar conteúdo sensível", "basis": "scenarios", "scenarios": ["S-10"], "status": "rehearsed"},
+    {"id": "AC-06", "text": "Rollback e recuperação foram exercitados", "basis": "scenarios", "scenarios": ["S-11"], "status": "rehearsed"},
+    {"id": "AC-07", "text": "Stakeholders concluem o roteiro e registram aceite ou pendências", "basis": "signoffs", "status": "pending"},
+    {"id": "AC-08", "text": "CI, containers, E2E e segurança estão aprovados", "basis": "ci", "status": "ci_gate"},
+    {"id": "AC-09", "text": "A decisão final e as limitações são publicadas no repositório sem dados reais", "basis": "decision", "status": "pending"}
+  ],
+  "defects": [],
+  "limitations": [],
+  "signoffs": {
+    "product_owner": {"status": "pending", "record_at": "pull_request"},
+    "technical_owner": {"status": "pending", "record_at": "pull_request"}
+  }
+}
