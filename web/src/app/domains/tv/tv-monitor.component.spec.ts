@@ -4,6 +4,7 @@ import { Subject } from 'rxjs';
 
 import { ExecutionCatalogPage } from '../executions/execution.models';
 import { ExecutionService } from '../executions/execution.service';
+import { ApiFailure } from '../../shared/api/api-error';
 import { TvMonitorComponent } from './tv-monitor.component';
 
 describe('TvMonitorComponent', () => {
@@ -114,6 +115,56 @@ describe('TvMonitorComponent', () => {
     expect(fixture!.nativeElement.textContent).toContain('exec-active');
     expect(fixture!.nativeElement.querySelector('[role="status"]')?.textContent).toContain('desatualizados');
     expect(refresh.disabled).toBeFalse();
+  });
+
+  it('removes the previous snapshot when a refresh is forbidden', () => {
+    createFixture();
+    response.next(executionPage());
+    fixture!.detectChanges();
+    const next = new Subject<ExecutionCatalogPage>();
+    currentResponse = next;
+    const forbidden: ApiFailure = {
+      kind: 'forbidden', status: 403, code: 'access_denied', message: 'safe', correlationId: null, fields: []
+    };
+
+    (fixture!.nativeElement.querySelector('.tv-refresh') as HTMLButtonElement).click();
+    next.error(forbidden);
+    fixture!.detectChanges();
+
+    expect(fixture!.componentInstance.result()).toBeNull();
+    expect(fixture!.nativeElement.textContent).not.toContain('exec-active');
+    expect(fixture!.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Acesso negado');
+  });
+
+  it('stops rotating immediately when reduced motion is enabled and removes the listener', fakeAsync(() => {
+    let changeListener: ((event: MediaQueryListEvent) => void) | undefined;
+    const media = {
+      matches: false,
+      addEventListener: jasmine.createSpy('addEventListener').and.callFake((_type: string, listener: EventListener) => {
+        changeListener = listener as (event: MediaQueryListEvent) => void;
+      }),
+      removeEventListener: jasmine.createSpy('removeEventListener')
+    } as unknown as MediaQueryList;
+    spyOn(window, 'matchMedia').and.returnValue(media);
+
+    createFixture();
+    expect(media.addEventListener).toHaveBeenCalledWith('change', jasmine.any(Function));
+    changeListener?.({ matches: true } as MediaQueryListEvent);
+    tick(15_000);
+
+    expect(fixture!.componentInstance.activePanel()).toBe('executions');
+    fixture!.destroy();
+    fixture = undefined;
+    expect(media.removeEventListener).toHaveBeenCalledWith('change', jasmine.any(Function));
+  }));
+
+  it('leaves the shell as the only main landmark', () => {
+    createFixture();
+    response.next(executionPage());
+    fixture!.detectChanges();
+
+    expect(fixture!.nativeElement.querySelector('main')).toBeNull();
+    expect(fixture!.nativeElement.querySelector('.tv-stage')).not.toBeNull();
   });
 
   it('returns to the dashboard through an explicit accessible exit', () => {

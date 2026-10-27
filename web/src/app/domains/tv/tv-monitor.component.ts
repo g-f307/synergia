@@ -4,11 +4,12 @@ import { Subscription } from 'rxjs';
 
 import { ThemeService } from '../../core/theme.service';
 import { I18nService } from '../../shared/i18n/i18n.service';
+import { ApiFailure } from '../../shared/api/api-error';
 import { ExecutionCatalogItem, ExecutionCatalogPage } from '../executions/execution.models';
 import { ExecutionService } from '../executions/execution.service';
 
 type TvPanel = 'executions' | 'sources';
-type TvState = 'loading' | 'ready' | 'stale' | 'error';
+type TvState = 'loading' | 'ready' | 'stale' | 'error' | 'forbidden';
 
 interface SourceSummary {
   name: string;
@@ -84,6 +85,7 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
     this.clockTimer = window.setInterval(() => this.now.set(new Date()), 1_000);
     this.startCarousel();
     document.addEventListener('visibilitychange', this.handleVisibility);
+    this.reduceMotion.addEventListener('change', this.handleMotionPreference);
   }
 
   ngOnDestroy(): void {
@@ -92,6 +94,7 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
     if (this.clockTimer) window.clearInterval(this.clockTimer);
     this.stopCarousel();
     document.removeEventListener('visibilitychange', this.handleVisibility);
+    this.reduceMotion.removeEventListener('change', this.handleMotionPreference);
   }
 
   load(): void {
@@ -104,8 +107,13 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
         this.state.set('ready');
         this.refreshing.set(false);
       },
-      error: () => {
-        this.state.set(this.result() ? 'stale' : 'error');
+      error: (failure: ApiFailure) => {
+        if (failure.kind === 'forbidden' || failure.status === 403) {
+          this.result.set(null);
+          this.state.set('forbidden');
+        } else {
+          this.state.set(this.result() ? 'stale' : 'error');
+        }
         this.refreshing.set(false);
       }
     });
@@ -144,6 +152,11 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
 
   private readonly handleVisibility = (): void => {
     if (document.hidden) this.stopCarousel();
+    else this.startCarousel();
+  };
+
+  private readonly handleMotionPreference = (event: MediaQueryListEvent): void => {
+    if (event.matches) this.stopCarousel();
     else this.startCarousel();
   };
 

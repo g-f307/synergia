@@ -39,6 +39,8 @@
   "tv.loading": "Carregando monitor operacional…",
   "tv.errorTitle": "Monitor indisponível",
   "tv.errorMessage": "Não foi possível carregar as execuções autorizadas.",
+  "tv.forbiddenTitle": "Acesso negado",
+  "tv.forbiddenMessage": "Seu acesso às execuções foi removido. Solicite a liberação ao responsável pelo sistema.",
   "tv.tryAgain": "Tentar novamente",
   "tv.stale": "Os dados exibidos estão desatualizados. A próxima atualização será tentada automaticamente.",
   "tv.summary": "Resumo das execuções",

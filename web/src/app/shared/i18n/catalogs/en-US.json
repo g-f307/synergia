@@ -39,6 +39,8 @@
   "tv.loading": "Loading operational monitor…",
   "tv.errorTitle": "Monitor unavailable",
   "tv.errorMessage": "Authorized executions could not be loaded.",
+  "tv.forbiddenTitle": "Access denied",
+  "tv.forbiddenMessage": "Your access to executions was removed. Ask the system owner to restore it.",
   "tv.tryAgain": "Try again",
   "tv.stale": "The displayed data is stale. The next refresh will be attempted automatically.",
   "tv.summary": "Execution summary",

@@ -34,7 +34,9 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   await page.getByRole('button', { name: /enviar|upload/i }).click();
   const existingImport = page.getByRole('link', { name: /ver resultado da importação|view import result/i });
   await expect.poll(async () => /\/imports\/[0-9a-f-]+/.test(page.url()) || await existingImport.isVisible()).toBe(true);
+  let expectsImportedExecution = true;
   if (await existingImport.isVisible()) {
+    expectsImportedExecution = false;
     await existingImport.click();
   }
   await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
@@ -47,7 +49,8 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   await expect.poll(() => page.locator('.tv-brand img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await page.locator('.tv-brand img').evaluate((image: HTMLImageElement) => image.decode());
   await page.evaluate(() => document.fonts.ready);
-  await expect(page.getByText(executionId)).toBeVisible();
+  if (expectsImportedExecution) await expect(page.getByText(executionId)).toBeVisible();
+  else await expect(page.locator('.tv-execution-table tbody tr').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /sair do modo tv|exit tv mode/i })).toBeVisible();
 
   const accessibility = await new AxeBuilder({ page }).analyze();
@@ -72,19 +75,35 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const darkAccessibility = await new AxeBuilder({ page }).analyze();
   expect(darkAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
+  for (const buttonName of [/tela cheia|full screen/i, /sair do modo tv|exit tv mode/i]) {
+    await page.getByRole('button', { name: buttonName }).hover();
+    const hoverAccessibility = await new AxeBuilder({ page }).analyze();
+    expect(hoverAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
+  }
   await testInfo.attach('tv-mode-dark', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });
 
   await page.getByRole('button', { name: /execuções recentes|recent executions/i }).click();
+  const executionsDarkAccessibility = await new AxeBuilder({ page }).analyze();
+  expect(executionsDarkAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.locator('.tv-monitor')).toBeVisible();
-  await expect(page.getByText(executionId)).toBeVisible();
+  if (expectsImportedExecution) await expect(page.getByText(executionId)).toBeVisible();
+  else await expect(page.locator('.tv-execution-table tbody tr').first()).toBeVisible();
   await testInfo.attach('tv-mode-compact', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });
+
+  await page.getByRole('button', { name: /atividade por fonte|activity by source/i }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.tv-source-card').first()).toBeVisible();
+  expect(await page.locator('.tv-monitor').evaluate((monitor) => monitor.scrollWidth <= monitor.clientWidth)).toBe(true);
+  expect(await page.locator('.tv-source-card').first().evaluate((card) => card.getBoundingClientRect().width <= 366)).toBe(true);
+  const mobileSourcesAccessibility = await new AxeBuilder({ page }).analyze();
+  expect(mobileSourcesAccessibility.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
 
   await page.getByRole('button', { name: /sair do modo tv|exit tv mode/i }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

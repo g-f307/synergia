@@ -41,9 +41,11 @@
     <div class="tv-state" role="status"><img src="/assets/icons/processing.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.loading') }}</h2></div>
   } @else if (state() === 'error') {
     <div class="tv-state" role="alert"><img src="/assets/icons/state-unavailable.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.errorTitle') }}</h2><p>{{ i18n.t('tv.errorMessage') }}</p><button type="button" (click)="load()">{{ i18n.t('tv.tryAgain') }}</button></div>
+  } @else if (state() === 'forbidden') {
+    <div class="tv-state" role="alert"><img src="/assets/icons/state-unavailable.svg" alt="" aria-hidden="true"><h2>{{ i18n.t('tv.forbiddenTitle') }}</h2><p>{{ i18n.t('tv.forbiddenMessage') }}</p><button type="button" (click)="load()">{{ i18n.t('tv.tryAgain') }}</button></div>
   } @else {
     @if (state() === 'stale') { <p class="tv-stale" role="status">{{ i18n.t('tv.stale') }}</p> }
-    <main class="tv-stage">
+    <div class="tv-stage">
       <section data-panel="executions" [hidden]="activePanel()!=='executions'" aria-labelledby="tv-executions-heading">
         <h2 id="tv-executions-heading" class="sr-only">{{ i18n.t('tv.executionsPanel') }}</h2>
         <div class="tv-kpis" [attr.aria-label]="i18n.t('tv.summary')">
@@ -83,6 +85,6 @@
           }</div>
         } @else { <div class="tv-empty"><h3>{{ i18n.t('tv.noSourcesTitle') }}</h3><p>{{ i18n.t('tv.noSourcesMessage') }}</p></div> }
       </section>
-    </main>
+    </div>
   }
 </section>
