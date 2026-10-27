@@ -83,8 +83,9 @@ dados reais.
   limitação registrada. `release` exige todos os cenários obrigatórios
   aprovados;
 - critérios AC-01–AC-09 resolvidos: todos devem estar `accepted`, exceto
-  AC-08, que deve estar `ci_gate`. `rehearsed`, `pending` e `blocked` não
-  autorizam liberação;
+  AC-08, que deve estar `ci_gate`; trocar esses estados entre critérios também
+  impede a liberação. `rehearsed`, `pending` e `blocked` não autorizam
+  liberação;
 - **`release`** com limitações registradas, e **`release_with_limitations`**
   sem nenhuma;
 - limitação sem responsável e prazo, defeito tratado sem responsável;
@@ -92,7 +93,10 @@ dados reais.
 - evidência inexistente, com caminho absoluto ou fora do repositório; cada
   execução assistida deve apontar para seu próprio registro
   `docs/evidence/stage-6/S-XX.json`, cujo cenário, resultado e estado
-  sanitizado são verificados pelo validador;
+  sanitizado são verificados pelo validador. O registro contém exatamente
+  `scenario_id`, `status`, `sanitized`, `executed_at` (ISO-8601 com fuso),
+  `environment` (`homologation`), `responsible_role`, `counts` (inteiros não
+  negativos), `codes` e `observations` sanitizadas;
 - campos com forma de credencial (`password`, `token`, `secret`, `email`,
   `authorization`).
 
@@ -104,9 +108,10 @@ dados reais.
    (`pending` → `ready`).
 2. Executar cada cenário com os stakeholders e registrar um arquivo JSON
    dedicado em `docs/evidence/stage-6/S-XX.json`, com `scenario_id`, `status`
-   (`passed` ou `failed`) e `sanitized: true`. O registro contém somente
-   estados, contagens e códigos; nunca conteúdo de célula, nome original,
-   caminho interno ou credencial.
+   (`passed` ou `failed`), `sanitized: true`, horário com fuso, ambiente
+   `homologation`, papel responsável, contagens, códigos e observações. Use
+   somente dados agregados e texto sanitizado; nunca conteúdo de célula, nome
+   original, caminho interno, e-mail ou credencial.
 3. Marcar o cenário com o mesmo `status` no registro de decisão e apontar para
    seu arquivo dedicado de evidência. O validador confere o vínculo e o
    conteúdo do registro.

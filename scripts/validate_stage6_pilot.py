@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -25,6 +27,29 @@ EXPECTED_DEPENDENCIES = set(range(137, 146))
 EXPECTED_SCENARIOS = {f"S-{number:02d}" for number in range(1, 13)}
 EXPECTED_CRITERIA = {f"AC-{number:02d}" for number in range(1, 10)}
 CRITERION_STATES = {"pending", "rehearsed", "accepted", "blocked", "ci_gate"}
+EVIDENCE_FIELDS = {
+    "scenario_id",
+    "status",
+    "sanitized",
+    "executed_at",
+    "environment",
+    "responsible_role",
+    "counts",
+    "codes",
+    "observations",
+}
+EVIDENCE_ROLES = {
+    "stakeholder",
+    "product_owner",
+    "technical_owner",
+    "facilitator",
+    "platform",
+    "identity",
+}
+EMAIL_PATTERN = re.compile(r"\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
+CREDENTIAL_PATTERN = re.compile(
+    r"(?i)\b(password|passwd|secret|token|authorization)\s*[:=]\s*\S+"
+)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -62,13 +87,39 @@ def _check_execution_evidence(
         evidence = _load(root / expected)
     except (json.JSONDecodeError, OSError) as error:
         raise ValueError(f"{subject} evidence must be a valid JSON record") from error
-    if not isinstance(evidence, Mapping) or set(evidence) != {
-        "scenario_id",
-        "status",
-        "sanitized",
-    }:
+    if not isinstance(evidence, Mapping) or set(evidence) != EVIDENCE_FIELDS:
         raise ValueError(f"{subject} evidence has an invalid record structure")
     _reject_forbidden_keys(evidence)
+    try:
+        executed_at = datetime.fromisoformat(evidence["executed_at"])
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{subject} evidence needs an ISO-8601 execution time") from error
+    if executed_at.tzinfo is None or executed_at.utcoffset() is None:
+        raise ValueError(f"{subject} evidence execution time needs a timezone")
+    if evidence["environment"] != "homologation":
+        raise ValueError(f"{subject} evidence environment must be homologation")
+    if evidence["responsible_role"] not in EVIDENCE_ROLES:
+        raise ValueError(f"{subject} evidence needs an approved responsible role")
+    counts = evidence["counts"]
+    codes = evidence["codes"]
+    observations = evidence["observations"]
+    if not isinstance(counts, Mapping) or any(
+        not isinstance(count, int) or isinstance(count, bool) or count < 0
+        for count in counts.values()
+    ):
+        raise ValueError(f"{subject} evidence counts must be non-negative integers")
+    if not isinstance(codes, list) or any(
+        not isinstance(code, str) or not re.fullmatch(r"[A-Z0-9_.-]{1,64}", code)
+        for code in codes
+    ):
+        raise ValueError(f"{subject} evidence codes must be sanitized code labels")
+    if not isinstance(observations, list) or any(
+        not isinstance(observation, str)
+        or EMAIL_PATTERN.search(observation)
+        or CREDENTIAL_PATTERN.search(observation)
+        for observation in observations
+    ):
+        raise ValueError(f"{subject} evidence observations must be sanitized text")
     if (
         evidence.get("scenario_id") != scenario_id
         or evidence.get("status") != state
@@ -225,12 +276,16 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         )
         if item["required"] and state != "passed" and not smtp_exception:
             raise ValueError(f"required scenario not passed: {item['id']}")
-    acceptable_states = {"accepted", "ci_gate"}
-    if any(
-        item["status"] not in acceptable_states
+    invalid_criteria = [
+        item["id"]
         for item in document["acceptance_criteria"]
-    ):
-        raise ValueError("release requires accepted criteria and a passed CI gate")
+        if item["status"]
+        != ("ci_gate" if item["id"] == "AC-08" else "accepted")
+    ]
+    if invalid_criteria:
+        raise ValueError(
+            "release requires AC-01–AC-07 and AC-09 accepted and AC-08 ci_gate"
+        )
     failed = [
         item["id"]
         for item in document["scenarios"]
