@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -21,7 +22,7 @@ def _record() -> dict:
     return json.loads(DECISION.read_text(encoding="utf-8"))
 
 
-def _released(outcome: str = "release") -> dict:
+def _released(root: Path, outcome: str = "release") -> dict:
     record = _record()
     record["decision"]["pilot"] = outcome
     record["decision"]["reason"] = "Roteiro concluído com os stakeholders."
@@ -30,16 +31,38 @@ def _released(outcome: str = "release") -> dict:
     for value in record["signoffs"].values():
         value["status"] = "approved"
     for item in record["scenarios"]:
+        evidence_path = Path("docs/evidence/stage-6") / f"{item['id']}.json"
+        evidence_file = root / evidence_path
+        evidence_file.parent.mkdir(parents=True, exist_ok=True)
+        evidence_file.write_text(
+            json.dumps(
+                {
+                    "scenario_id": item["id"],
+                    "status": "passed",
+                    "sanitized": True,
+                }
+            ),
+            encoding="utf-8",
+        )
         item["stakeholder_execution"] = {
             "status": "passed",
             "scenario_id": item["id"],
             "sanitized": True,
-            "evidence": ["docs/evidence/issue-143-smtp-homologation.md"],
+            "evidence": [evidence_path.as_posix()],
         }
     for criterion in record["acceptance_criteria"]:
-        if criterion["status"] == "pending":
-            criterion["status"] = "accepted"
+        criterion["status"] = "ci_gate" if criterion["id"] == "AC-08" else "accepted"
     return record
+
+
+@pytest.fixture
+def release_root(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    root.mkdir()
+    shutil.copytree(ROOT / "docs", root / "docs")
+    (root / "backend").symlink_to(ROOT / "backend", target_is_directory=True)
+    (root / "web").symlink_to(ROOT / "web", target_is_directory=True)
+    return root
 
 
 def test_committed_record_is_valid_and_does_not_claim_a_decision() -> None:
@@ -66,48 +89,62 @@ def test_every_dependency_issue_of_the_stage_is_registered() -> None:
     assert issues == {137, 138, 139, 140, 141, 142, 143, 144, 145}
 
 
-def test_a_fully_recorded_pilot_can_be_released() -> None:
-    assert pilot.validate(_released())["decision"] == "release"
+def test_a_fully_recorded_pilot_can_be_released(release_root: Path) -> None:
+    result = pilot.validate(_released(release_root), root=release_root)
+    assert result["decision"] == "release"
 
 
-def test_release_requires_both_signoffs() -> None:
-    record = _released()
+def test_release_requires_both_signoffs(release_root: Path) -> None:
+    record = _released(release_root)
     record["signoffs"]["technical_owner"]["status"] = "pending"
 
     with pytest.raises(ValueError, match="approval"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
-def test_release_requires_every_required_scenario_to_pass() -> None:
-    record = _released()
+def test_release_requires_every_required_scenario_to_pass(release_root: Path) -> None:
+    record = _released(release_root)
     record["scenarios"][0]["stakeholder_execution"] = {"status": "pending"}
 
     with pytest.raises(ValueError, match="required scenario not passed: S-01"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
-def test_an_optional_scenario_may_stay_pending() -> None:
-    record = _released()
+def test_an_optional_scenario_may_stay_pending(release_root: Path) -> None:
+    record = _released(release_root)
     record["scenarios"][-1]["stakeholder_execution"] = {"status": "pending"}
 
-    assert pilot.validate(record)["decision"] == "release"
+    assert pilot.validate(record, root=release_root)["decision"] == "release"
 
 
-def test_required_scenario_cannot_be_removed() -> None:
-    record = _released()
+def test_required_scenario_cannot_be_removed(release_root: Path) -> None:
+    record = _released(release_root)
     record["scenarios"].pop()
 
     with pytest.raises(ValueError, match="exactly S-01 through S-12"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
-def test_included_smtp_failure_requires_limited_release() -> None:
-    record = _released()
+def test_core_scenario_cannot_be_made_optional(release_root: Path) -> None:
+    record = _released(release_root)
+    record["scenarios"][0]["required"] = False
+
+    with pytest.raises(ValueError, match="S-01 through S-11 must remain required"):
+        pilot.validate(record, root=release_root)
+
+
+def test_included_smtp_failure_requires_limited_release(release_root: Path) -> None:
+    record = _released(release_root)
     record["preconditions"][-1]["smtp"] = "included"
     record["scenarios"][-1]["required"] = True
     record["scenarios"][-1]["stakeholder_execution"]["status"] = "failed"
+    execution_path = release_root / "docs/evidence/stage-6/S-12.json"
+    execution_path.write_text(
+        json.dumps({"scenario_id": "S-12", "status": "failed", "sanitized": True}),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="required scenario not passed"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
     record["decision"]["pilot"] = "release_with_limitations"
     record["limitations"] = [
@@ -118,47 +155,81 @@ def test_included_smtp_failure_requires_limited_release() -> None:
             "deadline": "before-scale-up",
         }
     ]
-    assert pilot.validate(record)["decision"] == "release_with_limitations"
+    result = pilot.validate(record, root=release_root)
+    assert result["decision"] == "release_with_limitations"
 
 
-def test_release_rejects_pending_acceptance_criteria() -> None:
-    record = _released()
+def test_non_smtp_required_failure_cannot_be_accepted_as_limitation(
+    release_root: Path,
+) -> None:
+    record = _released(release_root, "release_with_limitations")
+    record["limitations"] = [
+        {"id": "L-1", "state": "accepted", "owner": "product", "deadline": "x"}
+    ]
+    record["scenarios"][0]["stakeholder_execution"]["status"] = "failed"
+    execution = release_root / "docs/evidence/stage-6/S-01.json"
+    execution.write_text(
+        json.dumps({"scenario_id": "S-01", "status": "failed", "sanitized": True}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="S-01"):
+        pilot.validate(record, root=release_root)
+
+
+def test_release_rejects_pending_acceptance_criteria(release_root: Path) -> None:
+    record = _released(release_root)
     record["acceptance_criteria"][0]["status"] = "pending"
 
-    with pytest.raises(ValueError, match="acceptance criterion"):
-        pilot.validate(record)
+    with pytest.raises(ValueError, match="accepted criteria"):
+        pilot.validate(record, root=release_root)
 
 
-def test_release_requires_every_precondition_ready() -> None:
-    record = _released()
+@pytest.mark.parametrize("status", ["blocked", "rehearsed", "pending"])
+def test_release_rejects_unaccepted_criteria(status: str, release_root: Path) -> None:
+    record = _released(release_root)
+    record["acceptance_criteria"][0]["status"] = status
+
+    with pytest.raises(ValueError, match="accepted criteria"):
+        pilot.validate(record, root=release_root)
+
+
+def test_release_requires_every_precondition_ready(release_root: Path) -> None:
+    record = _released(release_root)
     record["preconditions"][0]["state"] = "pending"
 
     with pytest.raises(ValueError, match="precondition"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
 @pytest.mark.parametrize("severity", ["critical", "high"])
-def test_open_critical_or_high_defects_block_release(severity) -> None:
-    record = _released()
+def test_open_critical_or_high_defects_block_release(
+    severity, release_root: Path
+) -> None:
+    record = _released(release_root)
     record["defects"] = [{"id": "D-1", "severity": severity, "state": "open"}]
 
     with pytest.raises(ValueError, match=f"untreated {severity} defect"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
-def test_treated_defects_need_an_owner() -> None:
-    record = _released()
+def test_treated_defects_need_an_owner(release_root: Path) -> None:
+    record = _released(release_root)
     record["defects"] = [{"id": "D-1", "severity": "high", "state": "treated"}]
 
     with pytest.raises(ValueError, match="no owner"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
-def test_release_with_limitations_requires_registered_limitations() -> None:
+def test_release_with_limitations_requires_registered_limitations(
+    release_root: Path,
+) -> None:
     with pytest.raises(ValueError, match="requires registered limitations"):
-        pilot.validate(_released("release_with_limitations"))
+        pilot.validate(
+            _released(release_root, "release_with_limitations"), root=release_root
+        )
 
-    record = _released("release_with_limitations")
+    record = _released(release_root, "release_with_limitations")
     record["limitations"] = [
         {
             "id": "L-1",
@@ -167,17 +238,18 @@ def test_release_with_limitations_requires_registered_limitations() -> None:
             "deadline": "before_scale_up",
         }
     ]
-    assert pilot.validate(record)["decision"] == "release_with_limitations"
+    result = pilot.validate(record, root=release_root)
+    assert result["decision"] == "release_with_limitations"
 
 
-def test_plain_release_cannot_carry_limitations() -> None:
-    record = _released()
+def test_plain_release_cannot_carry_limitations(release_root: Path) -> None:
+    record = _released(release_root)
     record["limitations"] = [
         {"id": "L-1", "state": "open", "owner": "platform", "deadline": "d"}
     ]
 
     with pytest.raises(ValueError, match="own decision"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)
 
 
 def test_limitations_need_owner_and_deadline() -> None:
@@ -213,7 +285,7 @@ def test_executed_scenario_needs_existing_evidence() -> None:
         "status": "passed",
         "scenario_id": "S-01",
         "sanitized": True,
-        "evidence": ["docs/does-not-exist.md"],
+        "evidence": ["docs/evidence/stage-6/S-01.json"],
     }
 
     with pytest.raises(ValueError, match="missing evidence"):
@@ -274,9 +346,48 @@ def test_undelivered_dependency_is_rejected() -> None:
         pilot.validate(record)
 
 
-def test_execution_evidence_must_be_in_evidence_directory() -> None:
-    record = _released()
+def test_duplicate_dependencies_are_rejected() -> None:
+    record = _record()
+    record["dependencies"].append(copy.deepcopy(record["dependencies"][0]))
+
+    with pytest.raises(
+        ValueError, match="dependency identifiers must be present and unique"
+    ):
+        pilot.validate(record)
+
+
+def test_duplicate_acceptance_criteria_are_rejected() -> None:
+    record = _record()
+    record["acceptance_criteria"].append(
+        copy.deepcopy(record["acceptance_criteria"][0])
+    )
+
+    with pytest.raises(
+        ValueError, match="acceptance criterion identifiers must be present and unique"
+    ):
+        pilot.validate(record)
+
+
+def test_execution_evidence_must_match_and_belong_to_scenario(
+    release_root: Path,
+) -> None:
+    record = _released(release_root)
+    other_evidence = release_root / "docs/evidence/stage-6/S-02.json"
+    other_evidence.write_text(
+        json.dumps({"scenario_id": "S-02", "status": "passed", "sanitized": True}),
+        encoding="utf-8",
+    )
+    record["scenarios"][0]["stakeholder_execution"]["evidence"] = [
+        "docs/evidence/stage-6/S-02.json"
+    ]
+
+    with pytest.raises(ValueError, match="dedicated record"):
+        pilot.validate(record, root=release_root)
+
+
+def test_execution_evidence_must_be_in_evidence_directory(release_root: Path) -> None:
+    record = _released(release_root)
     record["scenarios"][0]["stakeholder_execution"]["evidence"] = ["README.md"]
 
     with pytest.raises(ValueError, match="under docs/evidence"):
-        pilot.validate(record)
+        pilot.validate(record, root=release_root)

@@ -74,13 +74,25 @@ dados reais.
 `scripts/validate_stage6_pilot.py` recusa, em modo fail-closed:
 
 - **`release` ou `release_with_limitations`** sem os dois aceites aprovados,
-  sem todas as pré-condições `ready`, sem todos os cenários obrigatórios
-  `passed` com evidência, ou com defeito crítico ou alto em aberto;
+  sem todas as pré-condições `ready`, sem S-01–S-11 aprovados com evidência
+  individual, ou com defeito crítico ou alto em aberto;
+- S-01–S-11 permanecem sempre obrigatórios. S-12 só é obrigatório quando
+  PC-06 registra `smtp: included`;
+- falha em qualquer cenário obrigatório impede a liberação, exceto S-12 quando
+  o SMTP foi incluído: essa falha exige `release_with_limitations` e uma
+  limitação registrada. `release` exige todos os cenários obrigatórios
+  aprovados;
+- critérios AC-01–AC-09 resolvidos: todos devem estar `accepted`, exceto
+  AC-08, que deve estar `ci_gate`. `rehearsed`, `pending` e `blocked` não
+  autorizam liberação;
 - **`release`** com limitações registradas, e **`release_with_limitations`**
   sem nenhuma;
 - limitação sem responsável e prazo, defeito tratado sem responsável;
 - qualquer decisão sem motivo registrado;
-- evidência inexistente, com caminho absoluto ou fora do repositório;
+- evidência inexistente, com caminho absoluto ou fora do repositório; cada
+  execução assistida deve apontar para seu próprio registro
+  `docs/evidence/stage-6/S-XX.json`, cujo cenário, resultado e estado
+  sanitizado são verificados pelo validador;
 - campos com forma de credencial (`password`, `token`, `secret`, `email`,
   `authorization`).
 
@@ -90,10 +102,14 @@ dados reais.
 
 1. Preencher as pré-condições conforme os responsáveis as concluírem
    (`pending` → `ready`).
-2. Executar cada cenário com os stakeholders e registrar a evidência
-   sanitizada em `docs/evidence/` (estados, contagens e códigos; nunca
-   conteúdo de célula, nome original, caminho interno ou credencial).
-3. Marcar o cenário como `passed` ou `failed`, apontando para a evidência.
+2. Executar cada cenário com os stakeholders e registrar um arquivo JSON
+   dedicado em `docs/evidence/stage-6/S-XX.json`, com `scenario_id`, `status`
+   (`passed` ou `failed`) e `sanitized: true`. O registro contém somente
+   estados, contagens e códigos; nunca conteúdo de célula, nome original,
+   caminho interno ou credencial.
+3. Marcar o cenário com o mesmo `status` no registro de decisão e apontar para
+   seu arquivo dedicado de evidência. O validador confere o vínculo e o
+   conteúdo do registro.
 4. Registrar defeitos com severidade e limitações com responsável e prazo.
 5. Registrar a decisão e o motivo, e os aceites do PO e do responsável
    técnico no PR.
