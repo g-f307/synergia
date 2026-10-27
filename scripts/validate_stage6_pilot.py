@@ -6,9 +6,10 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
+from unicodedata import normalize
 
 ROOT = Path(__file__).resolve().parents[1]
 DECISION = ROOT / "docs" / "stage-6-pilot-decision.json"
@@ -48,8 +49,35 @@ EVIDENCE_ROLES = {
 }
 EMAIL_PATTERN = re.compile(r"\b[^\s@]+@[^\s@]+\.[^\s@]+\b")
 CREDENTIAL_PATTERN = re.compile(
-    r"(?i)\b(password|passwd|secret|token|authorization)\s*[:=]\s*\S+"
+    r"(?i)(?<![a-z])(password|passwd|secret|token|authorization|bearer|senha|segredo)"
+    r"\b(?:\s*[:=]\s*|\s+)\S+"
 )
+INTERNAL_PATH_PATTERN = re.compile(r"(?<![\w/])/(?!/)[^\s]+|[a-zA-Z]:[\\/]|\\\\[^\s]+")
+COUNT_LABEL_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _sensitive_text(value: str) -> bool:
+    value = normalize("NFKC", value)
+    return bool(
+        EMAIL_PATTERN.search(value)
+        or CREDENTIAL_PATTERN.search(value)
+        or INTERNAL_PATH_PATTERN.search(value)
+    )
+
+
+def _reject_sensitive_values(value: Any) -> None:
+    if isinstance(value, Mapping):
+        for item in value.values():
+            _reject_sensitive_values(item)
+    elif isinstance(value, list):
+        for item in value:
+            _reject_sensitive_values(item)
+    elif isinstance(value, str) and _sensitive_text(value):
+        raise ValueError("sensitive text in pilot record")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -62,15 +90,23 @@ def _check_evidence(
     if not isinstance(paths, list) or not paths:
         raise ValueError(f"{subject} has no evidence")
     for relative in paths:
-        pure = PurePosixPath(str(relative))
+        if not isinstance(relative, str) or not relative.strip() or "\\" in relative:
+            raise ValueError(f"{subject} references missing evidence")
+        pure = PurePosixPath(relative)
         if execution and (
             len(pure.parts) < 3 or pure.parts[:2] != ("docs", "evidence")
         ):
             raise ValueError(
-                f"{subject} execution evidence must be under docs/evidence/: {relative}"
+                f"{subject} execution evidence must be under docs/evidence/"
             )
-        if pure.is_absolute() or ".." in pure.parts or not (root / pure).is_file():
-            raise ValueError(f"{subject} references missing evidence: {relative}")
+        target = root / pure
+        if (
+            pure.is_absolute()
+            or ".." in pure.parts
+            or not target.resolve().is_relative_to(root.resolve())
+            or not target.is_file()
+        ):
+            raise ValueError(f"{subject} references missing evidence")
 
 
 def _check_execution_evidence(
@@ -98,18 +134,29 @@ def _check_execution_evidence(
         ) from error
     if executed_at.tzinfo is None or executed_at.utcoffset() is None:
         raise ValueError(f"{subject} evidence execution time needs a timezone")
+    if executed_at > _now():
+        raise ValueError(f"{subject} evidence execution time cannot be in the future")
     if evidence["environment"] != "homologation":
         raise ValueError(f"{subject} evidence environment must be homologation")
-    if evidence["responsible_role"] not in EVIDENCE_ROLES:
+    if (
+        not isinstance(evidence["responsible_role"], str)
+        or evidence["responsible_role"] not in EVIDENCE_ROLES
+    ):
         raise ValueError(f"{subject} evidence needs an approved responsible role")
     counts = evidence["counts"]
     codes = evidence["codes"]
     observations = evidence["observations"]
     if not isinstance(counts, Mapping) or any(
-        not isinstance(count, int) or isinstance(count, bool) or count < 0
-        for count in counts.values()
+        not isinstance(label, str)
+        or not COUNT_LABEL_PATTERN.fullmatch(label)
+        or not isinstance(count, int)
+        or isinstance(count, bool)
+        or count < 0
+        for label, count in counts.items()
     ):
-        raise ValueError(f"{subject} evidence counts must be non-negative integers")
+        raise ValueError(
+            f"{subject} evidence counts need safe labels and non-negative integers"
+        )
     if not isinstance(codes, list) or any(
         not isinstance(code, str) or not re.fullmatch(r"[A-Z0-9_.-]{1,64}", code)
         for code in codes
@@ -117,11 +164,14 @@ def _check_execution_evidence(
         raise ValueError(f"{subject} evidence codes must be sanitized code labels")
     if not isinstance(observations, list) or any(
         not isinstance(observation, str)
-        or EMAIL_PATTERN.search(observation)
-        or CREDENTIAL_PATTERN.search(observation)
+        or not observation.strip()
+        or _sensitive_text(observation)
         for observation in observations
     ):
         raise ValueError(f"{subject} evidence observations must be sanitized text")
+    if not (counts or codes or observations):
+        raise ValueError(f"{subject} evidence needs at least one non-empty result")
+    _reject_sensitive_values(evidence)
     if (
         evidence.get("scenario_id") != scenario_id
         or evidence.get("status") != state
@@ -133,9 +183,13 @@ def _check_execution_evidence(
 def _reject_forbidden_keys(value: Any) -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
-            normalized = "".join(char for char in str(key).lower() if char.isalnum())
+            normalized = "".join(
+                char for char in normalize("NFKC", str(key)).lower() if char.isalnum()
+            )
             if any(fragment in normalized for fragment in FORBIDDEN_FRAGMENTS):
-                raise ValueError(f"forbidden field in pilot record: {key}")
+                raise ValueError("forbidden field in pilot record")
+            if _sensitive_text(str(key)):
+                raise ValueError("sensitive field label in pilot record")
             _reject_forbidden_keys(item)
     elif isinstance(value, list):
         for item in value:
@@ -287,14 +341,14 @@ def _validate_structure(document: Mapping[str, Any], root: Path) -> None:
             item.get("severity") not in SEVERITIES
             or item.get("state") not in DEFECT_STATES
         ):
-            raise ValueError(f"invalid defect: {item.get('id')}")
+            raise ValueError("invalid defect")
         if item["state"] != "open" and not item.get("owner"):
-            raise ValueError(f"treated defect has no owner: {item.get('id')}")
+            raise ValueError("treated defect has no owner")
     for item in document.get("limitations", []):
         if item.get("state") not in LIMITATION_STATES or not (
             item.get("owner") and item.get("deadline")
         ):
-            raise ValueError(f"limitation needs owner and deadline: {item.get('id')}")
+            raise ValueError("limitation needs owner and deadline")
         if set(item.get("scenarios", [])) - EXPECTED_SCENARIOS:
             raise ValueError("limitation references unknown scenario")
     _unique(document["defects"], "id", "defect")
@@ -369,7 +423,7 @@ def _validate_outcome(document: Mapping[str, Any]) -> str:
         )
     for item in document.get("defects", []):
         if item["severity"] in {"critical", "high"} and item["state"] == "open":
-            raise ValueError(f"untreated {item['severity']} defect: {item['id']}")
+            raise ValueError(f"untreated {item['severity']} defect")
     limitations = document.get("limitations", [])
     if outcome == "release" and limitations:
         raise ValueError("release with limitations must use its own decision")
@@ -388,6 +442,7 @@ def validate(
 ) -> dict[str, Any]:
     document = _load(DECISION) if document is None else document
     _validate_structure(document, root)
+    _reject_sensitive_values(document)
     outcome = _validate_outcome(document)
     scenarios = document["scenarios"]
     return {
@@ -406,7 +461,13 @@ def validate(
 
 
 def main() -> int:
-    print(json.dumps(validate(), sort_keys=True))
+    try:
+        result = validate()
+    except (ValueError, OSError):
+        # Keep parser exceptions, file names and supplied values out of CI logs.
+        print(json.dumps({"error": "invalid Stage 6 pilot record"}))
+        return 1
+    print(json.dumps(result, sort_keys=True))
     return 0
 
 

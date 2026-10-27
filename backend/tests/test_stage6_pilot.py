@@ -4,6 +4,7 @@ import copy
 import json
 import shutil
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,11 @@ import validate_stage6_pilot as pilot  # noqa: E402
 DECISION = ROOT / "docs" / "stage-6-pilot-decision.json"
 EXPECTED_CRITERIA = 9
 JOURNEY = {f"S-{number:02d}" for number in range(1, 13)}
+
+
+@pytest.fixture(autouse=True)
+def fixed_evidence_clock(monkeypatch):
+    monkeypatch.setattr(pilot, "_now", lambda: datetime(2026, 10, 27, tzinfo=UTC))
 
 
 def _record() -> dict:
@@ -613,3 +619,154 @@ def test_smtp_exception_needs_accepted_related_limitation(
     else:
         with pytest.raises(ValueError, match="accepted limitation linked to S-12"):
             pilot.validate(record, root=release_root)
+
+
+def _replace_execution_evidence(root, **changes):
+    path = root / "docs/evidence/stage-6/S-01.json"
+    evidence = json.loads(path.read_text())
+    evidence.update(changes)
+    path.write_text(json.dumps(evidence), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "results",
+    [
+        {"counts": {}, "codes": [], "observations": []},
+        {"counts": {}, "codes": [], "observations": [""]},
+        {"counts": {}, "codes": [], "observations": [" \t\n"]},
+    ],
+)
+def test_execution_needs_meaningful_results(results, release_root):
+    record = _synthetic_release_record(release_root)
+    _replace_execution_evidence(release_root, **results)
+    with pytest.raises(ValueError):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize(
+    "results",
+    [
+        {"counts": {"rejected": 0}, "codes": [], "observations": []},
+        {"counts": {}, "codes": ["BUDGET_REJECTED"], "observations": []},
+        {
+            "counts": {},
+            "codes": [],
+            "observations": ["Session returned to public login."],
+        },
+    ],
+)
+def test_each_sanitized_result_kind_is_sufficient(results, release_root):
+    record = _synthetic_release_record(release_root)
+    _replace_execution_evidence(release_root, **results)
+    assert pilot.validate(record, root=release_root)["decision"] == "release"
+
+
+@pytest.mark.parametrize(
+    "observation",
+    [
+        "token synthetic-only",
+        "TOKEN:synthetic-only",
+        "refresh_token synthetic-only",
+        "password synthetic-only",
+        "senha synthetic-only",
+        "Authorization Bearer test",
+        "internal path /srv/synthetic/private.xlsx",
+        r"C:\synthetic\private.xlsx",
+        r"C:/synthetic/private.xlsx",
+        r"\\synthetic\share\file.xlsx",
+        "contact person@example.invalid",
+        "ｔｏｋｅｎ synthetic-only",
+    ],
+)
+def test_sensitive_observation_variants_are_rejected(observation, release_root):
+    record = _synthetic_release_record(release_root)
+    _replace_execution_evidence(release_root, observations=[observation])
+    with pytest.raises(ValueError) as error:
+        pilot.validate(record, root=release_root)
+    assert observation not in str(error.value)
+
+
+@pytest.mark.parametrize("field", ["reason", "owner", "count_label"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "password=synthetic-only",
+        "person@example.invalid",
+        "/srv/synthetic/file.xlsx",
+    ],
+)
+def test_sensitive_text_is_rejected_beyond_observations(field, value, release_root):
+    record = _synthetic_release_record(release_root)
+    if field == "reason":
+        record["decision"]["reason"] = value
+    elif field == "owner":
+        record["preconditions"][0]["owner"] = value
+    else:
+        _replace_execution_evidence(release_root, counts={value: 1})
+    with pytest.raises(ValueError) as error:
+        pilot.validate(record, root=release_root)
+    assert value not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"counts": {"records": -1}},
+        {"counts": {"records": True}},
+        {"counts": {"records": 1.5}},
+        {"counts": {"records": "1"}},
+        {"counts": {"": 1}},
+        {"codes": [""]},
+        {"codes": ["private value"]},
+        {"codes": "PILOT_OK"},
+        {"observations": [None]},
+        {"executed_at": "2099-01-01T00:00:00Z"},
+        {"executed_at": "2026-10-26T12:00:00"},
+        {"executed_at": None},
+        {"environment": "production"},
+        {"responsible_role": []},
+        {"scenario_id": "S-02"},
+        {"status": "failed"},
+        {"sanitized": 1},
+    ],
+)
+def test_execution_metadata_and_result_contract(changes, release_root):
+    record = _synthetic_release_record(release_root)
+    _replace_execution_evidence(release_root, **changes)
+    with pytest.raises(ValueError):
+        pilot.validate(record, root=release_root)
+
+
+def test_external_symlink_cannot_supply_execution_evidence(release_root, tmp_path):
+    record = _synthetic_release_record(release_root)
+    path = release_root / "docs/evidence/stage-6/S-01.json"
+    external = tmp_path / "external.json"
+    external.write_bytes(path.read_bytes())
+    path.unlink()
+    path.symlink_to(external)
+    with pytest.raises(ValueError, match="missing evidence"):
+        pilot.validate(record, root=release_root)
+
+
+@pytest.mark.parametrize(
+    "message", ["password=synthetic-only", "/srv/private/test.json"]
+)
+def test_cli_errors_do_not_echo_supplied_values(message, monkeypatch, capsys):
+    def fail():
+        raise ValueError(message)
+
+    monkeypatch.setattr(pilot, "validate", fail)
+    assert pilot.main() == 1
+    output = capsys.readouterr()
+    assert json.loads(output.out) == {"error": "invalid Stage 6 pilot record"}
+    assert not output.err
+    assert message not in output.out
+
+
+@pytest.mark.parametrize("criterion_index", range(9))
+def test_criterion_status_cannot_be_swapped(criterion_index, release_root):
+    record = _synthetic_release_record(release_root)
+    criterion = record["acceptance_criteria"][criterion_index]
+    criterion["status"] = "accepted" if criterion["id"] == "AC-08" else "ci_gate"
+    with pytest.raises(ValueError, match="AC-01"):
+        pilot.validate(record, root=release_root)
