@@ -62,7 +62,6 @@
   "tv.attentionRatio": "{attention} of {total}",
   "tv.attentionExecutions": "Executions needing attention",
   "tv.latestActivity": "Latest activity",
-  "tv.attention": "Needs attention",
   "tv.noSourcesTitle": "No observed sources",
   "tv.noSourcesMessage": "Recent executions do not have an identified source yet.",
   "account.logout": "Sign out",

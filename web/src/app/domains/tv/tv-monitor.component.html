@@ -66,7 +66,7 @@
         <div class="tv-panel-heading" data-alignment="start"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div></div>
         @if (sourceSummaries().length) {
           <div class="tv-source-grid" data-layout="comparison">@for (source of sourceSummaries(); track source.name) {
-            <article class="tv-source-card" [class.needs-attention]="source.attention>0">
+            <article class="tv-source-card" data-density="display" [class.needs-attention]="source.attention>0">
               <header><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong></header>
               <div class="tv-source-visuals">
                 <div class="tv-volume-figure">

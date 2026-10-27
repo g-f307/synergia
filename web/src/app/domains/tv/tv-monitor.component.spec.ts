@@ -62,6 +62,7 @@ describe('TvMonitorComponent', () => {
     expect(panel.textContent).toContain('2 execuções observadas');
     const nfpCard = [...panel.querySelectorAll<HTMLElement>('.tv-source-card')]
       .find((card) => card.querySelector('h3')?.textContent?.trim() === 'N-FP');
+    expect(nfpCard?.getAttribute('data-density')).toBe('display');
     expect((nfpCard?.querySelector('.tv-volume-bar span') as HTMLElement).style.width).toBe('67%');
     expect(nfpCard?.querySelector('.tv-attention-ring')?.textContent).toContain('0 de 2');
     expect(panel.textContent).not.toContain('Disponível');

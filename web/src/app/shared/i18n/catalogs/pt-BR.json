@@ -62,7 +62,6 @@
   "tv.attentionRatio": "{attention} de {total}",
   "tv.attentionExecutions": "Execuções com atenção",
   "tv.latestActivity": "Última atividade",
-  "tv.attention": "Com atenção",
   "tv.noSourcesTitle": "Nenhuma fonte observada",
   "tv.noSourcesMessage": "As execuções recentes ainda não possuem uma fonte identificada.",
   "account.logout": "Sair",
