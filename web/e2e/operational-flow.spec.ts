@@ -138,8 +138,8 @@ test.describe.serial('integrated operational journey', () => {
   test('imports the real workbook families and keeps duplicate uploads idempotent', async ({ page }) => {
     await login(page);
     const imports = [
-      { source: 'WO Status', workbook: woStatusFixture },
-      { source: 'Total Decision', workbook: totalDecisionFixture },
+      { source: 'WO Status', workbook: woStatusFixture, rows: 33, valid: 21, rejected: 12 },
+      { source: 'Total Decision', workbook: totalDecisionFixture, rows: 4, valid: 1, rejected: 3 },
     ];
     let woStatusExecution = '';
 
@@ -153,7 +153,21 @@ test.describe.serial('integrated operational journey', () => {
       await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
       await expect(page.getByText(item.source, { exact: true })).toBeVisible();
       await expect(page.locator('.status-pill')).toContainText(/concluída com erros|completed with errors/i);
-      if (item.source === 'WO Status') woStatusExecution = page.url().split('/').pop() ?? '';
+      const execution = page.url().split('/').pop() ?? '';
+      const summary = page.locator('.summary');
+      await expect(summary.locator('div').filter({ hasText: /linhas lidas|rows read/i }).locator('dd')).toHaveText(String(item.rows));
+      await expect(summary.locator('div').filter({ hasText: /registros válidos|valid records/i }).locator('dd')).toHaveText(String(item.valid));
+      await expect(summary.locator('div').filter({ hasText: /registros rejeitados|rejected records/i }).locator('dd')).toHaveText(String(item.rejected));
+
+      await page.getByTestId('related-execution').click();
+      await expect(page).toHaveURL(new RegExp(`/executions/${execution}`));
+      await expect(page.getByText(item.source, { exact: true })).toBeVisible();
+      await expect(page.locator('.persisted-state')).toHaveText('completed_with_errors');
+      await expect(page.locator('.lifecycle-badge')).toContainText(/parcial|partial/i);
+      await expect(page.locator('.summary-highlights article').filter({ hasText: /linhas lidas|rows read/i }).locator('strong')).toHaveText(String(item.rows));
+      await expect(page.locator('.summary-highlights article').filter({ hasText: /registros válidos|valid records/i }).locator('strong')).toHaveText(String(item.valid));
+      await expect(page.locator('.summary-highlights article').filter({ hasText: /registros rejeitados|rejected records/i }).locator('strong')).toHaveText(String(item.rejected));
+      if (item.source === 'WO Status') woStatusExecution = execution;
     }
 
     await page.goto('/imports/new');

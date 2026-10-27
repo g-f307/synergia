@@ -266,6 +266,17 @@ describe('ImportCreateComponent', () => {
     component.selectFile({ target: { files: [workbook] } } as unknown as Event);
     component.submit(new Event('submit'));
     expect(upload).toHaveBeenCalledWith('WO Status', workbook, 'org-1');
+
+    selector.value = 'Total Decision';
+    selector.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(component.acceptedExtensions()).toBe('.xlsx');
+    expect(component.sizeLabel()).toBe('25 MiB');
+
+    const decisionWorkbook = new File(['synthetic'], 'total-decision.xlsx');
+    component.selectFile({ target: { files: [decisionWorkbook] } } as unknown as Event);
+    component.submit(new Event('submit'));
+    expect(upload).toHaveBeenCalledWith('Total Decision', decisionWorkbook, 'org-1');
   });
 
   it('revalidates a file selected while the upload policy is loading', () => {
