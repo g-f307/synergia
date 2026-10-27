@@ -30,6 +30,7 @@ describe('SessionService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    localStorage.clear();
     sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [
@@ -44,6 +45,7 @@ describe('SessionService', () => {
 
   afterEach(() => {
     http.verify();
+    localStorage.clear();
     sessionStorage.clear();
   });
 

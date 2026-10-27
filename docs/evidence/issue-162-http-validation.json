@@ -1,0 +1,84 @@
+{
+  "contains_source_values": false,
+  "duplicate": {
+    "duration_seconds": 25.2,
+    "error_code": "duplicate_file",
+    "http_status": 409,
+    "points_to_original": true,
+    "source": "WO Status"
+  },
+  "environment": {
+    "backend_workers": 1,
+    "database": "PostgreSQL isolated local database",
+    "measurement": "server VmRSS sampled from /proc every 100 ms",
+    "os": "Linux",
+    "python": "3.14.8"
+  },
+  "journey": "authenticated POST /imports with PostgreSQL persistence and API consultation",
+  "measured_at": "2026-10-27",
+  "schema_version": 1,
+  "sources": [
+    {
+      "duration_seconds": 410.186,
+      "final_status": "completed_with_errors",
+      "http_status": 201,
+      "issue_counts": {
+        "contract_blocked": 18,
+        "identifier_stored_as_number": 5849,
+        "invalid_quantity": 1,
+        "sheet_ignored": 13,
+        "unknown_oqc_flag": 60070,
+        "unknown_state": 63858
+      },
+      "lifecycle": "partial",
+      "policy": {
+        "allowed_extensions": [
+          "xlsx"
+        ],
+        "max_bytes": 67108864
+      },
+      "server_rss_baseline_bytes": 100483072,
+      "server_rss_peak_bytes": 1631219712,
+      "source": "WO Status",
+      "summary": {
+        "errors": 19,
+        "normalized_records": 68776,
+        "rejected_records": 19,
+        "rows_read": 68795,
+        "valid_records": 68776,
+        "warnings": 129790
+      }
+    },
+    {
+      "duration_seconds": 3.534,
+      "final_status": "completed_with_errors",
+      "http_status": 201,
+      "issue_counts": {
+        "column_ignored": 53,
+        "invalid_quantity": 1,
+        "restricted_value_minimized": 1228,
+        "unknown_state": 1090,
+        "unparsed_date": 1102
+      },
+      "lifecycle": "partial",
+      "policy": {
+        "allowed_extensions": [
+          "xlsx"
+        ],
+        "max_bytes": 26214400
+      },
+      "server_rss_baseline_bytes": 390586368,
+      "server_rss_peak_bytes": 390586368,
+      "source": "Total Decision",
+      "summary": {
+        "errors": 1,
+        "normalized_records": 550,
+        "rejected_records": 1,
+        "rows_read": 551,
+        "valid_records": 550,
+        "warnings": 3473
+      }
+    }
+  ],
+  "validated_revision": "cb8b5017c15443c447a6fdf2157c7474d1bf0728"
+}
