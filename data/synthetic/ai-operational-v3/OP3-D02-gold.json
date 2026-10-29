@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-D02",
+  "status": "completed",
+  "summary": "Execução aguardando revisão com uma pendência de quantidade.",
+  "findings": [
+    {
+      "finding_id": "pending:4101",
+      "title": "Pendência de quantidade",
+      "severity": "warning",
+      "statement": "Quantidade divergente exige conferência humana.",
+      "evidence_ids": [
+        "ev-p-4101"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}

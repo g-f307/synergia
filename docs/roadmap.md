@@ -57,5 +57,11 @@ dos painéis sem bloquear a primeira experiência de uso.
 Integrações corporativas definitivas e automação RPA permanecem planejadas e
 dependem de autorização formal.
 
+A reavaliação local das PoCs de IA (#148) possui
+[protocolo de preparação](ai-reevaluation-protocol.md), inventário da nova máquina
+e corpora sintéticos prospectivos com gabaritos pendentes de revisão humana.
+Calibração, avaliação reservada e decisões por proposta ainda não ocorreram.
+A etapa preserva os resultados negativos anteriores e não integra IA ao produto.
+
 Essas capacidades não são simuladas na aplicação atual. Cada uma exige contrato
 de API, controle de acesso, persistência, rastreabilidade e evidência própria.

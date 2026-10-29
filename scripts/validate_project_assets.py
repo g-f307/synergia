@@ -76,19 +76,23 @@ def validate_synthetic_data() -> None:
         ingestion_files = {p for p in ingestion_dataset.iterdir() if p.is_file()}
     # This corpus includes deliberately unreadable files. Validate its frozen
     # bytes, not the operational fixture contract or generic spreadsheet rules.
-    quality_dataset = SYNTHETIC_DATA / "ai-quality-v2"
     quality_files = set()
-    if quality_dataset.exists():
+    for version in ("ai-quality-v2", "ai-quality-v3"):
+        quality_dataset = SYNTHETIC_DATA / version
+        if not quality_dataset.exists():
+            continue
         failures = verify_quality_dataset(quality_dataset)
         if failures:
             raise ValueError(f"Dataset de diagnóstico inválido: {failures}")
         manifest_path = quality_dataset / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        quality_files = {
-            manifest_path,
-            quality_dataset / "scenarios.json",
-            *(quality_dataset / item["file"] for item in manifest["files"]),
-        }
+        quality_files.update(
+            {
+                manifest_path,
+                quality_dataset / "scenarios.json",
+                *(quality_dataset / item["file"] for item in manifest["files"]),
+            }
+        )
 
     supported = {".csv", ".json", ".xlsx"}
     files = [

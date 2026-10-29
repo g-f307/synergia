@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E02",
+  "execution": {
+    "execution_id": "syn-op3-e02",
+    "status": "awaiting_review",
+    "lifecycle": "partial",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 2,
+      "classifications": 1,
+      "events": 1
+    }
+  },
+  "pending_items": [
+    {
+      "evidence_id": "ev-p-4201",
+      "id": 4201,
+      "reason": "Referência divergente deve ser conferida.",
+      "status": "open",
+      "priority": "high",
+      "workorder_number": "WO-SYN-4201",
+      "responsible_area": "quality"
+    },
+    {
+      "evidence_id": "ev-p-4202",
+      "id": 4202,
+      "reason": "Aviso documental aguarda conferência.",
+      "status": "open",
+      "priority": "low",
+      "workorder_number": "WO-SYN-4202",
+      "responsible_area": "quality"
+    }
+  ],
+  "classifications": [
+    {
+      "evidence_id": "ev-c-4201",
+      "classification_id": "cls-syn-4201",
+      "state": "pending",
+      "justification": "Referência sintética divergente.",
+      "rule_id": "rule-syn-4201",
+      "workorder_number": "WO-SYN-4201"
+    }
+  ],
+  "events": [
+    {
+      "evidence_id": "ev-e-4201",
+      "event_id": "event-syn-4201",
+      "event_type": "pending_created",
+      "occurred_at": "2026-10-01T12:00:00Z",
+      "entity_type": "execution",
+      "entity_id": "syn-op3-e02"
+    }
+  ]
+}

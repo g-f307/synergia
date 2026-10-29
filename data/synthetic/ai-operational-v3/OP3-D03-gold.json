@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-D03",
+  "status": "completed",
+  "summary": "Execução falha com uma pendência crítica e evento de falha.",
+  "findings": [
+    {
+      "finding_id": "pending:4102",
+      "title": "Pendência crítica",
+      "severity": "critical",
+      "statement": "Falha registrada exige investigação humana.",
+      "evidence_ids": [
+        "ev-p-4102"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}
