@@ -26,7 +26,12 @@ PROTOCOL = json.loads((ROOT / "docs/ai-reevaluation-protocol.json").read_text())
 
 def test_protocol_requires_review_and_freeze_before_evaluation():
     assert PROTOCOL["issue"] == 148
-    assert PROTOCOL["status"] in {"draft_pending_review", "calibrating", "frozen"}
+    assert PROTOCOL["status"] in {
+        "draft_pending_review",
+        "prepared",
+        "calibrating",
+        "frozen",
+    }
     review = PROTOCOL["human_review"]
     assert review["status"] in {"pending", "approved"}
     if review["status"] == "pending":

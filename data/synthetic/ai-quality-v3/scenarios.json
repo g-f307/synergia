@@ -2,10 +2,10 @@
   "dataset_version": "3.0.0",
   "origin": "Hand-authored fictional cases for issue #148; no client data or model-generated labels.",
   "gold_review": {
-    "status": "pending_human_review",
-    "reviewer": null,
-    "date": null,
-    "decision": null
+    "status": "approved_by_user",
+    "reviewer": "Responsável pelo projeto nesta conversa",
+    "date": "2026-10-29",
+    "decision": "Confirmação do usuário: \"gabarito parece ok\". Revisão dos gabaritos, sem inferência ou aprovação de resultados."
   },
   "rubric": {
     "required": [

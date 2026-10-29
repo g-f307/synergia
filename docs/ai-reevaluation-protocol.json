@@ -2,14 +2,14 @@
   "schema_version": 1,
   "protocol_version": "1.0.0-draft",
   "issue": 148,
-  "status": "draft_pending_review",
+  "status": "prepared",
   "prepared_on": "2026-10-29",
   "environment_evidence": "docs/evidence/issue-148-environment.json",
   "human_review": {
-    "status": "pending",
-    "reviewer": null,
-    "reviewed_on": null,
-    "decision": null
+    "status": "approved",
+    "reviewer": "Responsável pelo projeto nesta conversa",
+    "reviewed_on": "2026-10-29",
+    "decision": "Confirmação do usuário: \"gabarito parece ok\". Revisão dos gabaritos, sem inferência ou aprovação de resultados."
   },
   "evaluation": {
     "status": "not_started",
@@ -30,9 +30,12 @@
       "annotations": "data/synthetic/ai-quality-v3/scenarios.json",
       "development_scenarios": 4,
       "evaluation_scenarios": 12,
-      "formats": ["csv", "xlsx"],
+      "formats": [
+        "csv",
+        "xlsx"
+      ],
       "paired_formats_are_independent_subjects": false,
-      "gold_review": "pending_human_review"
+      "gold_review": "approved_by_user"
     },
     {
       "id": "operational-v3",
@@ -40,8 +43,10 @@
       "manifest": "data/synthetic/ai-operational-v3/manifest.json",
       "development_scenarios": 4,
       "evaluation_scenarios": 8,
-      "formats": ["json"],
-      "gold_review": "pending_human_review"
+      "formats": [
+        "json"
+      ],
+      "gold_review": "approved_by_user"
     }
   ],
   "historical_references": [
@@ -108,8 +113,14 @@
     "initial_generation_tokens": 2048,
     "initial_temperature": 0,
     "thinking": "explicit_per_configuration_after_capability_check",
-    "seeds": {"quality": 125, "operational": 126},
-    "processor_profiles": ["cpu_only", "automatic_acceleration"],
+    "seeds": {
+      "quality": 125,
+      "operational": 126
+    },
+    "processor_profiles": [
+      "cpu_only",
+      "automatic_acceleration"
+    ],
     "vary_one_factor_at_a_time": true,
     "native_tools_or_guided_architecture": "separate_named_variant_if_used",
     "maximum_candidate_configurations_in_final_per_poc": 2
@@ -146,7 +157,12 @@
   "decision": {
     "quality": "not_decided",
     "operational": "not_decided",
-    "allowed": ["continue", "reformulate", "stop", "not_decided"],
+    "allowed": [
+      "continue",
+      "reformulate",
+      "stop",
+      "not_decided"
+    ],
     "requires_measured_utility_over_baseline": true,
     "product_integration_authorized": false
   }

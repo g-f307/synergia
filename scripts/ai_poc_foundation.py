@@ -85,16 +85,27 @@ class OllamaRuntime:
         *,
         options: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
+        think: bool | None = None,
+        keep_alive: int | None = None,
     ) -> None:
         _validate_loopback_url(config.endpoint)
         self.config = config
         self.options = dict(options or {})
         self.output_schema = output_schema
+        self.think = think
+        self.keep_alive = keep_alive
+        self.response_done_reason: str | None = None
         self.response_model: str | None = None
         self.response_metrics: dict[str, int] = {}
 
     def generate(self, prompt: str, *, model: str) -> tuple[str, int]:
+        self.response_metrics = {}
+        self.response_done_reason = None
         document = {"model": model, "prompt": prompt, "stream": False}
+        if self.think is not None:
+            document["think"] = self.think
+        if self.keep_alive is not None:
+            document["keep_alive"] = self.keep_alive
         if self.options:
             document["options"] = self.options
         if self.output_schema is not None:
@@ -107,7 +118,9 @@ class OllamaRuntime:
             method="POST",
         )
         try:
-            opener = urllib.request.build_opener(_NoRedirectHandler())
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({}), _NoRedirectHandler()
+            )
             with opener.open(request, timeout=self.config.timeout_seconds) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except PoCFoundationError:
@@ -126,6 +139,8 @@ class OllamaRuntime:
         if not isinstance(output, str):
             raise PoCFoundationError("runtime local retornou resposta sem JSON textual")
         self.response_model = payload.get("model")
+        reason = payload.get("done_reason")
+        self.response_done_reason = reason if reason in {"stop", "length"} else None
         self.response_metrics = {
             key: payload[key]
             for key in (

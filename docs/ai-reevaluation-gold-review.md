@@ -1,7 +1,9 @@
 # Gabaritos propostos da reavaliação — checkpoint 1 da #148
 
-**Revisão humana pendente.** A aprovação do plano não foi registrada como
-aprovação dos rótulos. Nenhuma resposta de modelo foi gerada para estes casos.
+**Revisão humana confirmada em 29/10/2026.** O responsável pelo projeto
+confirmou nesta conversa: “gabarito parece ok”. Essa confirmação aprova os
+gabaritos e não antecipa resultados nem decisões sobre modelos. Nenhuma
+resposta de modelo foi gerada para estes casos nesta preparação.
 As anotações foram escritas antes dos testes de compatibilidade determinística.
 
 ## Qualidade
@@ -74,7 +76,6 @@ histórica, inclusive a divergência de severidade de OP-03, permanecem intactos
 ## Como registrar a revisão
 
 Conferir códigos, categorias, posições, severidades, abstenções, fatos e consultas
-necessárias. Aprovar os gabaritos ou indicar correções pelos IDs acima. Somente
-após confirmação explícita serão registrados revisor, data e decisão nos dois
+necessárias. Aprovar os gabaritos ou indicar correções pelos IDs acima. A confirmação acima foi registrada com revisor, data e decisão nos dois
 corpora e no protocolo. Mudança de anotações exige novos hashes antes de congelar.
 Os testes de integridade não conferem aceite em nome do usuário.

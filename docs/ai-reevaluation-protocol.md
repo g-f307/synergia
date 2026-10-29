@@ -1,6 +1,6 @@
 # Protocolo de reavaliação local das PoCs — issue #148
 
-Estado do Bloco 1: **preparado para revisão, sem inferência**. O registro
+Estado: **gabaritos aprovados; infraestrutura do Bloco 2 implementada**. O registro
 legível por máquina é [ai-reevaluation-protocol.json](ai-reevaluation-protocol.json).
 As duas decisões permanecem `not_decided`. Este documento não autoriza integração
 de IA ao produto e não declara resultados positivos ainda não medidos.
@@ -58,7 +58,7 @@ modelo na lista não comprova capacidade, licença aprovada para implantação o
 autorização de uso produtivo. Downloads ausentes e probes serão informados no
 checkpoint de recursos antes da execução correspondente.
 
-Orçamento inicial proposto, a ser imposto pelo executor do Bloco 2:
+Orçamento experimental verificado pelo executor do Bloco 2:
 
 - um modelo e uma requisição por vez, apenas runtime local, nuvem desabilitada;
 - pelo menos 2 GiB de RAM disponível e 8 GiB livres em disco antes da rodada;
@@ -96,8 +96,8 @@ de qualidade reutiliza `materialize(dataset)` de `build_ai_quality_dataset.py`;
 não executa inferência nem altera o corpus v2.
 
 O [roteiro de revisão dos gabaritos](ai-reevaluation-gold-review.md) descreve os
-resultados propostos. Todos começam com `pending_human_review`, sem revisor,
-data ou decisão inventados. Os testes verificam somente contratos, bytes,
+resultados propostos. Os registros começaram com `pending_human_review`; em 29/10/2026 o usuário
+confirmou “gabarito parece ok”, registrado como `approved_by_user`. Os testes verificam somente contratos, bytes,
 contagens, códigos e posições; não substituem essa revisão humana.
 
 Os golds operacionais fornecem redação de referência. A avaliação deverá medir
@@ -166,5 +166,80 @@ backend/.venv/bin/python -c 'from scripts.build_ai_quality_dataset import verify
 
 Não executar o modo de materialização sobre datasets congelados. Não enviar
 arquivos de `docs/files/`, dados do cliente ou serviços corporativos a modelos.
-O protocolo ainda é um documento de preparação: o bloqueio executável de
-inferência reservada e a coleta de métricas pertencem ao Bloco 2.
+O executor do Bloco 2 implementa o bloqueio de avaliação reservada e a coleta
+de métricas descritos abaixo. A calibração e a decisão continuam pendentes.
+
+## Executor do Bloco 2
+
+O executor é `scripts/run_ai_reevaluation.py`, separado da aplicação. As quatro
+configurações de desenvolvimento em `scripts/ai_reevaluation_configs/` cobrem
+baseline e Qwen3 4B, nas duas propostas. Elas são pontos iniciais de calibração,
+não candidatos finais aprovados. Cada execução possui um snapshot imutável e
+um diretório exclusivo. Use o Python do ambiente do backend na raiz do repositório:
+
+```bash
+backend/.venv/bin/python scripts/run_ai_reevaluation.py freeze --config scripts/ai_reevaluation_configs/quality-baseline-development.json --output /tmp/quality-baseline-snapshot.json
+backend/.venv/bin/python scripts/run_ai_reevaluation.py run --snapshot /tmp/quality-baseline-snapshot.json --output-dir /tmp/quality-baseline-run
+```
+
+O congelamento do agente consulta somente metadados locais, sem geração. Exige
+tag, digest, quantização e versão do Ollama correspondentes à configuração:
+
+```bash
+backend/.venv/bin/python scripts/run_ai_reevaluation.py freeze --config scripts/ai_reevaluation_configs/quality-qwen3-4b-auto-development.json --output /tmp/quality-agent-snapshot.json
+backend/.venv/bin/python scripts/run_ai_reevaluation.py run --snapshot /tmp/quality-agent-snapshot.json --output-dir /tmp/quality-agent-run --allow-inference
+backend/.venv/bin/python scripts/run_ai_reevaluation.py compare --runs /tmp/quality-baseline-run/run.json /tmp/quality-agent-run/run.json --output /tmp/quality-comparison.json
+```
+
+Para operacional, trocar as configurações pelos arquivos `operational-*` e usar
+outros caminhos de evidência. Não substituir artefatos existentes. `run --resume`
+retoma somente o mesmo snapshot, plano, código, pacotes, hardware, dados e runtime.
+Uma tentativa iniciada e interrompida vira falha `interrupted`, sem repetição.
+Falhas concluídas também não são repetidas. Limitações de recursos deixam a
+rodada incompleta; a retomada mantém a referência inicial de uso de swap.
+
+O arquivo `run.json` é o diário autoritativo: `failure` no nível da tentativa
+prevalece sobre uma saída que passou no contrato, por exemplo se houve estouro
+de recurso. Os relatórios por tentativa são auxiliares. Warmup usa o primeiro
+caso de desenvolvimento e fica fora do denominador de qualidade. `complete`
+significa que todas as tentativas previstas foram registradas, incluindo falhas;
+não significa aprovação. Rodadas incompletas mostram denominadores executado
+e planejado e não sustentam uma decisão final.
+
+Para liberar o reservado, após a calibração, definir `status: frozen` no protocolo
+e incluir em `evaluation.final_configurations` cada objeto com `id` e
+`config_sha256` (SHA-256 do JSON canônico calculado por `ai_reevaluation.digest`).
+Selecionar os arquivos com `split: evaluation`, incluindo baseline; só então gerar
+seus snapshots. A repetição deve corresponder ao protocolo e ser pelo menos três.
+Mudar opções, prompt, modelo ou split invalida a seleção. Nenhuma configuração
+reservada está selecionada neste checkpoint.
+
+O manifesto registra hashes de código, prompts, schemas, datasets e protocolo,
+versões dos pacotes usados, hardware sem identificadores pessoais e metadados do
+modelo. A comparação recusa casos, repetições, hashes ou ambiente diferentes e
+exige baseline. As configurações devem ser preservadas junto às evidências;
+para variar um fator, criar outra configuração identificada e novos snapshots.
+
+O runtime deve ser dedicado: uma execução por vez, sem outros clientes gerando
+respostas. O executor serializa suas chamadas e recusa outro modelo carregado.
+`think` é explícito, a resposta privada de raciocínio não é armazenada, e
+`keep_alive` é configurável. Cada chamada registra tokens, duração de carga,
+prefill e geração quando disponíveis, término/truncamento; `/api/ps` registra
+estado carregado, contexto e alocação VRAM observados. Um warmup não comprova
+que a chamada foi fria: conferir `loaded_before` e `load_duration`.
+
+A amostragem mede RSS somado e VRAM total dos dispositivos, que inclui o desktop;
+não atribui toda VRAM ao modelo. `/api/ps.size_vram` complementa a atribuição do
+Ollama. Ausência de suporte a `nvidia-smi` fica como `null` com motivo. O monitor
+verifica RAM, disco, margem GPU e crescimento de swap, interrompendo a sequência
+no próximo checkpoint/chamada. **Não mata o processo externo e não é um limite
+de memória imposto pelo sistema operacional.** A requisição em andamento fica
+limitada pelo timeout e o ciclo operacional respeita o prazo restante. Não usar
+um modelo maior antes do probe de capacidade.
+
+O comparativo mostra aceitação, falhas, latência média/P95, cobertura da telemetria,
+RAM/VRAM, geração e consistência estrutural. Na qualidade, F1 aceito não dá crédito
+a diagnósticos rejeitados; uma tentativa interrompida sem escore torna F1
+indisponível e permanece como falha. No operacional, a igualdade textual histórica
+é conservadora e **não mede fidelidade semântica**. Fatos, alucinações e utilidade
+continuam `pending_human_review`; o executor não emite aprovação automática.
