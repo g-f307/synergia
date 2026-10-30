@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "issue": 148,
+  "client_date": "2026-10-29",
+  "status": "report_accepted_pr_pending",
+  "implementation_commit": "2366942",
+  "frozen_protocol": "1.2.0-frozen",
+  "evaluation_complete": true,
+  "measured_attempts": {
+    "quality_agent": 72,
+    "quality_baseline": 72,
+    "operational_agent": 24,
+    "operational_baseline": 24
+  },
+  "evidence": [
+    {
+      "path": "docs/evidence/issue-148-reserved-evaluation.json",
+      "sha256": "191fe1c062f2bce6bd8d570ba81e0d5c3dfb48f3e46cafab026cf47e272e266d"
+    },
+    {
+      "path": "docs/evidence/issue-148-quality-text-review.json",
+      "sha256": "2120c8597450fb814f2392a6eed3c0c992c7e1a9e8d968b3da48e6108662a112"
+    },
+    {
+      "path": "docs/evidence/issue-148-operational-text-review.json",
+      "sha256": "89a2ef0b7d0e7ca62f648487c5189b2b5e00e9c00eff8868dda44babb94128a1"
+    },
+    {
+      "path": "docs/evidence/issue-148-checkpoint-3.json",
+      "sha256": "a9844c830183089456972344799648a3da5a7c08ee2dbbd8da4aee08c42a4054"
+    }
+  ],
+  "quality": {
+    "decision": "reformulate",
+    "rationale": [
+      "Acceptance and valid structural consistency 66/72 below frozen gates.",
+      "6 accepted outputs assert column label B as serial value without evidence.",
+      "Benefit over deterministic baseline not demonstrated for progression."
+    ],
+    "accepted_rate": 0.9166666666666666,
+    "accepted_f1_micro": 0.9629629629629629,
+    "valid_structural_consistency": 0.9166666666666666,
+    "supported_claim_precision": null,
+    "expected_fact_coverage": null,
+    "human_review": "report_accepted_by_user_without_independent_atomic_claim_annotation",
+    "utility_over_baseline": "not_demonstrated_for_progression"
+  },
+  "operational": {
+    "decision": "reformulate",
+    "rationale": [
+      "Tool choice/parameter accuracy 0.8333 below 0.95; wrong entity filter omits existing events.",
+      "Conflicting classifications not recognized as insufficient evidence in all 3 repetitions.",
+      "Unsupported absence claims and incorrectly grounded severity; reliable utility over baseline not demonstrated."
+    ],
+    "accepted_rate": 1.0,
+    "tool_choice_accuracy": 0.8333333333333334,
+    "diagnostic_status_accuracy": 0.875,
+    "conservative_exact_reference_f1": 0.375,
+    "exact_json_consistency": 0.5,
+    "semantic_f1": null,
+    "semantic_consistency": null,
+    "supported_claim_precision": null,
+    "expected_fact_coverage_assistant": 0.6666666666666666,
+    "human_review": "report_accepted_by_user_without_independent_atomic_claim_annotation",
+    "utility_over_baseline": "not_demonstrated_for_progression"
+  },
+  "hardware": {
+    "hybrid_8b_feasible_in_observed_run": true,
+    "final_resource_limit_attempts": 0,
+    "four_gib_vram_is_experimental_floor_not_full_gpu_guarantee": true,
+    "preferred_vram_for_larger_comparison_gib": 8
+  },
+  "remaining_acceptance": [
+    "PR description approval, branch publication, remote CI and PR review/merge."
+  ],
+  "product_integration_authorized": false,
+  "new_calibration_authorized_by_this_decision": false,
+  "rejected_responses_repaired": false,
+  "reserved_gold_changed": false,
+  "report_acceptance": {
+    "status": "accepted",
+    "reviewer": "marcelovdu",
+    "date": "2026-10-29",
+    "statement": "O relatorio está ok.",
+    "scope": "Report, conclusions and disclosed limitations accepted; no independent atomic-claim annotation or product integration approval."
+  }
+}

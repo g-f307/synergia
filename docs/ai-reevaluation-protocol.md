@@ -2,8 +2,11 @@
 
 Estado: **calibração encerrada e seleção final congelada**. O registro
 legível por máquina é [ai-reevaluation-protocol.json](ai-reevaluation-protocol.json).
-As duas decisões permanecem `not_decided`. Este documento não autoriza integração
-de IA ao produto e não declara resultados positivos ainda não medidos.
+O protocolo JSON preserva `not_decided` como estado anterior à medição; os
+resultados e as decisões técnicas finais de reformular constam do
+[relatório final](ai-reevaluation-final-report.md) e da
+[decisão estruturada](ai-reevaluation-decision.json). Integração ao produto
+permanece não autorizada.
 
 ## Dependências e preservação histórica
 
@@ -146,7 +149,9 @@ A revisão humana deve contar afirmações sustentadas, afirmações sem suporte
 fatos esperados omitidos, hipóteses apresentadas como fatos e instruções de ação
 indevidas. Reportar taxas com seus denominadores e o percentual de respostas
 efetivamente revisadas. Ausência de afirmações ou de respostas válidas não pode
-ser interpretada como 100% de utilidade. O bloco seguinte implementará essa rubrica.
+ser interpretada como 100% de utilidade. A revisão do assistente e suas limitações
+estão no relatório final; o aceite do relatório foi confirmado pelo responsável,
+com as limitações preservadas.
 
 Qualidade exige demonstrar utilidade de explicação/encaminhamento além da
 classificação determinística; operacional exige investigação concluída com
@@ -167,7 +172,8 @@ backend/.venv/bin/python -c 'from scripts.build_ai_quality_dataset import verify
 Não executar o modo de materialização sobre datasets congelados. Não enviar
 arquivos de `docs/files/`, dados do cliente ou serviços corporativos a modelos.
 O executor do Bloco 2 implementa o bloqueio de avaliação reservada e a coleta
-de métricas descritos abaixo. A calibração e a decisão continuam pendentes.
+de métricas descritos abaixo. Os resultados da calibração e da avaliação estão nos respectivos relatórios;
+o relatório e a decisão técnica foram aceitos pelo responsável.
 
 ## Executor do Bloco 2
 

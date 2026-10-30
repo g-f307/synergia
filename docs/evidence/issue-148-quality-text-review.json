@@ -1,0 +1,793 @@
+{
+  "issue": 148,
+  "reviewer_kind": "assistant",
+  "human_acceptance": "report_accepted_by_user",
+  "kind": "quality",
+  "reviewed_accepted_outputs": 66,
+  "planned_measured_attempts": 72,
+  "attempts": [
+    {
+      "attempt_id": "0001",
+      "case": "evaluation/QD3-E01.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0002",
+      "case": "evaluation/QD3-E01.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0003",
+      "case": "evaluation/QD3-E02.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não foi preenchido conforme a especificação.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0004",
+      "case": "evaluation/QD3-E02.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não há evidência direta para confirmar essa intenção.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        },
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].verification_action",
+          "excerpt": "Verifique manualmente o conteúdo da célula A, linha 2 no sheet 'Dados' para confirmar se o campo workorder_number está realmente vazio e se foi omitido intencionalmente.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0005",
+      "case": "evaluation/QD3-E03.csv",
+      "repetition": 0,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0006",
+      "case": "evaluation/QD3-E03.xlsx",
+      "repetition": 0,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0007",
+      "case": "evaluation/QD3-E04.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0008",
+      "case": "evaluation/QD3-E04.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0009",
+      "case": "evaluation/QD3-E05.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0010",
+      "case": "evaluation/QD3-E05.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0011",
+      "case": "evaluation/QD3-E06.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do arquivo CSV está duplicado, conforme indicado na primeira ocorrência no CSV:2.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0012",
+      "case": "evaluation/QD3-E06.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do sheet 'Dados' está duplicado, conforme indicado na razão 'Serial duplicado; primeira ocorrência em Dados:2'.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0013",
+      "case": "evaluation/QD3-E07.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0014",
+      "case": "evaluation/QD3-E07.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0015",
+      "case": "evaluation/QD3-E08.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0016",
+      "case": "evaluation/QD3-E08.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[1].probable_cause.description",
+          "excerpt": "É possível que a base de referência tenha sido omitida intencionalmente ou não tenha sido incluída no arquivo, mas não há evidência de qual base deveria ser utilizada.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0017",
+      "case": "evaluation/QD3-E09.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0018",
+      "case": "evaluation/QD3-E09.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0019",
+      "case": "evaluation/QD3-E10.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0020",
+      "case": "evaluation/QD3-E10.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0021",
+      "case": "evaluation/QD3-E11.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0022",
+      "case": "evaluation/QD3-E11.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0023",
+      "case": "evaluation/QD3-E12.csv",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0024",
+      "case": "evaluation/QD3-E12.xlsx",
+      "repetition": 0,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0025",
+      "case": "evaluation/QD3-E01.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0026",
+      "case": "evaluation/QD3-E01.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0027",
+      "case": "evaluation/QD3-E02.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não foi preenchido conforme a especificação.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0028",
+      "case": "evaluation/QD3-E02.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não há evidência direta para confirmar essa intenção.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        },
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].verification_action",
+          "excerpt": "Verifique manualmente o conteúdo da célula A, linha 2 no sheet 'Dados' para confirmar se o campo workorder_number está realmente vazio e se foi omitido intencionalmente.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0029",
+      "case": "evaluation/QD3-E03.csv",
+      "repetition": 1,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0030",
+      "case": "evaluation/QD3-E03.xlsx",
+      "repetition": 1,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0031",
+      "case": "evaluation/QD3-E04.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0032",
+      "case": "evaluation/QD3-E04.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0033",
+      "case": "evaluation/QD3-E05.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0034",
+      "case": "evaluation/QD3-E05.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0035",
+      "case": "evaluation/QD3-E06.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do arquivo CSV está duplicado, conforme indicado na primeira ocorrência no CSV:2.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0036",
+      "case": "evaluation/QD3-E06.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do sheet 'Dados' está duplicado, conforme indicado na razão 'Serial duplicado; primeira ocorrência em Dados:2'.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0037",
+      "case": "evaluation/QD3-E07.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0038",
+      "case": "evaluation/QD3-E07.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0039",
+      "case": "evaluation/QD3-E08.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0040",
+      "case": "evaluation/QD3-E08.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[1].probable_cause.description",
+          "excerpt": "É possível que a base de referência tenha sido omitida intencionalmente ou não tenha sido incluída no arquivo, mas não há evidência de qual base deveria ser utilizada.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0041",
+      "case": "evaluation/QD3-E09.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0042",
+      "case": "evaluation/QD3-E09.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0043",
+      "case": "evaluation/QD3-E10.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0044",
+      "case": "evaluation/QD3-E10.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0045",
+      "case": "evaluation/QD3-E11.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0046",
+      "case": "evaluation/QD3-E11.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0047",
+      "case": "evaluation/QD3-E12.csv",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0048",
+      "case": "evaluation/QD3-E12.xlsx",
+      "repetition": 1,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0049",
+      "case": "evaluation/QD3-E01.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0050",
+      "case": "evaluation/QD3-E01.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0051",
+      "case": "evaluation/QD3-E02.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não foi preenchido conforme a especificação.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0052",
+      "case": "evaluation/QD3-E02.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].probable_cause.description",
+          "excerpt": "É possível que o campo workorder_number tenha sido omitido intencionalmente durante a entrada de dados, mas não há evidência direta para confirmar essa intenção.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        },
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[0].verification_action",
+          "excerpt": "Verifique manualmente o conteúdo da célula A, linha 2 no sheet 'Dados' para confirmar se o campo workorder_number está realmente vazio e se foi omitido intencionalmente.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0053",
+      "case": "evaluation/QD3-E03.csv",
+      "repetition": 2,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0054",
+      "case": "evaluation/QD3-E03.xlsx",
+      "repetition": 2,
+      "failure": "duplicate_diagnosis",
+      "accepted_output_reviewed": false,
+      "factual_counterexamples": [],
+      "review_note": "Rejected text unavailable by safety design; failure remains in denominator, safe diagnostic projection retained."
+    },
+    {
+      "attempt_id": "0055",
+      "case": "evaluation/QD3-E04.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0056",
+      "case": "evaluation/QD3-E04.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0057",
+      "case": "evaluation/QD3-E05.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0058",
+      "case": "evaluation/QD3-E05.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0059",
+      "case": "evaluation/QD3-E06.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do arquivo CSV está duplicado, conforme indicado na primeira ocorrência no CSV:2.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0060",
+      "case": "evaluation/QD3-E06.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_factual_claim",
+          "field": "diagnoses[0].summary",
+          "excerpt": "O serial 'B' na linha 3 do sheet 'Dados' está duplicado, conforme indicado na razão 'Serial duplicado; primeira ocorrência em Dados:2'.",
+          "reason": "B is the column label. No serial value is supplied by the occurrence; source reason states only duplication and first occurrence location."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0061",
+      "case": "evaluation/QD3-E07.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0062",
+      "case": "evaluation/QD3-E07.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0063",
+      "case": "evaluation/QD3-E08.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0064",
+      "case": "evaluation/QD3-E08.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [
+        {
+          "type": "unsupported_intent_hypothesis_or_instruction",
+          "field": "diagnoses[1].probable_cause.description",
+          "excerpt": "É possível que a base de referência tenha sido omitida intencionalmente ou não tenha sido incluída no arquivo, mas não há evidência de qual base deveria ser utilizada.",
+          "reason": "Unconfirmed possibility, not asserted established cause, but violates explicit no-intent instruction and adds no verified utility."
+        }
+      ],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0065",
+      "case": "evaluation/QD3-E09.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0066",
+      "case": "evaluation/QD3-E09.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0067",
+      "case": "evaluation/QD3-E10.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0068",
+      "case": "evaluation/QD3-E10.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0069",
+      "case": "evaluation/QD3-E11.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0070",
+      "case": "evaluation/QD3-E11.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0071",
+      "case": "evaluation/QD3-E12.csv",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    },
+    {
+      "attempt_id": "0072",
+      "case": "evaluation/QD3-E12.xlsx",
+      "repetition": 2,
+      "failure": null,
+      "accepted_output_reviewed": true,
+      "factual_counterexamples": [],
+      "review_note": "Read all accepted text; first repetition inspected in full, later outputs compared in full for changes. Known counterexamples are explicit; no atomic claim precision inferred from absence of flags."
+    }
+  ],
+  "supported_claim_precision": null,
+  "supported_claim_precision_reason": "No human-approved atomic-claim annotation; confirmed counterexamples and response-level coverage provided instead.",
+  "utility_over_baseline": "not_demonstrated_for_progression",
+  "decision_recommendation": "reformulate",
+  "reason": "Acceptance/valid consistency fail frozen thresholds; unsupported serial values and intent hypotheses; baseline reliable on same cases.",
+  "report_acceptance": {
+    "status": "accepted",
+    "reviewer": "marcelovdu",
+    "date": "2026-10-29",
+    "statement": "O relatorio está ok.",
+    "scope": "Report, conclusions and disclosed limitations accepted; no independent atomic-claim annotation or product integration approval."
+  }
+}
