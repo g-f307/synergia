@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "issue": 148,
+  "verified_on": "2026-10-30",
+  "repository": "https://github.com/g-f307/synergia.git",
+  "reference": "refs/tags/ai-poc-148-experiment-v1",
+  "reference_type": "annotated_tag",
+  "tag_object_sha": "8afb125e0fc7631ce1237aa1f69fcc5fcd5c75d1",
+  "commit_sha": "23669425d918d6699b914097c60c98f4128afe21",
+  "remote_ref_verified": true,
+  "frozen_snapshots_verified": 4,
+  "frozen_file_hashes_verified": 244,
+  "verification": "Independent empty bare repository fetched only the remote tag with depth=1; target SHA and SHA-256 of all 244 frozen files matched all four reserved snapshots.",
+  "immutability_policy": "Published experiment references must not be moved, recreated or deleted; another experiment requires another tag. This is repository policy, not a claim of server-side tag protection.",
+  "product_release": false,
+  "inference_repeated": false,
+  "independent_remote_tag_fetch_verified": true
+}

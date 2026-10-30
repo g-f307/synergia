@@ -28,6 +28,10 @@
     {
       "path": "docs/evidence/issue-148-checkpoint-3.json",
       "sha256": "a9844c830183089456972344799648a3da5a7c08ee2dbbd8da4aee08c42a4054"
+    },
+    {
+      "path": "docs/evidence/issue-148-experiment-reference.json",
+      "sha256": "ce23da4e219bcec3639dda522b9b39b97caf410978187961b4132cdcfeb99f88"
     }
   ],
   "quality": {
@@ -83,5 +87,10 @@
     "date": "2026-10-29",
     "statement": "O relatorio está ok.",
     "scope": "Report, conclusions and disclosed limitations accepted; no independent atomic-claim annotation or product integration approval."
+  },
+  "experiment_reference": {
+    "tag": "ai-poc-148-experiment-v1",
+    "commit_sha": "23669425d918d6699b914097c60c98f4128afe21",
+    "preservation_evidence": "docs/evidence/issue-148-experiment-reference.json"
   }
 }

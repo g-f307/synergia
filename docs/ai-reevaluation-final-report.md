@@ -55,7 +55,8 @@ crescimento permitido em cada rodada; não houve alegação de swap absoluto zer
 ## Escopo e integridade
 
 A rodada reservada usa o protocolo `1.2.0-frozen`, selecionado antes da primeira
-inferência reservada. Implementação e configurações: commit `2366942`. O protocolo
+inferência reservada. Implementação e configurações: commit `2366942`, preservado
+pela tag remota anotada `ai-poc-148-experiment-v1`. O protocolo
 é o plano imutável pré-execução; as decisões e os resultados são registrados
 separadamente neste relatório e nas evidências finais. Não alterar o protocolo
 para atualizar status após a medição, pois seu hash faz parte dos snapshots.
@@ -121,8 +122,34 @@ existente ou simples ausência de flags. Métricas não medidas ficam `null`.
 
 ## Reprodução
 
-Usar checkout do commit `2366942` ou da revisão final com os mesmos hashes,
-Python do backend com dependências instaladas, modelos/digests e runtime fixados.
+Usar o código preservado na tag remota anotada **`ai-poc-148-experiment-v1`**,
+que aponta ao commit completo **`23669425d918d6699b914097c60c98f4128afe21`**.
+Essa referência preserva o commit mesmo após squash e exclusão da branch do PR.
+Ela não é uma release de produto e não deve ser movida ou excluída. Qualquer
+experimento futuro exige outra referência, preservando esta.
+
+Obter a tag e abrir um checkout isolado, usando um diretório ainda inexistente:
+
+```bash
+git fetch origin refs/tags/ai-poc-148-experiment-v1:refs/tags/ai-poc-148-experiment-v1
+git rev-parse 'refs/tags/ai-poc-148-experiment-v1^{commit}'
+git worktree add --detach ../synergia-ai148-experiment refs/tags/ai-poc-148-experiment-v1
+cd ../synergia-ai148-experiment
+```
+
+O `rev-parse` deve retornar exatamente
+`23669425d918d6699b914097c60c98f4128afe21`. A conferência de preservação verificou
+os **244 hashes de arquivos dos quatro snapshots** contra os blobs desse commit,
+incluindo código, prompts, schemas, configurações, protocolo e dados. O registro
+está em [issue-148-experiment-reference.json](evidence/issue-148-experiment-reference.json).
+
+A revisão final do PR possui correções de formatação com hashes diferentes.
+Para reproduzir o código que gerou as evidências auditadas, usar a tag acima;
+um checkout do head final não substitui esse código. O relatório e as evidências
+finais estão na revisão integrada do PR, enquanto a tag preserva os insumos
+anteriores à medição. Isso não exige repetir inferências nem alterar snapshots.
+
+Usar Python do backend com dependências instaladas, modelos/digests e runtime fixados.
 Manter Ollama dedicado, sem outro cliente, download, instalação ou teste durante
 inferência. Conferir RAM, disco e GPU antes de iniciar. Os pesos são locais e não
 fazem parte do Git. Nenhuma credencial externa é necessária.
