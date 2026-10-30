@@ -10,8 +10,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-
 import ai_operational_summary as op
 from ai_poc_foundation import (
     LocalRuntimeTimeout,
@@ -19,6 +17,7 @@ from ai_poc_foundation import (
     PoCFoundationError,
     _NoRedirectHandler,
 )
+from jsonschema import Draft202012Validator
 
 FINAL = "final_answer"
 COMPLETE = "finish_collection"
@@ -36,9 +35,18 @@ def native_tools(
 ) -> list[dict]:
     descriptions = {
         "get_execution": "Ler execução autorizada, seu status e contagens de coleções.",
-        "list_pending": "Ler pendências do único caso autorizado. Sem filtros para recuperar todas.",
-        "list_classifications": "Ler classificações do único caso autorizado. Sem filtros para recuperar todas.",
-        "list_events": "Ler eventos do único caso autorizado. Sem filtros para recuperar todos.",
+        "list_pending": (
+            "Ler pendências do único caso autorizado. "
+            "Sem filtros para recuperar todas."
+        ),
+        "list_classifications": (
+            "Ler classificações do único caso autorizado. "
+            "Sem filtros para recuperar todas."
+        ),
+        "list_events": (
+            "Ler eventos do único caso autorizado. "
+            "Sem filtros para recuperar todos."
+        ),
     }
     result = [
         {
@@ -57,7 +65,11 @@ def native_tools(
                 "type": "function",
                 "function": {
                     "name": COMPLETE,
-                    "description": "Indicar que não serão necessárias novas consultas após o lote atual. A resposta consultiva será solicitada em outra fase. Não lê nem altera dados.",
+                    "description": (
+                        "Indicar que não serão necessárias novas consultas "
+                        "após o lote atual. A resposta consultiva será "
+                        "solicitada em outra fase. Não lê nem altera dados."
+                    ),
                     "parameters": {
                         "type": "object",
                         "properties": {},
@@ -74,7 +86,10 @@ def native_tools(
             "type": "function",
             "function": {
                 "name": FINAL,
-                "description": "Finalizar com resposta consultiva, somente após recuperar as evidências necessárias. Não grava nem altera dados.",
+                "description": (
+                    "Finalizar com resposta consultiva, somente após recuperar "
+                    "as evidências necessárias. Não grava nem altera dados."
+                ),
                 "parameters": json.loads(op.SCHEMA.read_text(encoding="utf-8")),
             },
         }
@@ -226,11 +241,15 @@ def structured_finish(
         {
             "role": "user",
             "content": (
-                "Agora retorne somente o JSON do schema, usando apenas as evidências recuperadas. "
-                "status descreve o diagnóstico, não o estado da execução. A falta de causa-raiz "
+                "Agora retorne somente o JSON do schema, "
+                "usando apenas as evidências recuperadas. "
+                "status descreve o diagnóstico, não o estado da execução. "
+                "A falta de causa-raiz "
                 "não impede descrever como completed uma falha documentada. "
-                "partial sem evidência adicional exige insufficient_evidence e uma pergunta. "
-                "Não invente fatos, causas ou referências, nem selecione classificações conflitantes. "
+                "partial sem evidência adicional exige "
+                "insufficient_evidence e uma pergunta. "
+                "Não invente fatos, causas ou referências, "
+                "nem selecione classificações conflitantes. "
                 "Schema: " + json.dumps(schema, ensure_ascii=False)
             ),
         }
@@ -447,7 +466,10 @@ def collect_native_attempt(
                 messages.append(
                     {
                         "role": "user",
-                        "content": f"{denied} solicitações negadas; nenhum dado dessas solicitações foi retornado.",
+                        "content": (
+                            f"{denied} solicitações negadas; "
+                            "nenhum dado dessas solicitações foi retornado."
+                        ),
                     }
                 )
             if report["failure"]:

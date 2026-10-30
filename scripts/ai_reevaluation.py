@@ -11,8 +11,6 @@ from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from jsonschema import Draft202012Validator
-
 import ai_operational_summary as operational
 import ai_quality_diagnosis as quality
 from ai_poc_foundation import (
@@ -22,7 +20,6 @@ from ai_poc_foundation import (
     PoCFoundationError,
     _NoRedirectHandler,
 )
-from ai_reevaluation_telemetry import Sampler, hardware, stable_json
 from ai_reevaluation_guidance import GUIDED_FIELDS, GuidedQualityRuntime
 from ai_reevaluation_native import (
     NATIVE_ARCHITECTURES,
@@ -30,8 +27,10 @@ from ai_reevaluation_native import (
     NativeToolsRuntime,
     collect_native_attempt,
 )
+from ai_reevaluation_telemetry import Sampler, hardware, stable_json
 from evaluate_ai_operational import _score, score_tool_calls
 from evaluate_ai_quality import score as quality_score
+from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL = ROOT / "docs/ai-reevaluation-protocol.json"
@@ -713,7 +712,7 @@ def summarize_run(state: dict) -> dict:
         for attempt in attempts:
             score = (attempt.get("result") or {}).get("score")
             if score is None:
-                # Missing score cannot improve F1: metric is unavailable until reconciled.
+                # Missing scores cannot improve F1; keep it unavailable.
                 summary["accepted_f1_micro"] = None
                 break
             if attempt["failure"] is None:

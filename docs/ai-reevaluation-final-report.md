@@ -300,3 +300,29 @@ substituídos por novas tentativas até obter resultado positivo.
 - `backend/.venv/bin/python scripts/security_release.py validate`: aprovado.
 - `git diff --check`: aprovado. As verificações finais rodaram após o término
   das inferências, preservando o isolamento da medição.
+
+### Correção do lint da CI após publicação do PR #164
+
+A primeira execução remota falhou em 14 ocorrências de Ruff: três blocos de
+imports e onze linhas acima de 88 caracteres. O job executa `ruff check .
+../scripts` dentro de `backend/`, aplicando `backend/pyproject.toml`; a verificação
+anterior executada na raiz não aplicou a mesma configuração aos scripts.
+
+A correção ordena imports e divide literais adjacentes preservando integralmente
+seus textos. A comparação da AST antes/depois, desconsiderando somente os imports
+de topo, confirmou a mesma lógica e os mesmos textos de ferramentas/prompts.
+`ruff check . ../scripts` executado em `backend/` e a compilação de `app`/scripts
+passaram. Os comandos corretos para repetir essas verificações a partir da raiz:
+
+```bash
+backend/.venv/bin/ruff check --config backend/pyproject.toml backend scripts
+backend/.venv/bin/python -m compileall -q backend/app scripts
+```
+
+As evidências e os snapshots da medição não foram alterados. O commit `2366942`
+continua identificando o código original do experimento; a formatação posterior
+muda hashes de arquivo, sem justificar reexecução ou substituição dos resultados.
+
+Após a correção, `.venv/bin/pytest -q -m "not integration"
+--junitxml=reports/pytest.xml`, executado em `backend/` como na CI, passou com
+**1.417 testes**, 672 desmarcados e 15 avisos, em 68,60 s.

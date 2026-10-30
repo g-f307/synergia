@@ -6,10 +6,9 @@ import hashlib
 import json
 from copy import deepcopy
 
-from jsonschema import Draft202012Validator
-
 import ai_quality_diagnosis as quality
 from ai_poc_foundation import OllamaRuntime, PoCFoundationError
+from jsonschema import Draft202012Validator
 
 GUIDED_FIELDS = ["status", "open_questions_bounds"]
 EVIDENCE_SCHEMA = (
