@@ -1,6 +1,6 @@
 # Protocolo de reavaliação local das PoCs — issue #148
 
-Estado: **gabaritos aprovados; infraestrutura do Bloco 2 implementada**. O registro
+Estado: **calibração encerrada e seleção final congelada**. O registro
 legível por máquina é [ai-reevaluation-protocol.json](ai-reevaluation-protocol.json).
 As duas decisões permanecem `not_decided`. Este documento não autoriza integração
 de IA ao produto e não declara resultados positivos ainda não medidos.
@@ -211,8 +211,8 @@ e incluir em `evaluation.final_configurations` cada objeto com `id` e
 `config_sha256` (SHA-256 do JSON canônico calculado por `ai_reevaluation.digest`).
 Selecionar os arquivos com `split: evaluation`, incluindo baseline; só então gerar
 seus snapshots. A repetição deve corresponder ao protocolo e ser pelo menos três.
-Mudar opções, prompt, modelo ou split invalida a seleção. Nenhuma configuração
-reservada está selecionada neste checkpoint.
+Mudar opções, prompt, modelo ou split invalida a seleção. As quatro configurações `*-evaluation.json` selecionadas constam do protocolo
+`1.2.0-frozen`; a seleção ocorreu antes da primeira inferência reservada.
 
 O manifesto registra hashes de código, prompts, schemas, datasets e protocolo,
 versões dos pacotes usados, hardware sem identificadores pessoais e metadados do
@@ -243,3 +243,26 @@ a diagnósticos rejeitados; uma tentativa interrompida sem escore torna F1
 indisponível e permanece como falha. No operacional, a igualdade textual histórica
 é conservadora e **não mede fidelidade semântica**. Fatos, alucinações e utilidade
 continuam `pending_human_review`; o executor não emite aprovação automática.
+
+
+## Seleção final de 29/10/2026
+
+O [checkpoint de calibração](ai-reevaluation-calibration.md) registra os resultados
+completos, controles negativos e justificativa das arquiteturas. As configurações
+finais são `quality-baseline-evaluation`,
+`quality-instruct-evidence-guided-evaluation`, `operational-baseline-evaluation`
+e `operational-qwen3-8b-staged-guarded-evaluation`. Cada arquivo encontra-se em
+`scripts/ai_reevaluation_configs/`. Executar `freeze` e `run` conforme acima,
+em diretórios novos, sem modificar protocolo, dados, scripts ou configurações
+entre as rodadas. Os snapshots incorporam o protocolo congelado completo.
+
+Revisão textual: avaliar todas as respostas aceitas e manter falhas no denominador.
+Unidades verificáveis são afirmações sobre estado, contagens, valores, posição,
+classificação e eventos; hipóteses explicitamente incertas e recomendações humanas
+são registradas separadamente e não comprovam causalidade. Referências existentes
+não bastam: conferir se sustentam a afirmação. Registrar por tentativa trechos
+problemáticos, omissões de fatos esperados, severidade e instruções indevidas.
+Revisão feita pelo assistente deve ser identificada como tal; não substitui o
+aceite humano de fatos/utilidade. Utilidade adicional ao baseline exige informação
+correta de explicação/encaminhamento ou síntese que vá além do template, sem causa
+inventada. Metas originais permanecem; métricas não medidas ficam indisponíveis.

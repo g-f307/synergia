@@ -147,6 +147,21 @@
           "maximum": 1
         }
       }
+    },
+    "architecture": {
+      "enum": [
+        "free_contract",
+        "quality_policy_guided",
+        "operational_native_tools",
+        "operational_native_structured",
+        "operational_native_staged"
+      ]
+    },
+    "context_contract_guard": {
+      "type": "boolean"
+    },
+    "evidence_only_context": {
+      "type": "boolean"
     }
   }
 }

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "operational-baseline-exploratory-development",
+  "kind": "operational",
+  "mode": "baseline",
+  "split": "development",
+  "repetitions": 1,
+  "warmup_attempts": 1,
+  "prompt": "operational-v3.txt",
+  "model": null,
+  "model_digest": null,
+  "runtime_version": null,
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "think": false,
+  "processor": "automatic_acceleration",
+  "keep_alive_seconds": 600,
+  "request_timeout_seconds": 300,
+  "attempt_timeout_seconds": 600,
+  "options": {
+    "num_ctx": 4096,
+    "num_predict": 2048,
+    "temperature": 0,
+    "seed": 126,
+    "num_thread": 6
+  }
+}

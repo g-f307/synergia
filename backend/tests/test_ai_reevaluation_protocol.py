@@ -146,7 +146,7 @@ def test_resource_limits_and_candidate_roles_are_explicit():
     assert len({model["id"] for model in models}) == len(models)
     assert (
         next(m for m in models if m["tag"] == "qwen3:8b")["capacity"]
-        == "pending_hybrid_probe"
+        == "observed_hybrid_cpu_gpu_development_probe"
     )
     assert (
         next(m for m in models if m["tag"].startswith("qwen2.5"))["product_eligibility"]

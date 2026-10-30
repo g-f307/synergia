@@ -23,6 +23,13 @@ from ai_poc_foundation import (
     _NoRedirectHandler,
 )
 from ai_reevaluation_telemetry import Sampler, hardware, stable_json
+from ai_reevaluation_guidance import GUIDED_FIELDS, GuidedQualityRuntime
+from ai_reevaluation_native import (
+    NATIVE_ARCHITECTURES,
+    NativeStructuredRuntime,
+    NativeToolsRuntime,
+    collect_native_attempt,
+)
 from evaluate_ai_operational import _score, score_tool_calls
 from evaluate_ai_quality import score as quality_score
 
@@ -67,6 +74,26 @@ def validate_configuration(config: dict):
         raise PoCFoundationError("invalid_configuration")
     contained(ROOT / "scripts/ai_poc_prompts", config["prompt"])
     LocalModelConfig(model=config["model"] or "baseline", endpoint=config["endpoint"])
+    if (
+        config.get("evidence_only_context")
+        and config.get("architecture") != "quality_policy_guided"
+    ):
+        raise PoCFoundationError("evidence_projection_requires_guided_quality")
+    if (
+        config.get("context_contract_guard")
+        and config.get("architecture") != "operational_native_staged"
+    ):
+        raise PoCFoundationError("context_guard_requires_staged_native_flow")
+    if config.get("architecture") in NATIVE_ARCHITECTURES and (
+        config["kind"] != "operational"
+        or config["mode"] != "agent"
+        or urlsplit(config["endpoint"]).path != "/api/chat"
+    ):
+        raise PoCFoundationError("native_tools_require_operational_chat_agent")
+    if config.get("architecture") == "quality_policy_guided" and (
+        config["kind"] != "quality" or config["mode"] != "agent"
+    ):
+        raise PoCFoundationError("guidance_requires_quality_agent")
     if config["mode"] == "agent" and not all(
         config[key] for key in ("model", "model_digest", "runtime_version")
     ):
@@ -134,6 +161,10 @@ def check_gate(config: dict, protocol: dict, review: dict):
     ):
         raise PoCFoundationError("gold_review_required")
     if config["split"] == "evaluation":
+        if config["mode"] == "agent" and config["think"] not in candidate.get(
+            "supported_thinking_modes", [True, False]
+        ):
+            raise PoCFoundationError("candidate_mode_incompatible_with_upstream")
         selected = protocol["evaluation"]["final_configurations"]
         if (
             protocol["status"] != "frozen"
@@ -223,12 +254,18 @@ def freeze(config: dict, *, metadata=runtime_metadata, identity=hardware) -> dic
     selected = [item["key"] for item in cases if item["split"] == config["split"]]
     if not selected:
         raise PoCFoundationError("empty_split")
+    runtime = metadata(config)
+    if config.get(
+        "architecture"
+    ) in NATIVE_ARCHITECTURES and "tools" not in runtime.get("capabilities", []):
+        raise PoCFoundationError("native_tools_not_supported")
     return {
         "schema_version": 1,
         "configuration": config,
+        "protocol": protocol,
         "config_sha256": digest(config),
         "hashes": fingerprint(),
-        "runtime": metadata(config),
+        "runtime": runtime,
         "hardware": identity(),
         "cases": selected,
         "packages": {
@@ -274,7 +311,14 @@ class MeteredRuntime:
                     "metrics": metrics,
                     "done_reason": reason,
                     "truncated": reason == "length",
+                    "request_sha256": getattr(self.runtime, "request_sha256", None),
+                    "rejected_response_sha256": getattr(
+                        self.runtime, "rejected_response_sha256", None
+                    ),
                 }
+            )
+            self.failure = self.failure or getattr(
+                self.runtime, "guidance_failure", None
             )
 
     @property
@@ -295,7 +339,19 @@ def make_runtime(config: dict):
         if config["kind"] == "quality"
         else operational.interaction_schema()
     )
-    return OllamaRuntime(
+    runtime_class = (
+        GuidedQualityRuntime
+        if config.get("architecture") == "quality_policy_guided"
+        else OllamaRuntime
+    )
+    if config.get("architecture") in NATIVE_ARCHITECTURES:
+        runtime_class = (
+            NativeStructuredRuntime
+            if config.get("architecture")
+            in {"operational_native_structured", "operational_native_staged"}
+            else NativeToolsRuntime
+        )
+    runtime = runtime_class(
         LocalModelConfig(
             config["model"], config["endpoint"], config["request_timeout_seconds"]
         ),
@@ -304,6 +360,9 @@ def make_runtime(config: dict):
         think=config["think"],
         keep_alive=config["keep_alive_seconds"],
     )
+    if isinstance(runtime, GuidedQualityRuntime):
+        runtime.evidence_only_context = config.get("evidence_only_context", False)
+    return runtime
 
 
 def execute_case(config, item, directory, runtime):
@@ -342,9 +401,27 @@ def execute_case(config, item, directory, runtime):
             "elapsed_ms": (time.perf_counter() - started) * 1000,
         }
     else:
-        report = operational.collect_agent_attempt(
-            case, runtime, config["model"], prompt_path=prompt
+        collector = (
+            collect_native_attempt
+            if config.get("architecture") in NATIVE_ARCHITECTURES
+            else operational.collect_agent_attempt
         )
+        if config.get("architecture") in {
+            "operational_native_structured",
+            "operational_native_staged",
+        }:
+            report = collector(
+                case,
+                runtime,
+                config["model"],
+                prompt_path=prompt,
+                structured_final=True,
+                completion_tool=config.get("architecture")
+                == "operational_native_staged",
+                context_guard=config.get("context_contract_guard", False),
+            )
+        else:
+            report = collector(case, runtime, config["model"], prompt_path=prompt)
     return {
         "report": report,
         "exact_reference_score": _score(report["output"], item["gold"])
@@ -433,7 +510,7 @@ def run(
         if entry["id"] in completed:
             continue
         with sampler_factory(
-            read(PROTOCOL)["resources"], output, state.get("resource_reference")
+            snapshot["protocol"]["resources"], output, state.get("resource_reference")
         ) as sampler:
             if "resource_reference" not in state and hasattr(sampler, "before"):
                 state["resource_reference"] = sampler.before
@@ -523,6 +600,18 @@ def summarize_run(state: dict) -> dict:
     times = sorted(r["elapsed_ms"] for r in reports if "elapsed_ms" in r)
     calls = [call for a in attempts for call in a.get("generation", [])]
     resources = [a.get("resources", {}) for a in attempts]
+    config = state["snapshot"]["configuration"]
+    guided_fields = []
+    case_scope = "original_output"
+    if config.get("architecture") == "quality_policy_guided":
+        guided_fields = GUIDED_FIELDS
+        case_scope = "pipeline_with_deterministic_status"
+    elif config.get("context_contract_guard"):
+        guided_fields = [
+            "status_when_retrieved_partial_without_data",
+            "question_bounds",
+        ]
+        case_scope = "pipeline_with_context_contract_guard"
 
     def peak(key):
         known = [r[key] for r in resources if r.get(key) is not None]
@@ -558,13 +647,28 @@ def summarize_run(state: dict) -> dict:
         ),
         "semantic_fidelity": "pending_human_review",
         "decision": "not_decided",
+        "architecture": state["snapshot"]["configuration"].get(
+            "architecture", "free_contract"
+        ),
+        "deterministic_guided_fields": guided_fields,
+        "case_correct_scope": case_scope,
+        "model_context_scope": "evidence_projection_v1"
+        if config.get("evidence_only_context")
+        else "original_context",
+        "context_contract_guidance_applied_attempts": sum(
+            bool(r.get("context_contract_guidance_applied")) for r in reports
+        ),
     }
     groups = {
         key: [a for a in attempts if a["case"] == key]
         for key in state["snapshot"]["cases"]
     }
     consistent = 0
+    repeated_groups = 0
     for group in groups.values():
+        if len(group) < 3:
+            continue
+        repeated_groups += 1
         signatures = [
             digest(
                 (a.get("result") or {}).get("score", {}).get("semantic_signature")
@@ -579,9 +683,32 @@ def summarize_run(state: dict) -> dict:
             and len(set(signatures)) == 1
         )
     summary["valid_structural_consistency"] = (
-        consistent / len(groups) if groups else None
+        consistent / repeated_groups if repeated_groups else None
     )
+    summary["consistency_cases_with_three_repetitions"] = repeated_groups
     if state["snapshot"]["configuration"]["kind"] == "quality":
+        summary["accepted_case_correct_rate"] = (
+            sum(
+                a["failure"] is None
+                and bool((a.get("result") or {}).get("score", {}).get("case_correct"))
+                for a in attempts
+            )
+            / n
+            if n
+            else None
+        )
+        summary["abstention_correct_rate"] = (
+            sum(
+                a["failure"] is None
+                and bool(
+                    (a.get("result") or {}).get("score", {}).get("abstention_correct")
+                )
+                for a in attempts
+            )
+            / n
+            if n
+            else None
+        )
         tp = fp = fn = 0
         for attempt in attempts:
             score = (attempt.get("result") or {}).get("score")
@@ -601,6 +728,20 @@ def summarize_run(state: dict) -> dict:
                 2 * tp / (2 * tp + fp + fn) if 2 * tp + fp + fn else 1.0
             )
     else:
+        summary["diagnostic_status_accuracy"] = (
+            sum(
+                a["failure"] is None
+                and bool(
+                    (a.get("result") or {})
+                    .get("exact_reference_score", {})
+                    .get("status_correct")
+                )
+                for a in attempts
+            )
+            / n
+            if n
+            else None
+        )
         summary["conservative_exact_reference_f1"] = (
             sum(
                 (a["result"].get("exact_reference_score") or {}).get("f1", 0)

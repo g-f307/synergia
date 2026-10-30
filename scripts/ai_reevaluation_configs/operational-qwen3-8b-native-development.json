@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "operational-qwen3-8b-native-development",
+  "kind": "operational",
+  "mode": "agent",
+  "split": "development",
+  "repetitions": 1,
+  "warmup_attempts": 1,
+  "prompt": "operational-native-v1.txt",
+  "model": "qwen3:8b",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "runtime_version": "0.40.12",
+  "endpoint": "http://127.0.0.1:11434/api/chat",
+  "think": false,
+  "processor": "automatic_acceleration",
+  "keep_alive_seconds": 600,
+  "request_timeout_seconds": 300,
+  "attempt_timeout_seconds": 600,
+  "options": {
+    "num_ctx": 4096,
+    "num_predict": 2048,
+    "temperature": 0,
+    "seed": 126,
+    "num_thread": 6
+  },
+  "architecture": "operational_native_tools"
+}

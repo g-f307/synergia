@@ -62,7 +62,10 @@ A reavaliação local das PoCs de IA (#148) possui
 e corpora sintéticos prospectivos com gabaritos aprovados pelo responsável.
 O executor comparativo oferece congelamento, retomada, bloqueio da avaliação
 reservada e telemetria de recursos, com testes independentes de modelos.
-Calibração, avaliação reservada e decisões por proposta ainda não ocorreram.
+A [calibração](ai-reevaluation-calibration.md) foi encerrada, incluindo variantes
+guiadas, ferramentas nativas e capacidade híbrida do 8B. As configurações finais
+foram congeladas antes da avaliação reservada; decisões por proposta dependem
+dos resultados e da revisão factual.
 A etapa preserva os resultados negativos anteriores e não integra IA ao produto.
 
 Essas capacidades não são simuladas na aplicação atual. Cada uma exige contrato

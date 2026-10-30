@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "protocol_version": "1.0.0-draft",
+  "protocol_version": "1.2.0-frozen",
   "issue": 148,
-  "status": "prepared",
+  "status": "frozen",
   "prepared_on": "2026-10-29",
   "environment_evidence": "docs/evidence/issue-148-environment.json",
   "human_review": {
@@ -12,7 +12,7 @@
     "decision": "Confirmação do usuário: \"gabarito parece ok\". Revisão dos gabaritos, sem inferência ou aprovação de resultados."
   },
   "evaluation": {
-    "status": "not_started",
+    "status": "authorized_frozen_before_first_reserved_inference",
     "requires_approved_gold": true,
     "requires_frozen_configuration": true,
     "repetitions_per_configuration": 3,
@@ -20,7 +20,25 @@
     "warmup_in_quality_denominator": false,
     "retain_failed_attempts": true,
     "resume_policy": "same_fingerprints_no_selective_repetition",
-    "final_configurations": []
+    "final_configurations": [
+      {
+        "id": "quality-baseline-evaluation",
+        "config_sha256": "f3106585833ecac169611e68d144ce5d938aeedad2332dc39d51bde32459cb00"
+      },
+      {
+        "id": "quality-instruct-evidence-guided-evaluation",
+        "config_sha256": "31e988438849f868ef112a1825348eaf51539c2cfede38a6e85e65fba8729d38"
+      },
+      {
+        "id": "operational-baseline-evaluation",
+        "config_sha256": "e8ac65c5f5683db20b0f30e7539384568cf677cd2e1a40cd39af63e8738acfc0"
+      },
+      {
+        "id": "operational-qwen3-8b-staged-guarded-evaluation",
+        "config_sha256": "dbebdf1b95f085500b2b92de21304b1b4135dafc520b96c627c61f105c0596e1"
+      }
+    ],
+    "selection_rationale": "Encerrar exploração conforme decisão do usuário: qualidade 4B Instruct com projeção de evidências e política guiada; operacional 8B com ferramentas nativas e guarda explícita; baseline de cada proposta nos mesmos casos. Sem nova calibração após reservado."
   },
   "datasets": [
     {
@@ -63,11 +81,14 @@
       "role": "historical_reference_only",
       "quantization": "Q4_K_M",
       "expected_download_decimal_gb": 1.9,
-      "installation": "not_installed",
-      "capacity": "pending_probe",
+      "installation": "installed",
+      "capacity": "observed_automatic_acceleration_in_development",
       "license": "Qwen Research License",
       "product_eligibility": "not_approved",
-      "source": "https://ollama.com/library/qwen2.5:3b-instruct-q4_K_M"
+      "source": "https://ollama.com/library/qwen2.5:3b-instruct-q4_K_M",
+      "supported_thinking_modes": [
+        false
+      ]
     },
     {
       "id": "candidate-qwen3-4b",
@@ -76,10 +97,15 @@
       "quantization": "Q4_K_M",
       "expected_download_decimal_gb": 0,
       "installation": "installed",
-      "capacity": "pending_probe",
+      "capacity": "observed_cpu_and_automatic_acceleration_on_development_probe",
       "license": "Apache-2.0",
       "product_eligibility": "pending_technical_evaluation",
-      "source": "https://ollama.com/library/qwen3:4b"
+      "source": "https://ollama.com/library/qwen3:4b",
+      "upstream_variant": "Qwen3-4B-Thinking-2507",
+      "supported_thinking_modes": [
+        true
+      ],
+      "mode_source": "https://huggingface.co/Qwen/Qwen3-4B-Thinking-2507"
     },
     {
       "id": "candidate-qwen3-8b",
@@ -87,11 +113,17 @@
       "role": "conditional_larger_candidate",
       "quantization": "Q4_K_M",
       "expected_download_decimal_gb": 5.2,
-      "installation": "not_installed",
-      "capacity": "pending_hybrid_probe",
+      "installation": "installed",
+      "capacity": "observed_hybrid_cpu_gpu_development_probe",
       "license": "Apache-2.0",
       "product_eligibility": "pending_technical_evaluation",
-      "source": "https://ollama.com/library/qwen3:8b"
+      "source": "https://ollama.com/library/qwen3:8b",
+      "upstream_variant": "Qwen3-8B hybrid thinking/non-thinking",
+      "supported_thinking_modes": [
+        true,
+        false
+      ],
+      "mode_source": "https://huggingface.co/Qwen/Qwen3-8B"
     },
     {
       "id": "control-llama32-1b",
@@ -104,10 +136,27 @@
       "license": "pending_local_license_review",
       "product_eligibility": "not_approved",
       "source": "https://ollama.com/library/llama3.2:1b"
+    },
+    {
+      "id": "candidate-qwen3-4b-instruct-2507",
+      "tag": "qwen3:4b-instruct-2507-q4_K_M",
+      "role": "instruction_following_candidate",
+      "upstream_variant": "Qwen3-4B-Instruct-2507",
+      "supported_thinking_modes": [
+        false
+      ],
+      "quantization": "Q4_K_M",
+      "expected_download_decimal_gb": 2.5,
+      "installation": "installed",
+      "capacity": "observed_automatic_acceleration_development_confirmation",
+      "license": "Apache-2.0",
+      "product_eligibility": "pending_technical_evaluation",
+      "source": "https://ollama.com/library/qwen3:4b-instruct-2507-q4_K_M",
+      "mode_source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507"
     }
   ],
   "calibration": {
-    "status": "not_started",
+    "status": "complete",
     "allowed_split": "development",
     "initial_context_tokens": 4096,
     "initial_generation_tokens": 2048,
@@ -123,7 +172,90 @@
     ],
     "vary_one_factor_at_a_time": true,
     "native_tools_or_guided_architecture": "separate_named_variant_if_used",
-    "maximum_candidate_configurations_in_final_per_poc": 2
+    "maximum_candidate_configurations_in_final_per_poc": 2,
+    "environment_policy": "isolated_after_downloads_no_concurrent_installation_or_tests",
+    "named_architectures": [
+      {
+        "id": "quality_policy_guided",
+        "scope": "quality_only",
+        "constrained_fields": [
+          "status",
+          "open_questions_bounds"
+        ],
+        "model_tasks": [
+          "classification",
+          "evidence_selection",
+          "grounded_explanation",
+          "hypothesis",
+          "human_verification"
+        ],
+        "interpretation": "Pipeline status is imposed by deterministic policy, not credited as independent model reasoning.",
+        "output_repairs_or_baseline_fallback": false,
+        "optional_evidence_only_context": {
+          "schema": "docs/schemas/ai-reevaluation-quality-context.schema.json",
+          "retained": [
+            "case_id",
+            "source",
+            "file_sha256",
+            "counts",
+            "occurrences"
+          ],
+          "removed": [
+            "normalized_records"
+          ],
+          "original_context_preserved_for_validation_and_scoring": true,
+          "output_repairs_or_gold_access": false
+        }
+      },
+      {
+        "id": "operational_native_tools",
+        "scope": "operational_only",
+        "endpoint": "/api/chat",
+        "read_tools": "unchanged_allowlist_case_scoped",
+        "query_selection": "model_selected_no_prefilled_queries",
+        "finalization": "model_calls_final_answer_as_response_container_no_mutation",
+        "finalization_is_not_read_tool_credit": true,
+        "maximum_read_calls": 6,
+        "maximum_model_steps": 7,
+        "output_repairs_or_baseline_fallback": false,
+        "source": "https://docs.ollama.com/capabilities/tool-calling"
+      },
+      {
+        "id": "operational_native_structured",
+        "scope": "operational_only",
+        "endpoint": "/api/chat",
+        "query_selection": "model_selected_native_reads_until_model_stops",
+        "finalization": "one_structured_generation_from_collected_evidence_without_new_queries",
+        "maximum_read_calls": 6,
+        "maximum_model_steps": 8,
+        "attempt_deadline_seconds": 600,
+        "output_repairs_or_baseline_fallback": false,
+        "contract_constraints": [
+          "insufficient_evidence_requires_question"
+        ],
+        "case_status_forced": false
+      },
+      {
+        "id": "operational_native_staged",
+        "scope": "operational_only",
+        "query_selection": "model_selected_native_reads_and_finish_collection_signal",
+        "finalization": "one_structured_generation_from_selected_results_after_model_completion_signal",
+        "completion_has_no_business_output": true,
+        "completion_is_not_read_tool_credit": true,
+        "maximum_read_calls": 6,
+        "maximum_model_steps": 8,
+        "attempt_deadline_seconds": 600,
+        "output_repairs_or_baseline_fallback": false,
+        "case_status_forced": false,
+        "optional_context_contract_guard": {
+          "case_status_forced_only_when": "get_execution was actually read, lifecycle partial and all collection counts zero",
+          "derives_from": "existing validate_output invariant and retrieved execution metadata",
+          "queries_prefilled_by_code": false,
+          "not_credited_as_model_status_reasoning": true,
+          "post_generation_repairs": false
+        }
+      }
+    ]
   },
   "resources": {
     "concurrent_models": 1,

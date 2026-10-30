@@ -97,8 +97,10 @@ class OllamaRuntime:
         self.response_done_reason: str | None = None
         self.response_model: str | None = None
         self.response_metrics: dict[str, int] = {}
+        self.request_sha256: str | None = None
 
     def generate(self, prompt: str, *, model: str) -> tuple[str, int]:
+        self.request_sha256 = None
         self.response_metrics = {}
         self.response_done_reason = None
         document = {"model": model, "prompt": prompt, "stream": False}
@@ -111,6 +113,7 @@ class OllamaRuntime:
         if self.output_schema is not None:
             document["format"] = self.output_schema
         body = json.dumps(document).encode()
+        self.request_sha256 = hashlib.sha256(body).hexdigest()
         request = urllib.request.Request(
             self.config.endpoint,
             data=body,

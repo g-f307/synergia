@@ -427,3 +427,42 @@ def test_think_and_keep_alive_explicit_no_reasoning_persisted(monkeypatch):
     assert runtime.response_metrics["eval_count"] == 12
     assert not hasattr(runtime, "thinking")
     assert "private reasoning" not in str(runtime.__dict__)
+
+
+def test_single_repetition_consistency_is_unavailable_not_failure(tmp_path):
+    c = config()
+    c["repetitions"] = 1
+    state = invoke(frozen(c), tmp_path / "run")
+    summary = runner.summarize_run(state)
+    assert summary["valid_structural_consistency"] is None
+    assert summary["consistency_cases_with_three_repetitions"] == 0
+    assert summary["accepted_case_correct_rate"] == 1
+    assert summary["abstention_correct_rate"] == 1
+
+
+def test_valid_schema_does_not_hide_wrong_abstention_in_summary(tmp_path):
+    state = invoke(frozen(config()), tmp_path / "run")
+    state["attempts"][1]["result"]["score"]["case_correct"] = False
+    state["attempts"][1]["result"]["score"]["abstention_correct"] = False
+    summary = runner.summarize_run(state)
+    assert summary["accepted_rate"] == 1
+    assert summary["accepted_case_correct_rate"] == 23 / 24
+    assert summary["abstention_correct_rate"] == 23 / 24
+
+
+def test_reserved_selection_cannot_promote_thinking_only_model_with_thinking_disabled():
+    c = config(mode="agent")
+    c["split"] = "evaluation"
+    protocol = runner.read(runner.PROTOCOL)
+    protocol["status"] = "frozen"
+    protocol["evaluation"]["final_configurations"] = [
+        {"id": c["id"], "config_sha256": runner.digest(c)}
+    ]
+    _, review = runner.corpus("quality")
+    with pytest.raises(PoCFoundationError, match="incompatible_with_upstream"):
+        runner.check_gate(c, protocol, review)
+    c["think"] = True
+    protocol["evaluation"]["final_configurations"] = [
+        {"id": c["id"], "config_sha256": runner.digest(c)}
+    ]
+    runner.check_gate(c, protocol, review)

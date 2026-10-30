@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synergia.local/schemas/ai-reevaluation-quality-context.schema.json",
+  "title": "Internal evidence-only quality context projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "projection_version",
+    "case_id",
+    "source",
+    "file_sha256",
+    "counts",
+    "occurrences"
+  ],
+  "properties": {
+    "projection_version": {
+      "const": "1.0.0"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,80}$"
+    },
+    "source": {
+      "enum": [
+        "N-FP",
+        "OWM",
+        "GMES/OQC",
+        "TMS"
+      ]
+    },
+    "file_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows_read",
+        "rows_valid",
+        "normalized_records",
+        "errors",
+        "warnings",
+        "read_success",
+        "layout_valid"
+      ],
+      "properties": {
+        "rows_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows_valid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "normalized_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "read_success": {
+          "type": "boolean"
+        },
+        "layout_valid": {
+          "type": "boolean"
+        }
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "code",
+          "severity",
+          "reason",
+          "sheet",
+          "row",
+          "column"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^ev-[0-9]+$"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z_]+$"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "maxItems": 500
+    }
+  }
+}
