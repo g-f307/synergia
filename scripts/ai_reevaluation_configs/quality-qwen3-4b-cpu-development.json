@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "quality-qwen3-4b-cpu-development",
+  "kind": "quality",
+  "mode": "agent",
+  "split": "development",
+  "repetitions": 3,
+  "warmup_attempts": 1,
+  "prompt": "quality-v2.1.txt",
+  "model": "qwen3:4b",
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "runtime_version": "0.40.12",
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "think": false,
+  "processor": "cpu_only",
+  "keep_alive_seconds": 600,
+  "request_timeout_seconds": 300,
+  "attempt_timeout_seconds": 600,
+  "options": {
+    "num_ctx": 4096,
+    "num_predict": 2048,
+    "temperature": 0,
+    "seed": 125,
+    "num_thread": 6
+  }
+}

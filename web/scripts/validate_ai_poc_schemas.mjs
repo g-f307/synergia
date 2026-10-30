@@ -16,6 +16,8 @@ const schemaFiles = [
   "ai-quality-diagnosis-v2-output.schema.json",
   "ai-operational-summary-input.schema.json",
   "ai-operational-summary-output.schema.json",
+  "ai-reevaluation-config.schema.json",
+  "ai-reevaluation-quality-context.schema.json",
 ];
 
 const ajv = new Ajv2020({ strict: true });

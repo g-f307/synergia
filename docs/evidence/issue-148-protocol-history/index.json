@@ -1,0 +1,61 @@
+{
+  "protocols": [
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/a22f7d88f3acfa6f17dccec88b7e2d94429d082572504b08383c14603dc3ebf9.json",
+      "archived_sha256": "3628907172ac62c9db6396337644791fcef47cb682e436884ab8952bfcf23514",
+      "original_file_sha256": "a22f7d88f3acfa6f17dccec88b7e2d94429d082572504b08383c14603dc3ebf9",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/99c26db19946b74ca7319b0af3ce8ae29d7462a3e925654eb19ee5ac37d1c37c.json",
+      "archived_sha256": "99c26db19946b74ca7319b0af3ce8ae29d7462a3e925654eb19ee5ac37d1c37c",
+      "original_file_sha256": "99c26db19946b74ca7319b0af3ce8ae29d7462a3e925654eb19ee5ac37d1c37c",
+      "original_bytes_preserved": true,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/22a9933fdff76e75d06219ca9e7d46c94e34f27806f7e63ad0b42f333dc1ecf7.json",
+      "archived_sha256": "22a9933fdff76e75d06219ca9e7d46c94e34f27806f7e63ad0b42f333dc1ecf7",
+      "original_file_sha256": "22a9933fdff76e75d06219ca9e7d46c94e34f27806f7e63ad0b42f333dc1ecf7",
+      "original_bytes_preserved": true,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/949f6cfecdef3387d3175e1903ac524cae13f1336b86c8911083eabeba02e912.json",
+      "archived_sha256": "18f96a4b974326d61c9f43d7d39e037d21dcfb6906675bd89052a3cff69de7a9",
+      "original_file_sha256": "949f6cfecdef3387d3175e1903ac524cae13f1336b86c8911083eabeba02e912",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/8cfcb39a746ba3895b3c4c02476b03dc66a36a7ffc348c1b3622f7b7603bc94f.json",
+      "archived_sha256": "57d41980a8ee9631fbf75124d346c1cbb9fb977eb771ef8dc753bbb9677415e2",
+      "original_file_sha256": "8cfcb39a746ba3895b3c4c02476b03dc66a36a7ffc348c1b3622f7b7603bc94f",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/b729a55cee082ae7131eca4952e9c9f2779e972647d4ba0c6de2e77e007b8c2a.json",
+      "archived_sha256": "2e98b7532b2f807fbf63d597887230b8aca1ac87bdb35237c1f42711083a06d7",
+      "original_file_sha256": "b729a55cee082ae7131eca4952e9c9f2779e972647d4ba0c6de2e77e007b8c2a",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/fd31f9600bbd6119f997b7710761249788636f49b2c7c7f3817d5307810fbc6b.json",
+      "archived_sha256": "6d0d726147a1d7021a2cde0630d3c29c2feee79ed266118b0485b66cde153814",
+      "original_file_sha256": "fd31f9600bbd6119f997b7710761249788636f49b2c7c7f3817d5307810fbc6b",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    },
+    {
+      "archived_file": "docs/evidence/issue-148-protocol-history/40bb9944cd63a33a8df133dc99217d36eed7b74e7bbccc1ba76aa09367cdc7b1.json",
+      "archived_sha256": "e3d05f5f1597b2700cca60745723f3d541c00d6c0df37318d91971687c4008cb",
+      "original_file_sha256": "40bb9944cd63a33a8df133dc99217d36eed7b74e7bbccc1ba76aa09367cdc7b1",
+      "original_bytes_preserved": false,
+      "body_source": "frozen_snapshot_or_verified_original_history"
+    }
+  ],
+  "note": "Snapshots reorder object keys; where original bytes are absent, archive preserves JSON body, with separate original and archived byte hashes."
+}

@@ -19,6 +19,18 @@ publicadas não são movidas ou recriadas; uma correção gera nova versão.
 Antes da primeira release estável, a fundação pode permanecer em `0.x.y`, mas
 toda incompatibilidade ainda deve ser destacada no PR e nas notas.
 
+## Referências de preservação de experimentos
+
+Tags anotadas `ai-poc-<issue>-experiment-v<N>` preservam o commit exato de um
+experimento auditado. São referências de evidência, não releases da aplicação,
+e podem apontar a um commit intermediário anterior ao squash. Após publicadas,
+não devem ser movidas, recriadas ou excluídas; outro experimento recebe nova tag.
+
+O relatório deve registrar tag, SHA completo do commit, comandos de obtenção e
+checkout, e conferência dos hashes dos insumos. A referência
+`ai-poc-148-experiment-v1` preserva o commit
+`23669425d918d6699b914097c60c98f4128afe21` da avaliação reservada da #148.
+
 ## API e OpenAPI
 
 A versão da API fica em `backend/app/main.py` e aparece em `info.version` de

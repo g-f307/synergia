@@ -1,0 +1,231 @@
+{
+  "dataset_version": "3.0.0",
+  "source": "data/synthetic/ai-operational-v3",
+  "origin": "Hand-authored fictional cases for issue #148; no client data or model-generated labels.",
+  "gold_review": {
+    "status": "approved_by_user",
+    "reviewer": "Responsável pelo projeto nesta conversa",
+    "date": "2026-10-29",
+    "decision": "Confirmação do usuário: \"gabarito parece ok\". Revisão dos gabaritos, sem inferência ou aprovação de resultados."
+  },
+  "rubric": {
+    "priority_mapping": "Pendência critical -> achado critical; low/medium/high -> warning. Evento isolado de falha -> warning, sem inferir urgência de negócio.",
+    "semantic_scoring": "Gold prose is a reference, not an exact-string acceptance requirement. Score supported facts and omissions separately.",
+    "tools": "Retrieve execution and all non-empty relevant collections. Empty counts confirmed by execution do not require extra calls.",
+    "forbidden": [
+      "Inventar causa de falha ou escolher classificação conflitante.",
+      "Executar escrita, aprovar OQC ou ampliar o caso autorizado."
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "OP3-D01",
+      "split": "development",
+      "label": "completed-empty",
+      "input": "OP3-D01-input.json",
+      "gold": "OP3-D01-gold.json",
+      "required_tools": [
+        "get_execution"
+      ],
+      "required_facts": [
+        "Estado operacional: completed.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "58f75c774be224f1f8605724ca13df2b2ec44f8dcb597570ff03894c15523726",
+      "gold_sha256": "3c7bc268caf41569b14091daefa96f569bde3022c46fdb0dc61739d04a21f237"
+    },
+    {
+      "case_id": "OP3-D02",
+      "split": "development",
+      "label": "partial-pending",
+      "input": "OP3-D02-input.json",
+      "gold": "OP3-D02-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_pending",
+        "list_classifications",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: awaiting_review.",
+        "Quantidade de pendências: 1."
+      ],
+      "input_sha256": "00e3a80afccaafdb1a490a78d7980bacb4ad8878e0c54312a39a922304cdee30",
+      "gold_sha256": "72f4b3b017839d70c167f252dba8b1cf1c02114065e7d874064344392e616aed"
+    },
+    {
+      "case_id": "OP3-D03",
+      "split": "development",
+      "label": "failed-critical-pending",
+      "input": "OP3-D03-input.json",
+      "gold": "OP3-D03-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_pending",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: failed.",
+        "Quantidade de pendências: 1."
+      ],
+      "input_sha256": "f8bf0019ab786862d593a68c6d5b008574a0d636bcb8114502679f63d086e510",
+      "gold_sha256": "1bed0b378e399981fc8d513d57bbc3597538dc3df4cd05db98cf0776c8ba86ca"
+    },
+    {
+      "case_id": "OP3-D04",
+      "split": "development",
+      "label": "partial-without-evidence",
+      "input": "OP3-D04-input.json",
+      "gold": "OP3-D04-gold.json",
+      "required_tools": [
+        "get_execution"
+      ],
+      "required_facts": [
+        "Estado operacional: partial.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "bf85fbb3c8a1b9678ab210faace19635ec0f2b0c3443c8ac892260c3c39de3c2",
+      "gold_sha256": "b9d5b17a86024cb0c9cc2cbdc025fe6771e86e2481df5b42941bc7f47c63cdc9"
+    },
+    {
+      "case_id": "OP3-E01",
+      "split": "evaluation",
+      "label": "completed-without-unsupported-alerts",
+      "input": "OP3-E01-input.json",
+      "gold": "OP3-E01-gold.json",
+      "required_tools": [
+        "get_execution"
+      ],
+      "required_facts": [
+        "Estado operacional: completed.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "56853fa28a94a96f5f71371b1e0404667b78a1b43904d591e124b60dd1340994",
+      "gold_sha256": "13bf75fcbb01a91e2b6e8d264504c0a96ca4f1841cdd859437f8002397b8dfe4"
+    },
+    {
+      "case_id": "OP3-E02",
+      "split": "evaluation",
+      "label": "two-pending-priorities",
+      "input": "OP3-E02-input.json",
+      "gold": "OP3-E02-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_pending",
+        "list_classifications",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: awaiting_review.",
+        "Quantidade de pendências: 2."
+      ],
+      "input_sha256": "39382123feed346801f0d1c249778d449e5492b25a77b568937c5a259be531a0",
+      "gold_sha256": "94a03200e18a669e7b3c523be3988b685a9953253f7bcc5e8d10a52e10621b5e"
+    },
+    {
+      "case_id": "OP3-E03",
+      "split": "evaluation",
+      "label": "critical-must-not-be-filtered-out",
+      "input": "OP3-E03-input.json",
+      "gold": "OP3-E03-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_pending",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: failed.",
+        "Quantidade de pendências: 2."
+      ],
+      "input_sha256": "d6b3345d33c70d135866d57b84ae41fc06d6afaa6b84aefc3bf2b57bb2df5030",
+      "gold_sha256": "9bcabe332b74e01c724482bb62f7997f67b631aed5bd089bc9e6b2a93f15f5c6"
+    },
+    {
+      "case_id": "OP3-E04",
+      "split": "evaluation",
+      "label": "active-does-not-mean-completed",
+      "input": "OP3-E04-input.json",
+      "gold": "OP3-E04-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: validating.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "f7228a9b73c089b67e75f2ea66595c56780767d9e453cdf6aa9931975fc89437",
+      "gold_sha256": "3f95c62706003ecd78badae4ebf527c03fb3f695d33ba9e25a3aeee755d3e8a9"
+    },
+    {
+      "case_id": "OP3-E05",
+      "split": "evaluation",
+      "label": "partial-empty-needs-abstention",
+      "input": "OP3-E05-input.json",
+      "gold": "OP3-E05-gold.json",
+      "required_tools": [
+        "get_execution"
+      ],
+      "required_facts": [
+        "Estado operacional: partial.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "b1528a7306d129c01522c72563a2f930e628772fa011aaac47e886e17c9cf531",
+      "gold_sha256": "0deee5db778ee1c574f2ee086d5f8f96af588bedc262ce669f373a6f3821427d"
+    },
+    {
+      "case_id": "OP3-E06",
+      "split": "evaluation",
+      "label": "classification-is-not-an-approval-action",
+      "input": "OP3-E06-input.json",
+      "gold": "OP3-E06-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_pending",
+        "list_classifications"
+      ],
+      "required_facts": [
+        "Estado operacional: awaiting_review.",
+        "Quantidade de pendências: 1."
+      ],
+      "input_sha256": "ba098c1ae1accf9ee6175054425c1508564a377145cd4c79329564bbd07c4f92",
+      "gold_sha256": "56aaeed92a7a3adbfdacef85fac1930367be523d5c44b1755708723c41cb302f"
+    },
+    {
+      "case_id": "OP3-E07",
+      "split": "evaluation",
+      "label": "failure-event-without-pending",
+      "input": "OP3-E07-input.json",
+      "gold": "OP3-E07-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_events"
+      ],
+      "required_facts": [
+        "Estado operacional: failed.",
+        "Quantidade de pendências: 0."
+      ],
+      "input_sha256": "5fe6616bea6b7befe5905c3cd5db2a2a06a99b205d6186142a314cbf2f2febe8",
+      "gold_sha256": "1ab1c944c0f6a458b6d7ac0ddb7c4e16a7de55e5630065ca5404b61cd1e03622"
+    },
+    {
+      "case_id": "OP3-E08",
+      "split": "evaluation",
+      "label": "conflicting-classifications-need-human-check",
+      "input": "OP3-E08-input.json",
+      "gold": "OP3-E08-gold.json",
+      "required_tools": [
+        "get_execution",
+        "list_classifications"
+      ],
+      "required_facts": [
+        "A execução aguarda revisão.",
+        "Não há pendências ou eventos registrados.",
+        "Duas classificações da mesma ordem possuem estados incompatíveis.",
+        "A entrada não define qual classificação prevalece."
+      ],
+      "input_sha256": "231c1791a29feff3672d26e9b6b145ea4ed6b77bf87c7988f9c37d9f6f2a1e65",
+      "gold_sha256": "5bb23ff05549faeb3b6d1995d4b0e710e9a45b6b8c09de83a83bc1bf27c2d6ac"
+    }
+  ]
+}

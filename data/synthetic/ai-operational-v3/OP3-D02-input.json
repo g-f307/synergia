@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-D02",
+  "execution": {
+    "execution_id": "syn-op3-d02",
+    "status": "awaiting_review",
+    "lifecycle": "partial",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 1,
+      "classifications": 1,
+      "events": 1
+    }
+  },
+  "pending_items": [
+    {
+      "evidence_id": "ev-p-4101",
+      "id": 4101,
+      "reason": "Quantidade divergente exige conferência humana.",
+      "status": "open",
+      "priority": "high",
+      "workorder_number": "WO-SYN-4101",
+      "responsible_area": "quality"
+    }
+  ],
+  "classifications": [
+    {
+      "evidence_id": "ev-c-4101",
+      "classification_id": "cls-syn-4101",
+      "state": "pending",
+      "justification": "Quantidade diverge da referência sintética.",
+      "rule_id": "rule-syn-4101",
+      "workorder_number": "WO-SYN-4101"
+    }
+  ],
+  "events": [
+    {
+      "evidence_id": "ev-e-4101",
+      "event_id": "event-syn-4101",
+      "event_type": "pending_created",
+      "occurred_at": "2026-10-01T12:00:00Z",
+      "entity_type": "execution",
+      "entity_id": "syn-op3-d02"
+    }
+  ]
+}
