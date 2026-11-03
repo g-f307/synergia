@@ -1,5 +1,8 @@
 # Contrato de implantação em containers
 
+O procedimento operacional consolidado começa no
+[guia de implantação](deployment/README.md), com instalação, diagnóstico e rollback.
+
 ## Artefatos
 
 | Imagem | Função | Processo | Usuário |

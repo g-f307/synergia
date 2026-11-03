@@ -16,6 +16,7 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 
 O README é o ponto de entrada. Os detalhes vigentes ficam em:
 
+- [guia consolidado de implantação, diagnóstico, atualização e recuperação](docs/deployment/README.md);
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
 - [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
 - [roadmap e estado das etapas](docs/roadmap.md);
@@ -90,6 +91,9 @@ reproduzível em [docs/local-environment.md](docs/local-environment.md). As
 seções abaixo são apenas uma referência rápida.
 
 ## Execução completa em containers
+
+Para homologação, diagnóstico e rollback, comece pelo
+[guia operacional de implantação](docs/deployment/README.md).
 
 ```bash
 cp .env.example .env

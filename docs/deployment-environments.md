@@ -1,5 +1,9 @@
 # Perfis de ambiente da implantação
 
+Para executar instalação, atualização, diagnóstico e recuperação, comece pela
+[entrada operacional de implantação](deployment/README.md). Este documento
+mantém o contrato dos perfis.
+
 O ambiente deve ser escolhido explicitamente. O Compose não assume mais
 `development` quando `SYNERGIA_ENV` está ausente. Isso impede que uma instalação
 destinada à homologação ou à produção inicie com controles locais.
