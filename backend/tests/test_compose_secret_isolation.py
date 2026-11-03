@@ -95,3 +95,17 @@ def test_compose_forwards_deployment_validation_settings(base) -> None:
         "SYNERGIA_API_ORIGIN",
     ):
         assert name in backend
+
+
+def test_ci_compose_commands_select_the_environment_explicitly() -> None:
+    workflow = _load(".github/workflows/ci.yml")
+
+    for job_name, job in workflow["jobs"].items():
+        for step in job.get("steps", []):
+            command = step.get("run", "")
+            if "docker compose" not in command:
+                continue
+            selected = (step.get("env") or {}).get("SYNERGIA_ENV") or (
+                job.get("env") or {}
+            ).get("SYNERGIA_ENV")
+            assert selected, f"{job_name}: {step.get('name', command)}"
