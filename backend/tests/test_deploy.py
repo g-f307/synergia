@@ -64,7 +64,7 @@ class FakeRunner:
             ),
         }
 
-    def run(self, args, *, step, timeout=60):
+    def run(self, args, *, step, timeout=60, input_text=None):
         self.calls.append((args, step))
         return self.responses[step]
 

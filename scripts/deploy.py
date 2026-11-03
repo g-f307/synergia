@@ -57,7 +57,14 @@ class CommandRunner:
         self.environment["COMPOSE_DISABLE_ENV_FILE"] = "1"
         self.environment["GIT_OPTIONAL_LOCKS"] = "0"
 
-    def run(self, args: Sequence[str], *, step: str, timeout: int = 60) -> str:
+    def run(
+        self,
+        args: Sequence[str],
+        *,
+        step: str,
+        timeout: int = 60,
+        input_text: str | None = None,
+    ) -> str:
         try:
             result = subprocess.run(
                 list(args),
@@ -67,6 +74,7 @@ class CommandRunner:
                 text=True,
                 timeout=timeout,
                 check=False,
+                input=input_text,
             )
         except subprocess.TimeoutExpired as exc:
             raise DeploymentError(
@@ -347,6 +355,10 @@ class OperationStore:
             raise DeploymentError(
                 "deployment history must be private (0700) and operator-owned"
             )
+        if self.path.is_symlink():
+            raise DeploymentError(
+                "deployment journal invalid; reconcile before retrying"
+            )
         if not self.path.exists():
             return None
         try:
@@ -374,11 +386,19 @@ class OperationStore:
                 "start",
                 "verify",
                 "confirm",
+                "reconcile",
             }:
                 raise ValueError
-            if record["status"] not in {"running", "succeeded", "failed", "uncertain"}:
+            if record["status"] not in {
+                "running",
+                "succeeded",
+                "failed",
+                "uncertain",
+                "reconciled",
+            }:
                 raise ValueError
-            UUID(record["id"])
+            if str(UUID(record["id"])) != record["id"]:
+                raise ValueError
             datetime.fromisoformat(record["updated_at"])
             return record
         except (OSError, ValueError, TypeError, KeyError) as exc:
@@ -396,9 +416,7 @@ class OperationStore:
         print(f"deployment stage: {name}", file=sys.stderr, flush=True)
 
     @contextmanager
-    def operation(self, action: str) -> Iterator[dict]:
-        if action not in {"apply", "rollback"}:
-            raise DeploymentError("unsupported deployment operation")
+    def lock(self) -> Iterator[dict | None]:
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.read()  # Check ownership/permissions before opening anything writable.
         # Same Docker daemon/project shares a lock even with different state dirs.
@@ -425,7 +443,15 @@ class OperationStore:
                 raise DeploymentError(
                     "another deployment is running; wait and diagnose"
                 ) from exc
-            previous = self.read()
+            yield self.read()
+        finally:
+            os.close(lock_fd)
+
+    @contextmanager
+    def operation(self, action: str) -> Iterator[dict]:
+        if action not in {"apply", "rollback"}:
+            raise DeploymentError("unsupported deployment operation")
+        with self.lock() as previous:
             if previous and previous["status"] in {"running", "uncertain"}:
                 raise DeploymentError(
                     "previous operation is unresolved; "
@@ -452,13 +478,63 @@ class OperationStore:
             finally:
                 record["updated_at"] = datetime.now(UTC).isoformat()
                 self.write(record)
-        finally:
-            os.close(lock_fd)
+
+    @contextmanager
+    def recovery(self, operation_id: str, resolution: str) -> Iterator[dict]:
+        if resolution not in {"resume", "rollback"}:
+            raise DeploymentError("unsupported reconciliation resolution")
+        with self.lock() as record:
+            if (
+                not record
+                or record["id"] != operation_id
+                or record["status"] not in {"running", "uncertain"}
+            ):
+                raise DeploymentError(
+                    "reconciliation requires the current unresolved operation"
+                )
+            directory = self.directory / "reconciliations"
+            directory.mkdir(mode=0o700, exist_ok=True)
+            audit = {
+                "id": str(uuid4()),
+                "operation": operation_id,
+                "resolution": resolution,
+                "before": dict(record),
+                "status": "running",
+                "updated_at": datetime.now(UTC).isoformat(),
+            }
+            path = directory / f"{audit['id']}.json"
+            atomic_json(path, audit)
+            record["status"] = "running"
+            self.stage(record, "reconcile")
+            try:
+                yield record
+            except BaseException:
+                record["status"] = "uncertain"
+                audit["status"] = "uncertain"
+                raise
+            else:
+                audit["status"] = "succeeded"
+            finally:
+                record["updated_at"] = datetime.now(UTC).isoformat()
+                audit["updated_at"] = record["updated_at"]
+                self.write(record)
+                atomic_json(path, audit)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("diagnose", "precheck", "apply", "verify"))
+    parser.add_argument(
+        "action",
+        choices=("diagnose", "precheck", "apply", "verify", "rollback", "reconcile"),
+    )
+    parser.add_argument(
+        "--operation", help="current operation UUID; required by reconcile"
+    )
+    parser.add_argument(
+        "--resolution",
+        choices=("resume", "rollback"),
+        help="explicit reconciliation action; omitted means read-only inspection",
+    )
     parser.add_argument(
         "--revision", help="commit/tag already checked out; required by apply"
     )
@@ -479,10 +555,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
+        if args.action != "apply" and (args.revision or args.initialize):
+            raise DeploymentError("revision/initialize are only used by apply")
+        if args.action != "reconcile" and (args.operation or args.resolution):
+            raise DeploymentError("operation/resolution are only used by reconcile")
         deployment = Deployment(
             project=args.project, env_file=args.env_file, state_dir=args.state_dir
         )
-        if args.action in {"apply", "verify"}:
+        if args.action in {"rollback", "reconcile"}:
+            from deploy_recovery import RecoveryWorkflow
+
+            flow = RecoveryWorkflow(deployment, OperationStore)
+            if args.action == "rollback":
+                report = flow.rollback()
+            else:
+                if not args.operation:
+                    raise DeploymentError("reconcile requires --operation")
+                report = flow.reconcile(args.operation, resolution=args.resolution)
+        elif args.action in {"apply", "verify"}:
             from deploy_flow import ApplyWorkflow
 
             flow = ApplyWorkflow(deployment, OperationStore)

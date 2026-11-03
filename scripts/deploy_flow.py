@@ -24,7 +24,10 @@ MIGRATION_NAME = re.compile(r"[0-9]{4}_[a-z0-9_]+\.sql")
 INSPECT_RUNTIME = (
     '{"image":{{json .Image}},"environment":{{json .Config.Env}},'
     '"command":{{json .Config.Cmd}},"entrypoint":{{json .Config.Entrypoint}},'
-    '"ports":{{json .HostConfig.PortBindings}},"labels":{{json .Config.Labels}}}'
+    '"ports":{{json .HostConfig.PortBindings}},"labels":{{json .Config.Labels}},'
+    '"user":{{json (index .Config "User")}},'
+    '"healthcheck":{{json (index .Config "Healthcheck")}},'
+    '"restart":{{json .HostConfig.RestartPolicy}},"mounts":{{json .Mounts}}}'
 )
 
 
@@ -34,21 +37,27 @@ class ApplyWorkflow:
         self.runner = deployment.runner
         self.store_type = store_type
 
-    def run(self, args, step, timeout=60):
-        return self.runner.run(args, step=step, timeout=timeout)
+    def run(self, args, step, timeout=60, *, input_text=None):
+        kwargs = {"step": step, "timeout": timeout}
+        if input_text is not None:
+            kwargs["input_text"] = input_text
+        return self.runner.run(args, **kwargs)
 
-    def inventory(self):
+    def inventory(self, *, allow_operations=False):
         report = self.deployment.precheck()
         containers = {}
+        self.active_operations = []
         for item in self.deployment.containers:
             if item["State"] not in {"exited", "created", "dead"} and (
                 item["Service"] in {"email-worker", "migrate", "config-check"}
                 or item.get("OneOff", "").lower() == "true"
             ):
-                raise DeploymentError(
-                    "a worker or one-off operation is active; "
-                    "wait and reconcile before deploying"
-                )
+                self.active_operations.append(item)
+                if not allow_operations:
+                    raise DeploymentError(
+                        "a worker or one-off operation is active; "
+                        "wait and reconcile before deploying"
+                    )
             if item.get("OneOff", "").lower() == "true":
                 continue
             name = item["Service"]
@@ -189,37 +198,52 @@ class ApplyWorkflow:
             path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files
         }
 
-    def read_active(self):
-        pointer = self.deployment.state_dir / "active.json"
-        if not pointer.exists():
-            return None
-        value = private_json(pointer)
+    def read_release(self, release_id):
         try:
-            release_id = str(UUID(value["release"]))
-            if release_id != value["release"]:
+            if not isinstance(release_id, str) or str(UUID(release_id)) != release_id:
                 raise ValueError
         except (KeyError, ValueError, TypeError) as exc:
             raise DeploymentError("active deployment reference invalid") from exc
         manifest = private_json(self.deployment.state_dir / release_id / "release.json")
+        return self.validate_manifest(manifest, release_id)
+
+    def validate_manifest(self, manifest, release_id):
         try:
             if (
                 manifest["id"] != release_id
                 or manifest["format"] != 1
-                or not REVISION.fullmatch(manifest["revision"])
+                or not (
+                    manifest["revision"] is None
+                    and manifest.get("kind") == "baseline"
+                    or isinstance(manifest["revision"], str)
+                    and REVISION.fullmatch(manifest["revision"])
+                )
                 or set(manifest["images"]) != {"backend", "web", "postgres"}
                 or not all(
                     IMAGE_ID.fullmatch(value) for value in manifest["images"].values()
                 )
                 or not re.fullmatch(r"[0-9a-f]{64}", manifest["compose_sha256"])
                 or manifest["project"] != self.deployment.project
-                or not isinstance(manifest["migrations"], dict)
+                or not isinstance(manifest["daemon_id"], str)
+                or manifest["environment"]
+                not in {"development", "test", "homologation", "production"}
+                or not valid_migrations(manifest["migrations"])
             ):
                 raise ValueError
             if manifest["previous"] is not None:
-                UUID(manifest["previous"])
-        except (KeyError, TypeError, ValueError) as exc:
+                if str(UUID(manifest["previous"])) != manifest["previous"]:
+                    raise ValueError
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
             raise DeploymentError("active deployment identity invalid") from exc
         return manifest
+
+    def read_active(self):
+        pointer = self.deployment.state_dir / "active.json"
+        if pointer.is_symlink():
+            raise DeploymentError("active deployment reference invalid")
+        if not pointer.exists():
+            return None
+        return self.read_release(private_json(pointer).get("release"))
 
     def apply(self, revision, *, initialize=False):
         report = self.inventory()
@@ -379,6 +403,32 @@ class ApplyWorkflow:
                     timeout=120,
                 )
                 self.inventory()
+                previous = active
+                if not previous and self.before:
+                    from deploy_recovery import RecoveryWorkflow
+
+                    previous = RecoveryWorkflow(
+                        self.deployment, self.store_type
+                    ).capture_baseline(
+                        report, original_config, self.before, self.ledger()
+                    )
+                expected = self.expected_ledger()
+                candidate = {
+                    "format": 1,
+                    "id": operation["id"],
+                    "project": report["project"],
+                    "daemon_id": report["daemon_id"],
+                    "revision": chosen,
+                    "environment": report["environment"],
+                    "images": images,
+                    "migrations": expected,
+                    "previous": previous["id"] if previous else None,
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "compose_sha256": hashlib.sha256(
+                        self.compose_file.read_bytes()
+                    ).hexdigest(),
+                }
+                atomic_json(self.release_dir / "candidate.json", candidate)
                 store.stage(operation, "maintenance")
                 maintenance = True
                 writers = [
@@ -400,7 +450,10 @@ class ApplyWorkflow:
                 ):
                     raise DeploymentError("application writers did not stop")
                 before_ledger = self.ledger()
-                expected = self.expected_ledger()
+                if previous and before_ledger != previous["migrations"]:
+                    raise DeploymentError(
+                        "migration history changed since the previous deployment"
+                    )
                 if before_ledger and any(
                     expected.get(name) != digest
                     for name, digest in before_ledger.items()
@@ -464,21 +517,7 @@ class ApplyWorkflow:
                     )
                 store.stage(operation, "verify")
                 self.verify(images, after_ledger)
-                manifest = {
-                    "format": 1,
-                    "id": operation["id"],
-                    "project": report["project"],
-                    "daemon_id": report["daemon_id"],
-                    "revision": chosen,
-                    "environment": report["environment"],
-                    "images": images,
-                    "migrations": after_ledger,
-                    "previous": active["id"] if active else None,
-                    "created_at": datetime.now(UTC).isoformat(),
-                    "compose_sha256": hashlib.sha256(
-                        self.compose_file.read_bytes()
-                    ).hexdigest(),
-                }
+                manifest = candidate
                 atomic_json(self.release_dir / "release.json", manifest)
                 store.stage(operation, "confirm")
                 atomic_json(
@@ -504,9 +543,18 @@ class ApplyWorkflow:
                 or self.containers[name]["State"] != "running"
             ):
                 raise DeploymentError(f"verification: {name} is not running")
-            if self.runtime(self.containers[name])["image"] != images[name]:
+            runtime = self.runtime(self.containers[name])
+            if runtime["image"] != images[name]:
                 raise DeploymentError(
                     f"verification: {name} image differs from candidate"
+                )
+            expected_environment = self.config["services"][name].get("environment", {})
+            if any(
+                runtime["environment"].get(key) != value
+                for key, value in expected_environment.items()
+            ):
+                raise DeploymentError(
+                    f"verification: {name} environment differs from release"
                 )
         if self.ledger() != migrations:
             raise DeploymentError(
@@ -514,20 +562,24 @@ class ApplyWorkflow:
             )
         # Use the existing smoke protocol inside the exact new images. This also
         # avoids host proxy settings and ambiguous published ports.
-        self.compose(
-            "exec",
-            "-T",
-            "backend",
-            "python",
-            "scripts/smoke_containers.py",
-            "--backend-url",
-            "http://127.0.0.1:8000",
-            "--web-url",
-            "http://web:8080",
-            "--expected-api-origin",
-            self.config["services"]["web"]["environment"]["SYNERGIA_API_ORIGIN"],
-            step="application smoke",
+        self.run(
+            [
+                "docker",
+                "exec",
+                "-i",
+                self.containers["backend"]["ID"],
+                "python",
+                "-",
+                "--backend-url",
+                "http://127.0.0.1:8000",
+                "--web-url",
+                "http://web:8080",
+                "--expected-api-origin",
+                self.config["services"]["web"]["environment"]["SYNERGIA_API_ORIGIN"],
+            ],
+            "application smoke",
             timeout=540,
+            input_text=(self.runner.root / "scripts/smoke_containers.py").read_text(),
         )
         self.compose(
             "exec",
@@ -569,3 +621,13 @@ class ApplyWorkflow:
         self.config = compose_values(private_json(self.compose_file))
         self.verify(active["images"], active["migrations"])
         return {"revision": active["revision"], "verified": True}
+
+
+def valid_migrations(value):
+    return isinstance(value, dict) and all(
+        isinstance(name, str)
+        and MIGRATION_NAME.fullmatch(name)
+        and isinstance(digest, str)
+        and re.fullmatch(r"[0-9a-f]{64}", digest)
+        for name, digest in value.items()
+    )

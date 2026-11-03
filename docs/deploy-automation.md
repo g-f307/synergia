@@ -1,9 +1,9 @@
 # Automação de implantação — issue #166
 
-Implementação em andamento. Os blocos 1 e 2 disponibilizam `precheck`,
-`diagnose`, `apply` e `verify`. O rollback, a reconciliação de operações
-interrompidas e a bateria integrada de falhas pertencem aos blocos seguintes.
-Não use esta entrega parcial para uma liberação assistida antes desses gates.
+Implementação em andamento. Os blocos 1 a 3 disponibilizam `precheck`,
+`diagnose`, `apply`, `verify`, `rollback` e `reconcile`. A bateria integrada de
+falhas e os gates de CI pertencem ao bloco 4. Não use esta entrega parcial
+para uma liberação assistida antes desses gates.
 
 ## Pré-condições e identidade da instalação
 
@@ -147,7 +147,7 @@ que os recursos passem novamente pelo precheck. A partir da pausa da aplicação
 falhas ou interrupções ficam `uncertain` e bloqueiam retries. A última referência
 confirmada não é promovida, mas isso **não significa** que o runtime ou schema
 tenham voltado à versão anterior. Não reinicie manualmente a migration nem
-execute downgrade. A reconciliação e o rollback serão entregues no bloco 3.
+execute downgrade. Use os procedimentos explícitos abaixo.
 
 O lock identifica o daemon Docker e o projeto, inclusive quando dois comandos
 informam diretórios de histórico diferentes. A instalação deve ter um único
@@ -168,6 +168,138 @@ runtime anterior e inventários de migrations. Não apague o histórico nem
 execute limpeza de imagens retidas enquanto elas forem necessárias à
 recuperação. A automação não remove volumes nem faz rollback destrutivo de banco.
 
-Essa entrega não declara a issue concluída. O rollback e a bateria completa do
-ensaio equivalente à homologação ainda precisam dos blocos 3 e 4, usando
-somente dados sintéticos e sem serviços SMTP externos.
+## Rollback da aplicação
+
+No host, use a mesma identidade de projeto e diretório de histórico:
+
+```bash
+python3 scripts/deploy.py rollback \
+  --project synergia \
+  --env-file /caminho/privado/homologation.env \
+  --state-dir /caminho/privado/deploy-history
+```
+
+O comando escolhe a versão imediatamente anterior à referência ativa. Antes de
+parar a aplicação, confere configuração protegida, imagens por ID, identidade
+do PostgreSQL e igualdade exata entre o ledger atual e o ledger da versão de
+destino. Também bloqueia se o advisory lock do runner estiver ocupado. Imagem
+ausente, configuração alterada, perfil antigo inválido ou histórico divergente
+impedem o rollback. Nenhuma imagem é baixada ou reconstruída.
+
+Após as conferências, o comando para somente backend e web e os inicia pelas
+imagens e configuração preservadas, com `--no-deps`, `--no-build` e `--pull never`.
+Confere novamente o banco após a pausa e verifica runtime, ledger e smoke antes
+de promover o rollback como uma nova implantação. Não inicia o PostgreSQL,
+worker ou runner de migrations. A versão antiga precisa aceitar o schema
+atual; igualdade do ledger é a política conservadora, não uma prova universal
+de compatibilidade com DDL manual fora do runner.
+
+Na primeira atualização de uma instalação sem histórico da automação, uma
+baseline privada captura o runtime efetivo: imagens, ambiente, comandos,
+portas, mounts, usuário, restart e health checks. Ela exige ledger existente
+e válido. Se a imagem antiga não informava commit, `revision` permanece `null`;
+seus IDs continuam identificando exatamente os artefatos restaurados. A CLI
+envia o smoke versionado ao Python do container, sem depender de um script
+que pudesse não existir na imagem anterior.
+
+Uma falha após iniciar a manutenção deixa o rollback `uncertain`, preservando
+a última referência confirmada. A aplicação pode estar parada ou parcialmente
+restaurada; consulte o diagnóstico e reconcilie explicitamente.
+
+## Reconciliação de operação interrompida
+
+Primeiro leia `operation.id` no diagnóstico. No host, inspecione esse UUID:
+
+```bash
+python3 scripts/deploy.py reconcile \
+  --project synergia \
+  --env-file /caminho/privado/homologation.env \
+  --state-dir /caminho/privado/deploy-history \
+  --operation UUID_DA_OPERACAO
+```
+
+Sem `--resolution`, o comando é somente leitura: não toma lock de implantação,
+não altera o journal, não inicia containers e não chama readiness. Informa
+disponibilidade do banco, lock de migrations, operações ativas, correspondência
+do ledger com a candidata e o resultado do container de migration:
+
+| Estado | Significado e próxima ação |
+| --- | --- |
+| `running` | Container ainda em execução, pausado ou reiniciando; não iniciar nova migration nem reconciliar o runtime. |
+| `completed` | Container encerrado com código zero; conferir também ledger e ausência de locks. |
+| `failed` | Container encerrado com erro; podem existir migrations anteriores já confirmadas. O ledger determina o que foi aplicado. |
+| `not_found` | Não há container com a identidade esperada; isso não prova que a migration nunca executou. |
+| `unknown` | Container existe sem resultado conclusivo; manter o bloqueio e investigar localmente. |
+
+Escolha uma resolução somente depois de examinar as evidências:
+
+```bash
+# Concluir a candidata cujas migrations já estão integralmente confirmadas:
+python3 scripts/deploy.py reconcile \
+  --project synergia \
+  --env-file /caminho/privado/homologation.env \
+  --state-dir /caminho/privado/deploy-history \
+  --operation UUID_DA_OPERACAO --resolution resume
+
+# Restaurar a aplicação anterior quando o ledger continuar compatível:
+python3 scripts/deploy.py reconcile \
+  --project synergia \
+  --env-file /caminho/privado/homologation.env \
+  --state-dir /caminho/privado/deploy-history \
+  --operation UUID_DA_OPERACAO --resolution rollback
+```
+
+`resume` **não repete migrations**. Exige igualdade completa do ledger com a
+candidata e ausência de processo/lock ativo ou desconhecido; então inicia e
+verifica os serviços preservados. Mesmo sem container de migration, o ledger
+transacional completo permite essa resolução explícita, sem inferir que o SQL
+deva ser repetido. Se parte das migrations tiver falhado, a divergência bloqueia
+`resume`. `rollback` exige o ledger da versão anterior; a instalação inicial
+sem versão anterior não possui esse caminho de retorno.
+
+As duas resoluções tomam o mesmo lock exclusivo da implantação e exigem o UUID
+atual com status `running` ou `uncertain`. Cada tentativa preserva o journal
+anterior e o resultado em `reconciliations/`, sem mensagens brutas ou segredos.
+Uma resolução falha permanece `uncertain`. `resume` bem-sucedido marca a
+operação como `succeeded`; retorno à versão anterior marca `reconciled`, sem
+declarar a candidata implantada. Ambas exigem verificação antes de alterar a
+referência ativa. Nunca edite o journal ou apague containers para forçar retry.
+
+Artefato da candidata ausente ou corrompido bloqueia a recuperação automática.
+Preserve as evidências, mantenha a manutenção e encaminhe o caso aos
+responsáveis por aplicação e banco. A automação não adivinha o commit, o
+resultado do SQL nem a configuração a partir de uma tag mutável.
+
+## Quando o banco exige recuperação
+
+Uma migration nova pode ter sido confirmada mesmo que a atualização falhe
+depois. Nesse caso, o rollback de aplicação fica bloqueado por padrão. Escolha
+uma correção para frente compatível com o schema ou uma recuperação conjunta
+de banco e arquivos, com decisão explícita dos responsáveis e RPO/RTO aceitos.
+Nenhum comando de deploy executa `.down.sql`, restaura dump ou remove volumes.
+
+Antes de uma atualização com migrations, prepare e verifique o backup segundo
+[data-recovery.md](data-recovery.md) e o
+[runbook de backup e restauração](runbooks/backup-restore.md). O deploy não cria
+esse backup automaticamente. **O bundle existente exporta somente o schema
+`synergia`; não inclui `public.synergia_schema_migrations`.** O inventário de
+arquivos SQL no manifesto não substitui os registros efetivamente aplicados.
+
+Para recuperação completa da implantação, a operação de banco deve preservar
+também o ledger público, suas datas e hashes, no mesmo ponto consistente do
+backup de domínio e arquivos. Uma alternativa é um dump custom do banco
+inteiro com `pg_dump` da mesma major version, sem restringir `--schema`, mais
+os arquivos e configuração correspondentes, sob manutenção e sem migrations
+concorrentes. Não exponha dumps, arquivos privados ou saídas SQL como evidência.
+
+Restaure em banco e storage novos e vazios, mantendo os originais preservados.
+Confirme a origem/versão das imagens, ledger público, constraints, usuários,
+contagens, hashes e arquivos referenciados. O procedimento existente de
+restauração de domínio não deve ser tratado como restauração automática de um
+dump do banco inteiro. A operação de banco valida o procedimento apropriado ao
+backup escolhido; só depois de verificação integral e aceite operacional deve
+ocorrer a troca controlada dos destinos. Não marque uma operação como resolvida
+nem libere tráfego apenas porque o PostgreSQL iniciou.
+
+Essa entrega não declara a issue concluída. A bateria completa do ensaio de
+homologação e a integração dos gates de CI ainda pertencem ao bloco 4.

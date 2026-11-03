@@ -67,7 +67,7 @@ class FlowRunner(FakeRunner):
             "OneOff": "False",
         }
 
-    def run(self, args, *, step, timeout=60):
+    def run(self, args, *, step, timeout=60, input_text=None):
         self.calls.append((args, step))
         if self.failure == step:
             raise DeploymentError(f"{step}: synthetic failure")
@@ -163,6 +163,9 @@ def flow_factory(tmp_path):
         migrations = root / "database/migrations"
         migrations.mkdir(parents=True, exist_ok=True)
         (migrations / "0001_synthetic.sql").write_bytes(b"SELECT 1;")
+        scripts = root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        (scripts / "smoke_containers.py").write_text("print('synthetic smoke')\n")
         env = tmp_path / "homologation.env"
         env.write_text("SYNERGIA_ENV=homologation\n")
         env.chmod(0o600)
@@ -306,8 +309,8 @@ def test_build_time_source_or_configuration_changes_block_before_maintenance(
     flow = flow_factory(existing=True)
     original = flow.runner.run
 
-    def run(args, *, step, timeout=60):
-        result = original(args, step=step, timeout=timeout)
+    def run(args, *, step, timeout=60, input_text=None):
+        result = original(args, step=step, timeout=timeout, input_text=input_text)
         if step == "build candidate":
             if change == "source":
                 flow.runner.responses["source revision"] = "b" * 40
@@ -327,10 +330,10 @@ def test_migration_ledger_mismatch_blocks_startup(flow_factory):
     flow = flow_factory()
     original = flow.runner.run
 
-    def run(args, *, step, timeout=60):
+    def run(args, *, step, timeout=60, input_text=None):
         if step == "read migration ledger":
             return "{}"
-        return original(args, step=step, timeout=timeout)
+        return original(args, step=step, timeout=timeout, input_text=input_text)
 
     flow.runner.run = run
     with pytest.raises(DeploymentError, match="ledger does not match"):
@@ -359,10 +362,10 @@ def test_immutable_image_revision_is_checked(flow_factory):
     flow = flow_factory()
     original = flow.runner.run
 
-    def run(args, *, step, timeout=60):
+    def run(args, *, step, timeout=60, input_text=None):
         if step == "resolve immutable image":
             return json.dumps({"id": IMAGE["backend"], "labels": {}})
-        return original(args, step=step, timeout=timeout)
+        return original(args, step=step, timeout=timeout, input_text=input_text)
 
     flow.runner.run = run
     with pytest.raises(DeploymentError, match="source revision does not match"):
