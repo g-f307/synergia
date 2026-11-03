@@ -1,9 +1,9 @@
 # Automação de implantação — issue #166
 
-Implementação em andamento. Os blocos 1 a 3 disponibilizam `precheck`,
-`diagnose`, `apply`, `verify`, `rollback` e `reconcile`. A bateria integrada de
-falhas e os gates de CI pertencem ao bloco 4. Não use esta entrega parcial
-para uma liberação assistida antes desses gates.
+Os comandos disponíveis são `precheck`, `diagnose`, `apply`, `verify`,
+`rollback` e `reconcile`. A validação técnica reproduzível está descrita no
+[relatório da issue #166](deploy-validation-report.md); liberação em um destino
+real ainda exige a configuração, os backups e os aceites operacionais do local.
 
 ## Pré-condições e identidade da instalação
 
@@ -301,5 +301,49 @@ backup escolhido; só depois de verificação integral e aceite operacional deve
 ocorrer a troca controlada dos destinos. Não marque uma operação como resolvida
 nem libere tráfego apenas porque o PostgreSQL iniciou.
 
-Essa entrega não declara a issue concluída. A bateria completa do ensaio de
-homologação e a integração dos gates de CI ainda pertencem ao bloco 4.
+## Ensaio sintético e gate de CI
+
+Em um checkout limpo, com Python 3.12+, Docker e os commits atual e anterior
+disponíveis localmente, execute no host:
+
+```bash
+python3 scripts/validate_deploy.py --output artifacts/deploy-validation.json
+```
+
+O executor cria projetos `synergia-check-<identificador-aleatório>`, configuração
+e histórico privados fora do Git e somente dados sintéticos. Exercita instalação,
+atualização, falhas reais de build/SQL/health/smoke, concorrência, interrupções,
+diagnóstico, proteção de artefatos e rollback de uma versão anterior. O backend
+e a web dessa versão são construídos dos arquivos Git do commit `HEAD^`, com
+seu SHA registrado nas imagens; use `--previous-revision SHA_OU_TAG` para escolher
+outro commit já disponível. Não há download de código de terceiros, criação de
+tags Git, credenciais de homologação ou uso de SMTP no ensaio.
+
+O teste mantém um advisory lock real durante a simulação de migration lenta,
+interrompe o cliente abruptamente e exige reconciliação sem repetir SQL. Uma
+falha de SQL é provocada somente no PostgreSQL sintético. Mudanças temporárias
+no ledger e nos artefatos também ficam restritas aos projetos do teste e são
+desfeitas antes da conferência de integridade.
+
+Na conclusão, inclusive em falha, o executor remove somente seus containers,
+volumes e redes e compara o inventário com o estado anterior. **Essa limpeza
+destrutiva é exclusiva do executor sintético; `deploy.py` não remove volumes.**
+Imagens e cache de build não são limpos globalmente. Históricos privados de
+teste permanecem em diretórios temporários protegidos para diagnóstico local;
+não os publique como evidência.
+
+Saída `0` e `result: passed`, com `cleanup: passed`, confirmam o ensaio.
+O JSON público contém cenários, resultados, durações, commits e hashes do código;
+nunca configuração, dumps, arquivos importados, logs brutos ou segredos. Falha
+retorna `1` e identifica o cenário no mesmo relatório. Execute em um daemon
+sem alterações concorrentes de outros operadores, pois o gate exige que os
+recursos preexistentes permaneçam idênticos.
+
+O job **Deploy — homologação, atualização e recuperação** executa esse comando
+na CI e publica somente `artifacts/deploy-validation.json`. Se o commit anterior
+tiver outro inventário de migrations, o ensaio deve comprovar o bloqueio do
+rollback por schema; ele não executa downgrade para satisfazer o teste. A
+validação local equivalente à homologação não representa implantação na LG.
+
+A consolidação do conjunto completo de runbooks corporativos continua no
+escopo da #167; este documento define o contrato executável da automação #166.

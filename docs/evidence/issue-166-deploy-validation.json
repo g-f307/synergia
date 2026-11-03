@@ -1,0 +1,120 @@
+{
+  "cases": [
+    {
+      "id": "diagnosis_read_only_empty",
+      "seconds": 0.218,
+      "status": "passed"
+    },
+    {
+      "id": "invalid_configuration_blocked",
+      "seconds": 0.158,
+      "status": "passed"
+    },
+    {
+      "id": "initial_installation",
+      "seconds": 207.864,
+      "status": "passed"
+    },
+    {
+      "id": "source_metadata_non_root_and_worker_opt_in",
+      "seconds": 0.357,
+      "status": "passed"
+    },
+    {
+      "id": "repeat_update_preserves_data",
+      "seconds": 20.159,
+      "status": "passed"
+    },
+    {
+      "id": "diagnosis_read_only_running",
+      "seconds": 0.734,
+      "status": "passed"
+    },
+    {
+      "id": "concurrent_client_blocked",
+      "seconds": 0.563,
+      "status": "passed"
+    },
+    {
+      "id": "real_build_failure",
+      "seconds": 3.434,
+      "status": "passed"
+    },
+    {
+      "id": "real_migration_failure",
+      "seconds": 44.034,
+      "status": "passed"
+    },
+    {
+      "id": "real_health_failure",
+      "seconds": 27.23,
+      "status": "passed"
+    },
+    {
+      "id": "real_smoke_failure",
+      "seconds": 47.025,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_client_resume",
+      "seconds": 22.871,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_client_rollback",
+      "seconds": 22.405,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_live_migration",
+      "seconds": 30.609,
+      "status": "passed"
+    },
+    {
+      "id": "schema_divergence_blocks_rollback",
+      "seconds": 1.682,
+      "status": "passed"
+    },
+    {
+      "id": "altered_recovery_artifact_blocked",
+      "seconds": 0.754,
+      "status": "passed"
+    },
+    {
+      "id": "legacy_previous_version",
+      "seconds": 246.591,
+      "status": "passed"
+    },
+    {
+      "id": "private_artifact_and_journal_hygiene",
+      "seconds": 0.002,
+      "status": "passed"
+    }
+  ],
+  "cleanup": "passed",
+  "environment": "homologation",
+  "finished_at": "2026-11-03T16:52:54.548418+00:00",
+  "format": 1,
+  "preexisting_resources_preserved": true,
+  "previous_revision": "69617d94c3314b7693b19e132755b1a8c559a403",
+  "previous_version_outcome": "restored",
+  "result": "passed",
+  "source_revision": "391530beb634f82a7bac3c0853db12f6f059124d",
+  "source_sha256": {
+    "backend/Dockerfile": "5d93e09192e105fc4fdd1d60a19f1dce9b0e3b70b5a7d1051bd49a4484361312",
+    "backend/app/container_runtime.py": "b0c2825a2a541e681e61bf693b79b046d473904153569a1247e820a05b979b91",
+    "backend/app/deployment_environment.py": "110801f5eb8c4ff7482ccc5c7146a8d4fb9379d40464a2c8e14e723e1f899d97",
+    "docker-compose.yml": "6968940f24d51e4411273ebf7c721acc1f8669a02c9b372f46bdf43bac9d771b",
+    "scripts/apply_migrations.py": "343065907be24131f13ac8fdf9024c122753f5539ab8ffc870cd5c2d2504ff5d",
+    "scripts/container_entrypoint.py": "c98d9a9eafc7d92cfafcef7e54f830994cb889bbb4bf99302d2d77986978affd",
+    "scripts/deploy.py": "bdc7bcf6297eac8e8c8196b28cd2d2185ab77e8b4defae2e58e9a41b373c1cb8",
+    "scripts/deploy_common.py": "1d0d49d83319a44a2dcccc6daa23cc7ab6e20a1db5d36b387c6f2eff1a7aaae0",
+    "scripts/deploy_flow.py": "290e9a63188bf2b4f1e8552f92754c3f2cf4588cff333db2157a6c586f35c3af",
+    "scripts/deploy_recovery.py": "e5d718881c34f2ac3480a300530cfc14fc18a4ea330909d0cb7f6262c7d625d4",
+    "scripts/smoke_containers.py": "7c152f0ca8cf11fa6897ff8f8f1351a0c729e5ce6905358a36fd1875528b2dce",
+    "scripts/validate_deploy.py": "f1cc95315f2b00386b577e63964afcf859b1b1a49e34feb2f478f61dcbca149d",
+    "web/Dockerfile": "4dfbf0dbc77a3d35754547d59d82543201e67397e3af322fd9121d204294a35e"
+  },
+  "started_at": "2026-11-03T16:41:35.447230+00:00",
+  "synthetic_only": true
+}

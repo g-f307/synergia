@@ -107,16 +107,25 @@ o padrão é `data/imports/`, ignorado pelo Git.
 
 ### Integração contínua
 
-O workflow possui cinco jobs:
+O workflow possui oito definições de jobs; a portabilidade das PoCs executa em
+uma matriz com Ubuntu e Windows:
 
 1. Angular: lint, testes com cobertura e build;
 2. FastAPI: lint, testes sem integração e compilação;
 3. banco e dados: PostgreSQL 16 vazio, migrations, massas sintéticas, testes de
    persistência e validação do Compose;
-4. protótipo: checkout somente leitura de `prototype-pages` e smoke check dos
+4. portabilidade das PoCs: manifesto e hashes dos fixtures congelados;
+5. containers: build, auditoria das imagens e smoke test;
+6. deploy: homologação sintética, atualização, falhas e recuperação reproduzíveis;
+7. protótipo: checkout somente leitura de `prototype-pages` e smoke check dos
    arquivos publicados;
-5. segurança de release: regressão ofensiva, DAST controlado, segredos,
+8. segurança de release: regressão ofensiva, DAST controlado, segredos,
    dependências, imagem publicada e SBOM CycloneDX.
+
+A automação de implantação é executada no host por `scripts/deploy.py`, com
+estado privado externo ao Git. Ela preserva volumes, pausa os escritores antes
+das migrations e registra imagens por ID e commit. O contrato e a política
+conservadora de rollback estão em [deploy-automation.md](deploy-automation.md).
 
 ## Protótipo publicado
 
