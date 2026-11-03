@@ -2,7 +2,12 @@
   "cases": [
     {
       "id": "legacy_previous_version",
-      "seconds": 64.396,
+      "seconds": 123.074,
+      "status": "passed"
+    },
+    {
+      "id": "unmanaged_stopped_postgres_update",
+      "seconds": 55.454,
       "status": "passed"
     }
   ],
@@ -13,6 +18,6 @@
   "previous_revision": "04769a84423eac2544b7e3a81dfa48232e6e7344",
   "previous_version_outcome": "restored",
   "result": "passed",
-  "source_revision": "7d4247f3bab4cc6407ed7c1ee31c4fee10f15ecb",
+  "source_revision": "965d972880443fe3a71b5f477fb2f2cf9ad04f45",
   "synthetic_only": true
 }
