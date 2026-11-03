@@ -87,6 +87,8 @@ Recursos parciais exigem reconciliação; a automação não cria silenciosament
 outro banco para substituir dados ausentes. Identidade, usuário ou senha do
 PostgreSQL divergentes do container existente exigem procedimento próprio de
 administração do banco; atualização de aplicação não rotaciona essas credenciais.
+Alteração da porta publicada do PostgreSQL também exige esse procedimento;
+o fluxo bloqueia a mudança antes do build, pois mantém o container do banco.
 
 | Etapa | Efeito e resultado esperado |
 | --- | --- |
@@ -132,6 +134,8 @@ containers e imagens efetivos, ledger, endpoints e configuração web usando a
 configuração privada preservada. Não executa build, migration ou envio de
 e-mail, mas invoca readiness e, portanto, faz a sondagem temporária de storage.
 Para uma leitura sem essa escrita, use `diagnose`.
+As portas publicadas também são comparadas com o runtime; uma origem interna
+saudável não basta para aprovar uma exposição diferente da registrada.
 
 ## Falhas e controle das operações
 
@@ -185,6 +189,9 @@ do PostgreSQL e igualdade exata entre o ledger atual e o ledger da versão de
 destino. Também bloqueia se o advisory lock do runner estiver ocupado. Imagem
 ausente, configuração alterada, perfil antigo inválido ou histórico divergente
 impedem o rollback. Nenhuma imagem é baixada ou reconstruída.
+Os dois volumes persistentes precisam existir. A ausência do volume de arquivos
+bloqueia rollback e reconciliação, inclusive quando o container do backend foi
+removido: a automação não cria um volume vazio para substituir arquivos perdidos.
 
 Após as conferências, o comando para somente backend e web e os inicia pelas
 imagens e configuração preservadas, com `--no-deps`, `--no-build` e `--pull never`.

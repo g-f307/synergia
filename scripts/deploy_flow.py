@@ -16,6 +16,7 @@ from deploy_common import (
     compose_values,
     parse_json,
     private_json,
+    published_ports_match,
 )
 
 IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}")
@@ -313,6 +314,14 @@ class ApplyWorkflow:
                             "database credentials/identity changed; "
                             "use a separate database procedure"
                         )
+                    if not published_ports_match(
+                        self.config["services"]["postgres"].get("ports"),
+                        self.before["postgres"].get("ports"),
+                    ):
+                        raise DeploymentError(
+                            "PostgreSQL published ports changed; "
+                            "use a separate database procedure"
+                        )
                 atomic_json(self.release_dir / "before-runtime.json", self.before)
                 for name in ("backend", "web"):
                     if name in self.before:
@@ -555,6 +564,12 @@ class ApplyWorkflow:
             ):
                 raise DeploymentError(
                     f"verification: {name} environment differs from release"
+                )
+            if not published_ports_match(
+                self.config["services"][name].get("ports"), runtime.get("ports")
+            ):
+                raise DeploymentError(
+                    f"verification: {name} published ports differ from release"
                 )
         if self.ledger() != migrations:
             raise DeploymentError(

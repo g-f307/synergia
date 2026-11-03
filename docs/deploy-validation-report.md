@@ -45,16 +45,16 @@ documentação de evidências for atualizada depois do ensaio.
 | Verificação executada | Resultado |
 | --- | --- |
 | Ruff, no mesmo diretório e escopo da CI | aprovado |
-| Suíte sem integração | 1.551 passaram; 672 testes de integração foram excluídos desse comando |
-| Testes específicos da automação e entrypoint, incluídos na suíte | 132 passaram |
+| Suíte sem integração | 1.561 passaram; 672 testes de integração foram excluídos desse comando |
+| Testes específicos da automação e entrypoint, incluídos na suíte | 142 passaram |
 | Compilação dos módulos Python afetados | aprovada |
 | YAML do workflow e configuração do novo job/artefato | parse e conferências locais aprovados |
 | Scanner de segredos do projeto sobre a árvore pública preparada | 1.017 arquivos examinados; nenhum achado; dados reais ignorados excluídos |
-| Bateria Docker versionada, perfil homologação | 18/18 cenários aprovados; limpeza aprovada |
+| Bateria Docker versionada, perfil homologação | 20/20 cenários aprovados; limpeza aprovada |
 | Compatibilidade com a `main` anterior à issue | adoção e rollback aprovados; limpeza aprovada |
 | Integridade dos recursos preexistentes | containers, volumes e redes preservados nos dois ensaios |
 
-A bateria principal foi executada entre `16:41:35` e `16:52:54 UTC`, com backend,
+A bateria final da revisão foi executada entre `17:25:20` e `17:30:48 UTC`, com backend,
 frontend e PostgreSQL reais e configuração sintética externa privada. Os casos
 confirmaram usuário e arquivo preservados, o mesmo container PostgreSQL e as
 datas originais do ledger nas atualizações repetidas e recuperações.
@@ -66,12 +66,13 @@ Foram provocadas falhas reais de build, SQL, health e smoke; o resultado
 recuperação verificada, sem promoção da candidata falha. O cenário de migration
 lenta usa uma tarefa sintética com o advisory lock do runner, sem novo DDL.
 
-A bateria principal comparou o checkout de implementação com seu commit
-anterior. Um ensaio adicional usou a `main`
+A bateria final usou a `main`
 `04769a84423eac2544b7e3a81dfa48232e6e7344`, anterior à automação, para reproduzir
-também o caminho do PR na CI. O rollback restaurou os IDs exatos das imagens
+o caminho do PR na CI. O rollback restaurou os IDs exatos das imagens
 construídas desse código; a imagem antiga não precisou conter os scripts novos.
-A evidência está em [issue-166-previous-main.json](evidence/issue-166-previous-main.json).
+A evidência resumida está em
+[issue-166-previous-main.json](evidence/issue-166-previous-main.json): trata-se de
+uma extração desse cenário da mesma bateria, incluído nos 20, não outra execução.
 
 Os JSONs registram o commit exercitado antes da atualização exclusivamente
 documental das evidências e os hashes dos arquivos operacionais selecionados.
@@ -83,6 +84,24 @@ de status HTTP; não houve falha de teste.
 O job remoto foi configurado; sua execução depende da publicação da branch e
 abertura do PR. Não há declaração de CI remota aprovada nem de implantação na
 infraestrutura da LG.
+
+## Ajustes confirmados na revisão final
+
+Foram identificadas e corrigidas duas lacunas nos caminhos de segurança:
+
+- Recuperação sem o volume de arquivos poderia permitir a criação de um volume
+  vazio pelo Compose. Rollback e reconciliação agora exigem os dois volumes
+  persistentes antes de parar serviços e repetem essa checagem após a pausa.
+- A mudança da porta publicada do PostgreSQL podia ser registrada sem ser
+  aplicada, pois seu container é preservado. A atualização agora bloqueia essa
+  mudança antes do build; a verificação também compara as portas efetivas de
+  PostgreSQL, backend e web com a configuração registrada.
+
+As regressões cobrem rollback normal, as duas resoluções de reconciliação,
+interfaces e portas publicadas. A bateria real também provoca perda deliberada
+do volume **sintético**, depois das verificações de preservação, para comprovar
+que a recuperação recusa a criação de um substituto vazio. Essa falha de
+infraestrutura faz parte do teste descartável; não afeta dados ou volumes reais.
 
 ## Limites e portões externos
 

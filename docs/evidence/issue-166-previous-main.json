@@ -1,17 +1,18 @@
 {
   "cases": [
     {
-      "id": "previous_main_without_deploy_metadata",
-      "seconds": 115.877,
+      "id": "legacy_previous_version",
+      "seconds": 64.396,
       "status": "passed"
     }
   ],
   "cleanup": "passed",
+  "derived_from": "issue-166-deploy-validation.json",
   "format": 1,
   "preexisting_resources_preserved": true,
   "previous_revision": "04769a84423eac2544b7e3a81dfa48232e6e7344",
   "previous_version_outcome": "restored",
   "result": "passed",
-  "source_revision": "391530beb634f82a7bac3c0853db12f6f059124d",
+  "source_revision": "7d4247f3bab4cc6407ed7c1ee31c4fee10f15ecb",
   "synthetic_only": true
 }

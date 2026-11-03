@@ -772,6 +772,30 @@ def main(argv=None):
                 drill.data_snapshot(flow) == data,
                 "repeat update must preserve ledger dates, user, file and PostgreSQL",
             )
+        with drill.case("postgres_port_change_blocked"):
+            config = flow.deployment.env_file
+            original = config.read_text()
+            active = flow.read_active()
+            runtime = drill.runtime_snapshot(flow)
+            try:
+                config.write_text(
+                    re.sub(
+                        r"(?m)^POSTGRES_PORT=.*$",
+                        f"POSTGRES_PORT={available_port()}",
+                        original,
+                    )
+                )
+                drill.expect_block(
+                    lambda: flow.apply(drill.revision), "database port drift"
+                )
+                require(
+                    flow.read_active() == active
+                    and drill.runtime_snapshot(flow) == runtime,
+                    "database port drift must precede build and shutdown",
+                )
+            finally:
+                config.write_text(original)
+            flow.verify_active()
         with drill.case("diagnosis_read_only_running"):
             history = drill.history_snapshot(flow)
             runtime = drill.runtime_snapshot(flow)
@@ -857,6 +881,36 @@ def main(argv=None):
             result["previous_version_outcome"] = outcome
         with drill.case("private_artifact_and_journal_hygiene"):
             drill.privacy()
+        with drill.case("missing_application_volume_blocks_recovery"):
+            # Destructive infrastructure fault only in our disposable project,
+            # after every preservation check; never reproduce this on real data.
+            flow.inventory()
+            require(
+                re.fullmatch(r"synergia-check-[0-9a-f]{12}", flow.deployment.project)
+                is not None,
+                "storage fault requires a synthetic project",
+            )
+            active = flow.read_active()
+            web = flow.containers["web"]["ID"]
+            volume = f"{flow.deployment.project}_synergia-application-data"
+            drill.runner.run(
+                ["docker", "rm", "--force", flow.containers["backend"]["ID"]],
+                step="synthetic missing backend fixture",
+            )
+            drill.runner.run(
+                ["docker", "volume", "rm", volume],
+                step="synthetic missing volume fixture",
+            )
+            drill.expect_block(flow.rollback, "missing persistent storage")
+            report = flow.deployment.diagnose()
+            require(
+                not report["volumes_present"]["synergia-application-data"],
+                "recovery must not create an empty replacement volume",
+            )
+            require(
+                flow.read_active() == active and flow.containers["web"]["ID"] == web,
+                "missing storage must block before stopping remaining writers",
+            )
         result["result"] = "passed"
         exit_code = 0
     except (Exception, KeyboardInterrupt) as exc:

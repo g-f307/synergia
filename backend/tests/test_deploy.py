@@ -17,6 +17,49 @@ deploy = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(deploy)
 
 
+@pytest.mark.parametrize(
+    "configured,bindings,expected",
+    [
+        (
+            [{"target": 5432, "published": "15432"}],
+            {"5432/tcp": [{"HostIp": "", "HostPort": "15432"}]},
+            True,
+        ),
+        (
+            [{"target": 5432, "published": "15432"}],
+            {
+                "5432/tcp": [
+                    {"HostIp": "0.0.0.0", "HostPort": "15432"},
+                    {"HostIp": "::", "HostPort": "15432"},
+                ]
+            },
+            True,
+        ),
+        (
+            [{"target": 5432, "published": "15432", "host_ip": "127.0.0.1"}],
+            {"5432/tcp": [{"HostIp": "", "HostPort": "15432"}]},
+            False,
+        ),
+        (
+            [{"target": 5432, "published": "25432"}],
+            {"5432/tcp": [{"HostIp": "", "HostPort": "15432"}]},
+            False,
+        ),
+        (
+            [{"target": 5432, "published": "0"}],
+            {"5432/tcp": [{"HostIp": "", "HostPort": ""}]},
+            True,
+        ),
+    ],
+)
+def test_published_port_comparison_preserves_interface_and_port_intent(
+    configured, bindings, expected
+):
+    from deploy_common import published_ports_match
+
+    assert published_ports_match(configured, bindings) is expected
+
+
 def configuration(project="synergia-test"):
     environment = {
         "SYNERGIA_ENV": "homologation",

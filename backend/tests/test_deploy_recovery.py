@@ -360,3 +360,69 @@ def test_compose_rejecting_a_recovery_artifact_blocks_before_maintenance(recover
     assert "stop application writers" not in [
         step for _, step in recovery.runner.calls[count:]
     ]
+
+
+@pytest.mark.parametrize("resolution", ["normal", "resume", "rollback"])
+def test_missing_storage_volume_blocks_recovery_without_recreating_it(
+    recovery, resolution
+):
+    if resolution == "normal":
+        recovery.apply(COMMIT)
+        identifier = None
+    else:
+        identifier = unresolved(recovery)
+    before = recovery.read_active()
+    original = recovery.runner.run
+
+    def run(args, *, step, timeout=60, input_text=None):
+        if step == "persistent volume inventory":
+            return "synergia-test_synergia-postgres\n"
+        return original(args, step=step, timeout=timeout, input_text=input_text)
+
+    recovery.runner.run = run
+    del recovery.runner.services["backend"]
+    count = len(recovery.runner.calls)
+    with pytest.raises(DeploymentError, match="persistent recovery volume missing"):
+        if resolution == "normal":
+            recovery.rollback()
+        else:
+            recovery.reconcile(identifier, resolution=resolution)
+    assert recovery.read_active() == before
+    assert not {
+        "stop application writers",
+        "backend readiness",
+        "web readiness",
+    }.intersection(step for _, step in recovery.runner.calls[count:])
+
+
+def test_postgres_port_change_is_blocked_before_build(recovery):
+    recovery.apply(COMMIT)
+    recovery.runner.config["services"]["postgres"]["ports"] = [
+        {"target": 5432, "published": "25432", "protocol": "tcp"}
+    ]
+    count = len(recovery.runner.calls)
+    with pytest.raises(DeploymentError, match="PostgreSQL published ports changed"):
+        recovery.apply(COMMIT)
+    assert not {"build candidate", "stop application writers"}.intersection(
+        step for _, step in recovery.runner.calls[count:]
+    )
+
+
+def test_verification_rejects_drift_in_published_application_ports(recovery):
+    recovery.apply(COMMIT)
+    original = recovery.runner.run
+
+    def run(args, *, step, timeout=60, input_text=None):
+        output = original(args, step=step, timeout=timeout, input_text=input_text)
+        if (
+            step == "capture current runtime"
+            and args[-1] == recovery.runner.container("web")["ID"]
+        ):
+            runtime = json.loads(output)
+            runtime["ports"] = {"8080/tcp": [{"HostIp": "", "HostPort": "9999"}]}
+            return json.dumps(runtime)
+        return output
+
+    recovery.runner.run = run
+    with pytest.raises(DeploymentError, match="web published ports differ"):
+        recovery.verify_active()

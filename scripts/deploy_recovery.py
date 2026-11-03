@@ -15,6 +15,7 @@ from deploy_common import (
     compose_values,
     parse_json,
     private_json,
+    published_ports_match,
 )
 from deploy_flow import IMAGE_ID, REVISION, ApplyWorkflow, valid_migrations
 
@@ -64,6 +65,7 @@ class RecoveryWorkflow(ApplyWorkflow):
         return manifest
 
     def select(self, manifest, report):
+        require_recovery_volumes(report)
         if (manifest.get("project"), manifest.get("daemon_id")) != (
             report["project"],
             report["daemon_id"],
@@ -121,6 +123,12 @@ class RecoveryWorkflow(ApplyWorkflow):
         ):
             raise DeploymentError(
                 "PostgreSQL configuration changed; reconcile database access"
+            )
+        if not published_ports_match(
+            services["postgres"].get("ports"), pg.get("ports")
+        ):
+            raise DeploymentError(
+                "PostgreSQL published ports changed; reconcile database access"
             )
         if self.lock_held():
             raise DeploymentError(
@@ -180,7 +188,7 @@ class RecoveryWorkflow(ApplyWorkflow):
                 "stop application writers",
                 timeout=90,
             )
-        self.inventory()
+        require_recovery_volumes(self.inventory())
         # Recheck after draining writers, immediately before starting old code.
         if self.lock_held() or self.ledger() != manifest["migrations"]:
             raise DeploymentError(
@@ -398,6 +406,17 @@ class RecoveryWorkflow(ApplyWorkflow):
             "revision": target["revision"],
             "verified": True,
         }
+
+
+def require_recovery_volumes(report):
+    required = {"synergia-postgres", "synergia-application-data"}
+    if set(report.get("volumes_present", {})) != required or not all(
+        report["volumes_present"].values()
+    ):
+        raise DeploymentError(
+            "persistent recovery volume missing; restore data before recovery; "
+            "empty replacement volumes are forbidden"
+        )
 
 
 def runtime_service(original, runtime, config):

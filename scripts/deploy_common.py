@@ -75,3 +75,36 @@ def compose_values(value):
     if isinstance(value, list):
         return [compose_values(item) for item in value]
     return value
+
+
+def published_ports_match(configured, bindings) -> bool:
+    """Compare requested host bindings, including wildcard and dynamic ports."""
+    try:
+        expected = {
+            (
+                int(item["target"]),
+                item.get("protocol", "tcp"),
+                str(item.get("published") or "0"),
+                item.get("host_ip") or "",
+            )
+            for item in configured or []
+        }
+        actual = set()
+        for target, publications in (bindings or {}).items():
+            number, protocol = target.split("/")
+            grouped = {}
+            for publication in publications or []:
+                grouped.setdefault(str(publication["HostPort"] or "0"), set()).add(
+                    publication["HostIp"] or ""
+                )
+            for published, addresses in grouped.items():
+                if addresses == {"0.0.0.0", "::"}:
+                    addresses = {""}
+                actual.update(
+                    (int(number), protocol, published, address) for address in addresses
+                )
+        return expected == actual
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise DeploymentError(
+            "published port contract invalid; review configuration"
+        ) from exc
