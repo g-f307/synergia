@@ -1,0 +1,52 @@
+{
+  "observed_on": "2026-10-29",
+  "issue": 148,
+  "source_revision": "85a31ba24b48f4d4566b97bc0e0597fc2b5528b4",
+  "measurement_kind": "read_only_inventory_no_inference",
+  "platform": {
+    "system": "Linux",
+    "architecture": "x86_64",
+    "python": "3.12.3"
+  },
+  "cpu": {
+    "model": "AMD Ryzen 5 7535HS",
+    "logical_cpus": 12
+  },
+  "ram_total_bytes": 15907282944,
+  "gpu": {
+    "model": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "vram_total_bytes": 4294967296,
+    "driver": "580.178.04"
+  },
+  "project_disk_available_bytes": 26279706624,
+  "runtime": {
+    "provider": "ollama",
+    "version": "0.40.12",
+    "scope": "loopback"
+  },
+  "installed_models": [
+    {
+      "name": "qwen3:4b",
+      "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "file_size_bytes": 2497293931,
+      "parameter_size": "4.0B",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "name": "llama3.2:1b",
+      "digest": "baf6a787fdffd633537aa2eb51cfd54cb93ff08e28040095462bb63daf552878",
+      "file_size_bytes": 1321098329,
+      "parameter_size": "1.2B",
+      "quantization": "Q8_0"
+    }
+  ],
+  "historical_environment": {
+    "source": "docs/ai-quality-evaluation-report.md",
+    "cpu": "Intel Core i5-1335U",
+    "ram_approx_gib": 7.4,
+    "accelerator": "CPU only",
+    "runtime": "Ollama 0.35.1",
+    "raw_evidence_available_at_documented_paths": false
+  },
+  "comparability": "Historical measurements are from another computer and runtime; do not attribute differences solely to GPU or CPU."
+}

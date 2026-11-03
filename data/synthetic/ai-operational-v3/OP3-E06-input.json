@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E06",
+  "execution": {
+    "execution_id": "syn-op3-e06",
+    "status": "awaiting_review",
+    "lifecycle": "partial",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 1,
+      "classifications": 1,
+      "events": 0
+    }
+  },
+  "pending_items": [
+    {
+      "evidence_id": "ev-p-4206",
+      "id": 4206,
+      "reason": "Resultado retido aguarda revisão humana.",
+      "status": "open",
+      "priority": "critical",
+      "workorder_number": "WO-SYN-4206",
+      "responsible_area": "quality"
+    }
+  ],
+  "classifications": [
+    {
+      "evidence_id": "ev-c-4206",
+      "classification_id": "cls-syn-4206",
+      "state": "retained",
+      "justification": "Regra sintética registrou retenção.",
+      "rule_id": "rule-syn-4206",
+      "workorder_number": "WO-SYN-4206"
+    }
+  ],
+  "events": []
+}

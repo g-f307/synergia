@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E05",
+  "execution": {
+    "execution_id": "syn-op3-e05",
+    "status": "partial",
+    "lifecycle": "partial",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 0,
+      "classifications": 0,
+      "events": 0
+    }
+  },
+  "pending_items": [],
+  "classifications": [],
+  "events": []
+}

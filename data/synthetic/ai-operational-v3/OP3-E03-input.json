@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E03",
+  "execution": {
+    "execution_id": "syn-op3-e03",
+    "status": "failed",
+    "lifecycle": "failed",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 2,
+      "classifications": 0,
+      "events": 1
+    }
+  },
+  "pending_items": [
+    {
+      "evidence_id": "ev-p-4203",
+      "id": 4203,
+      "reason": "Falha crítica registrada para investigação.",
+      "status": "open",
+      "priority": "critical",
+      "workorder_number": "WO-SYN-4203",
+      "responsible_area": "quality"
+    },
+    {
+      "evidence_id": "ev-p-4204",
+      "id": 4204,
+      "reason": "Conferência complementar de referência.",
+      "status": "open",
+      "priority": "high",
+      "workorder_number": "WO-SYN-4204",
+      "responsible_area": "quality"
+    }
+  ],
+  "classifications": [],
+  "events": [
+    {
+      "evidence_id": "ev-e-4203",
+      "event_id": "event-syn-4203",
+      "event_type": "execution_failed",
+      "occurred_at": "2026-10-01T12:00:00Z",
+      "entity_type": "execution",
+      "entity_id": "syn-op3-e03"
+    }
+  ]
+}

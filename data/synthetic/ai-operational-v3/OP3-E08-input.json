@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E08",
+  "execution": {
+    "execution_id": "syn-op3-e08",
+    "status": "awaiting_review",
+    "lifecycle": "partial",
+    "pipeline_version": "synthetic-148-v3",
+    "rule_catalog_version": "synthetic-148-v3",
+    "counts": {
+      "pending_items": 0,
+      "classifications": 2,
+      "events": 0
+    }
+  },
+  "pending_items": [],
+  "classifications": [
+    {
+      "evidence_id": "ev-c-4208",
+      "classification_id": "cls-syn-4208",
+      "state": "approved",
+      "justification": "Registro sintético de aprovação.",
+      "rule_id": "rule-syn-4208",
+      "workorder_number": "WO-SYN-4290"
+    },
+    {
+      "evidence_id": "ev-c-4209",
+      "classification_id": "cls-syn-4209",
+      "state": "retained",
+      "justification": "Registro sintético de retenção.",
+      "rule_id": "rule-syn-4209",
+      "workorder_number": "WO-SYN-4290"
+    }
+  ],
+  "events": []
+}

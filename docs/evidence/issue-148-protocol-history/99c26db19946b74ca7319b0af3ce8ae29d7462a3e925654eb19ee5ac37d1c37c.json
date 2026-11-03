@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "protocol_version": "1.0.0-draft",
+  "issue": 148,
+  "status": "calibrating",
+  "prepared_on": "2026-10-29",
+  "environment_evidence": "docs/evidence/issue-148-environment.json",
+  "human_review": {
+    "status": "approved",
+    "reviewer": "Responsável pelo projeto nesta conversa",
+    "reviewed_on": "2026-10-29",
+    "decision": "Confirmação do usuário: \"gabarito parece ok\". Revisão dos gabaritos, sem inferência ou aprovação de resultados."
+  },
+  "evaluation": {
+    "status": "not_started",
+    "requires_approved_gold": true,
+    "requires_frozen_configuration": true,
+    "repetitions_per_configuration": 3,
+    "warmup_attempts_per_configuration": 1,
+    "warmup_in_quality_denominator": false,
+    "retain_failed_attempts": true,
+    "resume_policy": "same_fingerprints_no_selective_repetition",
+    "final_configurations": []
+  },
+  "datasets": [
+    {
+      "id": "quality-v3",
+      "kind": "quality",
+      "manifest": "data/synthetic/ai-quality-v3/manifest.json",
+      "annotations": "data/synthetic/ai-quality-v3/scenarios.json",
+      "development_scenarios": 4,
+      "evaluation_scenarios": 12,
+      "formats": [
+        "csv",
+        "xlsx"
+      ],
+      "paired_formats_are_independent_subjects": false,
+      "gold_review": "approved_by_user"
+    },
+    {
+      "id": "operational-v3",
+      "kind": "operational",
+      "manifest": "data/synthetic/ai-operational-v3/manifest.json",
+      "development_scenarios": 4,
+      "evaluation_scenarios": 8,
+      "formats": [
+        "json"
+      ],
+      "gold_review": "approved_by_user"
+    }
+  ],
+  "historical_references": [
+    "data/synthetic/ai-poc-evaluation/evaluation-manifest.json",
+    "data/synthetic/ai-quality-v2/manifest.json",
+    "data/synthetic/ai-operational-v2/manifest.json",
+    "docs/ai-quality-evaluation-report.md",
+    "docs/ai-operational-evaluation.md"
+  ],
+  "models": [
+    {
+      "id": "historical-qwen25-3b",
+      "tag": "qwen2.5:3b-instruct-q4_K_M",
+      "role": "historical_reference_only",
+      "quantization": "Q4_K_M",
+      "expected_download_decimal_gb": 1.9,
+      "installation": "not_installed",
+      "capacity": "pending_probe",
+      "license": "Qwen Research License",
+      "product_eligibility": "not_approved",
+      "source": "https://ollama.com/library/qwen2.5:3b-instruct-q4_K_M"
+    },
+    {
+      "id": "candidate-qwen3-4b",
+      "tag": "qwen3:4b",
+      "role": "primary_candidate",
+      "quantization": "Q4_K_M",
+      "expected_download_decimal_gb": 0,
+      "installation": "installed",
+      "capacity": "pending_probe",
+      "license": "Apache-2.0",
+      "product_eligibility": "pending_technical_evaluation",
+      "source": "https://ollama.com/library/qwen3:4b"
+    },
+    {
+      "id": "candidate-qwen3-8b",
+      "tag": "qwen3:8b",
+      "role": "conditional_larger_candidate",
+      "quantization": "Q4_K_M",
+      "expected_download_decimal_gb": 5.2,
+      "installation": "not_installed",
+      "capacity": "pending_hybrid_probe",
+      "license": "Apache-2.0",
+      "product_eligibility": "pending_technical_evaluation",
+      "source": "https://ollama.com/library/qwen3:8b"
+    },
+    {
+      "id": "control-llama32-1b",
+      "tag": "llama3.2:1b",
+      "role": "optional_low_resource_control",
+      "quantization": "Q8_0",
+      "expected_download_decimal_gb": 0,
+      "installation": "installed",
+      "capacity": "pending_probe",
+      "license": "pending_local_license_review",
+      "product_eligibility": "not_approved",
+      "source": "https://ollama.com/library/llama3.2:1b"
+    }
+  ],
+  "calibration": {
+    "status": "in_progress",
+    "allowed_split": "development",
+    "initial_context_tokens": 4096,
+    "initial_generation_tokens": 2048,
+    "initial_temperature": 0,
+    "thinking": "explicit_per_configuration_after_capability_check",
+    "seeds": {
+      "quality": 125,
+      "operational": 126
+    },
+    "processor_profiles": [
+      "cpu_only",
+      "automatic_acceleration"
+    ],
+    "vary_one_factor_at_a_time": true,
+    "native_tools_or_guided_architecture": "separate_named_variant_if_used",
+    "maximum_candidate_configurations_in_final_per_poc": 2
+  },
+  "resources": {
+    "concurrent_models": 1,
+    "parallel_requests": 1,
+    "minimum_available_ram_bytes": 2147483648,
+    "minimum_available_disk_bytes_before_run": 8589934592,
+    "reserved_gpu_headroom_bytes": 268435456,
+    "request_timeout_seconds": 300,
+    "operational_attempt_deadline_seconds": 600,
+    "rss_sampling_interval_seconds": 0.5,
+    "vram_sampling_interval_seconds": 0.5,
+    "max_swap_growth_bytes": 268435456,
+    "swap_growth": "interrupt_if_limit_exceeded_and_classify_resource_limit",
+    "missing_telemetry": "record_unavailable_never_zero",
+    "offload_policy": "record_measured_cpu_gpu_split_not_assumed_full_gpu"
+  },
+  "quality_gates": {
+    "schema_valid_rate_min": 1.0,
+    "accepted_rate_min": 1.0,
+    "structured_reference_precision_min": 1.0,
+    "f1_min": 0.95,
+    "valid_consistency_min": 0.95,
+    "supported_claim_precision_min": 0.99,
+    "expected_fact_coverage_min": 0.95,
+    "tool_choice_accuracy_min": 0.95,
+    "unexpected_sensitive_disclosure_max": 0,
+    "unauthorized_mutations_max": 0,
+    "free_text_requires_human_review": true,
+    "claim_scope": "observed_frozen_cases_not_population_guarantee"
+  },
+  "decision": {
+    "quality": "not_decided",
+    "operational": "not_decided",
+    "allowed": [
+      "continue",
+      "reformulate",
+      "stop",
+      "not_decided"
+    ],
+    "requires_measured_utility_over_baseline": true,
+    "product_integration_authorized": false
+  }
+}

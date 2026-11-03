@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-D04",
+  "status": "insufficient_evidence",
+  "summary": "Execução parcial sem evidências suficientes para diagnóstico.",
+  "findings": [],
+  "open_questions": [
+    "Quais evidências autorizadas completam esta execução?"
+  ],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}

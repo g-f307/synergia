@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E03",
+  "status": "completed",
+  "summary": "Execução falha com duas pendências, incluindo uma crítica.",
+  "findings": [
+    {
+      "finding_id": "pending:4203",
+      "title": "Falha crítica",
+      "severity": "critical",
+      "statement": "Falha crítica registrada para investigação.",
+      "evidence_ids": [
+        "ev-p-4203"
+      ]
+    },
+    {
+      "finding_id": "pending:4204",
+      "title": "Conferência complementar",
+      "severity": "warning",
+      "statement": "Conferência complementar de referência.",
+      "evidence_ids": [
+        "ev-p-4204"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}

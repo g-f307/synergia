@@ -293,6 +293,7 @@ def run_attempt(
     model: str,
     output_dir: Path,
     parameters: dict[str, Any] | None = None,
+    prompt_path: Path = PROMPT,
 ) -> dict[str, Any]:
     """Persist every attempt, including invalid JSON/runtime failure; no fallback.
 
@@ -301,7 +302,7 @@ def run_attempt(
     """
     attempt_dir = output_dir / str(uuid.uuid4())
     attempt_dir.mkdir(parents=True, exist_ok=False)
-    prompt = PROMPT.read_text(encoding="utf-8")
+    prompt = prompt_path.read_text(encoding="utf-8")
     report = {
         "attempt_id": attempt_dir.name,
         "started_at": datetime.now(UTC).isoformat(),

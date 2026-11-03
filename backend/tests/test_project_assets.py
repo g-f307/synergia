@@ -16,12 +16,10 @@ import validate_project_assets as assets  # noqa: E402
 
 @pytest.fixture
 def synthetic_root(tmp_path, monkeypatch):
-    shutil.copytree(
-        ROOT / "data/synthetic/ai-quality-v2", tmp_path / "ai-quality-v2"
-    )
-    shutil.copytree(
-        ROOT / "data/synthetic/ai-operational-v2", tmp_path / "ai-operational-v2"
-    )
+    for family in ("ai-quality", "ai-operational"):
+        for version in ("v2", "v3"):
+            name = f"{family}-{version}"
+            shutil.copytree(ROOT / "data/synthetic" / name, tmp_path / name)
     monkeypatch.setattr(assets, "SYNTHETIC_DATA", tmp_path)
     return tmp_path
 
@@ -41,9 +39,12 @@ def test_project_assets_dispatches_operational_manifest_with_quality_corpus(
 
 
 @pytest.mark.parametrize("change", ["modified", "missing", "gold"])
-def test_project_assets_rejects_quality_integrity_failure(synthetic_root, change):
-    dataset = synthetic_root / "ai-quality-v2"
-    path = dataset / "evaluation/QD2-E12.xlsx"
+@pytest.mark.parametrize("version", [2, 3])
+def test_project_assets_rejects_quality_integrity_failure(
+    synthetic_root, change, version
+):
+    dataset = synthetic_root / f"ai-quality-v{version}"
+    path = dataset / f"evaluation/QD{version}-E12.xlsx"
     if change == "missing":
         path.unlink()
     elif change == "gold":
@@ -54,8 +55,13 @@ def test_project_assets_rejects_quality_integrity_failure(synthetic_root, change
         assets.validate_synthetic_data()
 
 
-def test_unlisted_quality_file_still_receives_generic_validation(synthetic_root):
-    (synthetic_root / "ai-quality-v2/extra.xlsx").write_bytes(b"not a workbook")
+@pytest.mark.parametrize("version", [2, 3])
+def test_unlisted_quality_file_still_receives_generic_validation(
+    synthetic_root, version
+):
+    (synthetic_root / f"ai-quality-v{version}/extra.xlsx").write_bytes(
+        b"not a workbook"
+    )
     with pytest.raises(BadZipFile):
         assets.validate_synthetic_data()
 

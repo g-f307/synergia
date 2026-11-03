@@ -1,0 +1,129 @@
+{
+  "issue": 148,
+  "checkpoint": 2,
+  "observed_on": "2026-10-29",
+  "kind": "executor_validation_no_model_inference",
+  "human_review": {
+    "status": "approved",
+    "decision": "gabarito parece ok"
+  },
+  "baseline_development_smoke": {
+    "quality": {
+      "id": "quality-baseline-development",
+      "complete": true,
+      "planned_measured_attempts": 24,
+      "measured_attempts": 24,
+      "warmup_attempts": 1,
+      "failures": {},
+      "accepted_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "mean_latency_ms": 8.724541666666667,
+      "p95_latency_ms": 10.301,
+      "latency_known_attempts": 24,
+      "latency_unknown_attempts": 0,
+      "sampled_rss_peak_bytes": 25485312,
+      "sampled_total_gpu_used_peak_bytes": 67108864,
+      "generation_calls": 0,
+      "generated_tokens_known": 0,
+      "generation_calls_without_token_telemetry": 0,
+      "load_duration_ns_known": 0,
+      "generation_calls_without_load_telemetry": 0,
+      "semantic_fidelity": "pending_human_review",
+      "decision": "not_decided",
+      "valid_structural_consistency": 1.0,
+      "accepted_f1_micro": 1.0,
+      "hardware": {
+        "os": "Linux",
+        "kernel": "6.11.0-26-generic",
+        "python": "3.12.3",
+        "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics",
+        "ram_total_bytes": 15907282944,
+        "gpu_names_drivers": "NVIDIA GeForce RTX 3050 Laptop GPU, 580.178.04, 4096"
+      },
+      "inference": false
+    },
+    "operational": {
+      "id": "operational-baseline-development",
+      "complete": true,
+      "planned_measured_attempts": 12,
+      "measured_attempts": 12,
+      "warmup_attempts": 1,
+      "failures": {},
+      "accepted_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "mean_latency_ms": 0.20624766724116247,
+      "p95_latency_ms": 0.2979769997182302,
+      "latency_known_attempts": 12,
+      "latency_unknown_attempts": 0,
+      "sampled_rss_peak_bytes": 25485312,
+      "sampled_total_gpu_used_peak_bytes": 67108864,
+      "generation_calls": 0,
+      "generated_tokens_known": 0,
+      "generation_calls_without_token_telemetry": 0,
+      "load_duration_ns_known": 0,
+      "generation_calls_without_load_telemetry": 0,
+      "semantic_fidelity": "pending_human_review",
+      "decision": "not_decided",
+      "valid_structural_consistency": 1.0,
+      "conservative_exact_reference_f1": 1.0,
+      "tool_choice_accuracy": null,
+      "tool_metric_applies": false,
+      "hardware": {
+        "os": "Linux",
+        "kernel": "6.11.0-26-generic",
+        "python": "3.12.3",
+        "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics",
+        "ram_total_bytes": 15907282944,
+        "gpu_names_drivers": "NVIDIA GeForce RTX 3050 Laptop GPU, 580.178.04, 4096"
+      },
+      "inference": false
+    }
+  },
+  "agent_metadata_only": {
+    "configuration_id": "quality-qwen3-4b-auto-development",
+    "runtime": {
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ],
+      "details": {
+        "context_length": 262144,
+        "embedding_length": 2560,
+        "families": [
+          "qwen3"
+        ],
+        "family": "qwen3",
+        "format": "gguf",
+        "parameter_size": "4.0B",
+        "parent_model": "",
+        "quantization_level": "Q4_K_M",
+        "runner": "ggml"
+      },
+      "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "license_sha256": "6137b5779dc95b01879befc7c3f0f8d5a92b235ed3ff15768f8d2b51f61e308e",
+      "model": "qwen3:4b",
+      "runtime_version": "0.40.12"
+    },
+    "configuration_sha256": "7096b111c525b43f94933a071e32063dd43d43b405c8402781559c9dc4993139",
+    "snapshot_sha256": "b5d016bc0c4a1b5a100d19a7e63396ba636064381cfa720f6a3b5119dd9236e0",
+    "inference": false
+  },
+  "checks": {
+    "runner_offline_tests": 33,
+    "backend_non_integration_passed": 1366,
+    "integration_deselected": 672,
+    "warnings": 15,
+    "ruff": "passed",
+    "ajv_strict_schemas": 7,
+    "synthetic_files_validated": 175,
+    "security_release_validate": "passed"
+  },
+  "limitations": [
+    "Baseline smoke is development only, not a reserved evaluation or model result.",
+    "Whole GPU usage includes desktop; idle Ollama RSS is not model-specific inference memory.",
+    "Initial sandbox run lacked GPU/process visibility; complete validation used normal host permissions.",
+    "First full suite was interrupted after stalling in sandbox; rerun outside sandbox passed.",
+    "No model download, load or inference. Calibration, reserved evaluation and decisions pending."
+  ]
+}

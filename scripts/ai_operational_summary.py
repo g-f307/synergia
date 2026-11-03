@@ -12,12 +12,14 @@ from typing import Any
 
 try:
     from ai_poc_foundation import (
+        LocalRuntimeTimeout,
         ModelRuntime,
         PoCFoundationError,
         _reject_sensitive_content,
     )
 except ModuleNotFoundError:
     from scripts.ai_poc_foundation import (
+        LocalRuntimeTimeout,
         ModelRuntime,
         PoCFoundationError,
         _reject_sensitive_content,
@@ -329,7 +331,9 @@ def execute_agent(
     )
 
 
-def collect_agent_attempt(case: dict, runtime: ModelRuntime, model: str) -> dict:
+def collect_agent_attempt(
+    case: dict, runtime: ModelRuntime, model: str, *, prompt_path: Path = PROMPT
+) -> dict:
     # Reuse the Linux RSS sampler, separate from Python allocation tracking.
     try:
         from evaluate_ai_quality import MemorySampler
@@ -337,7 +341,7 @@ def collect_agent_attempt(case: dict, runtime: ModelRuntime, model: str) -> dict
         from scripts.evaluate_ai_quality import MemorySampler
 
     registry = ToolRegistry(case)
-    prompt = PROMPT.read_text(encoding="utf-8")
+    prompt = prompt_path.read_text(encoding="utf-8")
     schema = SCHEMA.read_text(encoding="utf-8")
     request = (
         f"{prompt}\nCASE_ID: {case['case_id']}\n"
@@ -428,6 +432,8 @@ def collect_agent_attempt(case: dict, runtime: ModelRuntime, model: str) -> dict
                 report["failure"] = "iteration_limit"
     except json.JSONDecodeError:
         report["failure"] = "invalid_json"
+    except LocalRuntimeTimeout:
+        report["failure"] = "runtime_timeout"
     except PoCFoundationError:
         # Do not persist potentially sensitive exception text or rejected output.
         report["failure"] = "contract_or_runtime_failure"

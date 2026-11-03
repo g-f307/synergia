@@ -1,0 +1,1391 @@
+{
+  "issue": 148,
+  "reviewer_kind": "assistant",
+  "human_acceptance": "report_accepted_by_user",
+  "scope": "All accepted reserved outputs, all repetitions, plus corresponding baseline. Exact output hashes identify annotation targets.",
+  "fact_coverage_rubric": "Only explicit support in output, including findings, for each pre-existing manifest.required_facts unit. Conjunction requires both parts. Missing responses get zero coverage. Not an estimate of all possible facts.",
+  "supported_claim_precision": null,
+  "supported_claim_precision_reason": "No human-approved atomic-claim annotation; counterexamples and case-level review retained instead.",
+  "semantic_consistency_rate": null,
+  "semantic_consistency_reason": "Exact JSON equality separately measured; no independently approved semantic equivalence annotation.",
+  "utility_over_baseline": "not_demonstrated_for_progression",
+  "decision_recommendation": "reformulate",
+  "runs": [
+    {
+      "id": "operational-baseline-evaluation",
+      "mode": "baseline",
+      "reviewed_accepted_outputs": 24,
+      "attempts": [
+        {
+          "attempt_id": "0001",
+          "case": "OP3-E01",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "8d336aec962b54c010ea87fddfa5d8695ef8d71a685339394c15f61fab16bb73",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0002",
+          "case": "OP3-E02",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "6d07b72c2b2e0d157ddb6c2183fc209630dd90c99ba05f9773fadde44c1c8f3a",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0003",
+          "case": "OP3-E03",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "b4ad9d83ab17ce692b446faf6216f5e0c42c3d1a431d2d9fb87a17a45135ed20",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0004",
+          "case": "OP3-E04",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "fca7633e640c8e852ecd10ced2ba485b12b91e5eb8ea76ab38f62ad8b2c98ec7",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0005",
+          "case": "OP3-E05",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "41dff658e3839ece7aa59c43d6721f46ea6156509c46713033502dcaa4c96821",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0006",
+          "case": "OP3-E06",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "0a36f9db68755195c56789268e90e7ce4f3d1c76e846cbdc87fa63ba73c9b258",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0007",
+          "case": "OP3-E07",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "47fc6e6a98df563e901804abc418f252f471da2ccb69997621a9c500910e8a22",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_finding_omitted",
+              "reason": "Failure event is not summarized as a finding."
+            }
+          ],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0008",
+          "case": "OP3-E08",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "27d4825673f0f73ad07a5f51148769a4a47a585c2558c406bec81a5509732c9e",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "No conflict finding, status completed. Generic evidence question does not request conflict resolution."
+            }
+          ],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0009",
+          "case": "OP3-E01",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "8d336aec962b54c010ea87fddfa5d8695ef8d71a685339394c15f61fab16bb73",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0010",
+          "case": "OP3-E02",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "6d07b72c2b2e0d157ddb6c2183fc209630dd90c99ba05f9773fadde44c1c8f3a",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0011",
+          "case": "OP3-E03",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "b4ad9d83ab17ce692b446faf6216f5e0c42c3d1a431d2d9fb87a17a45135ed20",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0012",
+          "case": "OP3-E04",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "fca7633e640c8e852ecd10ced2ba485b12b91e5eb8ea76ab38f62ad8b2c98ec7",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0013",
+          "case": "OP3-E05",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "41dff658e3839ece7aa59c43d6721f46ea6156509c46713033502dcaa4c96821",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0014",
+          "case": "OP3-E06",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "0a36f9db68755195c56789268e90e7ce4f3d1c76e846cbdc87fa63ba73c9b258",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0015",
+          "case": "OP3-E07",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "47fc6e6a98df563e901804abc418f252f471da2ccb69997621a9c500910e8a22",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_finding_omitted",
+              "reason": "Failure event is not summarized as a finding."
+            }
+          ],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0016",
+          "case": "OP3-E08",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "27d4825673f0f73ad07a5f51148769a4a47a585c2558c406bec81a5509732c9e",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "No conflict finding, status completed. Generic evidence question does not request conflict resolution."
+            }
+          ],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0017",
+          "case": "OP3-E01",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "8d336aec962b54c010ea87fddfa5d8695ef8d71a685339394c15f61fab16bb73",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0018",
+          "case": "OP3-E02",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "6d07b72c2b2e0d157ddb6c2183fc209630dd90c99ba05f9773fadde44c1c8f3a",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0019",
+          "case": "OP3-E03",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "b4ad9d83ab17ce692b446faf6216f5e0c42c3d1a431d2d9fb87a17a45135ed20",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0020",
+          "case": "OP3-E04",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "fca7633e640c8e852ecd10ced2ba485b12b91e5eb8ea76ab38f62ad8b2c98ec7",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0021",
+          "case": "OP3-E05",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "41dff658e3839ece7aa59c43d6721f46ea6156509c46713033502dcaa4c96821",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0022",
+          "case": "OP3-E06",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "0a36f9db68755195c56789268e90e7ce4f3d1c76e846cbdc87fa63ba73c9b258",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0023",
+          "case": "OP3-E07",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "47fc6e6a98df563e901804abc418f252f471da2ccb69997621a9c500910e8a22",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_finding_omitted",
+              "reason": "Failure event is not summarized as a finding."
+            }
+          ],
+          "tool_score": null
+        },
+        {
+          "attempt_id": "0024",
+          "case": "OP3-E08",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "27d4825673f0f73ad07a5f51148769a4a47a585c2558c406bec81a5509732c9e",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "No conflict finding, status completed. Generic evidence question does not request conflict resolution."
+            }
+          ],
+          "tool_score": null
+        }
+      ],
+      "expected_fact_count": 54,
+      "covered_expected_facts": 45,
+      "expected_fact_coverage_assistant": 0.8333333333333334
+    },
+    {
+      "id": "operational-qwen3-8b-staged-guarded-evaluation",
+      "mode": "agent",
+      "reviewed_accepted_outputs": 24,
+      "attempts": [
+        {
+          "attempt_id": "0001",
+          "case": "OP3-E01",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "508c2c9bee9d85913a070e3b8050b49842dfdf875c405ca1b91d0316c95f5dc9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0002",
+          "case": "OP3-E02",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "890499fa4152f22e68a62bc6c268ca2f580e0472cb54dd901c9a69643f0d9c05",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "missing_specific_finding_detail",
+              "reason": "Groups two pending items without their distinct reasons/priorities. First output adds immediate urgency to both high/low items; later paraphrase drops immediate urgency."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 4,
+            "correct": 4,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0003",
+          "case": "OP3-E03",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "41b585791f4f0fa06bcd213339809f4a83d72679f528c23c03a4219a8cee21f1",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "incorrect_severity_grounding",
+              "reason": "Critical severity assigned to execution; critical pending item grouped with high item as warning. Does not preserve expected critical pending finding."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0004",
+          "case": "OP3-E04",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "886f9852c6a8604e68738dd52706f25aab49e342e0941d98f49364f7c5e152ef",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no events and suggests execution concluded; input has validation_started event and active lifecycle. list_events used case ID instead of execution entity ID."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0005",
+          "case": "OP3-E05",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "a2a127737b03a2b58033561798c9c28cb24a39f16f16c1c3936ed3f30f1cb0f9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_fact_omitted",
+              "reason": "Does not explicitly state pending count zero; guarded insufficient_evidence status is deterministic after execution query."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0006",
+          "case": "OP3-E06",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "01c359c166bb16a891fedfeab62b212cef9a3bb8a1a96810273f7e80572e5a29",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "misleading_completion_wording",
+              "reason": "Says execution concluded while status awaiting_review and lifecycle partial. Correctly identifies retained result and critical pending evidence."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0007",
+          "case": "OP3-E07",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "cfa6354ed38a92c32371169af98c4ef5dd04408fb3efc0455097ace5003186ea",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no associated events; input has execution_failed event. Incorrect entity filter returned empty collection. Failure event finding omitted."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0008",
+          "case": "OP3-E08",
+          "repetition": 0,
+          "failure": null,
+          "output_sha256": "41ee50bfc6ceb9a1027ae5994806ffdaf2de66410e40774de4ec1668c13f9f49",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "Lists approval/retention without same-order incompatibility, status completed and no question. Input defines no prevailing classification; wording also implies execution concluded."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 2,
+            "correct": 2,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0009",
+          "case": "OP3-E01",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "508c2c9bee9d85913a070e3b8050b49842dfdf875c405ca1b91d0316c95f5dc9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0010",
+          "case": "OP3-E02",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "02dc10371dc1129adeed672220433104b8e559fb158c1a15b36742e5858fff01",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "missing_specific_finding_detail",
+              "reason": "Groups two pending items without their distinct reasons/priorities. First output adds immediate urgency to both high/low items; later paraphrase drops immediate urgency."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 4,
+            "correct": 4,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0011",
+          "case": "OP3-E03",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "dbed3e6a0a8d5e7d7f3dc7e87829fc8e7628b14ab2e9cd9dbc44f4f2028fa582",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "incorrect_severity_grounding",
+              "reason": "Critical severity assigned to execution; critical pending item grouped with high item as warning. Does not preserve expected critical pending finding."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0012",
+          "case": "OP3-E04",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "886f9852c6a8604e68738dd52706f25aab49e342e0941d98f49364f7c5e152ef",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no events and suggests execution concluded; input has validation_started event and active lifecycle. list_events used case ID instead of execution entity ID."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0013",
+          "case": "OP3-E05",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "a2a127737b03a2b58033561798c9c28cb24a39f16f16c1c3936ed3f30f1cb0f9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_fact_omitted",
+              "reason": "Does not explicitly state pending count zero; guarded insufficient_evidence status is deterministic after execution query."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0014",
+          "case": "OP3-E06",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "141225004d8da2182c836e5f5a09cc951cc40d5bfc4b767dc97c6265604008d2",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0015",
+          "case": "OP3-E07",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "cfa6354ed38a92c32371169af98c4ef5dd04408fb3efc0455097ace5003186ea",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no associated events; input has execution_failed event. Incorrect entity filter returned empty collection. Failure event finding omitted."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0016",
+          "case": "OP3-E08",
+          "repetition": 1,
+          "failure": null,
+          "output_sha256": "214bd4816cabaca8aa25d2e9a8aa944dd424c890bdb32cae6d99ae2f4547381b",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "Lists approval/retention without same-order incompatibility, status completed and no question. Input defines no prevailing classification; wording also implies execution concluded."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 2,
+            "correct": 2,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0017",
+          "case": "OP3-E01",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "508c2c9bee9d85913a070e3b8050b49842dfdf875c405ca1b91d0316c95f5dc9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: completed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0018",
+          "case": "OP3-E02",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "02dc10371dc1129adeed672220433104b8e559fb158c1a15b36742e5858fff01",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "missing_specific_finding_detail",
+              "reason": "Groups two pending items without their distinct reasons/priorities. First output adds immediate urgency to both high/low items; later paraphrase drops immediate urgency."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 4,
+            "correct": 4,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0019",
+          "case": "OP3-E03",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "dbed3e6a0a8d5e7d7f3dc7e87829fc8e7628b14ab2e9cd9dbc44f4f2028fa582",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 2.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "incorrect_severity_grounding",
+              "reason": "Critical severity assigned to execution; critical pending item grouped with high item as warning. Does not preserve expected critical pending finding."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0020",
+          "case": "OP3-E04",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "886f9852c6a8604e68738dd52706f25aab49e342e0941d98f49364f7c5e152ef",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: validating.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no events and suggests execution concluded; input has validation_started event and active lifecycle. list_events used case ID instead of execution entity ID."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0021",
+          "case": "OP3-E05",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "a2a127737b03a2b58033561798c9c28cb24a39f16f16c1c3936ed3f30f1cb0f9",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: partial.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "expected_fact_omitted",
+              "reason": "Does not explicitly state pending count zero; guarded insufficient_evidence status is deterministic after execution query."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 1,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0022",
+          "case": "OP3-E06",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "141225004d8da2182c836e5f5a09cc951cc40d5bfc4b767dc97c6265604008d2",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: awaiting_review.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 1.",
+              "covered_explicitly": true
+            }
+          ],
+          "review_findings": [],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 3,
+            "correct": 3,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        },
+        {
+          "attempt_id": "0023",
+          "case": "OP3-E07",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "cfa6354ed38a92c32371169af98c4ef5dd04408fb3efc0455097ace5003186ea",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "Estado operacional: failed.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Quantidade de pendências: 0.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "contradicted_absence_claim",
+              "reason": "Claims no associated events; input has execution_failed event. Incorrect entity filter returned empty collection. Failure event finding omitted."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 0.3333333333333333,
+            "attempted": 2,
+            "correct": 1,
+            "denied": 0,
+            "incorrect": 1,
+            "missing": 1,
+            "precision": 0.5,
+            "recall": 0.5
+          }
+        },
+        {
+          "attempt_id": "0024",
+          "case": "OP3-E08",
+          "repetition": 2,
+          "failure": null,
+          "output_sha256": "214bd4816cabaca8aa25d2e9a8aa944dd424c890bdb32cae6d99ae2f4547381b",
+          "accepted_output_reviewed": true,
+          "expected_fact_annotations": [
+            {
+              "fact": "A execução aguarda revisão.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "Não há pendências ou eventos registrados.",
+              "covered_explicitly": true
+            },
+            {
+              "fact": "Duas classificações da mesma ordem possuem estados incompatíveis.",
+              "covered_explicitly": false
+            },
+            {
+              "fact": "A entrada não define qual classificação prevalece.",
+              "covered_explicitly": false
+            }
+          ],
+          "review_findings": [
+            {
+              "type": "conflict_not_recognized",
+              "reason": "Lists approval/retention without same-order incompatibility, status completed and no question. Input defines no prevailing classification; wording also implies execution concluded."
+            }
+          ],
+          "tool_score": {
+            "accuracy": 1.0,
+            "attempted": 2,
+            "correct": 2,
+            "denied": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          }
+        }
+      ],
+      "expected_fact_count": 54,
+      "covered_expected_facts": 36,
+      "expected_fact_coverage_assistant": 0.6666666666666666
+    }
+  ],
+  "report_acceptance": {
+    "status": "accepted",
+    "reviewer": "marcelovdu",
+    "date": "2026-10-29",
+    "statement": "O relatorio está ok.",
+    "scope": "Report, conclusions and disclosed limitations accepted; no independent atomic-claim annotation or product integration approval."
+  }
+}

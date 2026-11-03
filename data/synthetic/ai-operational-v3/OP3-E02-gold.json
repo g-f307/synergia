@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E02",
+  "status": "completed",
+  "summary": "Execução aguarda revisão de duas pendências com prioridades alta e baixa.",
+  "findings": [
+    {
+      "finding_id": "pending:4201",
+      "title": "Referência divergente",
+      "severity": "warning",
+      "statement": "Referência divergente deve ser conferida.",
+      "evidence_ids": [
+        "ev-p-4201"
+      ]
+    },
+    {
+      "finding_id": "pending:4202",
+      "title": "Aviso documental",
+      "severity": "warning",
+      "statement": "Aviso documental aguarda conferência.",
+      "evidence_ids": [
+        "ev-p-4202"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}

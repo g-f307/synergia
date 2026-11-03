@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.1.0",
+  "case_id": "OP3-E06",
+  "status": "completed",
+  "summary": "Execução aguarda revisão humana de resultado retido registrado.",
+  "findings": [
+    {
+      "finding_id": "pending:4206",
+      "title": "Revisão de resultado retido",
+      "severity": "critical",
+      "statement": "Resultado retido aguarda revisão humana.",
+      "evidence_ids": [
+        "ev-p-4206",
+        "ev-c-4206"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "human_next_steps": [
+    "Conferir as evidências com o responsável antes de agir."
+  ]
+}

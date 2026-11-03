@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "quality-instruct-explicit-development",
+  "kind": "quality",
+  "mode": "agent",
+  "split": "development",
+  "repetitions": 1,
+  "warmup_attempts": 1,
+  "prompt": "quality-v3.1.txt",
+  "model": "qwen3:4b-instruct-2507-q4_K_M",
+  "model_digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+  "runtime_version": "0.40.12",
+  "endpoint": "http://127.0.0.1:11434/api/generate",
+  "think": false,
+  "processor": "automatic_acceleration",
+  "keep_alive_seconds": 600,
+  "request_timeout_seconds": 300,
+  "attempt_timeout_seconds": 600,
+  "options": {
+    "num_ctx": 4096,
+    "num_predict": 2048,
+    "temperature": 0,
+    "seed": 125,
+    "num_thread": 6
+  }
+}
