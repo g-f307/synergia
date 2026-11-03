@@ -19,7 +19,7 @@ DEPLOYMENT_ENVIRONMENTS = frozenset(
     {"development", "test", "homologation", "production"}
 )
 LOCAL_DEFAULTS = {
-    "POSTGRES_PASSWORD": "synergia-local-only",
+    "PGPASSWORD": "synergia-local-only",
     "AUTH_JWT_SIGNING_KEY": "synergia-local-signing-key-change-me-119",
     "RATE_LIMIT_KEY_SECRET": "synergia-local-rate-limit-key-change-me",
 }
@@ -31,11 +31,28 @@ def _enabled(value: str | None) -> bool:
 
 
 def _absolute_http_url(name: str, value: str, *, allow_local: bool) -> None:
+    if "CHANGE_ME" in value.upper():
+        raise ValueError(f"{name} must not contain an unedited placeholder")
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise ValueError(f"{name} must be an absolute HTTP origin")
-    if parsed.username or parsed.password or parsed.query or parsed.fragment:
-        raise ValueError(f"{name} must not contain credentials, query or fragment")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(f"{name} must contain a valid numeric port") from exc
+    if port == 0:
+        raise ValueError(f"{name} must contain a port between 1 and 65535")
+    if (
+        parsed.username
+        or parsed.password
+        or parsed.path
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(
+            f"{name} must not contain credentials, path, query or fragment"
+        )
     if not allow_local and parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError(f"{name} must not use a local address outside development")
 

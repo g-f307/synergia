@@ -1,3 +1,5 @@
+import json
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
@@ -37,7 +39,7 @@ def test_builds_safe_conninfo_for_reserved_password_characters() -> None:
 def _deployment_environment(environment: str) -> dict[str, str]:
     return {
         "SYNERGIA_ENV": environment,
-        "POSTGRES_PASSWORD": "synthetic-postgres-password",
+        "PGPASSWORD": "synthetic-postgres-password",
         "AUTH_JWT_SIGNING_KEY": "synthetic-signing-key-with-at-least-32-bytes",
         "RATE_LIMIT_KEY_SECRET": "synthetic-rate-limit-key-with-at-least-32-bytes",
         "AUTH_ALLOWED_ORIGINS": "http://synergia.internal.example",
@@ -63,7 +65,7 @@ def test_deployment_environment_must_be_explicit_and_known(value) -> None:
 def test_development_accepts_local_defaults() -> None:
     environment = {
         "SYNERGIA_ENV": "development",
-        "POSTGRES_PASSWORD": "synergia-local-only",
+        "PGPASSWORD": "synergia-local-only",
         "AUTH_JWT_SIGNING_KEY": "synergia-local-signing-key-change-me-119",
         "RATE_LIMIT_KEY_SECRET": "synergia-local-rate-limit-key-change-me",
         "AUTH_ALLOWED_ORIGINS": "http://localhost:8080",
@@ -76,7 +78,7 @@ def test_development_accepts_local_defaults() -> None:
 @pytest.mark.parametrize(
     ("name", "value"),
     [
-        ("POSTGRES_PASSWORD", "synergia-local-only"),
+        ("PGPASSWORD", "synergia-local-only"),
         ("AUTH_JWT_SIGNING_KEY", "synergia-local-signing-key-change-me-119"),
         ("RATE_LIMIT_KEY_SECRET", "synergia-local-rate-limit-key-change-me"),
         ("AUTH_ALLOWED_ORIGINS", "http://localhost:8080"),
@@ -93,7 +95,7 @@ def test_homologation_rejects_local_defaults(name: str, value: str) -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["POSTGRES_PASSWORD", "AUTH_JWT_SIGNING_KEY", "RATE_LIMIT_KEY_SECRET"],
+    ["PGPASSWORD", "AUTH_JWT_SIGNING_KEY", "RATE_LIMIT_KEY_SECRET"],
 )
 def test_homologation_rejects_unedited_placeholders(name: str) -> None:
     environment = _deployment_environment("homologation")
@@ -123,6 +125,22 @@ def test_homologation_local_login_requires_a_valid_expiry() -> None:
         datetime.now(UTC) + timedelta(days=30)
     ).isoformat()
     assert validate_deployment_environment(environment) == "homologation"
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("SYNERGIA_API_ORIGIN", "http://CHANGE_ME_API_HOST:8000"),
+        ("AUTH_ALLOWED_ORIGINS", "http://web.internal.example/login"),
+        ("SYNERGIA_API_ORIGIN", "http://api.internal.example:not-a-port"),
+    ],
+)
+def test_homologation_rejects_malformed_origins(name: str, value: str) -> None:
+    environment = _deployment_environment("homologation")
+    environment[name] = value
+
+    with pytest.raises(ValueError, match=name):
+        validate_deployment_environment(environment)
 
 
 def test_production_requires_secure_cookie_and_corporate_identity() -> None:
@@ -204,3 +222,44 @@ def test_container_entrypoint_reports_the_selected_environment() -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "command-ready"
     assert "synergia startup: environment=development" in result.stderr
+
+
+def test_entrypoint_accepts_homologation_environment_rendered_by_compose() -> None:
+    compose_environment = os.environ | {
+        "SYNERGIA_ENV": "homologation",
+        "POSTGRES_PASSWORD": "synthetic-postgres-password",
+        "AUTH_JWT_SIGNING_KEY": "synthetic-signing-key-with-at-least-32-bytes",
+        "RATE_LIMIT_KEY_SECRET": "synthetic-rate-limit-key-with-at-least-32-bytes",
+        "AUTH_ALLOWED_ORIGINS": "http://web.internal.example",
+        "SYNERGIA_API_ORIGIN": "http://api.internal.example",
+    }
+    rendered = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        env=compose_environment,
+        text=True,
+    )
+    backend_environment = json.loads(rendered.stdout)["services"]["backend"][
+        "environment"
+    ]
+    backend_environment["PYTHONPATH"] = str(ROOT / "backend")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "container_entrypoint.py"),
+            sys.executable,
+            "-c",
+            "print('command-ready')",
+        ],
+        check=False,
+        capture_output=True,
+        env=backend_environment,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "command-ready"
+    assert "synergia startup: environment=homologation" in result.stderr
