@@ -4,6 +4,12 @@ O ambiente deve ser escolhido explicitamente. O Compose não assume mais
 `development` quando `SYNERGIA_ENV` está ausente. Isso impede que uma instalação
 destinada à homologação ou à produção inicie com controles locais.
 
+`POSTGRES_PASSWORD` também é obrigatória na interpolação do Compose em todos os
+perfis. Assim, a configuração falha ainda em `docker compose config`, antes da
+criação do PostgreSQL ou da publicação de sua porta. O valor local conhecido
+existe somente em `.env.example`; homologação e produção devem fornecê-lo por
+arquivo privado.
+
 ## Desenvolvimento
 
 Use `.env.example` apenas na estação local:

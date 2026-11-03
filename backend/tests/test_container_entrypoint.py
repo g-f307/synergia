@@ -143,6 +143,40 @@ def test_homologation_rejects_malformed_origins(name: str, value: str) -> None:
         validate_deployment_environment(environment)
 
 
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "https://*.company.example",
+        "https://bad_host.company.example",
+    ],
+)
+def test_homologation_rejects_wildcard_or_malformed_origin_hosts(
+    origin: str,
+) -> None:
+    environment = _deployment_environment("homologation")
+    environment["AUTH_ALLOWED_ORIGINS"] = origin
+
+    with pytest.raises(ValueError, match="AUTH_ALLOWED_ORIGINS"):
+        validate_deployment_environment(environment)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("AUTH_JWT_ALGORITHM", "HS512"),
+        ("AUTH_IDENTITY_PROVIDER", "fake"),
+    ],
+)
+def test_homologation_rejects_authentication_settings_the_app_rejects(
+    name: str, value: str
+) -> None:
+    environment = _deployment_environment("homologation")
+    environment[name] = value
+
+    with pytest.raises(ValueError, match=name):
+        validate_deployment_environment(environment)
+
+
 def test_production_requires_secure_cookie_and_corporate_identity() -> None:
     environment = _deployment_environment("production")
 
@@ -192,6 +226,43 @@ def test_production_requires_https_public_origins() -> None:
     )
 
     with pytest.raises(ValueError, match="AUTH_ALLOWED_ORIGINS.*HTTPS"):
+        validate_deployment_environment(environment)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("AUTH_CORPORATE_REQUIRE_MFA", "false"),
+        (
+            "AUTH_CORPORATE_DISCOVERY_URL",
+            "https://other-identity.internal.example/.well-known/openid-configuration",
+        ),
+    ],
+)
+def test_production_rejects_incompatible_corporate_identity_settings(
+    name: str, value: str
+) -> None:
+    environment = _deployment_environment("production")
+    environment.update(
+        {
+            "AUTH_ALLOWED_ORIGINS": "https://web.internal.example",
+            "SYNERGIA_API_ORIGIN": "https://api.internal.example",
+            "AUTH_REFRESH_COOKIE_SECURE": "true",
+            "AUTH_IDENTITY_PROVIDER": "corporate",
+            "AUTH_CORPORATE_ISSUER": "https://identity.internal.example",
+            "AUTH_CORPORATE_DISCOVERY_URL": (
+                "https://identity.internal.example/.well-known/openid-configuration"
+            ),
+            "AUTH_CORPORATE_AUDIENCE": "synergia-api",
+            "AUTH_CORPORATE_CLIENT_ID": "synergia",
+            "AUTH_CORPORATE_CLIENT_SECRET_FILE": "/run/secrets/identity-client",
+            "AUTH_CORPORATE_MAPPING_FILE": "/run/secrets/identity-mapping.json",
+            "AUTH_CORPORATE_REQUIRE_MFA": "true",
+        }
+    )
+    environment[name] = value
+
+    with pytest.raises(ValueError, match=name):
         validate_deployment_environment(environment)
 
 
@@ -263,3 +334,20 @@ def test_entrypoint_accepts_homologation_environment_rendered_by_compose() -> No
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "command-ready"
     assert "synergia startup: environment=homologation" in result.stderr
+
+
+def test_compose_rejects_missing_postgres_password_before_services_start() -> None:
+    compose_environment = os.environ | {"SYNERGIA_ENV": "homologation"}
+    compose_environment.pop("POSTGRES_PASSWORD", None)
+
+    result = subprocess.run(
+        ["docker", "compose", "--env-file", "/dev/null", "config"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        env=compose_environment,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "POSTGRES_PASSWORD" in result.stderr

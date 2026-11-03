@@ -273,6 +273,7 @@ jobs:
       - name: Validar Docker Compose
         env:
           SYNERGIA_ENV: development
+          POSTGRES_PASSWORD: synergia-local-only
         run: docker compose config
 
   containers:
