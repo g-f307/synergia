@@ -386,6 +386,31 @@ class ApplyWorkflow:
                     raise DeploymentError("source revision changed during build")
                 if self.deployment.config != original_config:
                     raise DeploymentError("external configuration changed during build")
+                previous = active
+                expected = self.expected_ledger()
+                candidate = {
+                    "format": 1,
+                    "id": operation["id"],
+                    "project": report["project"],
+                    "daemon_id": report["daemon_id"],
+                    "revision": chosen,
+                    "environment": report["environment"],
+                    "images": images,
+                    "migrations": expected,
+                    "previous": previous["id"] if previous else None,
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "compose_sha256": hashlib.sha256(
+                        self.compose_file.read_bytes()
+                    ).hexdigest(),
+                }
+                atomic_json(self.release_dir / "candidate.json", candidate)
+                if initialize:
+                    # Persist intent before Compose can create any resources.
+                    atomic_json(
+                        self.release_dir / "initialization.json", {"initial": True}
+                    )
+                    maintenance = True
+                    store.stage(operation, "initialize")
                 self.compose(
                     "run",
                     "--no-deps",
@@ -412,7 +437,6 @@ class ApplyWorkflow:
                     timeout=120,
                 )
                 self.inventory()
-                previous = active
                 if not previous and self.before:
                     from deploy_recovery import RecoveryWorkflow
 
@@ -421,128 +445,115 @@ class ApplyWorkflow:
                     ).capture_baseline(
                         report, original_config, self.before, self.ledger()
                     )
-                expected = self.expected_ledger()
-                candidate = {
-                    "format": 1,
-                    "id": operation["id"],
-                    "project": report["project"],
-                    "daemon_id": report["daemon_id"],
-                    "revision": chosen,
-                    "environment": report["environment"],
-                    "images": images,
-                    "migrations": expected,
-                    "previous": previous["id"] if previous else None,
-                    "created_at": datetime.now(UTC).isoformat(),
-                    "compose_sha256": hashlib.sha256(
-                        self.compose_file.read_bytes()
-                    ).hexdigest(),
-                }
-                atomic_json(self.release_dir / "candidate.json", candidate)
+                    candidate["previous"] = previous["id"]
+                    atomic_json(self.release_dir / "candidate.json", candidate)
                 store.stage(operation, "maintenance")
                 maintenance = True
-                writers = [
-                    item["ID"]
-                    for name, item in self.containers.items()
-                    if name in {"web", "backend"}
-                ]
-                if writers:
-                    self.run(
-                        ["docker", "stop", "--time", "30", *writers],
-                        "stop application writers",
-                        timeout=90,
-                    )
-                self.inventory()
-                if any(
-                    item["State"] != "exited"
-                    for name, item in self.containers.items()
-                    if name in {"web", "backend"}
-                ):
-                    raise DeploymentError("application writers did not stop")
-                before_ledger = self.ledger()
-                if previous and before_ledger != previous["migrations"]:
-                    raise DeploymentError(
-                        "migration history changed since the previous deployment"
-                    )
-                if before_ledger and any(
-                    expected.get(name) != digest
-                    for name, digest in before_ledger.items()
-                ):
-                    raise DeploymentError(
-                        "published migration history differs from candidate"
-                    )
-                atomic_json(
-                    self.release_dir / "migration-before.json",
-                    {
-                        "migrations": before_ledger,
-                    },
-                )
-                store.stage(operation, "migrate")
-                # Keep the named container as evidence if the client times out.
-                self.compose(
-                    "run",
-                    "--no-deps",
-                    "--pull",
-                    "never",
-                    "-T",
-                    "--name",
-                    f"{self.deployment.project}-migration-{operation['id']}",
-                    "migrate",
-                    step="apply migrations",
-                    timeout=600,
-                )
-                after_ledger = self.ledger()
-                if after_ledger != expected:
-                    raise DeploymentError(
-                        "migration ledger does not match candidate source"
-                    )
-                print(
-                    "migrations verified: "
-                    f"applied={len(expected) - len(before_ledger or {})} "
-                    f"total={len(expected)}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                atomic_json(
-                    self.release_dir / "migration-after.json",
-                    {
-                        "migrations": after_ledger,
-                    },
-                )
-                store.stage(operation, "start")
-                for name in ("backend", "web"):
-                    self.compose(
-                        "up",
-                        "-d",
-                        "--no-deps",
-                        "--no-build",
-                        "--pull",
-                        "never",
-                        "--wait",
-                        "--wait-timeout",
-                        "150",
-                        name,
-                        step=f"{name} readiness",
-                        timeout=180,
-                    )
-                store.stage(operation, "verify")
-                self.verify(images, after_ledger)
-                manifest = candidate
-                atomic_json(self.release_dir / "release.json", manifest)
-                store.stage(operation, "confirm")
-                atomic_json(
-                    self.deployment.state_dir / "active.json",
-                    {"release": operation["id"]},
-                )
-                print(
-                    f"deployment confirmed: revision={chosen}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-                return manifest
+                return self.complete_candidate(candidate, previous, store, operation)
             except BaseException:
                 if not maintenance:
                     operation["status"] = "failed"
                 raise
+
+    def complete_candidate(self, candidate, previous, store, operation):
+        images = candidate["images"]
+        expected = candidate["migrations"]
+        chosen = candidate["revision"]
+        writers = [
+            item["ID"]
+            for name, item in self.containers.items()
+            if name in {"web", "backend"}
+        ]
+        if writers:
+            self.run(
+                ["docker", "stop", "--time", "30", *writers],
+                "stop application writers",
+                timeout=90,
+            )
+        self.inventory()
+        if any(
+            item["State"] != "exited"
+            for name, item in self.containers.items()
+            if name in {"web", "backend"}
+        ):
+            raise DeploymentError("application writers did not stop")
+        before_ledger = self.ledger()
+        if previous and before_ledger != previous["migrations"]:
+            raise DeploymentError(
+                "migration history changed since the previous deployment"
+            )
+        if before_ledger and any(
+            expected.get(name) != digest for name, digest in before_ledger.items()
+        ):
+            raise DeploymentError("published migration history differs from candidate")
+        atomic_json(
+            self.release_dir / "migration-before.json",
+            {
+                "migrations": before_ledger,
+            },
+        )
+        atomic_json(self.release_dir / "migration-attempted.json", {"attempted": True})
+        store.stage(operation, "migrate")
+        # Keep the named container as evidence if the client times out.
+        self.compose(
+            "run",
+            "--no-deps",
+            "--pull",
+            "never",
+            "-T",
+            "--name",
+            f"{self.deployment.project}-migration-{operation['id']}",
+            "migrate",
+            step="apply migrations",
+            timeout=600,
+        )
+        after_ledger = self.ledger()
+        if after_ledger != expected:
+            raise DeploymentError("migration ledger does not match candidate source")
+        print(
+            "migrations verified: "
+            f"applied={len(expected) - len(before_ledger or {})} "
+            f"total={len(expected)}",
+            file=sys.stderr,
+            flush=True,
+        )
+        atomic_json(
+            self.release_dir / "migration-after.json",
+            {
+                "migrations": after_ledger,
+            },
+        )
+        store.stage(operation, "start")
+        for name in ("backend", "web"):
+            self.compose(
+                "up",
+                "-d",
+                "--no-deps",
+                "--no-build",
+                "--pull",
+                "never",
+                "--wait",
+                "--wait-timeout",
+                "150",
+                name,
+                step=f"{name} readiness",
+                timeout=180,
+            )
+        store.stage(operation, "verify")
+        self.verify(images, after_ledger)
+        manifest = candidate
+        atomic_json(self.release_dir / "release.json", manifest)
+        store.stage(operation, "confirm")
+        atomic_json(
+            self.deployment.state_dir / "active.json",
+            {"release": operation["id"]},
+        )
+        print(
+            f"deployment confirmed: revision={chosen}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return manifest
 
     def verify(self, images, migrations):
         self.inventory()

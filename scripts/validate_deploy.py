@@ -35,7 +35,14 @@ from deploy_recovery import RecoveryWorkflow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 USER_ID = "16600000-0000-4000-8000-000000000001"
-FAULTS = {"build", "migration", "health", "smoke", "slow-migration"}
+FAULTS = {
+    "build",
+    "migration",
+    "health",
+    "smoke",
+    "slow-migration",
+    "initial-readiness",
+}
 SOURCE_FILES = (
     "docker-compose.yml",
     "backend/Dockerfile",
@@ -75,6 +82,12 @@ class FaultRunner(CommandRunner):
     def run(self, args, *, step, timeout=60, input_text=None):
         args = list(args)
         fault = self.fault
+        if fault == "initial-readiness" and step == "PostgreSQL readiness":
+            # Real timeout after creation: the fresh container's first healthcheck
+            # runs at 5s, beyond this readiness deadline. Keep the trusted config.
+            self.fault = None
+            args[args.index("--wait-timeout") + 1] = "1"
+            return super().run(args, step=step, timeout=timeout, input_text=input_text)
         matched = (
             fault == "build"
             and step == "build candidate"
@@ -571,7 +584,16 @@ class Drill:
         self.seed(flow)
         before = self.data_snapshot(flow)
         legacy_ledger = flow.ledger()
-        deployed = flow.apply(self.revision)
+        with self.case("unmanaged_stopped_postgres_update"):
+            self.runner.run(
+                ["docker", "stop", "--time", "30", flow.containers["postgres"]["ID"]],
+                step="stop synthetic previous PostgreSQL",
+            )
+            deployed = flow.apply(self.revision)
+            require(
+                flow.containers["postgres"]["ID"] == before[3],
+                "adoption must restart the same PostgreSQL container",
+            )
         baseline = flow.read_release(deployed["previous"])
         require(
             baseline["images"] == images, "baseline must capture previous exact images"
@@ -741,6 +763,40 @@ def main(argv=None):
                 not flow.deployment.state_dir.exists(),
                 "invalid configuration must not create history",
             )
+        with drill.case("initial_readiness_failure_after_creation"):
+            drill.runner.fault = "initial-readiness"
+            drill.expect_block(
+                lambda: flow.apply(drill.revision, initialize=True),
+                "initial readiness timeout after resource creation",
+            )
+            record = private_json(flow.deployment.state_dir / "operation.json")
+            require(
+                record["status"] == "uncertain", "initial failure must be reconcilable"
+            )
+            flow.inventory()
+            pg = flow.containers["postgres"]["ID"]
+            volumes = dict(flow.deployment.precheck()["volumes_present"])
+            require(any(volumes.values()), "PostgreSQL volume must really exist")
+            require(flow.read_active() is None, "initial failure must not promote")
+            for initialize in (False, True):
+                drill.expect_block(
+                    lambda: flow.apply(drill.revision, initialize=initialize),
+                    "unresolved initial operation must block blind retries",
+                )
+            require(
+                flow.reconcile(record["id"])["initialization_pending"],
+                "read-only reconciliation must identify pending initialization",
+            )
+            flow.reconcile(record["id"], resolution="resume")
+            require(
+                flow.containers["postgres"]["ID"] == pg,
+                "explicit resume must preserve PostgreSQL container",
+            )
+            require(
+                flow.read_active()["id"] == record["id"],
+                "initial resume must retain operation identity",
+            )
+        flow = drill.environment()
         with drill.case("initial_installation"):
             flow.apply(drill.revision, initialize=True)
             flow.verify_active()

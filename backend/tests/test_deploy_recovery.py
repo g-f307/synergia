@@ -426,3 +426,143 @@ def test_verification_rejects_drift_in_published_application_ports(recovery):
     recovery.runner.run = run
     with pytest.raises(DeploymentError, match="web published ports differ"):
         recovery.verify_active()
+
+
+@pytest.mark.parametrize("state", ["running", "created", "exited", None])
+def test_initial_readiness_failure_after_creation_has_explicit_resume(recovery, state):
+    runner = recovery.runner
+    runner.services = {}
+    runner.has_volumes = False
+    runner.applied = False
+    original = runner.run
+
+    def fail_after_creation(args, *, step, **kwargs):
+        if step == "PostgreSQL readiness":
+            if state is not None:
+                runner.services["postgres"] = state
+                runner.has_volumes = True
+            raise DeploymentError("readiness timeout after resource creation")
+        return original(args, step=step, **kwargs)
+
+    runner.run = fail_after_creation
+    with pytest.raises(DeploymentError, match="readiness timeout"):
+        recovery.apply(COMMIT, initialize=True)
+    journal = private_json(recovery.deployment.state_dir / "operation.json")
+    assert journal["status"] == "uncertain"
+    assert recovery.read_active() is None
+    assert runner.migration_runs == 0
+    for initialize in (True, False):
+        with pytest.raises(DeploymentError, match="unresolved"):
+            recovery.apply(COMMIT, initialize=initialize)
+    before = len(runner.calls)
+    assert recovery.reconcile(journal["id"])["initialization_pending"]
+    assert not any(step == "PostgreSQL readiness" for _, step in runner.calls[before:])
+    with pytest.raises(DeploymentError, match="explicit resume"):
+        recovery.reconcile(journal["id"], resolution="rollback")
+    # A repeated transient failure remains recoverable, retaining the same UUID.
+    with pytest.raises(DeploymentError, match="readiness timeout"):
+        recovery.reconcile(journal["id"], resolution="resume")
+    assert (
+        private_json(recovery.deployment.state_dir / "operation.json")["id"]
+        == journal["id"]
+    )
+    runner.run = original
+    assert recovery.reconcile(journal["id"], resolution="resume")["verified"]
+    assert runner.migration_runs == 1
+    assert recovery.read_active()["id"] == journal["id"]
+    assert recovery.verify_active()["verified"]
+    assert not any("volume" in args and "rm" in args for args, _ in runner.calls)
+
+
+def test_initialization_never_retries_a_migration_attempt(recovery):
+    runner = recovery.runner
+    runner.services = {}
+    runner.has_volumes = False
+    runner.applied = False
+    runner.failure = "apply migrations"
+    with pytest.raises(DeploymentError):
+        recovery.apply(COMMIT, initialize=True)
+    journal = private_json(recovery.deployment.state_dir / "operation.json")
+    runner.failure = None
+    before = len(runner.calls)
+    with pytest.raises(DeploymentError, match="migration history differs"):
+        recovery.reconcile(journal["id"], resolution="resume")
+    assert not any(step == "apply migrations" for _, step in runner.calls[before:])
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    ["configuration", "image", "environment", "ports", "lock", "ledger", "worker"],
+)
+def test_initial_resume_blocks_changed_or_active_resources(recovery, invalid):
+    runner = recovery.runner
+    runner.services = {}
+    runner.has_volumes = False
+    runner.applied = False
+    original = runner.run
+
+    def timeout(args, *, step, **kwargs):
+        result = original(args, step=step, **kwargs)
+        if step == "PostgreSQL readiness":
+            raise DeploymentError("timeout after creation")
+        return result
+
+    runner.run = timeout
+    with pytest.raises(DeploymentError):
+        recovery.apply(COMMIT, initialize=True)
+    runner.run = original
+    operation = private_json(recovery.deployment.state_dir / "operation.json")["id"]
+    if invalid == "configuration":
+        path = recovery.deployment.state_dir / operation / "compose.json"
+        path.write_text(path.read_text() + " ")
+    elif invalid == "image":
+        runner.current_images["postgres"] = PREVIOUS["backend"]
+    elif invalid == "environment":
+        runner.current_env["postgres"]["POSTGRES_DB"] = "other"
+    elif invalid == "ports":
+
+        def changed_ports(args, *, step, **kwargs):
+            result = original(args, step=step, **kwargs)
+            if (
+                step == "capture current runtime"
+                and args[-1] == runner.container("postgres")["ID"]
+            ):
+                runtime = json.loads(result)
+                runtime["ports"] = {"5432/tcp": [{"HostIp": "", "HostPort": "6432"}]}
+                return json.dumps(runtime)
+            return result
+
+        runner.run = changed_ports
+    elif invalid == "lock":
+        runner.locked = True
+    elif invalid == "ledger":
+        runner.applied = True
+    else:
+        runner.services["email-worker"] = "running"
+    before = runner.migration_runs
+    with pytest.raises(DeploymentError):
+        recovery.reconcile(operation, resolution="resume")
+    assert runner.migration_runs == before == 0
+    assert recovery.read_active() is None
+
+
+def test_initial_config_check_failure_can_resume_even_with_only_volumes(recovery):
+    runner = recovery.runner
+    runner.services = {}
+    runner.has_volumes = False
+    runner.applied = False
+    original = runner.run
+
+    def timeout(args, *, step, **kwargs):
+        if step == "candidate configuration":
+            runner.has_volumes = True
+            raise DeploymentError("config-check reply lost")
+        return original(args, step=step, **kwargs)
+
+    runner.run = timeout
+    with pytest.raises(DeploymentError):
+        recovery.apply(COMMIT, initialize=True)
+    operation = private_json(recovery.deployment.state_dir / "operation.json")["id"]
+    runner.run = original
+    assert recovery.reconcile(operation, resolution="resume")["verified"]
+    assert runner.migration_runs == 1

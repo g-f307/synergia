@@ -390,3 +390,24 @@ def test_frozen_config_preserves_dollars_in_secrets_without_public_exposure(
         "POSTGRES_PASSWORD"
     ] == password.replace("$", "$$")
     assert compose_literals({"value": "$variable"}) == {"value": "$$variable"}
+
+
+def test_unmanaged_stopped_postgres_is_ready_before_capturing_baseline(flow_factory):
+    flow = flow_factory(existing=True)
+    flow.runner.services["postgres"] = "exited"
+    original = flow.runner.run
+
+    def run(args, *, step, **kwargs):
+        if (
+            step == "inspect migration ledger"
+            and flow.runner.services["postgres"] != "running"
+        ):
+            raise DeploymentError("database is stopped")
+        return original(args, step=step, **kwargs)
+
+    flow.runner.run = run
+    result = flow.apply(COMMIT)
+    assert result["previous"] is not None
+    order = steps(flow)
+    assert order.index("PostgreSQL readiness") < order.index("inspect migration ledger")
+    assert flow.verify_active()["verified"]

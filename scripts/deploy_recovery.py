@@ -64,8 +64,7 @@ class RecoveryWorkflow(ApplyWorkflow):
         atomic_json(directory / "release.json", manifest)
         return manifest
 
-    def select(self, manifest, report):
-        require_recovery_volumes(report)
+    def load_candidate(self, manifest, report):
         if (manifest.get("project"), manifest.get("daemon_id")) != (
             report["project"],
             report["daemon_id"],
@@ -104,6 +103,12 @@ class RecoveryWorkflow(ApplyWorkflow):
                 raise DeploymentError(
                     "retained image is unavailable; restore exact artifacts"
                 )
+
+    def select(self, manifest, report, *, initializing=False):
+        if not initializing:
+            require_recovery_volumes(report)
+        self.load_candidate(manifest, report)
+        services = self.config["services"]
         if (
             "postgres" not in self.containers
             or self.containers["postgres"]["State"] != "running"
@@ -134,7 +139,12 @@ class RecoveryWorkflow(ApplyWorkflow):
             raise DeploymentError(
                 "database migration lock is held; wait and inspect the owner"
             )
-        if self.ledger() != manifest["migrations"]:
+        ledger = self.ledger()
+        if initializing and ledger not in (None, {}):
+            raise DeploymentError(
+                "initialization database is not empty; reconcile manually"
+            )
+        if not initializing and ledger != manifest["migrations"]:
             raise DeploymentError(
                 "migration history differs from recovery target; "
                 "application rollback blocked; use the database recovery procedure"
@@ -316,6 +326,85 @@ class RecoveryWorkflow(ApplyWorkflow):
             else "unknown"
         }
 
+    def resume_initialization(self, candidate, resolution):
+        """Resume initial provisioning only before any SQL attempt."""
+        if resolution != "resume" or candidate["previous"] is not None:
+            raise DeploymentError("initial installation requires explicit resume")
+        store = self.store_type(
+            self.deployment.state_dir,
+            identity=f"{candidate['daemon_id']}:{candidate['project']}",
+        )
+        with store.recovery(candidate["id"], resolution) as journal:
+            report = self.inventory()
+            if (
+                journal["action"] != "apply"
+                or self.read_active() is not None
+                or any(name != "postgres" for name in self.containers)
+                or (
+                    self.deployment.state_dir
+                    / candidate["id"]
+                    / "migration-attempted.json"
+                ).exists()
+                or self.migration_process(candidate["id"])["state"] != "not_found"
+            ):
+                raise DeploymentError(
+                    "initialization state changed; reconcile manually"
+                )
+            self.load_candidate(candidate, report)
+            # Never recreate an existing PostgreSQL container or discard its volumes.
+            if "postgres" in self.containers:
+                pg = self.runtime(self.containers["postgres"])
+                if (
+                    pg["image"] != candidate["images"]["postgres"]
+                    or any(
+                        pg["environment"].get(key) != value
+                        for key, value in self.config["services"]["postgres"][
+                            "environment"
+                        ].items()
+                    )
+                    or not published_ports_match(
+                        self.config["services"]["postgres"].get("ports"),
+                        pg.get("ports"),
+                    )
+                ):
+                    raise DeploymentError("initialization PostgreSQL identity changed")
+            self.compose(
+                "run",
+                "--no-deps",
+                "--pull",
+                "never",
+                "--rm",
+                "-T",
+                "config-check",
+                step="candidate configuration",
+            )
+            store.stage(journal, "initialize")
+            self.compose(
+                "up",
+                "-d",
+                "--no-deps",
+                "--no-build",
+                "--no-recreate",
+                "--pull",
+                "never",
+                "--wait",
+                "--wait-timeout",
+                "90",
+                "postgres",
+                step="PostgreSQL readiness",
+                timeout=120,
+            )
+            report = self.inventory()
+            self.select(candidate, report, initializing=True)
+            self.complete_candidate(candidate, None, store, journal)
+            journal["status"] = "succeeded"
+        return {
+            "operation": candidate["id"],
+            "resolution": resolution,
+            "revision": candidate["revision"],
+            "verified": True,
+        }
+
     def reconcile(self, operation_id, *, resolution=None):
         try:
             if str(UUID(operation_id)) != operation_id:
@@ -337,6 +426,20 @@ class RecoveryWorkflow(ApplyWorkflow):
             operation_id,
             expected_image=candidate["images"]["backend"] if candidate else None,
         )
+        initial = directory / "initialization.json"
+        attempted = directory / "migration-attempted.json"
+        if initial.exists() and not attempted.exists() and candidate is not None:
+            if private_json(initial) != {"initial": True}:
+                raise DeploymentError("initialization intent invalid")
+            if resolution is None:
+                return {
+                    "operation": operation_id,
+                    "status": record["status"],
+                    "initialization_pending": True,
+                    "migration": process,
+                    "active_operations": len(self.active_operations),
+                }
+            return self.resume_initialization(candidate, resolution)
         pg = self.containers.get("postgres")
         available = bool(pg and pg["State"] == "running")
         locked = self.lock_held() if available else None

@@ -382,6 +382,7 @@ class OperationStore:
                 "precheck",
                 "build",
                 "maintenance",
+                "initialize",
                 "migrate",
                 "start",
                 "verify",

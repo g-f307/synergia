@@ -256,13 +256,36 @@ python3 scripts/deploy.py reconcile \
   --operation UUID_DA_OPERACAO --resolution rollback
 ```
 
-`resume` **não repete migrations**. Exige igualdade completa do ledger com a
-candidata e ausência de processo/lock ativo ou desconhecido; então inicia e
+Após uma tentativa de migration, `resume` **não repete migrations**. Exige
+igualdade completa do ledger com a candidata e ausência de processo/lock ativo ou desconhecido; então inicia e
 verifica os serviços preservados. Mesmo sem container de migration, o ledger
 transacional completo permite essa resolução explícita, sem inferir que o SQL
 deva ser repetido. Se parte das migrations tiver falhado, a divergência bloqueia
 `resume`. `rollback` exige o ledger da versão anterior; a instalação inicial
 sem versão anterior não possui esse caminho de retorno.
+
+Na primeira instalação, o candidato, a configuração congelada e a intenção
+`initialization.json` são persistidos **antes** de qualquer comando Compose que
+possa criar recursos. Se a configuração ou o readiness do PostgreSQL falhar,
+a operação fica `uncertain`; repetir `apply`, com ou sem `--initialize`, é
+bloqueado. O diagnóstico de reconciliação informa `initialization_pending: true`
+sem consultar um banco que ainda pode estar indisponível.
+
+Nesse caso, use o mesmo comando `reconcile ... --resolution resume`. A retomada
+explícita valida imagens, configuração, projeto e daemon, toma o lock, aguarda
+ou inicia o PostgreSQL com `--no-recreate`, preserva os volumes já criados e
+executa a **primeira** tentativa das migrations. Um container PostgreSQL já
+existente deve corresponder à imagem, ambiente e portas preservados. Escritores,
+operações ativas, container de migration existente, lock ou ledger não vazio
+bloqueiam essa retomada. Não há limpeza automática de recursos.
+
+Antes de enviar SQL ao Docker, o executor persiste `migration-attempted.json`.
+Depois desse ponto, inclusive se o cliente morrer antes de receber resposta,
+a exceção de inicialização deixa de valer: aplicam-se as regras de ledger
+completo descritas acima, sem repetir SQL. Falhas repetidas de readiness podem
+ser retomadas com o mesmo UUID; a promoção continua dependendo de todas as
+verificações. A retomada usa a configuração congelada, não alterações posteriores
+no arquivo de ambiente externo.
 
 As duas resoluções tomam o mesmo lock exclusivo da implantação e exigem o UUID
 atual com status `running` ou `uncertain`. Cada tentativa preserva o journal

@@ -108,3 +108,33 @@ def test_validation_cli_uses_only_the_python_standard_library():
     )
     assert result.returncode == 0, result.stderr
     assert "--previous-revision" in result.stdout
+
+
+def test_initial_readiness_fault_executes_real_up_with_short_deadline(
+    tmp_path, monkeypatch
+):
+    calls = []
+
+    def run(_self, args, **kwargs):
+        calls.append((args, kwargs))
+        raise DeploymentError("real Compose readiness timeout")
+
+    monkeypatch.setattr(CommandRunner, "run", run)
+    runner = FaultRunner(tmp_path)
+    runner.fault = "initial-readiness"
+    with pytest.raises(DeploymentError, match="real Compose"):
+        runner.run(
+            [
+                "docker",
+                "compose",
+                "up",
+                "--no-recreate",
+                "--wait",
+                "--wait-timeout",
+                "90",
+                "postgres",
+            ],
+            step="PostgreSQL readiness",
+        )
+    assert calls[0][0][-2:] == ["1", "postgres"]
+    assert runner.fault is None
