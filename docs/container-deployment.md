@@ -73,6 +73,9 @@ essa variável em bancos novos nem como configuração permanente.
 Nenhuma integração corporativa deve ser considerada pronta apenas porque a
 aplicação executa em containers.
 
+Os perfis, exemplos externos e falhas de pré-validação estão descritos em
+[Perfis de ambiente da implantação](deployment-environments.md).
+
 
 ## Worker de e-mail opt-in
 

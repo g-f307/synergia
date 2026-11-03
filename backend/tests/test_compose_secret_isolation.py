@@ -75,3 +75,23 @@ def test_the_overlay_secret_path_is_required_and_external(overlay) -> None:
     source = overlay["secrets"]["smtp_password"]["file"]
 
     assert source.startswith("${EMAIL_SMTP_SECRET_PATH:?")
+
+
+def test_compose_requires_an_explicit_deployment_environment(base) -> None:
+    for name in ("migrate", "backend", "email-worker"):
+        assert _environment(base["services"][name])["SYNERGIA_ENV"].startswith(
+            "${SYNERGIA_ENV:?"
+        )
+
+
+def test_compose_forwards_deployment_validation_settings(base) -> None:
+    backend = _environment(base["services"]["backend"])
+
+    for name in (
+        "AUTH_LOCAL_LOGIN_EXPIRES_AT",
+        "AUTH_IDENTITY_PROVIDER",
+        "AUTH_CORPORATE_CLIENT_SECRET_FILE",
+        "AUTH_CORPORATE_MAPPING_FILE",
+        "SYNERGIA_API_ORIGIN",
+    ):
+        assert name in backend

@@ -3,10 +3,22 @@ from __future__ import annotations
 import os
 import sys
 
-from app.container_runtime import build_database_conninfo
+from app.container_runtime import (
+    build_database_conninfo,
+    validate_deployment_environment,
+)
 
 
 def main() -> None:
+    try:
+        selected_environment = validate_deployment_environment(os.environ)
+    except ValueError as exc:
+        raise SystemExit(f"invalid deployment configuration: {exc}") from exc
+    print(
+        f"synergia startup: environment={selected_environment}",
+        file=sys.stderr,
+        flush=True,
+    )
     if not os.environ.get("DATABASE_URL", "").strip():
         try:
             os.environ["DATABASE_URL"] = build_database_conninfo(os.environ)
