@@ -11,7 +11,6 @@ import re
 import stat
 import subprocess
 import sys
-import tempfile
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -21,6 +20,14 @@ from uuid import UUID, uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from deploy_common import (  # noqa: E402
+    DeploymentError,
+    atomic_json,
+    compose_values,
+    parse_json,
+)
 
 from app.deployment_environment import validate_deployment_environment  # noqa: E402
 
@@ -39,10 +46,6 @@ HOST_VARIABLES = (
     "XDG_RUNTIME_DIR",
     "SSH_AUTH_SOCK",
 )
-
-
-class DeploymentError(RuntimeError):
-    """An actionable, secret-free error safe to show to the operator."""
 
 
 class CommandRunner:
@@ -80,13 +83,6 @@ class CommandRunner:
                 "check tooling, permissions and external configuration locally"
             )
         return result.stdout
-
-
-def parse_json(raw: str, step: str):
-    try:
-        return json.loads(raw)
-    except (ValueError, TypeError) as exc:
-        raise DeploymentError(f"{step}: invalid tool response") from exc
 
 
 def external_path(path: Path, root: Path, *, configuration: bool = False) -> Path:
@@ -159,9 +155,13 @@ class Deployment:
             r"[A-Za-z0-9:._-]{1,128}", daemon_id
         ):
             raise DeploymentError("Docker daemon: missing installation identity")
-        config = parse_json(
-            self.command("config", "--format", "json", step="Compose configuration"),
-            "Compose configuration",
+        config = compose_values(
+            parse_json(
+                self.command(
+                    "config", "--format", "json", step="Compose configuration"
+                ),
+                "Compose configuration",
+            )
         )
         try:
             services = config["services"]
@@ -222,8 +222,21 @@ class Deployment:
     def diagnose(self) -> dict:
         report = self._configuration_report()
         # docker inspect/ps do not start services, create volumes or invoke health.
-        raw = self.command(
-            "ps", "--all", "--format", "json", step="installation inventory"
+        raw = self.runner.run(
+            [
+                "docker",
+                "ps",
+                "--all",
+                "--no-trunc",
+                "--filter",
+                f"label=com.docker.compose.project={self.project}",
+                "--format",
+                '{"ID":{{json .ID}},"Service":'
+                '{{json (.Label "com.docker.compose.service")}},'
+                '"State":{{json .State}},"OneOff":'
+                '{{json (.Label "com.docker.compose.oneoff")}}}',
+            ],
+            step="installation inventory",
         ).strip()
         if not raw:
             containers = []
@@ -238,6 +251,7 @@ class Deployment:
             for item in containers
         ):
             raise DeploymentError("installation inventory: unsupported response")
+        self.containers = containers
         # Do not echo arbitrary container names, commands, labels or logs.
         report["services"] = [
             {"service": item["Service"], "running": item.get("State") == "running"}
@@ -373,23 +387,13 @@ class OperationStore:
             ) from exc
 
     def write(self, record: Mapping) -> None:
-        descriptor, temporary = tempfile.mkstemp(
-            prefix=".operation-", dir=self.directory
-        )
-        try:
-            with os.fdopen(descriptor, "w") as stream:
-                json.dump(dict(record), stream, sort_keys=True)
-                stream.write("\n")
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, self.path)
-            directory_fd = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
-        finally:
-            Path(temporary).unlink(missing_ok=True)
+        atomic_json(self.path, record)
+
+    def stage(self, record: dict, name: str) -> None:
+        record["stage"] = name
+        record["updated_at"] = datetime.now(UTC).isoformat()
+        self.write(record)
+        print(f"deployment stage: {name}", file=sys.stderr, flush=True)
 
     @contextmanager
     def operation(self, action: str) -> Iterator[dict]:
@@ -440,7 +444,8 @@ class OperationStore:
                 yield record
             except BaseException:
                 # A failed client does not prove that Docker stopped the operation.
-                record["status"] = "uncertain"
+                if record["status"] != "failed":
+                    record["status"] = "uncertain"
                 raise
             else:
                 record["status"] = "succeeded"
@@ -453,7 +458,13 @@ class OperationStore:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("diagnose", "precheck"))
+    parser.add_argument("action", choices=("diagnose", "precheck", "apply", "verify"))
+    parser.add_argument(
+        "--revision", help="commit/tag already checked out; required by apply"
+    )
+    parser.add_argument(
+        "--initialize", action="store_true", help="allow an empty installation"
+    )
     parser.add_argument(
         "--project", required=True, help="existing stable Compose project name"
     )
@@ -471,7 +482,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         deployment = Deployment(
             project=args.project, env_file=args.env_file, state_dir=args.state_dir
         )
-        report = getattr(deployment, args.action)()
+        if args.action in {"apply", "verify"}:
+            from deploy_flow import ApplyWorkflow
+
+            flow = ApplyWorkflow(deployment, OperationStore)
+            if args.action == "apply":
+                if not args.revision:
+                    raise DeploymentError(
+                        "apply requires --revision with the chosen commit/tag"
+                    )
+                report = flow.apply(args.revision, initialize=args.initialize)
+            else:
+                report = flow.verify_active()
+        else:
+            if args.revision or args.initialize:
+                raise DeploymentError("revision/initialize are only used by apply")
+            report = getattr(deployment, args.action)()
     except (DeploymentError, OSError) as exc:
         message = (
             str(exc)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 from app.container_runtime import (
@@ -14,8 +15,11 @@ def main() -> None:
         selected_environment = validate_deployment_environment(os.environ)
     except ValueError as exc:
         raise SystemExit(f"invalid deployment configuration: {exc}") from exc
+    revision = os.environ.get("SYNERGIA_BUILD_REVISION", "unknown")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        revision = "unknown"
     print(
-        f"synergia startup: environment={selected_environment}",
+        f"synergia startup: environment={selected_environment} revision={revision}",
         file=sys.stderr,
         flush=True,
     )
