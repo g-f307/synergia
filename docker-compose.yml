@@ -5,19 +5,29 @@ x-backend-environment: &backend-environment
   PGPORT: "5432"
   PGDATABASE: ${POSTGRES_DB:-synergia}
   PGUSER: ${POSTGRES_USER:-synergia}
-  PGPASSWORD: ${POSTGRES_PASSWORD:-synergia-local-only}
+  PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD explicitly}
   IMPORT_STORAGE_DIR: /var/lib/synergia/imports
   INGESTION_ALLOWED_SHEETS: ${INGESTION_ALLOWED_SHEETS:-}
   PROFILE_AVATAR_STORAGE_ROOT: /var/lib/synergia/avatars
   EMAIL_CAPTURE_PATH: /var/lib/synergia/email-capture/messages.jsonl
-  SYNERGIA_ENV: ${SYNERGIA_ENV:-development}
+  SYNERGIA_ENV: ${SYNERGIA_ENV:?Set SYNERGIA_ENV explicitly}
   SYNERGIA_LOCAL_AUTH_ENABLED: ${SYNERGIA_LOCAL_AUTH_ENABLED:-false}
+  AUTH_LOCAL_LOGIN_EXPIRES_AT: ${AUTH_LOCAL_LOGIN_EXPIRES_AT:-}
+  AUTH_IDENTITY_PROVIDER: ${AUTH_IDENTITY_PROVIDER:-local}
+  AUTH_CORPORATE_ISSUER: ${AUTH_CORPORATE_ISSUER:-}
+  AUTH_CORPORATE_DISCOVERY_URL: ${AUTH_CORPORATE_DISCOVERY_URL:-}
+  AUTH_CORPORATE_AUDIENCE: ${AUTH_CORPORATE_AUDIENCE:-}
+  AUTH_CORPORATE_CLIENT_ID: ${AUTH_CORPORATE_CLIENT_ID:-}
+  AUTH_CORPORATE_CLIENT_SECRET_FILE: ${AUTH_CORPORATE_CLIENT_SECRET_FILE:-}
+  AUTH_CORPORATE_MAPPING_FILE: ${AUTH_CORPORATE_MAPPING_FILE:-}
+  AUTH_CORPORATE_REQUIRE_MFA: ${AUTH_CORPORATE_REQUIRE_MFA:-true}
   AUTH_JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
   AUTH_JWT_SIGNING_KEY: ${AUTH_JWT_SIGNING_KEY:-synergia-local-signing-key-change-me-119}
   AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-synergia-local}
   AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-synergia-api}
   AUTH_REFRESH_COOKIE_SECURE: ${AUTH_REFRESH_COOKIE_SECURE:-false}
   AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS:-http://localhost:8080}
+  SYNERGIA_API_ORIGIN: ${SYNERGIA_API_ORIGIN:-http://localhost:8000}
   RATE_LIMIT_KEY_SECRET: ${RATE_LIMIT_KEY_SECRET:-synergia-local-rate-limit-key-change-me}
   OBSERVABILITY_LOG_LEVEL: ${OBSERVABILITY_LOG_LEVEL:-INFO}
   MIGRATION_BASELINE_THROUGH: ${MIGRATION_BASELINE_THROUGH:-}
@@ -45,12 +55,24 @@ x-email-secret-environment: &email-secret-environment
   EMAIL_SMTP_PASSWORD_FILE: ${EMAIL_SMTP_PASSWORD_FILE:-}
 
 services:
+  config-check:
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-c", "print('deployment configuration valid')"]
+    environment: *backend-environment
+    restart: "no"
+
   postgres:
     image: docker.io/library/postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-synergia}
       POSTGRES_USER: ${POSTGRES_USER:-synergia}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-synergia-local-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD explicitly}
+    depends_on:
+      config-check:
+        condition: service_completed_successfully
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

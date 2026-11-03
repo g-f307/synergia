@@ -26,6 +26,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [reconstrução completa do ambiente local](docs/local-environment.md);
 - [primeiros passos com a aplicação conteinerizada](docs/getting-started.md);
 - [contrato de implantação em containers](docs/container-deployment.md);
+- [perfis e pré-validação dos ambientes](docs/deployment-environments.md);
 - [contratos da API](docs/api-contracts.md);
 - [contratos sanitizados dos workbooks reais de homologação](docs/real-workbook-contracts.md);
 - [adapter de Total Decision para GMES/OQC](docs/total-decision-adapter.md);
