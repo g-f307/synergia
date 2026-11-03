@@ -4,11 +4,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from psycopg.conninfo import conninfo_to_dict
+
 from app.container_runtime import (
     build_database_conninfo,
     validate_deployment_environment,
 )
-from psycopg.conninfo import conninfo_to_dict
 
 ROOT = Path(__file__).resolve().parents[2]
 
