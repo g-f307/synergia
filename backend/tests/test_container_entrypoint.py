@@ -351,3 +351,57 @@ def test_compose_rejects_missing_postgres_password_before_services_start() -> No
 
     assert result.returncode != 0
     assert "POSTGRES_PASSWORD" in result.stderr
+
+
+@pytest.mark.parametrize("password", ["synergia-local-only", "CHANGE_ME"])
+def test_compose_preflight_rejects_unsafe_password_before_postgres(
+    password: str,
+) -> None:
+    compose_environment = os.environ | {
+        "SYNERGIA_ENV": "homologation",
+        "POSTGRES_PASSWORD": password,
+        "AUTH_JWT_SIGNING_KEY": "synthetic-signing-key-with-at-least-32-bytes",
+        "RATE_LIMIT_KEY_SECRET": "synthetic-rate-limit-key-with-at-least-32-bytes",
+        "AUTH_ALLOWED_ORIGINS": "http://web.internal.example",
+        "SYNERGIA_API_ORIGIN": "http://api.internal.example",
+    }
+    rendered = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            "/dev/null",
+            "config",
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        env=compose_environment,
+        text=True,
+    )
+    services = json.loads(rendered.stdout)["services"]
+    assert services["postgres"]["depends_on"]["config-check"] == {
+        "condition": "service_completed_successfully",
+        "required": True,
+    }
+    preflight_environment = services["config-check"]["environment"]
+    preflight_environment["PYTHONPATH"] = str(ROOT / "backend")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "container_entrypoint.py"),
+            sys.executable,
+            "-c",
+            "print('configuration-valid')",
+        ],
+        check=False,
+        capture_output=True,
+        env=preflight_environment,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "PGPASSWORD" in result.stderr

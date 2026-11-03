@@ -10,6 +10,11 @@ criação do PostgreSQL ou da publicação de sua porta. O valor local conhecido
 existe somente em `.env.example`; homologação e produção devem fornecê-lo por
 arquivo privado.
 
+Antes do PostgreSQL, o Compose executa `config-check` sem conexão com o banco.
+Esse portão reutiliza a mesma validação do backend e impede a inicialização do banco
+quando a senha é `synergia-local-only`, contém `CHANGE_ME` ou quando qualquer
+outro controle do perfil é inválido.
+
 ## Desenvolvimento
 
 Use `.env.example` apenas na estação local:

@@ -55,12 +55,24 @@ x-email-secret-environment: &email-secret-environment
   EMAIL_SMTP_PASSWORD_FILE: ${EMAIL_SMTP_PASSWORD_FILE:-}
 
 services:
+  config-check:
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-c", "print('deployment configuration valid')"]
+    environment: *backend-environment
+    restart: "no"
+
   postgres:
     image: docker.io/library/postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-synergia}
       POSTGRES_USER: ${POSTGRES_USER:-synergia}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD explicitly}
+    depends_on:
+      config-check:
+        condition: service_completed_successfully
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

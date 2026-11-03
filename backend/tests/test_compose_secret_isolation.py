@@ -78,23 +78,23 @@ def test_the_overlay_secret_path_is_required_and_external(overlay) -> None:
 
 
 def test_compose_requires_an_explicit_deployment_environment(base) -> None:
-    for name in ("migrate", "backend", "email-worker"):
+    for name in ("config-check", "migrate", "backend", "email-worker"):
         assert _environment(base["services"][name])["SYNERGIA_ENV"].startswith(
             "${SYNERGIA_ENV:?"
         )
 
 
 def test_compose_forwards_deployment_validation_settings(base) -> None:
-    backend = _environment(base["services"]["backend"])
-
-    for name in (
-        "AUTH_LOCAL_LOGIN_EXPIRES_AT",
-        "AUTH_IDENTITY_PROVIDER",
-        "AUTH_CORPORATE_CLIENT_SECRET_FILE",
-        "AUTH_CORPORATE_MAPPING_FILE",
-        "SYNERGIA_API_ORIGIN",
-    ):
-        assert name in backend
+    for service_name in ("config-check", "backend"):
+        environment = _environment(base["services"][service_name])
+        for name in (
+            "AUTH_LOCAL_LOGIN_EXPIRES_AT",
+            "AUTH_IDENTITY_PROVIDER",
+            "AUTH_CORPORATE_CLIENT_SECRET_FILE",
+            "AUTH_CORPORATE_MAPPING_FILE",
+            "SYNERGIA_API_ORIGIN",
+        ):
+            assert name in environment
 
 
 def test_ci_compose_commands_select_the_environment_explicitly() -> None:
