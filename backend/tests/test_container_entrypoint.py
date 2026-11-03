@@ -297,6 +297,8 @@ def test_container_entrypoint_reports_the_selected_environment() -> None:
 
 def test_entrypoint_accepts_homologation_environment_rendered_by_compose() -> None:
     compose_environment = os.environ | {
+        "COMPOSE_DISABLE_ENV_FILE": "1",
+        "SYNERGIA_LOCAL_AUTH_ENABLED": "false",
         "SYNERGIA_ENV": "homologation",
         "POSTGRES_PASSWORD": "synthetic-postgres-password",
         "AUTH_JWT_SIGNING_KEY": "synthetic-signing-key-with-at-least-32-bytes",
