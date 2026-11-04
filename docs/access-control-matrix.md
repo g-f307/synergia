@@ -44,6 +44,7 @@ Não há herança implícita nem papel `superuser`.
 | `artifact.read` | validação, normalizado, divergência e evidência | — | ✓ | ✓ | ✓ | — |
 | `execution.reprocess` | execução | — | ✓ | — | — | — |
 | `audit.read` | histórico auditável | ✓ | ✓ | ✓ | — | — |
+| `feedback.triage` | triagem de feedback organizacional | — | ✓ | — | — | — |
 | `audit.export` | exportar auditoria sanitizada | — | ✓ | ✓ | — | — |
 | `artifact.export` | download de evidência aceita | — | ✓ | ✓ | — | — |
 | `report.export` | exportar versão concluída de relatório | — | ✓ | ✓ | — | — |
@@ -90,6 +91,13 @@ também dependerá da política de rede da TI.
 | `GET /auth/sessions` | `session.revoke.own` | sessões próprias ativas | `own` | admin, gestor, analista, operador, consulta |
 | `POST /auth/sessions/revoke-others` | `session.revoke.own` | outras sessões próprias | `own` | admin, gestor, analista, operador, consulta |
 | `DELETE /auth/sessions/{session_id}` | `session.revoke.own` | sessão própria indicada | `own` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/policy` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `POST /feedback` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/{feedback_id}` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/triage` | `feedback.triage` | feedback | `org` | gestor |
+| `GET /feedback/triage/{feedback_id}` | `feedback.triage` | feedback | `org` | gestor |
+| `PATCH /feedback/triage/{feedback_id}` | `feedback.triage` | feedback | `org` | gestor |
 | `GET /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `PATCH /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `POST /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
@@ -283,3 +291,7 @@ Além dos portões `ID-P01` a `ID-P07` da ADR (registro em
 | AUTH-P03 | classificar campos sensíveis de normalizados, evidências e exportações | Segurança/DPO/Gestor |
 | AUTH-P04 | definir limite operacional para exportações; os formatos iniciais aprovados são CSV e JSON | Gestor |
 | AUTH-P05 | revisar esta matriz por integrante diferente do autor antes do merge | Revisor do PR |
+
+
+
+Feedback exige vínculo organizacional ativo único, derivado no servidor. Concessões globais não criam vínculo. Autores consultam exclusivamente seus registros; triadores precisam de `feedback.triage` nesse vínculo. Nenhum payload escolhe organização.

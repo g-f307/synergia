@@ -2,7 +2,9 @@
 
 ## Idiomas e preferência
 
-A aplicação oferece `pt-BR` e `en-US`. O idioma vem do perfil retornado por
+A aplicação oferece `pt-BR` e `en-US`. A jornada de feedback também oferece
+`es-ES`, selecionável no perfil, com fallback pt-BR nas telas antigas ainda
+não traduzidas. O idioma vem do perfil retornado por
 `/me` e é reaplicado após autenticação, renovação da sessão e atualização do
 perfil. Valores ausentes ou ainda não suportados usam `pt-BR` como fallback
 seguro. A escolha permanece no servidor; o navegador não mantém uma segunda
@@ -24,7 +26,8 @@ Os catálogos ficam em `web/src/app/shared/i18n/catalogs`. Para acrescentar
 texto de produto:
 
 1. crie uma chave semântica e estável, agrupada por domínio;
-2. inclua a mesma chave em `pt-BR.json` e `en-US.json`;
+2. inclua a mesma chave em `pt-BR.json` e `en-US.json`; para `feedback.*`,
+   inclua também a tradução em `es-ES.json`;
 3. consuma-a por `I18nService.t`, sem espalhar texto traduzível no componente;
 4. use parâmetros nomeados para valores dinâmicos;
 5. execute `python scripts/validate_i18n.py` e os testes do frontend.
