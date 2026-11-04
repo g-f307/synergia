@@ -1,0 +1,23 @@
+{
+  "cases": [
+    {
+      "id": "legacy_previous_version",
+      "seconds": 123.074,
+      "status": "passed"
+    },
+    {
+      "id": "unmanaged_stopped_postgres_update",
+      "seconds": 55.454,
+      "status": "passed"
+    }
+  ],
+  "cleanup": "passed",
+  "derived_from": "issue-166-deploy-validation.json",
+  "format": 1,
+  "preexisting_resources_preserved": true,
+  "previous_revision": "04769a84423eac2544b7e3a81dfa48232e6e7344",
+  "previous_version_outcome": "restored",
+  "result": "passed",
+  "source_revision": "965d972880443fe3a71b5f477fb2f2cf9ad04f45",
+  "synthetic_only": true
+}

@@ -6,6 +6,8 @@ COPY . .
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
+ARG SYNERGIA_BUILD_REVISION=unknown
+LABEL org.opencontainers.image.revision=$SYNERGIA_BUILD_REVISION
 USER root
 RUN apk upgrade --no-cache
 ENV SYNERGIA_API_ORIGIN=http://localhost:8000

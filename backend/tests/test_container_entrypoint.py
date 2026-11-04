@@ -297,6 +297,8 @@ def test_container_entrypoint_reports_the_selected_environment() -> None:
 
 def test_entrypoint_accepts_homologation_environment_rendered_by_compose() -> None:
     compose_environment = os.environ | {
+        "COMPOSE_DISABLE_ENV_FILE": "1",
+        "SYNERGIA_LOCAL_AUTH_ENABLED": "false",
         "SYNERGIA_ENV": "homologation",
         "POSTGRES_PASSWORD": "synthetic-postgres-password",
         "AUTH_JWT_SIGNING_KEY": "synthetic-signing-key-with-at-least-32-bytes",
@@ -334,6 +336,32 @@ def test_entrypoint_accepts_homologation_environment_rendered_by_compose() -> No
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "command-ready"
     assert "synergia startup: environment=homologation" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "revision,expected", [("a" * 40, "a" * 40), ("invalid-secret-value", "unknown")]
+)
+def test_entrypoint_reports_only_a_valid_build_revision(revision, expected):
+    environment = _deployment_environment("development") | {
+        "SYNERGIA_BUILD_REVISION": revision,
+        "DATABASE_URL": "synthetic-not-used",
+        "PYTHONPATH": str(ROOT / "backend"),
+    }
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/container_entrypoint.py"),
+            sys.executable,
+            "-c",
+            "print('command-ready')",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert f"revision={expected}" in result.stderr
+    assert "invalid-secret-value" not in result.stderr
 
 
 def test_compose_rejects_missing_postgres_password_before_services_start() -> None:

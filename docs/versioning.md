@@ -16,6 +16,12 @@ Uma release só pode partir da `main`, com CI verde, documentação coerente e s
 issue bloqueadora conhecida. O título e as notas relacionam issues e PRs. Tags
 publicadas não são movidas ou recriadas; uma correção gera nova versão.
 
+A automação de implantação registra separadamente o SHA completo do checkout
+e os IDs imutáveis das imagens. O SHA aparece na label OCI
+`org.opencontainers.image.revision` e no startup do backend. Esse identificador
+operacional não altera `info.version` da API nem cria automaticamente uma tag
+ou release. Consulte [deploy-automation.md](deploy-automation.md).
+
 Antes da primeira release estável, a fundação pode permanecer em `0.x.y`, mas
 toda incompatibilidade ainda deve ser destacada no PR e nas notas.
 
