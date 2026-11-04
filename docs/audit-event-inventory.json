@@ -1,0 +1,230 @@
+{
+  "format_version": "1.0.0",
+  "issue": 169,
+  "approved_fields": [
+    "id",
+    "occurred_at",
+    "organization_id",
+    "actor_id",
+    "actor_type",
+    "action",
+    "resource_type",
+    "resource_id",
+    "outcome",
+    "correlation_id",
+    "metadata",
+    "origin"
+  ],
+  "metadata_fields": [
+    "version",
+    "state_version",
+    "record_count",
+    "artifact_count",
+    "duration_ms",
+    "attempt_number",
+    "event_count",
+    "consent",
+    "is_active",
+    "from_state",
+    "to_state",
+    "format"
+  ],
+  "sources": [
+    {
+      "table": "audit_events",
+      "id_prefix": "execution",
+      "organization": "organization from executions",
+      "actions": [
+        "execution_started",
+        "execution_transitioned",
+        "execution_completed",
+        "execution_failed",
+        "file_accepted",
+        "file_rejected",
+        "pipeline_finished",
+        "processing_unit_persisted",
+        "processing_persistence_failed",
+        "reprocessing_requested",
+        "artifact.export_prepared"
+      ],
+      "emitters": [
+        "database/migrations/0009_execution_lifecycle.sql",
+        "database/migrations/0010_secure_upload_quarantine.sql",
+        "backend/app/imports.py",
+        "backend/app/persistence.py",
+        "backend/app/queries.py",
+        "backend/app/execution_monitoring.py"
+      ]
+    },
+    {
+      "table": "identity_access_events",
+      "id_prefix": "identity",
+      "organization": "explicit organization or global",
+      "actions": [
+        "auth.*",
+        "user.*",
+        "access.*",
+        "profile.*",
+        "authorization.denied",
+        "approval.*"
+      ],
+      "emitters": [
+        "backend/app/auth/repository.py",
+        "backend/app/users.py",
+        "backend/app/access_control.py",
+        "backend/app/profile.py",
+        "backend/app/authorization.py",
+        "backend/app/approvals.py"
+      ]
+    },
+    {
+      "table": "report_events",
+      "id_prefix": "report",
+      "organization": "organization from report_versions",
+      "actions": [
+        "report.generation_*",
+        "report.consulted",
+        "report.exported"
+      ],
+      "emitters": [
+        "backend/app/reports.py"
+      ]
+    },
+    {
+      "table": "approval_events",
+      "id_prefix": "approval",
+      "organization": "explicit organization",
+      "actions": [
+        "approval.created",
+        "approval.submitted",
+        "approval.assigned",
+        "approval.reassigned",
+        "approval.approved",
+        "approval.rejected",
+        "approval.returned",
+        "approval.resubmitted"
+      ],
+      "emitters": [
+        "backend/app/approvals.py"
+      ]
+    },
+    {
+      "table": "notification_events",
+      "id_prefix": "notification",
+      "organization": "organization from notification; missing notification is global",
+      "actions": [
+        "notification.created",
+        "notification.delivered",
+        "notification.consolidated",
+        "notification.suppressed",
+        "notification.delivery_failed",
+        "notification.read"
+      ],
+      "emitters": [
+        "database/migrations/0021_create_internal_notifications.sql",
+        "database/migrations/0030_create_notification_template_administration.sql"
+      ]
+    },
+    {
+      "table": "notification_template_events",
+      "id_prefix": "template",
+      "organization": "global",
+      "actions": [
+        "template.draft_created",
+        "template.draft_updated",
+        "template.published",
+        "template.deactivated"
+      ],
+      "emitters": [
+        "backend/app/notification_templates.py"
+      ]
+    },
+    {
+      "table": "data_operation_events",
+      "id_prefix": "data_operation",
+      "organization": "global",
+      "actions": [
+        "data.backup",
+        "data.restore",
+        "data.verification",
+        "data.retention"
+      ],
+      "emitters": [
+        "backend/app/data_operations.py"
+      ]
+    },
+    {
+      "table": "approval_policy_activation_events",
+      "id_prefix": "policy",
+      "organization": "global",
+      "actions": [
+        "approval.policy_activation"
+      ],
+      "emitters": [
+        "database/migrations/0023_create_human_approvals.sql"
+      ]
+    },
+    {
+      "table": "email_delivery_attempts",
+      "id_prefix": "email_attempt",
+      "organization": "organization from delivery and notification",
+      "actions": [
+        "email.started",
+        "email.sent",
+        "email.retry",
+        "email.failed"
+      ],
+      "emitters": [
+        "backend/app/email_delivery.py"
+      ]
+    },
+    {
+      "table": "email_delivery_reconciliations",
+      "id_prefix": "email_reconciliation",
+      "organization": "organization from delivery and notification",
+      "actions": [
+        "email.reconciled"
+      ],
+      "emitters": [
+        "backend/app/email_reconciliation.py"
+      ]
+    },
+    {
+      "table": "audit_export_events",
+      "id_prefix": "audit_export",
+      "organization": "authorized organization or global-only",
+      "actions": [
+        "audit.export_requested",
+        "audit.export_succeeded",
+        "audit.export_failed"
+      ],
+      "emitters": [
+        "backend/app/audit.py"
+      ]
+    }
+  ],
+  "excluded_sources": {
+    "execution_state_transitions": "Represented by execution events; no duplicate projection.",
+    "identity_login_attempts": "Transient abuse-control state; identifier/IP hashes are not exported.",
+    "rate_limit_events": "Technical abuse evidence with HMAC identifiers; not business audit export.",
+    "stdout": "Technical logs; separate collection and policy.",
+    "metrics": "Aggregates, not per-action audit events."
+  },
+  "coverage_findings": [
+    {
+      "journey": "evidence-download",
+      "gap": "Authorized downloads had no audit event.",
+      "resolution": "artifact.export_prepared after authorization and file validation, before FileResponse; no filename or path; not a receipt by the client."
+    },
+    {
+      "journey": "audit-export",
+      "gap": "No functional export or audit of export requests/results.",
+      "resolution": "Explicit permission, bounded export, append-only requested/succeeded/failed events; no recursive export."
+    },
+    {
+      "journey": "historical-attribution",
+      "gap": "Some legacy sources omit actor UUID or correlation, and global identity events lack organization.",
+      "resolution": "Preserve null/unknown and global-only scope; never infer historical actors or organizations from current memberships."
+    }
+  ]
+}

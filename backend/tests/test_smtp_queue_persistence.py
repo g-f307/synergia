@@ -637,6 +637,11 @@ def test_rollback_before_first_smtp_delivery_preserves_internal_notifications(sc
         ROOT / "database/rollbacks/0033_allow_smtp_email_delivery.down.sql"
     ).read_text()
     with psycopg.connect(scene.database) as conn:
+        conn.execute(
+            (ROOT / "database/rollbacks/0034_create_audit_export.down.sql")
+            .read_text(),
+            prepare=False,
+        )
         conn.execute(rollback, prepare=False)
         assert conn.execute(
             "SELECT count(*) FROM synergia.notifications"
