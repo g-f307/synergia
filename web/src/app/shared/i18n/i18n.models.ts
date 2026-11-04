@@ -1,6 +1,6 @@
 import ptBR from './catalogs/pt-BR.json';
 
-export const supportedLocales = ['pt-BR', 'en-US'] as const;
+export const supportedLocales = ['pt-BR', 'en-US', 'es-ES'] as const;
 export type SupportedLocale = typeof supportedLocales[number];
 export type TranslationKey = keyof typeof ptBR;
 export type TranslationParameters = Record<string, string | number>;

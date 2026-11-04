@@ -107,3 +107,10 @@ implementação e evidência próprias.
 | Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
 | Consultar e exportar auditoria com proteção de dados | F/NF | inventário de onze fontes; JSON/CSV com filtros equivalentes; escopo único; permissão explícita; UTC; ordem estável; limites; sanitização; CSV injection neutralizada; solicitação e resultado append-only; download de evidência auditado | [#169](https://github.com/g-f307/synergia/issues/169) | `backend/app/audit.py`; migration `0034`; `execution_monitoring.py`; `docs/audit-event-inventory.json`; `docs/audit-export.md` | `test_audit.py`, `test_audit_persistence.py`, regressão de evidências e matriz real de autorização; exemplos sintéticos | Atendido no contrato de API; destino e retenção corporativos fora do escopo |
+
+
+## Feedback pela aplicação
+
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Registrar e tratar bugs e sugestões com isolamento | F/NF | vínculo organizacional único derivado; autor consulta próprios registros; permissão de triagem; origem permitida; protocolo imutável; filtros; justificativa; concorrência; auditoria sanitizada; pt/en/es; acessibilidade | [#168](https://github.com/g-f307/synergia/issues/168) | `backend/app/feedback.py`; migration 0035; `web/src/app/domains/feedback/`; [contrato](product-feedback.md) | `test_feedback_persistence.py`, testes de baseline/IAM, testes Angular e `web/e2e/feedback.spec.ts`; [validação](feedback-validation.md) | Implementado e validado localmente; revisão e CI no PR |

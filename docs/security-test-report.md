@@ -3,9 +3,9 @@
 Relatório determinístico da suíte da issue #43. `permitido` e `negado`
 representam os casos positivos e negativos exigidos para cada papel.
 
-- operações privadas cobertas: 100
+- operações privadas cobertas: 107
 - papéis iniciais: 5
-- combinações papel x operação: 500
+- combinações papel x operação: 535
 - rotas públicas explicitamente verificadas: 5
 
 | Operação | Permissão | Escopo | Permitido | Negado |
@@ -15,6 +15,13 @@ representam os casos positivos e negativos exigidos para cada papel.
 | `GET /auth/sessions` | `session.revoke.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `POST /auth/sessions/revoke-others` | `session.revoke.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `DELETE /auth/sessions/{session_id}` | `session.revoke.own` | `own` | admin, gestor, analista, operador, consulta |  |
+| `GET /feedback/policy` | `feedback.own` | `own/org` | admin, gestor, analista, operador, consulta |  |
+| `POST /feedback` | `feedback.own` | `own/org` | admin, gestor, analista, operador, consulta |  |
+| `GET /feedback` | `feedback.own` | `own/org` | admin, gestor, analista, operador, consulta |  |
+| `GET /feedback/{feedback_id}` | `feedback.own` | `own/org` | admin, gestor, analista, operador, consulta |  |
+| `GET /feedback/triage` | `feedback.triage` | `org` | gestor | admin, analista, operador, consulta |
+| `GET /feedback/triage/{feedback_id}` | `feedback.triage` | `org` | gestor | admin, analista, operador, consulta |
+| `PATCH /feedback/triage/{feedback_id}` | `feedback.triage` | `org` | gestor | admin, analista, operador, consulta |
 | `GET /me` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `PATCH /me` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
 | `POST /me/avatar` | `profile.own` | `own` | admin, gestor, analista, operador, consulta |  |
@@ -113,7 +120,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 
 ## Evidências automatizadas
 
-- `test_security_matrix_persistence.py`: 500 requisições HTTP reais
+- `test_security_matrix_persistence.py`: 535 requisições HTTP reais
   com JWT, papéis e permissões carregados do PostgreSQL;
 - `test_security_regression.py`: completude OpenAPI, mass assignment,
   respostas uniformes e ausência de segredos;

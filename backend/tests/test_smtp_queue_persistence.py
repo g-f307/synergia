@@ -638,6 +638,11 @@ def test_rollback_before_first_smtp_delivery_preserves_internal_notifications(sc
     ).read_text()
     with psycopg.connect(scene.database) as conn:
         conn.execute(
+            (Path(__file__).resolve().parents[2] /
+             "database/rollbacks/0035_create_product_feedback.down.sql").read_text(),
+            prepare=False,
+        )
+        conn.execute(
             (ROOT / "database/rollbacks/0034_create_audit_export.down.sql")
             .read_text(),
             prepare=False,

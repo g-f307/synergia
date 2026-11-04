@@ -116,6 +116,8 @@ def test_processes_traceable_normalized_records_from_current_execution() -> None
 def test_creates_all_operational_entities() -> None:
     expected_tables = {
         "audit_export_events",
+        "feedback",
+        "feedback_events",
         "audit_event_catalog",
         "audit_events",
         "approval_events",

@@ -1,0 +1,30 @@
+<section class="feedback-page">
+  <div class="toolbar"><p>{{ i18n.t(triage ? 'feedback.triageIntro' : 'feedback.ownIntro') }}</p><a class="action" routerLink="/feedback/new" [queryParams]="{source: triage ? 'feedback/triage' : 'feedback'}">{{ i18n.t('feedback.send') }}</a></div>
+  <div class="scroll" tabindex="0" role="region" [attr.aria-label]="i18n.t('feedback.content')">
+    <details class="filters"><summary>{{ i18n.t('feedback.filters') }}</summary>
+      <form (ngSubmit)="apply()">
+        <label>{{ i18n.t('feedback.protocol') }}<input name="protocol" [(ngModel)]="protocol" maxlength="35" pattern="FB-[A-Fa-f0-9]{32}"></label>
+        <label>{{ i18n.t('feedback.kind') }}<select name="kind" [(ngModel)]="kind"><option value="">{{ i18n.t('feedback.all') }}</option><option value="bug">{{ i18n.t('feedback.bug') }}</option><option value="suggestion">{{ i18n.t('feedback.suggestion') }}</option></select></label>
+        <label>{{ i18n.t('feedback.state') }}<select name="state" [(ngModel)]="state"><option value="">{{ i18n.t('feedback.all') }}</option>@for (state of states; track state) { <option [value]="state">{{ i18n.t(api.stateKey(state)) }}</option> }</select></label>
+        <label>{{ i18n.t('feedback.from') }}<input type="date" name="from" [(ngModel)]="from"></label>
+        <label>{{ i18n.t('feedback.to') }}<input type="date" name="to" [(ngModel)]="to"></label>
+        <button type="submit">{{ i18n.t('feedback.apply') }}</button>
+      </form><p class="hint">{{ i18n.t('feedback.periodHelp') }}</p>
+    </details>
+    @if (loading()) { <syn-state state="loading" [title]="i18n.t('feedback.loading')" [message]="''" /> }
+    @else if (failure(); as failure) { <syn-state state="error" [title]="i18n.t('feedback.error')" [message]="i18n.t(api.errorKey(failure))"><button type="button" (click)="retry()">{{ i18n.t('feedback.retry') }}</button></syn-state> }
+    @else if (result(); as result) {
+      @if (result.items.length === 0) { <syn-state state="empty" [title]="i18n.t('feedback.empty')" [message]="i18n.t('feedback.emptyHelp')" /> }
+      @else {
+        <p class="hint">{{ i18n.t('feedback.total', {count: result.pagination.total}) }}</p>
+        <ul class="feedback-list">@for (item of result.items; track item.id) {
+          <li><article><span class="badge">{{ i18n.t(item.kind === 'bug' ? 'feedback.bug' : 'feedback.suggestion') }}</span><span class="badge">{{ i18n.t(api.stateKey(item.state)) }}</span>
+            <h2><a [routerLink]="[triage ? '/feedback/triage' : '/feedback', item.id]">{{ item.title }}</a></h2>
+            <p class="protocol">{{ item.protocol }}</p><time [attr.datetime]="item.created_at">{{ i18n.formatDate(item.created_at, {dateStyle: 'medium', timeStyle: 'short'}) }}</time>
+          </article></li>
+        }</ul>
+        <syn-pagination [page]="result.pagination.page" [pages]="result.pagination.pages" (pageChange)="navigate($event)" />
+      }
+    }
+  </div>
+</section>

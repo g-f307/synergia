@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOGS = ROOT / "web/src/app/shared/i18n/catalogs"
 DEFAULT_SOURCE = ROOT / "web/src/app"
 CATALOG_NAMES = ("pt-BR.json", "en-US.json")
-KEY_PATTERN = re.compile(r"['\"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)['\"]")
+KEY_PATTERN = re.compile(r"['\"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)['\"]")
 
 
 def load_catalog(path: Path) -> dict[str, str]:
@@ -39,14 +39,28 @@ def validate(catalog_root: Path, source_root: Path) -> list[str]:
             if not value.strip():
                 errors.append(f"{locale}: valor vazio: {key}")
 
+    spanish_path = catalog_root / "es-ES.json"
+    if not spanish_path.exists() and any(
+        key.startswith("feedback.") for key in reference_keys
+    ):
+        errors.append("es-ES: catálogo obrigatório para a jornada de feedback")
+    if spanish_path.exists():
+        spanish = load_catalog(spanish_path)
+        required = {key for key in reference_keys if key.startswith("feedback.")}
+        for key in sorted(required - spanish.keys()):
+            errors.append(f"es-ES: chave ausente: {key}")
+        for key, value in spanish.items():
+            if key not in reference_keys:
+                errors.append(f"es-ES: chave extra: {key}")
+            if not value.strip():
+                errors.append(f"es-ES: valor vazio: {key}")
+
     referenced: set[str] = set()
     for path in source_root.rglob("*"):
         if path.suffix not in {".ts", ".html"} or path.name.endswith(".spec.ts"):
             continue
         source = (
-            path.read_text(encoding="utf-8")
-            .replace("\\'", "'")
-            .replace('\\"', '"')
+            path.read_text(encoding="utf-8").replace("\\'", "'").replace('\\"', '"')
         )
         referenced.update(KEY_PATTERN.findall(source))
     referenced &= reference_keys
@@ -65,10 +79,7 @@ def main() -> int:
         print("\n".join(errors))
         return 1
     key_count = len(load_catalog(args.catalog_root / "pt-BR.json"))
-    print(
-        f"OK: {key_count} chaves em pt-BR e en-US, "
-        "sem ausências ou órfãs."
-    )
+    print(f"OK: {key_count} chaves em pt-BR e en-US, sem ausências ou órfãs.")
     return 0
 
 

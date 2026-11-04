@@ -37,6 +37,7 @@ ROLE_PERMISSIONS = {
         "execution.reprocess",
         "audit.read",
         "audit.export",
+        "feedback.triage",
         "artifact.export",
         "report.export",
         "session.revoke.own",

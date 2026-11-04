@@ -1,0 +1,41 @@
+<section class="feedback-page">
+  <div class="toolbar"><a [routerLink]="triage ? '/feedback/triage' : '/feedback'">{{ i18n.t('feedback.back') }}</a><button class="secondary" type="button" (click)="retry()" [disabled]="busy()">{{ i18n.t('feedback.refresh') }}</button></div>
+  <div class="scroll" tabindex="0" role="region" [attr.aria-label]="i18n.t('feedback.content')">
+    @if (loading()) { <syn-state state="loading" [title]="i18n.t('feedback.loading')" [message]="''" /> }
+    @if (failure(); as failure) { <div #errorState tabindex="-1"><syn-state state="error" [title]="i18n.t('feedback.error')" [message]="i18n.t(api.errorKey(failure))" /></div> }
+    @if (!loading()) {
+      @if (item(); as item) {
+        <article class="detail">
+          <p class="protocol">{{ item.protocol }}</p><h1>{{ item.title }}</h1>
+          <div class="actions"><span class="badge">{{ i18n.t(item.kind === 'bug' ? 'feedback.bug' : 'feedback.suggestion') }}</span><span class="badge">{{ i18n.t(api.stateKey(item.state)) }}</span></div>
+          <p class="hint">{{ item.source_route }} · <time [attr.datetime]="item.created_at">{{ i18n.formatDate(item.created_at, {dateStyle:'medium',timeStyle:'short'}) }}</time></p>
+          <h2>{{ i18n.t('feedback.description') }}</h2><p class="plain">{{ item.description }}</p>
+          @if (item.expected_result) { <h2>{{ i18n.t('feedback.expected') }}</h2><p class="plain">{{ item.expected_result }}</p> }
+          @if (item.observed_result) { <h2>{{ i18n.t('feedback.observed') }}</h2><p class="plain">{{ item.observed_result }}</p> }
+        </article>
+        @if (triage && item.allowed_transitions.length) {
+          <form #form="ngForm" class="editor triage-editor" (ngSubmit)="submit(form)">
+            <h2>{{ i18n.t('feedback.updateState') }}</h2>
+            <label for="state">{{ i18n.t('feedback.state') }}</label>
+            <select id="state" name="state" [(ngModel)]="state" required>@for (state of item.allowed_transitions; track state) { <option [value]="state">{{ i18n.t(api.stateKey(state)) }}</option> }</select>
+            <label for="reason">{{ i18n.t('feedback.reason') }} <small>{{ i18n.t(terminal() ? 'feedback.requiredReason' : 'feedback.optional') }}</small></label>
+            <textarea id="reason" name="reason" [(ngModel)]="reason" #reasonField="ngModel" [required]="terminal()" [minlength]="terminal() ? 5 : 0" maxlength="2000" rows="3" aria-describedby="reason-help" [attr.aria-invalid]="reasonField.invalid && reasonField.touched"></textarea>
+            <p id="reason-help" class="hint">{{ i18n.t('feedback.reasonHelp') }}</p>
+            @if (form.invalid && form.submitted) { <p role="alert">{{ i18n.t('feedback.validation') }}</p> }
+            <button type="submit" [disabled]="busy() || failure()?.status === 409" [attr.aria-busy]="busy()">{{ i18n.t('feedback.save') }}</button>
+          </form>
+        }
+        @if (saved()) { <p role="status">{{ i18n.t('feedback.saved') }}</p> }
+        <section class="history"><h2>{{ i18n.t('feedback.history') }}</h2>
+          <ol>@for (event of item.history; track event.id) {
+            <li><strong>{{ i18n.t(api.stateKey(event.to_state)) }}</strong> · <time [attr.datetime]="event.occurred_at">{{ i18n.formatDate(event.occurred_at, {dateStyle:'medium',timeStyle:'short'}) }}</time>
+              <p class="hint">{{ i18n.t('feedback.actor') }}: {{ event.actor_user_id }}</p>
+              @if (event.from_state) { <p>{{ i18n.t('feedback.previous') }}: {{ i18n.t(api.stateKey(event.from_state)) }}</p> }
+              @if (event.reason) { <p class="plain">{{ event.reason }}</p> }
+            </li>
+          }</ol>
+        </section>
+      }
+    }
+  </div>
+</section>

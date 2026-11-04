@@ -256,3 +256,23 @@ def test_serializes_two_concurrent_runs(migration_database: str) -> None:
     assert first.wait(timeout=60) == 0, first.stderr.read()
     assert second.wait(timeout=60) == 0, second.stderr.read()
     assert migration_count(migration_database) == len(MIGRATIONS)
+
+
+@pytest.mark.parametrize(
+    "trigger",
+    ["feedback_events_immutable", "feedback_mutation_guard", "feedback_audit_created"],
+)
+def test_feedback_baseline_requires_history_and_mutation_guards(
+    migration_database: str, trigger: str
+) -> None:
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    table = "feedback_events" if trigger == "feedback_events_immutable" else "feedback"
+    with psycopg.connect("", dbname=migration_database) as connection:
+        connection.execute(
+            sql.SQL("DROP TRIGGER {} ON synergia.{}").format(
+                sql.Identifier(trigger), sql.Identifier(table)
+            )
+        )
+    result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
