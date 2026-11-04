@@ -45,6 +45,9 @@ DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
     "report_export": (60, 60, True),
     "audit_read": (60, 60, True),
     "audit_export": (10, 60, True),
+    "feedback_create": (10, 60, True),
+    "feedback_read": (120, 60, True),
+    "feedback_triage": (30, 60, True),
     "decision": (30, 60, True),
     "session_read": (30, 60, True),
     "session_revoke": (10, 60, True),
@@ -86,6 +89,12 @@ def policies_from_env() -> dict[str, RatePolicy]:
 
 
 def classify_operation(method: str, path: str) -> str | None:
+    if method == "GET" and (path == "/feedback" or path.startswith("/feedback/")):
+        return "feedback_read"
+    if method == "POST" and path == "/feedback":
+        return "feedback_create"
+    if method == "PATCH" and path.startswith("/feedback/triage/"):
+        return "feedback_triage"
     if method == "GET" and path == "/audit/events":
         return "audit_read"
     if method == "GET" and path == "/audit/events/export":
