@@ -21,6 +21,9 @@ from app.rate_limiting import (
 
 def test_operation_matrix_covers_every_critical_contract() -> None:
     cases = {
+        ("POST", "/feedback"): "feedback_create",
+        ("GET", "/feedback/policy"): "feedback_read",
+        ("PATCH", "/feedback/triage/id"): "feedback_triage",
         ("GET", "/audit/events"): "audit_read",
         ("GET", "/audit/events/export"): "audit_export",
         ("POST", "/auth/login"): "login",

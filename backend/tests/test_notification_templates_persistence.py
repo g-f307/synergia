@@ -462,6 +462,11 @@ def test_rollback_preserves_new_templates_used_by_notification_and_delivery(
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         try:
             cursor.execute(
+                (Path(__file__).resolve().parents[2] /
+                 "database/rollbacks/0035_create_product_feedback.down.sql").read_text(),
+                prepare=False,
+            )
+            cursor.execute(
                 (ROOT / "database/rollbacks/0034_create_audit_export.down.sql")
                 .read_text(encoding="utf-8"), prepare=False,
             )
