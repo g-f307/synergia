@@ -3,9 +3,9 @@
 Relatório determinístico da suíte da issue #43. `permitido` e `negado`
 representam os casos positivos e negativos exigidos para cada papel.
 
-- operações privadas cobertas: 98
+- operações privadas cobertas: 100
 - papéis iniciais: 5
-- combinações papel x operação: 490
+- combinações papel x operação: 500
 - rotas públicas explicitamente verificadas: 5
 
 | Operação | Permissão | Escopo | Permitido | Negado |
@@ -36,6 +36,8 @@ representam os casos positivos e negativos exigidos para cada papel.
 | `GET /pending-items` | `pending.read` | `org` | gestor, analista, operador, consulta | admin |
 | `GET /pending-items/{pending_id}` | `pending.read` | `org` | gestor, analista, operador, consulta | admin |
 | `GET /history` | `audit.read` | `org` | admin, gestor, analista | operador, consulta |
+| `GET /audit/events` | `audit.read` | `org/global` | admin, gestor, analista | operador, consulta |
+| `GET /audit/events/export` | `audit.export` | `org/global` | gestor, analista | admin, operador, consulta |
 | `GET /workorders/{workorder_number}/consolidated-result` | `business.read` | `org` | gestor, analista, operador, consulta | admin |
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | `org` | gestor | admin, analista, operador, consulta |
 | `GET /indicators` | `dashboard.read` | `org` | gestor, analista, operador, consulta | admin |
@@ -111,7 +113,7 @@ representam os casos positivos e negativos exigidos para cada papel.
 
 ## Evidências automatizadas
 
-- `test_security_matrix_persistence.py`: 490 requisições HTTP reais
+- `test_security_matrix_persistence.py`: 500 requisições HTTP reais
   com JWT, papéis e permissões carregados do PostgreSQL;
 - `test_security_regression.py`: completude OpenAPI, mass assignment,
   respostas uniformes e ausência de segredos;

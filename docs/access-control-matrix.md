@@ -44,6 +44,7 @@ Não há herança implícita nem papel `superuser`.
 | `artifact.read` | validação, normalizado, divergência e evidência | — | ✓ | ✓ | ✓ | — |
 | `execution.reprocess` | execução | — | ✓ | — | — | — |
 | `audit.read` | histórico auditável | ✓ | ✓ | ✓ | — | — |
+| `audit.export` | exportar auditoria sanitizada | — | ✓ | ✓ | — | — |
 | `artifact.export` | download de evidência aceita | — | ✓ | ✓ | — | — |
 | `report.export` | exportar versão concluída de relatório | — | ✓ | ✓ | — | — |
 | `report.generate` | nova versão de relatório | — | ✓ | — | — | — |
@@ -110,6 +111,8 @@ também dependerá da política de rede da TI.
 | `GET /pending-items` | `pending.read` | pendências | `org` | gestor, analista, operador, consulta |
 | `GET /pending-items/{pending_id}` | `pending.read` | pendência | `org` | gestor, analista, operador, consulta |
 | `GET /history` | `audit.read` | eventos | `org` | admin, gestor, analista |
+| `GET /audit/events` | `audit.read` | auditoria sanitizada | `org/global` | admin, gestor, analista |
+| `GET /audit/events/export` | `audit.export` | exportação de auditoria | `org/global` | gestor, analista |
 | `GET /workorders/{workorder_number}/consolidated-result` | `business.read` | consolidado | `org` | gestor, analista, operador, consulta |
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | execução | `org` | gestor |
 | `GET /indicators` | `dashboard.read` | indicadores | `org` | gestor, analista, operador, consulta |
@@ -195,6 +198,11 @@ futuras exportações às ações `artifact.export` e `report.export`;
 administração a `access.admin`.
 
 ## Escopo por organização
+
+A auditoria consolidada exige uma única organização autorizada por requisição,
+ou exclusivamente eventos globais com concessão global explícita. Exportar
+também exige `audit.read` no mesmo escopo de `audit.export`; nenhum papel
+administrativo implica exportação. Consulte [audit-export.md](audit-export.md).
 
 O escopo organizacional é **obrigatório** para dados operacionais. Cada vínculo
 de papel terá `organization_scope = list` com um ou mais `organization_id`, ou

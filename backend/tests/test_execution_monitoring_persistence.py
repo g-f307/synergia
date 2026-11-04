@@ -201,6 +201,20 @@ def test_postgres_monitoring_counts_states_pagination_and_safe_download(
         assert internal_alias.status_code == 404
         assert internal_alias.json()["error"]["code"] == "evidence_not_found"
         assert str(tmp_path) not in internal_alias.text
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        events = connection.execute(
+            """SELECT entity_id, correlation_id, payload
+            FROM synergia.audit_events
+            WHERE execution_id = %s AND event_type = 'artifact.export_prepared'""",
+            (EXECUTION_ID,),
+        ).fetchall()
+    assert len(events) == 1
+    assert events[0][0] == str(source_id)
+    assert events[0][1] is not None
+    assert events[0][2]["actor_type"] == "user"
+    assert set(events[0][2]) == {
+        "actor_type", "actor_identifier", "actor_session_id", "version"
+    }
 
 
 def test_all_official_states_have_a_coherent_public_lifecycle() -> None:

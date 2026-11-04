@@ -109,7 +109,10 @@ def test_adopts_completely_legacy_database(migration_database: str) -> None:
 def test_smtp_baseline_requires_provider_and_reconciliation_schema(
     migration_database: str, missing: str
 ) -> None:
-    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    index = next(
+        i for i, path in enumerate(MIGRATIONS) if path.name.startswith("0033")
+    )
+    apply_legacy_schema(migration_database, index + 1)
     with psycopg.connect("", dbname=migration_database) as connection:
         if missing == "provider":
             connection.execute(
@@ -120,6 +123,30 @@ def test_smtp_baseline_requires_provider_and_reconciliation_schema(
             )
         else:
             connection.execute("DROP TABLE synergia.email_delivery_reconciliations")
+    result = run_migrations(migration_database, MIGRATIONS[index].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert migration_count(migration_database) == 0
+
+
+@pytest.mark.parametrize("missing", ["view", "ledger", "trigger", "terminal_index"])
+def test_audit_baseline_refuses_partial_export_contract(
+    migration_database: str, missing: str,
+) -> None:
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    with psycopg.connect("", dbname=migration_database) as connection:
+        if missing == "view":
+            connection.execute("DROP VIEW synergia.audit_event_catalog")
+        elif missing == "ledger":
+            connection.execute("DROP VIEW synergia.audit_event_catalog")
+            connection.execute("DROP TABLE synergia.audit_export_events")
+        elif missing == "trigger":
+            connection.execute(
+                "DROP TRIGGER audit_export_events_immutable "
+                "ON synergia.audit_export_events"
+            )
+        else:
+            connection.execute("DROP INDEX synergia.audit_export_events_one_result")
     result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
     assert result.returncode != 0
     assert "partial or incompatible" in result.stderr

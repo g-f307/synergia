@@ -55,6 +55,7 @@ class RuntimeActors:
     config: AuthConfig
     users: dict[str, UUID]
     sessions: dict[str, UUID]
+    organization_id: UUID
 
     def token(self, role: str, *, disposable: bool = False) -> str:
         session_id = self.sessions[role]
@@ -151,7 +152,9 @@ def runtime_actors() -> RuntimeActors:
                 """,
                 (user_id, None if role == "admin" else organization_id, role),
             )
-    actors = RuntimeActors(database_url, AuthConfig.from_env(), users, sessions)
+    actors = RuntimeActors(
+        database_url, AuthConfig.from_env(), users, sessions, organization_id
+    )
     try:
         yield actors
     finally:
@@ -214,6 +217,10 @@ def test_role_route_method_matrix_executes_real_authorization(
             case.method,
             concrete_path(case.path),
             headers=headers,
+            params=(
+                {"organization_id": str(runtime_actors.organization_id)}
+                if case.path.startswith("/audit/events") else None
+            ),
             json={} if case.method in {"POST", "PUT", "PATCH", "DELETE"} else None,
         )
 

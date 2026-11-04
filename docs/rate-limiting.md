@@ -21,6 +21,8 @@ continuam limitados por origem e pelo fingerprint da credencial apresentada.
 | Reprocessamento | 10 | 300 s | fechada |
 | Geração de relatório | 20 | 300 s | fechada |
 | Exportação | 60 | 60 s | fechada |
+| Consulta de auditoria (`audit_read`) | 60 | 60 s | fechada |
+| Exportação de auditoria (`audit_export`) | 10 | 60 s | fechada |
 | Decisão humana | 30 | 60 s | fechada |
 
 Os limites e janelas usam as variáveis `RATE_LIMIT_<OPERATION>_LIMIT` e

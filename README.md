@@ -16,6 +16,8 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 
 O README é o ponto de entrada. Os detalhes vigentes ficam em:
 
+- [consulta, exportação segura e inventário de auditoria](docs/audit-export.md);
+
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
 - [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
 - [roadmap e estado das etapas](docs/roadmap.md);

@@ -14,6 +14,7 @@ import psycopg
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel
 
 from app.authorization import (
@@ -176,6 +177,22 @@ class MonitoringRepository:
 
     def _connect(self):
         return psycopg.connect(self.database_url, row_factory=dict_row)
+
+    def record_evidence_export(
+        self, execution_id: str, evidence_id: int, actor: ActorContext,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO synergia.audit_events (
+                    execution_id, entity_type, entity_id, event_type,
+                    correlation_id, payload
+                ) VALUES (%s, 'source_file', %s, 'artifact.export_prepared',
+                          %s, %s)""",
+                (execution_id, str(evidence_id), actor.correlation_id, Jsonb({
+                    "actor_type": "user", "actor_identifier": str(actor.user_id),
+                    "actor_session_id": str(actor.session_id), "version": 1,
+                })),
+            )
 
     def execution_exists(self, execution_id: str) -> bool:
         with self._connect() as connection:
@@ -614,10 +631,13 @@ def list_evidences(
     "/{execution_id}/evidences/{evidence_id}/download",
     responses=ERRORS,
     response_class=FileResponse,
-    dependencies=[Depends(require_execution_permission("artifact.export"))],
 )
 def download_evidence(
-    execution_id: str, evidence_id: int, repository: Repository
+    execution_id: str, evidence_id: int,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("artifact.export"))
+    ],
+    repository: Repository,
 ) -> FileResponse:
     _ensure_execution(repository, execution_id)
     evidence = repository.evidence_file(execution_id, evidence_id)
@@ -641,6 +661,7 @@ def download_evidence(
             "Evidência não encontrada",
             {"evidence_id": evidence_id},
         )
+    repository.record_evidence_export(execution_id, evidence_id, actor)
     return FileResponse(
         path,
         media_type=evidence.get("media_type"),
