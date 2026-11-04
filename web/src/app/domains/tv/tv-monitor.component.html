@@ -13,6 +13,7 @@
       <time class="tv-clock" [attr.datetime]="now().toISOString()">{{ clockLabel() }}</time>
     </div>
     <div class="tv-actions">
+      <button type="button" class="tv-icon-action" (click)="sendFeedback()" [attr.aria-label]="i18n.t('feedback.send')"><img src="/assets/icons/mail.svg" alt="" aria-hidden="true"></button>
       <button type="button" class="tv-icon-action tv-refresh" (click)="load()" [disabled]="refreshing()" [attr.aria-label]="i18n.t('tv.refresh')"><img src="/assets/icons/refresh.svg" alt="" aria-hidden="true"></button>
       <button type="button" class="tv-icon-action" (click)="toggleTheme()" [attr.aria-label]="i18n.t('accessibility.toggleTheme')"><span aria-hidden="true">◐</span></button>
       <button type="button" class="tv-fullscreen" (click)="requestFullscreen()">{{ i18n.t('tv.fullscreen') }}</button>

@@ -176,6 +176,11 @@ export const routes: Routes = [
     canActivate: [authenticatedGuard, permissionGuard('notification.read')],
     loadComponent: () => import('./domains/notifications/notification-center.component').then((value) => value.NotificationCenterComponent)
   },
+  { path: 'feedback/new', data: { triage: false }, canActivate: [authenticatedGuard], loadComponent: () => import('./domains/feedback/feedback-create.component').then((value) => value.FeedbackCreateComponent) },
+  { path: 'feedback/triage/:feedbackId', data: { triage: true }, canActivate: [authenticatedGuard, permissionGuard('feedback.triage')], loadComponent: () => import('./domains/feedback/feedback-detail.component').then((value) => value.FeedbackDetailComponent) },
+  { path: 'feedback/triage', data: { triage: true }, canActivate: [authenticatedGuard, permissionGuard('feedback.triage')], loadComponent: () => import('./domains/feedback/feedback-list.component').then((value) => value.FeedbackListComponent) },
+  { path: 'feedback/:feedbackId', data: { triage: false }, canActivate: [authenticatedGuard], loadComponent: () => import('./domains/feedback/feedback-detail.component').then((value) => value.FeedbackDetailComponent) },
+  { path: 'feedback', data: { triage: false }, canActivate: [authenticatedGuard], loadComponent: () => import('./domains/feedback/feedback-list.component').then((value) => value.FeedbackListComponent) },
   { path: '', pathMatch: 'full', redirectTo: 'profile' },
   { path: '**', redirectTo: 'profile' }
 ];

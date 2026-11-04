@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
 import enUS from './catalogs/en-US.json';
+import esES from './catalogs/es-ES.json';
 import ptBR from './catalogs/pt-BR.json';
 import { SupportedLocale, TranslationKey, TranslationParameters, isSupportedLocale } from './i18n.models';
 
@@ -8,7 +9,8 @@ const DEFAULT_LOCALE: SupportedLocale = 'pt-BR';
 const DEFAULT_TIMEZONE = 'America/Manaus';
 const catalogs: Record<SupportedLocale, Record<TranslationKey, string>> = {
   'pt-BR': ptBR,
-  'en-US': enUS
+  'en-US': enUS,
+  'es-ES': { ...ptBR, ...esES }
 };
 
 @Injectable({ providedIn: 'root' })

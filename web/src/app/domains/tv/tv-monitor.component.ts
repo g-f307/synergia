@@ -132,6 +132,10 @@ export class TvMonitorComponent implements OnInit, OnDestroy {
     }
   }
 
+  async sendFeedback(): Promise<void> {
+    if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    await this.router.navigate(['/feedback/new'], { queryParams: { source: 'tv' } });
+  }
   async exit(): Promise<void> {
     if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
     await this.router.navigateByUrl('/dashboard');

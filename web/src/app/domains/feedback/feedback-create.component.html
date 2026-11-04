@@ -1,0 +1,44 @@
+<section class="feedback-page">
+  <div class="toolbar"><p>{{ i18n.t('feedback.createIntro') }}</p><a routerLink="/feedback">{{ i18n.t('feedback.own') }}</a></div>
+  <div class="scroll" tabindex="0" role="region" [attr.aria-label]="i18n.t('feedback.content')">
+    @if (loading()) { <syn-state state="loading" [title]="i18n.t('feedback.loading')" [message]="''" /> }
+    @if (failure(); as failure) {
+      <div #errorState tabindex="-1"><syn-state state="error" [title]="i18n.t('feedback.error')" [message]="i18n.t(api.errorKey(failure))">
+        @if (!policy()) { <button type="button" (click)="load()">{{ i18n.t('feedback.retry') }}</button> }
+      </syn-state></div>
+    }
+    @if (created(); as item) {
+      <syn-state state="success" [title]="i18n.t('feedback.sent')" [message]="i18n.t('feedback.confirmation')">
+        <p class="protocol">{{ item.protocol }}</p>
+        <a class="action" [routerLink]="['/feedback', item.id]">{{ i18n.t('feedback.follow') }}</a>
+      </syn-state>
+    } @else if (policy(); as policy) {
+      @if (!policy.can_create) {
+        <syn-state state="unavailable" [title]="i18n.t('feedback.organizationTitle')" [message]="i18n.t(policy.organization_issue === 'ambiguous' ? 'feedback.organizationAmbiguous' : 'feedback.organizationMissing')" />
+      } @else {
+        <form #form="ngForm" (ngSubmit)="submit(form)" class="editor">
+          <p class="notice" id="privacy">{{ i18n.t('feedback.privacy') }}</p>
+          <p>{{ i18n.t('feedback.organization') }}: <strong>{{ policy.organization?.display_name }}</strong></p>
+          <label for="kind">{{ i18n.t('feedback.kind') }}</label>
+          <select id="kind" name="kind" [(ngModel)]="kind" required><option value="bug">{{ i18n.t('feedback.bug') }}</option><option value="suggestion">{{ i18n.t('feedback.suggestion') }}</option></select>
+          <label for="title">{{ i18n.t('feedback.title') }} <small>5–160</small></label>
+          <input id="title" name="title" [(ngModel)]="title" #titleField="ngModel" required minlength="5" maxlength="160" [attr.aria-invalid]="titleField.invalid && titleField.touched" aria-describedby="field-help" autocomplete="off">
+          <p class="hint" id="kind-help">{{ i18n.t(kind === 'bug' ? 'feedback.bugHelp' : 'feedback.suggestionHelp') }}</p>
+          <label for="description">{{ i18n.t('feedback.description') }} <small>10–4000</small></label>
+          <textarea id="description" name="description" [(ngModel)]="description" #descriptionField="ngModel" required minlength="10" maxlength="4000" rows="5" [attr.aria-invalid]="descriptionField.invalid && descriptionField.touched" aria-describedby="field-help privacy kind-help"></textarea>
+          @if (kind === 'bug') {
+            <label for="expected">{{ i18n.t('feedback.expected') }} <small>{{ i18n.t('feedback.optional') }} · 2000</small></label>
+            <textarea id="expected" name="expected" [(ngModel)]="expected" maxlength="2000" rows="3"></textarea>
+            <label for="observed">{{ i18n.t('feedback.observed') }} <small>{{ i18n.t('feedback.optional') }} · 2000</small></label>
+            <textarea id="observed" name="observed" [(ngModel)]="observed" maxlength="2000" rows="3"></textarea>
+          }
+          <label for="source">{{ i18n.t('feedback.source') }}</label>
+          <select id="source" name="source" [(ngModel)]="source" required>@for (source of policy.sources; track source.id) { <option [value]="source.id">{{ source.route }}</option> }</select>
+          <p id="field-help" class="hint">{{ i18n.t('feedback.fieldHelp') }}</p>
+          @if (form.invalid && form.submitted) { <p role="alert">{{ i18n.t('feedback.validation') }}</p> }
+          <div class="actions"><button type="submit" [disabled]="busy()" [attr.aria-busy]="busy()">{{ i18n.t(busy() ? 'feedback.sending' : 'feedback.send') }}</button><a routerLink="/feedback">{{ i18n.t('feedback.cancel') }}</a></div>
+        </form>
+      }
+    }
+  </div>
+</section>

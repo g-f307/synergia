@@ -55,6 +55,11 @@ export class AppComponent {
     });
   }
 
+  feedbackSource(): string {
+    let snapshot = this.router.routerState.snapshot.root;
+    while (snapshot.firstChild) snapshot = snapshot.firstChild;
+    return snapshot.routeConfig?.path || 'profile';
+  }
   toggleMenu(): void { this.menuOpen.update((value) => !value); }
   toggleSidebar(): void {
     this.sidebarCollapsed.update((value) => !value);
@@ -77,6 +82,7 @@ export class AppComponent {
 
   private navigationContextFor(url: string): NavigationContext {
     const path = url.split('?')[0];
+    if (path.startsWith('/feedback')) return { label: path.startsWith('/feedback/triage') ? 'feedback.triage' : path === '/feedback/new' ? 'feedback.send' : 'feedback.own', icon: 'mail.svg', hideBreadcrumbs: true };
     if (path === '/dashboard/related/workorders') return { label: 'dashboard.workorders', icon: 'production.svg', hideBreadcrumbs: true };
     if (path.startsWith('/workorders/')) return { label: 'dashboard.workorders', icon: 'production.svg', detail: decodeURIComponent(path.slice('/workorders/'.length)), hideBreadcrumbs: true };
     if (path.startsWith('/pending-items/')) return { label: 'navigation.pending', icon: 'queue.svg', detail: decodeURIComponent(path.slice('/pending-items/'.length)), hideBreadcrumbs: true };
