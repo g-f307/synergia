@@ -74,7 +74,9 @@
       "operations": [
         {"method": "POST", "path": "/reports", "permission": "report.generate", "scope": "org"},
         {"method": "GET", "path": "/reports/{report_id}/versions/{version}", "permission": "report.read", "scope": "org"},
-        {"method": "GET", "path": "/reports/{report_id}/versions/{version}/export", "permission": "report.export", "scope": "org"}
+        {"method": "GET", "path": "/reports/{report_id}/versions/{version}/export", "permission": "report.export", "scope": "org"},
+        {"method": "GET", "path": "/audit/events", "permission": "audit.read", "scope": "org/global"},
+        {"method": "GET", "path": "/audit/events/export", "permission": "audit.export", "scope": "org/global"}
       ]
     },
     {

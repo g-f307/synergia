@@ -12,6 +12,8 @@
     "unavailable"
   ],
   "supporting_operations": [
+    {"method": "GET", "path": "/audit/events", "permission": "audit.read", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
+    {"method": "GET", "path": "/audit/events/export", "permission": "audit.export", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
     {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell", "evidence": ["web/src/app/core/session.service.ts"]},
     {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "deferred", "consumer": "none", "decision": "A revogação global, incluindo a sessão atual, permanece disponível na API; o perfil oferece revogação individual e das outras sessões.", "target": "future-global-logout-ui"},
     {"method": "GET", "path": "/auth/sessions", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},

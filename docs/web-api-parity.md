@@ -37,7 +37,7 @@ Cada contrato recebe uma das decisões abaixo:
 | relatórios | catálogo, geração, histórico, cancelamento e exportação | parcial; nova versão explícita permanece pendente |
 | notificações | central, contador, leitura, preferências e gestão versionada de templates | completo na #110; SMTP corporativo permanece fora do escopo |
 | administração de acesso | usuários, grupos, papéis, associações e permissões efetivas | completo na #106 |
-| auditoria | consulta protegida disponível na API | interface adiada |
+| auditoria | consulta consolidada e exportação JSON/CSV protegidas na API (#169) | interface adiada |
 | saúde e métricas | sondas e métricas protegidas para plataforma | técnico, sem interface Angular |
 
 ## Jornada administrativa
@@ -63,8 +63,9 @@ por `access.admin`; a autorização e a validação de escopo permanecem no back
   `409`, não para oferecer um botão de exclusão;
 - dados normalizados permanecem protegidos na API até existir uma regra de
   exposição aprovada;
-- o histórico auditável permanece consultável pela API enquanto uma jornada
-  própria não define filtros, retenção e público autorizado.
+- histórico, consulta consolidada e exportação de auditoria permanecem na API;
+  filtros, escopo e limites estão em [audit-export.md](audit-export.md);
+  a interface dedicada e a retenção corporativa continuam pendentes.
 
 ## Capacidades sem contrato completo
 

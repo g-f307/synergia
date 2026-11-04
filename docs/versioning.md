@@ -1,5 +1,11 @@
 # Convenções de versionamento
 
+A API `0.10.0` acrescenta `GET /audit/events` e
+`GET /audit/events/export` (#169), preservando `GET /history`.
+A migration `0034` publica a permissão `audit.export` no catálogo `1.4.0`.
+O formato de exportação possui versão própria `1.0.0`, documentada em
+[audit-export.md](audit-export.md).
+
 O repositório usa GitHub Flow, releases com versionamento semântico e artefatos
 de domínio versionados junto ao código. A versão permite responder qual
 contrato, schema e conjunto de regras produziram um resultado.

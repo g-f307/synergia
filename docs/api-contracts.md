@@ -20,8 +20,15 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API 0.10.0 acrescenta consulta e exportação sanitizada de auditoria, sem
+alterar `GET /history`. Filtros, limites, formatos e erros estão em
+[audit-export.md](audit-export.md); campos e emissores estão no
+[inventário versionado](audit-event-inventory.json).
+
 | Método e rota | Resultado | Sucesso |
 | --- | --- | --- |
+| `GET /audit/events` | auditoria consolidada, sanitizada, filtrada e paginada em escopo único | `200` |
+| `GET /audit/events/export` | arquivo JSON/CSV com manifest; exige consulta e exportação no mesmo escopo | `200` |
 | `GET /health/live` | confirma que o processo responde, sem consultar dependências | `200` |
 | `GET /health/ready` | confirma PostgreSQL, schema e armazenamento; falha fechada | `200`/`503` |
 | `GET /health` | apresenta estado sanitizado de dependências críticas e opcionais | `200`/`503` |

@@ -101,3 +101,9 @@ correspondente. Nova capacidade deve adicionar linha com issue e teste; mudança
 de regra deve apontar a versão do catálogo aplicável. Componentes futuros de
 [architecture.md](architecture.md) permanecem `Planejado` até possuírem issue,
 implementação e evidência próprias.
+
+## Auditoria e exportação controlada
+
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Consultar e exportar auditoria com proteção de dados | F/NF | inventário de onze fontes; JSON/CSV com filtros equivalentes; escopo único; permissão explícita; UTC; ordem estável; limites; sanitização; CSV injection neutralizada; solicitação e resultado append-only; download de evidência auditado | [#169](https://github.com/g-f307/synergia/issues/169) | `backend/app/audit.py`; migration `0034`; `execution_monitoring.py`; `docs/audit-event-inventory.json`; `docs/audit-export.md` | `test_audit.py`, `test_audit_persistence.py`, regressão de evidências e matriz real de autorização; exemplos sintéticos | Atendido no contrato de API; destino e retenção corporativos fora do escopo |
