@@ -43,6 +43,8 @@ DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
     "reprocess": (10, 300, True),
     "report_generate": (20, 300, True),
     "report_export": (60, 60, True),
+    "audit_read": (60, 60, True),
+    "audit_export": (10, 60, True),
     "decision": (30, 60, True),
     "session_read": (30, 60, True),
     "session_revoke": (10, 60, True),
@@ -54,6 +56,8 @@ ORGANIZATION_PERMISSIONS: Final[dict[str, str]] = {
     "reprocess": "execution.reprocess",
     "report_generate": "report.generate",
     "report_export": "report.export",
+    "audit_read": "audit.read",
+    "audit_export": "audit.export",
 }
 
 
@@ -82,6 +86,10 @@ def policies_from_env() -> dict[str, RatePolicy]:
 
 
 def classify_operation(method: str, path: str) -> str | None:
+    if method == "GET" and path == "/audit/events":
+        return "audit_read"
+    if method == "GET" and path == "/audit/events/export":
+        return "audit_export"
     if method == "POST" and path == "/auth/login":
         return "login"
     if method == "POST" and path == "/auth/refresh":

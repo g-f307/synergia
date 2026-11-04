@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.access_control import router as access_control_router
 from app.approvals import router as approvals_router
+from app.audit import router as audit_router
 from app.auth.config import configured_allowed_origins
 from app.auth.routes import router as auth_router
 from app.errors import install_error_handlers
@@ -25,7 +26,7 @@ def create_app() -> FastAPI:
     configure_logging()
     application = FastAPI(
         title="SYNERGIA API",
-        version="0.9.0",
+        version="0.10.0",
         description=(
             "Contratos estáveis para importação, acompanhamento, consultas, "
             "pendências, relatórios, notificações, reprocessamento, identidade "
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(auth_router)
+    application.include_router(audit_router)
     application.include_router(imports_router)
     application.include_router(queries_router)
     application.include_router(monitoring_router)
