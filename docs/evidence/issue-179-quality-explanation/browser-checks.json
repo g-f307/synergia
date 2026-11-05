@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "browser": "153.0.8010.12",
+  "desktop": "1440x1000",
+  "mobile": "390x844",
+  "javascript_errors": [],
+  "network_requests": [],
+  "checks": [
+    "one grouped diagnosis",
+    "both severities and positions",
+    "unknown value and abstention",
+    "rejection timeout and unavailable controls",
+    "light and dark themes",
+    "mobile no horizontal overflow",
+    "keyboard navigation",
+    "empty case without inference"
+  ]
+}

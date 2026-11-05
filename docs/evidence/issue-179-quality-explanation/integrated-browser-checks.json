@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "identity": "synthetic test override; no operational DB",
+  "api": "actual application router",
+  "generation": "real pinned local Ollama, two interactive requests; not another evaluation round",
+  "video_recorded": false,
+  "results": [
+    {
+      "scenario": "QE-A02",
+      "model_generation": "real",
+      "result": "Explicação aceita",
+      "occurrences": 2
+    },
+    {
+      "scenario": "QE-A01",
+      "result": "Evidência insuficiente"
+    },
+    {
+      "theme": "light",
+      "axe_serious_critical": 0
+    },
+    {
+      "theme": "dark",
+      "axe_serious_critical": 0
+    }
+  ],
+  "javascript_errors": []
+}
