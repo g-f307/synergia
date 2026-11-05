@@ -52,40 +52,6 @@
   ],
   "routes": [
     {
-      "id": "ai-quality",
-      "route": "/ai/quality",
-      "status": "implemented",
-      "issue": 179,
-      "prototype_pages": [],
-      "menu": "IA — Qualidade",
-      "permission": "execution.read",
-      "scope": "synthetic",
-      "evidence": [
-        "web/src/app/domains/ai-quality/ai-quality.service.ts"
-      ],
-      "endpoints": [
-        {
-          "method": "GET",
-          "path": "/ai/quality/scenarios",
-          "permission": "execution.read"
-        },
-        {
-          "method": "POST",
-          "path": "/ai/quality/scenarios/{scenario_id}/explanations",
-          "permission": "execution.read"
-        }
-      ],
-      "url_state": [],
-      "states": [
-        "loading",
-        "empty",
-        "error",
-        "forbidden",
-        "unavailable"
-      ],
-      "owner": "domains/ai-quality"
-    },
-    {
       "id": "login",
       "route": "/login",
       "status": "implemented",
@@ -821,6 +787,40 @@
         "unavailable"
       ],
       "owner": "domains/feedback"
+    },
+    {
+      "id": "ai-quality",
+      "route": "/ai/quality",
+      "status": "implemented",
+      "issue": 179,
+      "prototype_pages": [],
+      "menu": "IA — Qualidade",
+      "permission": "execution.read",
+      "scope": "synthetic",
+      "evidence": [
+        "web/src/app/domains/ai-quality/ai-quality.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/ai/quality/scenarios",
+          "permission": "execution.read"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/quality/scenarios/{scenario_id}/explanations",
+          "permission": "execution.read"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/ai-quality"
     }
   ]
 }

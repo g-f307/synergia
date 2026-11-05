@@ -7,11 +7,12 @@ import json
 from dataclasses import replace
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app import ai_quality as api
 from app.ai_quality_core import RuntimeUnavailable, baseline
 from app.authorization import get_actor_context
 from app.main import app
-from fastapi.testclient import TestClient
 
 
 class Runtime:

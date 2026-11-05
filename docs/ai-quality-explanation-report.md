@@ -183,6 +183,12 @@ rodada histórica não descrevem a interface.
 
 Após a integração foram executados:
 
+- Na preparação final para publicação, `cd backend && pytest -q -m "not integration"`:
+  **1.681 aprovados**, 782 testes de integração não selecionados. O lint completo
+  `ruff check . ../scripts`, no mesmo diretório usado pela CI, também passou.
+  O cadastro da origem `ai/quality` no feedback e a compatibilidade dos testes
+  com a versão 1.6 do mapa de jornadas foram verificados em 15 testes direcionados.
+
 - `pytest` nos testes de explicação, API, fundação, diagnóstico, métricas,
   avaliação, runner e protocolo: **236 aprovados**; aviso de depreciação
   preexistente da integração Starlette/httpx no ambiente local.

@@ -1,6 +1,11 @@
 {
   "version": "1.0.0",
   "sources": {
+    "ai/quality": {
+      "route": "/ai/quality",
+      "permission": "execution.read",
+      "global": false
+    },
     "dashboard": {
       "route": "/dashboard",
       "permission": "dashboard.read",

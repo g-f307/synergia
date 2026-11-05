@@ -10,8 +10,9 @@ from pathlib import Path
 
 from ai_poc_foundation import LocalRuntimeTimeout, PoCFoundationError
 from ai_quality_diagnosis import CATEGORIES, DiagnosisError, validate_document
-from app import ai_quality_core as shared
 from jsonschema import Draft202012Validator
+
+from app import ai_quality_core as shared
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT = ROOT / "scripts/ai_poc_prompts/quality-explanation-v1.txt"
