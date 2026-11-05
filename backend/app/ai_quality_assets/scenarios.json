@@ -1,0 +1,262 @@
+[
+  {
+    "id": "QD3-E01",
+    "groups": []
+  },
+  {
+    "id": "QD3-E02",
+    "groups": [
+      {
+        "code": "invalid_quantity",
+        "category": "format",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-2",
+            "severity": "error",
+            "reason": "Quantidade inválida: produced_quantity",
+            "field": {
+              "state": "known",
+              "value": "produced_quantity"
+            },
+            "column": {
+              "state": "known",
+              "value": "B"
+            },
+            "row": {
+              "state": "known",
+              "value": 2
+            },
+            "sheet": {
+              "state": "known",
+              "value": "CSV"
+            },
+            "known_value": {
+              "state": "observed",
+              "value": -9
+            },
+            "unknown_value": {
+              "state": "not_applicable"
+            }
+          }
+        ]
+      },
+      {
+        "code": "required_field",
+        "category": "completeness",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-1",
+            "severity": "error",
+            "reason": "Campo obrigatório vazio: workorder_number",
+            "field": {
+              "state": "known",
+              "value": "workorder_number"
+            },
+            "column": {
+              "state": "known",
+              "value": "A"
+            },
+            "row": {
+              "state": "known",
+              "value": 2
+            },
+            "sheet": {
+              "state": "known",
+              "value": "CSV"
+            },
+            "known_value": {
+              "state": "unavailable"
+            },
+            "unknown_value": {
+              "state": "missing"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "QE-A01",
+    "groups": [
+      {
+        "code": "required_field",
+        "category": "completeness",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-1",
+            "severity": "error",
+            "reason": "Campo obrigatório vazio: serial_number",
+            "field": {
+              "state": "known",
+              "value": "serial_number"
+            },
+            "column": {
+              "state": "known",
+              "value": "B"
+            },
+            "row": {
+              "state": "known",
+              "value": 2
+            },
+            "sheet": {
+              "state": "known",
+              "value": "synthetic"
+            },
+            "known_value": {
+              "state": "unavailable"
+            },
+            "unknown_value": {
+              "state": "missing"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "QE-A02",
+    "groups": [
+      {
+        "code": "duplicate_serial",
+        "category": "consistency",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-1",
+            "severity": "error",
+            "reason": "Serial duplicado; primeira ocorrência em synthetic:2",
+            "field": {
+              "state": "known",
+              "value": "serial_number"
+            },
+            "column": {
+              "state": "known",
+              "value": "B"
+            },
+            "row": {
+              "state": "known",
+              "value": 3
+            },
+            "sheet": {
+              "state": "known",
+              "value": "synthetic"
+            },
+            "known_value": {
+              "state": "observed",
+              "value": "SYN-179-A"
+            },
+            "unknown_value": {
+              "state": "not_applicable"
+            }
+          },
+          {
+            "evidence_id": "ev-2",
+            "severity": "warning",
+            "reason": "Serial duplicado; primeira ocorrência em synthetic:2",
+            "field": {
+              "state": "known",
+              "value": "serial_number"
+            },
+            "column": {
+              "state": "known",
+              "value": "B"
+            },
+            "row": {
+              "state": "known",
+              "value": 4
+            },
+            "sheet": {
+              "state": "known",
+              "value": "synthetic"
+            },
+            "known_value": {
+              "state": "observed",
+              "value": "SYN-179-A"
+            },
+            "unknown_value": {
+              "state": "not_applicable"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "QE-A03",
+    "groups": [
+      {
+        "code": "invalid_quantity",
+        "category": "format",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-1",
+            "severity": "error",
+            "reason": "Quantidade inválida: planned_quantity",
+            "field": {
+              "state": "known",
+              "value": "planned_quantity"
+            },
+            "column": {
+              "state": "known",
+              "value": "B"
+            },
+            "row": {
+              "state": "known",
+              "value": 2
+            },
+            "sheet": {
+              "state": "known",
+              "value": "synthetic"
+            },
+            "known_value": {
+              "state": "observed",
+              "value": -7
+            },
+            "unknown_value": {
+              "state": "not_applicable"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "QE-A04",
+    "groups": [
+      {
+        "code": "missing_reference_data",
+        "category": "reference",
+        "causal_evidence": "not_provided",
+        "occurrences": [
+          {
+            "evidence_id": "ev-1",
+            "severity": "warning",
+            "reason": "Base de referência não fornecida",
+            "field": {
+              "state": "not_provided"
+            },
+            "column": {
+              "state": "not_provided"
+            },
+            "row": {
+              "state": "not_provided"
+            },
+            "sheet": {
+              "state": "not_provided"
+            },
+            "known_value": {
+              "state": "unavailable"
+            },
+            "unknown_value": {
+              "state": "not_exposed"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

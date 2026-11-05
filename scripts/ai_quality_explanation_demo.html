@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>SYNERGIA · Explicação assistida · PoC local</title>
+<style>
+/* SHARED_TOKENS */
+*{box-sizing:border-box}body{margin:0;background:var(--syn-bg);color:var(--syn-text);font:16px/1.6 system-ui,sans-serif}main{max-width:1440px;margin:auto;padding:32px}header{display:flex;align-items:start;justify-content:space-between;gap:24px}h1{font-size:clamp(1.5rem,3vw,2rem);line-height:1.2;margin:8px 0}h2{font-size:1.15rem;margin:0 0 16px}h3{font-size:1rem}.eyebrow{color:var(--syn-primary);font-weight:700;font-size:.8rem;letter-spacing:.08em}.muted{color:var(--syn-text-secondary)}.toolbar{display:flex;flex-wrap:wrap;gap:16px;margin:24px 0}label{display:grid;gap:8px;font-size:.875rem;font-weight:600;flex:1;min-width:180px}button,select{min-height:44px;padding:8px 12px;border:1px solid var(--syn-border);border-radius:var(--syn-radius-sm);background:var(--syn-bg-card);color:var(--syn-text);font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid var(--syn-primary);outline-offset:3px}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0}.card{background:var(--syn-bg-card);border:1px solid var(--syn-border);border-radius:var(--syn-radius);padding:24px;min-width:0}.tag{display:inline-block;padding:4px 10px;border-radius:24px;font-size:.8rem;font-weight:600;border:1px solid currentColor}.pipeline{color:var(--syn-info)}.model{color:var(--syn-success)}.fallback{color:var(--syn-attention)}code{font-family:monospace;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;font-size:.875rem}th,td{text-align:left;vertical-align:top;padding:12px 8px;border-bottom:1px solid var(--syn-border);overflow-wrap:anywhere}th{font-weight:600}.scroll{overflow:auto}ul{padding-left:24px}p{margin:12px 0}dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px}dt{color:var(--syn-text-secondary)}dd{margin:0;overflow-wrap:anywhere}.notice{padding:16px;border-left:4px solid var(--syn-primary);background:var(--syn-bg-card)}.status{display:flex;flex-wrap:wrap;gap:8px}footer{font-size:.8rem;margin-top:32px;overflow-wrap:anywhere}@media(max-width:800px){main{padding:16px}.comparison{grid-template-columns:1fr;gap:16px}header{flex-direction:column}.card{padding:16px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+<style>select{width:100%;min-width:0;max-width:100%}</style>
+</head>
+<body>
+<main>
+<header><div><div class="eyebrow">SYNERGIA · LABORATÓRIO LOCAL</div><h1>Explicação assistida de qualidade</h1><p class="muted">O pipeline detecta. O modelo explica. A pessoa confere.</p></div><button id="theme" type="button" aria-pressed="false">Tema escuro</button></header>
+<p class="notice">PoC experimental com dados sintéticos e reprodução offline. Nenhuma decisão, correção ou alteração é executada pela IA. Sem integração ao produto.</p>
+<div class="toolbar"><label for="scenario">Cenário sintético<select id="scenario"></select></label><label for="repetition">Repetição registrada<select id="repetition"><option value="0">1</option><option value="1">2</option><option value="2">3</option></select></label><label for="control">Exibição<select id="control"><option value="recorded">Resultado registrado do modelo</option><option value="rejected">Controle sintético: resposta recusada</option><option value="timeout">Controle sintético: tempo excedido</option><option value="unavailable">Controle sintético: modelo indisponível</option></select></label></div>
+<p id="context" class="muted"></p>
+<div id="results" aria-live="polite"></div>
+<section class="card"><h2>Comparação da rodada completa</h2><p class="muted">Os casos da #148 são regressão conhecida. CSV e XLSX pareados não são amostras independentes. A validação usa frases permitidas; compreensão e utilidade ainda exigem avaliação humana.</p><div class="scroll"><table><thead><tr><th>Métrica</th><th>Baseline determinístico</th><th>Candidato com fallback</th></tr></thead><tbody id="metrics"></tbody></table></div></section>
+<footer><p id="provenance"></p><p>O modelo pode escolher apenas frases factuais previamente validadas. Mais fluência não comprova fidelidade nem qualidade produtiva. Os controles sintéticos acima não são respostas registradas do Qwen.</p></footer>
+</main>
+<script type="application/json" id="evidence">__EVIDENCE__</script>
+<script>
+'use strict';
+const evidence=JSON.parse(document.getElementById('evidence').textContent);
+const $=id=>document.getElementById(id);
+const node=(tag,text,cls)=>{const element=document.createElement(tag);if(text!==undefined)element.textContent=text;if(cls)element.className=cls;return element;};
+const names={accepted_explanation:'Explicação aceita',fallback_deterministic:'Fallback determinístico',insufficient_evidence:'Evidência insuficiente'};
+const value=item=>item.state==='known'?String(item.value):'Não informada';
+evidence.scenarios.forEach((s,i)=>{const option=node('option',s.id+' · '+s.label);option.value=i;$('scenario').append(option);});
+function render(){
+ const scenario=evidence.scenarios[Number($('scenario').value)],repetition=Number($('repetition').value),control=$('control').value;
+ const attempt=scenario.attempts.find(a=>a.mode==='candidate'&&a.repetition===repetition);
+ const groups=control==='recorded'?attempt.groups:scenario.controls[control];
+ $('context').textContent=scenario.provenance==='known_regression_issue_148'?'Regressão conhecida da #148 · fatos agrupados antes da inferência.':'Caso adversarial sintético · fixture de saída do pipeline.';
+ if(control!=='recorded')$('context').textContent+=' Controle simulado, separado da avaliação do modelo.';
+ $('results').replaceChildren();
+ if(groups.length===0){$('results').append(node('p','Nenhuma ocorrência detectada pelo pipeline. O modelo não foi chamado.','card'));}
+ groups.forEach(item=>{
+  const grid=node('section',undefined,'comparison'),facts=node('article',undefined,'card'),text=node('article',undefined,'card');
+  facts.append(node('span','Fatos do pipeline','tag pipeline'),node('h2',item.group.code));
+  const dl=node('dl');[['Categoria',item.group.category],['Ocorrências agrupadas',item.group.occurrences.length],['Evidência causal','Não fornecida']].forEach(([k,v])=>dl.append(node('dt',k),node('dd',String(v))));facts.append(dl);
+  const scroll=node('div',undefined,'scroll'),table=node('table'),thead=node('thead'),head=node('tr');['Referência / severidade','Campo / posição','Valor da célula'].forEach(h=>head.append(node('th',h)));thead.append(head);table.append(thead);const tbody=node('tbody');
+  item.group.occurrences.forEach(o=>{const row=node('tr');const ref=node('td');ref.append(node('code',o.evidence_id),node('div',o.severity),node('p',o.reason));const location=node('td');location.append(node('code',value(o.field)),node('div','Coluna: '+value(o.column)),node('div','Linha: '+value(o.row)),node('div','Aba: '+value(o.sheet)));const cell=node('td',o.known_value.state==='observed'?String(o.known_value.value):(o.unknown_value.state==='missing'?'Ausente · valor desconhecido':'Não exposto'));row.append(ref,location,cell);tbody.append(row);});table.append(tbody);scroll.append(table);facts.append(scroll);
+  const tags=node('div',undefined,'status');tags.append(node('span',item.origin==='model'?'Texto redigido pelo modelo':'Texto determinístico',item.origin==='model'?'tag model':'tag pipeline'),node('span',names[item.state],item.origin==='model'?'tag model':'tag fallback'));text.append(tags,node('h2','Explicação e conferência'),node('p',item.text.explanation),node('h3','Verificações humanas'));const checks=node('ul');item.text.human_checks.forEach(check=>checks.append(node('li',check)));text.append(checks);
+  const baseline=node('details');baseline.append(node('summary','Comparar com baseline determinístico'),node('p',scenario.baseline[groups.indexOf(item)].explanation));text.append(baseline);
+  if(item.rejection_code)text.append(node('p','Motivo do fallback: '+item.rejection_code,'muted'));
+  text.append(node('p',(control==='recorded'?'Tempo registrado: ':'Tempo do controle sintético: ')+item.elapsed_ms+' ms','muted'));grid.append(facts,text);$('results').append(grid);
+ });
+}
+['scenario','repetition','control'].forEach(id=>$(id).addEventListener('change',render));
+$('theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'light';$('theme').setAttribute('aria-pressed',String(dark));$('theme').textContent=dark?'Tema claro':'Tema escuro';});
+const b=evidence.metrics.baseline,c=evidence.metrics.candidate;
+[['Tentativas por caso',b.case_attempts,c.case_attempts],['Explicações aceitas do modelo','Não aplicável',c.accepted_model_groups+' / '+c.group_attempts],['Fallbacks',0,c.fallback_groups],['Cobertura das ocorrências',(100*b.occurrence_coverage)+'%',(100*c.occurrence_coverage)+'%'],['Diagnósticos duplicados',b.duplicate_diagnoses,c.duplicate_diagnoses],['Grupos aceitos fora das frases permitidas',b.accepted_unsupported_claim_groups,c.accepted_unsupported_claim_groups],['Latência média por caso (ms)',b.latency_mean_ms,c.latency_mean_ms]].forEach(values=>{const row=node('tr');values.forEach(v=>row.append(node('td',String(v))));$('metrics').append(row);});
+$('provenance').textContent='Rodada: '+evidence.started_at+' · SHA-256 do manifesto: '+evidence.manifest_sha256;
+render();
+</script>
+</body>
+</html>

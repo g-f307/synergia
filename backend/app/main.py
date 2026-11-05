@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.access_control import router as access_control_router
+from app.ai_quality import router as ai_quality_router
 from app.approvals import router as approvals_router
 from app.audit import router as audit_router
 from app.auth.config import configured_allowed_origins
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(auth_router)
+    application.include_router(ai_quality_router)
     application.include_router(audit_router)
     application.include_router(feedback_router)
     application.include_router(imports_router)

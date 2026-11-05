@@ -111,6 +111,8 @@ também dependerá da política de rede da TI.
 | `GET /imports/{execution_id}/normalized-data` | `artifact.read` | dados normalizados | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/pipeline-summary` | `import.read` | resumo do pipeline | `org` | gestor, analista, operador |
 | `GET /executions` | `execution.read` | catálogo de execuções | `org` | gestor, analista, operador, consulta |
+| `GET /ai/quality/scenarios` | `execution.read` | cenários de qualidade exclusivamente sintéticos | `synthetic` | gestor, analista, operador, consulta |
+| `POST /ai/quality/scenarios/{scenario_id}/explanations` | `execution.read` | explicação assistida sem mutação ou dados operacionais | `synthetic` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}` | `execution.read` | execução | `org` | gestor, analista, operador, consulta |
 | `GET /workorders/{workorder_number}` | `business.read` | Workorder | `org` | gestor, analista, operador, consulta |
 | `GET /search` | `business.read` | busca operacional persistida | `org` | gestor, analista, operador, consulta |
