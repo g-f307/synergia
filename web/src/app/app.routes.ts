@@ -4,6 +4,11 @@ import { adminGuard, authenticatedGuard, publicOnlyGuard, permissionGuard } from
 
 export const routes: Routes = [
   {
+    path: 'ai/quality',
+    canActivate: [authenticatedGuard, permissionGuard('execution.read')],
+    loadComponent: () => import('./domains/ai-quality/ai-quality.component').then(value => value.AiQualityComponent)
+  },
+  {
     path: 'login',
     canActivate: [publicOnlyGuard],
     loadComponent: () => import('./features/login.component').then((value) => value.LoginComponent)

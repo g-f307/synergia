@@ -1,6 +1,6 @@
 {
-  "version": "1.5.0",
-  "issue": 147,
+  "version": "1.6.0",
+  "issue": 179,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
     "loading",
@@ -51,6 +51,40 @@
     {"id": "corporate-integrations-and-rpa", "status": "deferred", "target": "stage-6", "decision": "Conectores e RPA dependem de autorização formal para entrada na Etapa 6."}
   ],
   "routes": [
+    {
+      "id": "ai-quality",
+      "route": "/ai/quality",
+      "status": "implemented",
+      "issue": 179,
+      "prototype_pages": [],
+      "menu": "IA — Qualidade",
+      "permission": "execution.read",
+      "scope": "synthetic",
+      "evidence": [
+        "web/src/app/domains/ai-quality/ai-quality.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/ai/quality/scenarios",
+          "permission": "execution.read"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/quality/scenarios/{scenario_id}/explanations",
+          "permission": "execution.read"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/ai-quality"
+    },
     {
       "id": "login",
       "route": "/login",
