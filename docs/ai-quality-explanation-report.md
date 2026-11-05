@@ -191,6 +191,11 @@ Após a integração foram executados:
 - `npm run lint` e `npm run build`: aprovados. O build mantém avisos de orçamento
   CSS em componentes preexistentes; a área nova não excede o orçamento.
 - Ruff e validadores de i18n, sistema visual e mapa de jornadas: aprovados.
+- Na preparação do PR, a matriz de segurança foi sincronizada para 109
+  operações privadas e 545 combinações de papel/operação. Os 31 testes
+  direcionados de API e regressão de segurança passaram; incluem 21 testes de
+  API já contados acima e dez verificações adicionais. A execução PostgreSQL
+  da matriz completa permanece pendente na CI.
 - Ensaio Playwright do shell, API e modelo reais: agrupamento, valor ausente,
   abstenção, temas e viewport 390×844; sem violações Axe graves/críticas na
   área nova. A identidade foi substituída somente no servidor descartável de
