@@ -3,7 +3,7 @@ import { Subject } from 'rxjs';
 
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { AiQualityComponent } from './ai-quality.component';
-import { AiQualityService, QualityCatalog, QualityExplanation, QualityGroup, QualityResponse } from './ai-quality.service';
+import { AiQualityService, QualityCatalog, QualityExplanation, QualityGroup, QualityModelStatus, QualityResponse } from './ai-quality.service';
 
 describe('AiQualityComponent', () => {
   let fixture: ComponentFixture<AiQualityComponent>;
@@ -18,8 +18,8 @@ describe('AiQualityComponent', () => {
     ] }).compileComponents();
     fixture = TestBed.createComponent(AiQualityComponent); fixture.detectChanges();
   });
-  function load(): void {
-    catalog.next({ schema_version: '1.0.0', scenarios: [
+  function load(modelStatus: QualityModelStatus = 'available'): void {
+    catalog.next({ schema_version: '1.0.0', model_status: modelStatus, scenarios: [
       { id: 'QE-A02', groups: [group()], baseline: [text()] },
       { id: 'QE-A01', groups: [group()], baseline: [text()] },
       { id: 'QD3-E01', groups: [], baseline: [] }
@@ -69,10 +69,27 @@ describe('AiQualityComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-state="forbidden"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
   });
+  for (const status of ['disabled', 'unavailable'] as const) {
+    it(`disables generation when the model is ${status} and keeps the baseline visible`, () => {
+      load(status); fixture.componentInstance.generate(); fixture.detectChanges();
+      expect(generate).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.quality-controls button').disabled).toBeTrue();
+      expect(fixture.nativeElement.textContent).toContain(status === 'disabled' ? 'Geração por modelo desabilitada' : 'Modelo validado indisponível');
+      expect(fixture.nativeElement.querySelector('details').textContent).toContain(text().explanation);
+      fixture.componentInstance.load(); load('available');
+      expect(fixture.nativeElement.querySelector('.quality-controls button').disabled).toBeFalse();
+    });
+  }
   it('keeps the generation HTTP error visible instead of labeling it an accepted response', () => {
     load(); fixture.componentInstance.generate(); generation.error({ status: 500 }); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Não foi possível obter a explicação');
     expect(fixture.componentInstance.response()).toBeNull();
+  });
+  it('explains a quota denial without displaying an accepted explanation', () => {
+    load(); fixture.componentInstance.generate(); generation.error({ status: 429 }); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('limite temporário de geração');
+    expect(fixture.componentInstance.response()).toBeNull();
+    expect(fixture.componentInstance.generating()).toBeFalse();
   });
   it('translates the interface while explicitly identifying the model language', () => {
     TestBed.inject(I18nService).configure('en-US'); load();

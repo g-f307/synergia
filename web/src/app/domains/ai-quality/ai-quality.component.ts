@@ -6,7 +6,7 @@ import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { TranslationKey } from '../../shared/i18n/i18n.models';
 import { BadgeComponent, ResponsiveTableComponent, StateComponent } from '../../shared/ui/ui-kit';
-import { AiQualityService, FactValue, QualityExplanation, QualityResponse, QualityScenario, scenarioNames } from './ai-quality.service';
+import { AiQualityService, FactValue, QualityExplanation, QualityModelStatus, QualityResponse, QualityScenario, scenarioNames } from './ai-quality.service';
 
 @Component({
   selector: 'syn-ai-quality', imports: [FormsModule, BadgeComponent, ResponsiveTableComponent, StateComponent],
@@ -20,6 +20,7 @@ export class AiQualityComponent {
   readonly selectedId = signal('');
   readonly selected = computed(() => this.scenarios().find(s => s.id === this.selectedId()));
   readonly loading = signal(true);
+  readonly modelStatus = signal<QualityModelStatus>('disabled');
   readonly generating = signal(false);
   readonly failure = signal<ApiFailure | null>(null);
   readonly response = signal<QualityResponse | null>(null);
@@ -28,9 +29,12 @@ export class AiQualityComponent {
   constructor() { this.load(); }
 
   load(): void {
+    if (this.generating()) return;
     this.loading.set(true); this.failure.set(null);
+    this.response.set(null);
     this.api.catalog().pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: value => {
+        this.modelStatus.set(value.model_status);
         this.scenarios.set(value.scenarios);
         this.selectedId.set(value.scenarios.find(s => s.id === 'QE-A02')?.id ?? value.scenarios[0]?.id ?? '');
         this.loading.set(false);
@@ -46,7 +50,7 @@ export class AiQualityComponent {
 
   generate(): void {
     const scenario = this.selected();
-    if (!scenario || this.generating() || !scenario.groups.length) return;
+    if (!scenario || this.generating() || !scenario.groups.length || this.modelStatus() !== 'available') return;
     this.generating.set(true); this.failure.set(null); this.response.set(null);
     this.api.generate(scenario.id).pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: response => { this.response.set(response); this.generating.set(false); },

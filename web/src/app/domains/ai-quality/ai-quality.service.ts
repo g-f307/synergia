@@ -14,7 +14,8 @@ export interface QualityOccurrence {
 export interface QualityGroup { code: string; category: string; causal_evidence: string; occurrences: QualityOccurrence[]; }
 export interface QualityText { explanation: string; human_checks: string[]; }
 export interface QualityScenario { id: string; groups: QualityGroup[]; baseline: QualityText[]; }
-export interface QualityCatalog { schema_version: string; scenarios: QualityScenario[]; }
+export type QualityModelStatus = 'disabled' | 'available' | 'unavailable';
+export interface QualityCatalog { schema_version: string; model_status: QualityModelStatus; scenarios: QualityScenario[]; }
 export interface QualityExplanation {
   group: QualityGroup; text: QualityText; origin: 'model' | 'deterministic';
   state: 'accepted_explanation' | 'fallback_deterministic' | 'insufficient_evidence';
