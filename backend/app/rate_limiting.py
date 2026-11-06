@@ -36,6 +36,7 @@ class RatePolicy:
 
 
 DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
+    "ai_quality_generate": (3, 300, True),
     "login": (10, 60, True),
     "refresh": (30, 60, True),
     "upload": (20, 60, True),
@@ -89,6 +90,14 @@ def policies_from_env() -> dict[str, RatePolicy]:
 
 
 def classify_operation(method: str, path: str) -> str | None:
+    parts = path.strip("/").split("/")
+    if (
+        method == "POST"
+        and len(parts) == 5
+        and parts[:3] == ["ai", "quality", "scenarios"]
+        and parts[4] == "explanations"
+    ):
+        return "ai_quality_generate"
     if method == "GET" and (path == "/feedback" or path.startswith("/feedback/")):
         return "feedback_read"
     if method == "POST" and path == "/feedback":

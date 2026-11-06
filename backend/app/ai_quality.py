@@ -99,6 +99,7 @@ class Scenario(BaseModel):
 
 class Catalog(BaseModel):
     schema_version: Literal["1.0.0"] = "1.0.0"
+    model_status: Literal["disabled", "available", "unavailable"]
     scenarios: list[Scenario]
 
 
@@ -173,7 +174,7 @@ class LocalRuntime:
         except (ValueError, UnicodeError) as exc:
             raise RuntimeUnavailable from exc
 
-    def generate(self, prompt, *, model):
+    def verify_pin(self):
         if not self.pinned:
             version = self.request("version")
             models = self.request("tags")
@@ -191,6 +192,9 @@ class LocalRuntime:
             ):
                 raise RuntimeUnavailable
             self.pinned = True
+
+    def generate(self, prompt, *, model):
+        self.verify_pin()
         result = self.request(
             "generate",
             {
@@ -224,7 +228,15 @@ class QualityService:
         )
 
     def catalog(self):
+        status = "disabled"
+        if self.model_enabled():
+            try:
+                self.runtime_factory().verify_pin()
+                status = "available"
+            except (RuntimeUnavailable, OSError, TimeoutError):
+                status = "unavailable"
         return Catalog(
+            model_status=status,
             scenarios=[
                 Scenario(
                     id=s["id"],
@@ -232,13 +244,21 @@ class QualityService:
                     baseline=[baseline(g) for g in s["groups"]],
                 )
                 for s in self.scenarios
-            ]
+            ],
         )
+
+    @staticmethod
+    def model_enabled():
+        return os.getenv("SYNERGIA_AI_QUALITY_MODEL_ENABLED", "false").lower() == "true"
 
     def generate(self, scenario_id: str, mode: str):
         scenario = next((s for s in self.scenarios if s["id"] == scenario_id), None)
         if scenario is None:
             raise ApiError(404, "ai_scenario_not_found", "Cenário não encontrado")
+        if mode == "model" and not self.model_enabled():
+            raise ApiError(
+                503, "ai_quality_disabled", "Geração por modelo desabilitada"
+            )
         acquired = mode == "model" and self.lock.acquire(blocking=False)
         try:
             runtime = None

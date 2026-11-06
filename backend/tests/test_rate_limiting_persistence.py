@@ -7,9 +7,36 @@ from uuid import uuid4
 import psycopg
 import pytest
 
-from app.rate_limiting import PostgresRateLimiter, RatePolicy
+from app.rate_limiting import PostgresRateLimiter, RatePolicy, policies_from_env
 
 pytestmark = [pytest.mark.integration, pytest.mark.real_rate_limit]
+
+
+def test_quality_quota_persists_denial_without_subject_or_prompt() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    limiter = PostgresRateLimiter(database_url, "synthetic-rate-limit-" + "z" * 32)
+    policy = policies_from_env()["ai_quality_generate"]
+    subject = f"synthetic-{uuid4()}"
+    correlation = uuid4()
+    for _ in range(policy.limit):
+        assert limiter.consume(policy, "user", subject, correlation, "POST") is None
+    assert limiter.consume(policy, "user", subject, correlation, "POST") is not None
+    with psycopg.connect(database_url) as connection:
+        event = connection.execute(
+            """
+            SELECT operation, dimension, key_hash, correlation_id, route_group
+            FROM synergia.rate_limit_events
+            WHERE operation = %s AND key_hash = %s
+            """,
+            (policy.operation, limiter.digest(subject)),
+        ).fetchone()
+    assert event == (
+        "ai_quality_generate",
+        "user",
+        limiter.digest(subject),
+        correlation,
+        "ai_quality_generate",
+    )
 
 
 def test_atomic_limit_concurrency_audit_and_isolation() -> None:
