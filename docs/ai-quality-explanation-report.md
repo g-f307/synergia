@@ -25,7 +25,7 @@ precisam de avaliação humana independente.
 - Adversariais adicionais: quatro fixtures de saída do pipeline; serial
   ausente, duas ocorrências com severidades diferentes, quantidade inválida
   sem causa e referência ausente.
-- Três repetições, sem aquecimento excluído ou retry: 84 tentativas por braço.ja f
+- Três repetições, sem aquecimento excluído ou retry: 84 tentativas por braço.
 - Uma geração por grupo: 96 explicações planejadas para o candidato; casos
   vazios são registrados sem chamada ao modelo.
 - Qwen3 4B Instruct Q4_K_M, Ollama 0.40.12, digest idêntico ao da #148.
