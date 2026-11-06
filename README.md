@@ -34,6 +34,7 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [adapter de Total Decision para GMES/OQC](docs/total-decision-adapter.md);
 - [corpus, reconciliação e volume de ingestão](docs/ingestion-corpus-validation.md);
 - [entrega SMTP substituível, smoke e reconciliação](docs/smtp-email-provider.md);
+- [PoC da API interna de e-mail LG, com roteiro Windows sem downloads na rede restrita](docs/lg-email-poc.md) e [contrato sanitizado pendente de validação](docs/lg-email-api-contract.md);
 - [relatórios persistentes, versões e estados](docs/reports.md);
 - [plano de desempenho e confiabilidade pré-RPA](docs/performance-test-plan.md);
 - [síntese da baseline exploratória e decisão pré-RPA](docs/performance-baseline-pre-rpa.md);
