@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from app.auth.repository import PostgresAuthRepository
 from app.auth.security import PasswordVerifier, protected_identifier, sha256_token
 from app.main import app
+from app.observability.telemetry import bind_correlation_id, reset_correlation_id
 
 pytestmark = [pytest.mark.integration, pytest.mark.security]
 
@@ -54,6 +55,46 @@ def _login(repository, email, password, now):
     assert PasswordVerifier().verify(credentials.password_hash, password)
     return repository.create_session(
         attempt_id, credentials.user_id, now, 8, 24, None
+    )
+
+
+def test_auth_events_keep_correlation_without_leaking_to_next_call() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    _user_id, email, password, _hash = _create_user(database_url)
+    repository = PostgresAuthRepository(database_url)
+    now = datetime.now(UTC)
+    correlation = uuid4()
+    identifier_hash = protected_identifier(email, KEY)
+    token = bind_correlation_id(correlation)
+    try:
+        attempt, _ = repository.begin_login_attempt(
+            identifier_hash, None, now, 900, 5, 900
+        )
+        repository.fail_login(attempt, identifier_hash, "invalid_credentials")
+        session = _login(repository, email, password, now)
+    finally:
+        reset_correlation_id(token)
+    repository.rotate_refresh(sha256_token(session.refresh_token), now, 8)
+    with psycopg.connect(database_url) as connection:
+        events = connection.execute(
+            "SELECT event_key, correlation_id FROM synergia.identity_access_events "
+            "WHERE (event_key = 'auth.login_failed' AND entity_id = %s) "
+            "OR (session_id = %s AND event_key LIKE 'auth.%%')",
+            (str(attempt), session.session_id),
+        ).fetchall()
+    assert ("auth.login_failed", correlation) in events
+    assert ("auth.login_succeeded", correlation) in events
+    assert any(
+        key not in {"auth.login_failed", "auth.login_succeeded"} for key, _ in events
+    )
+    assert all(
+        value
+        == (
+            correlation
+            if key in {"auth.login_failed", "auth.login_succeeded"}
+            else None
+        )
+        for key, value in events
     )
 
 

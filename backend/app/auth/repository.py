@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 
 from app.auth.models import CredentialRecord, RefreshResult, SessionResult
 from app.auth.security import new_refresh_token, sha256_token
+from app.observability.telemetry import current_correlation_id
 
 
 class AuthRepository(Protocol):
@@ -80,8 +81,8 @@ class PostgresAuthRepository:
             """
             INSERT INTO synergia.identity_access_events (
                 event_key, actor_user_id, subject_user_id, session_id,
-                entity_type, entity_id, payload
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                entity_type, entity_id, payload, correlation_id
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 event_key,
@@ -91,6 +92,7 @@ class PostgresAuthRepository:
                 entity_type,
                 entity_id,
                 Jsonb(payload or {}),
+                current_correlation_id(),
             ),
         )
 

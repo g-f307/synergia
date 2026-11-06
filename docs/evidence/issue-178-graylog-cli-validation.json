@@ -1,0 +1,46 @@
+{
+  "status": "validated_worker_cli",
+  "results": [
+    {
+      "command": "process_graylog.py check",
+      "exit_code": 0,
+      "result": {
+        "status": "configuration_valid_no_network",
+        "enabled": true
+      }
+    },
+    {
+      "command": "process_graylog.py status",
+      "exit_code": 0,
+      "result": {
+        "status": "inspected",
+        "queue": {
+          "pending": 0,
+          "inflight": 0,
+          "accepted": 12,
+          "uncertain": 0,
+          "blocked": 0,
+          "exhausted": 0
+        },
+        "events_first_100": []
+      }
+    },
+    {
+      "command": "process_graylog.py run --allow-network",
+      "exit_code": 0,
+      "result": {
+        "status": "completed",
+        "processed": 0,
+        "accepted": 0,
+        "queue": {
+          "pending": 0,
+          "inflight": 0,
+          "accepted": 12,
+          "uncertain": 0,
+          "blocked": 0,
+          "exhausted": 0
+        }
+      }
+    }
+  ]
+}

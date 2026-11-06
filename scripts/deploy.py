@@ -32,7 +32,10 @@ from deploy_common import (  # noqa: E402
 from app.deployment_environment import validate_deployment_environment  # noqa: E402
 
 PROJECT_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,62}")
-SERVICES = ("config-check", "postgres", "migrate", "backend", "email-worker", "web")
+SERVICES = (
+    "config-check", "postgres", "migrate", "backend", "email-worker",
+    "graylog-worker", "web",
+)
 VOLUMES = ("synergia-postgres", "synergia-application-data")
 # Deliberately do not inherit COMPOSE_*, SYNERGIA_*, passwords or .env overrides.
 HOST_VARIABLES = (

@@ -13,6 +13,7 @@ import urllib.request
 from functools import lru_cache
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
@@ -26,6 +27,7 @@ from app.ai_quality_core import (
 )
 from app.authorization import ActorContext, require_permission
 from app.errors import ApiError
+from app.model_audit import ModelAuditRepository, get_model_audit_repository
 
 router = APIRouter(prefix="/ai/quality", tags=["ai-quality"])
 MODEL = "qwen3:4b-instruct"
@@ -306,5 +308,28 @@ def generate(
     payload: GenerateRequest,
     actor: Annotated[ActorContext, Depends(require_permission("execution.read"))],
     service: Annotated[QualityService, Depends(get_quality_service)],
+    audit: Annotated[ModelAuditRepository, Depends(get_model_audit_repository)],
 ):
-    return service.generate(scenario_id, payload.mode)
+    if payload.mode != "model":
+        return service.generate(scenario_id, payload.mode)
+    operation_id = uuid4()
+    audit.record(actor, operation_id, "llm.requested")
+    started = time.monotonic()
+    try:
+        result = service.generate(scenario_id, payload.mode)
+    except Exception:
+        audit.record(
+            actor,
+            operation_id,
+            "llm.failed",
+            duration_ms=max(0, round((time.monotonic() - started) * 1000)),
+        )
+        raise
+    audit.record(
+        actor,
+        operation_id,
+        "llm.completed",
+        duration_ms=max(0, round((time.monotonic() - started) * 1000)),
+        fallback=any(group.rejection_code is not None for group in result.groups),
+    )
+    return result
