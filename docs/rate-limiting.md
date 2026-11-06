@@ -20,6 +20,7 @@ continuam limitados por origem e pelo fingerprint da credencial apresentada.
 | Busca | 120 | 60 s | fechada |
 | Reprocessamento | 10 | 300 s | fechada |
 | Geração de relatório | 20 | 300 s | fechada |
+| Explicação sintética de qualidade (`ai_quality_generate`) | 3 | 300 s | fechada |
 | Exportação | 60 | 60 s | fechada |
 | Consulta de auditoria (`audit_read`) | 60 | 60 s | fechada |
 | Exportação de auditoria (`audit_export`) | 10 | 60 s | fechada |
@@ -51,6 +52,13 @@ Uma cota esgotada responde `429` com código estável `rate_limit_exceeded`, cam
 fim da janela. Falhas do PostgreSQL respondem `503 rate_limit_unavailable`.
 Nenhuma operação protegida segue sem consumir sua cota, evitando bypass durante
 degradações.
+
+`POST /ai/quality/scenarios/{scenario_id}/explanations` usa uma cota própria,
+independente de relatórios e leituras de execuções. Trocar cenário ou modo
+(`model`/`baseline`) não restaura o limite. O catálogo GET, que já inclui baseline,
+permanece acessível sem consumir a cota de geração. As recusas são registradas
+com a operação `ai_quality_generate` no mesmo armazenamento auditável das demais
+operações, sem guardar prompt, cenário ou resposta do modelo.
 
 ## Observabilidade e ajuste
 
