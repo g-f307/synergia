@@ -1,0 +1,8 @@
+{
+  "os": "Linux",
+  "kernel": "6.18.54.1-microsoft-standard-WSL2",
+  "python": "3.12.15",
+  "cpu": "11th Gen Intel(R) Core(TM) i5-11300H @ 3.10GHz",
+  "ram_total_bytes": 12429488128,
+  "gpu_names_drivers": "NVIDIA GeForce GTX 1650, 617.42, 4096"
+}

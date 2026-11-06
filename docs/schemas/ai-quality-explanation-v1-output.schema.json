@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:synergia:ai-quality-explanation:output:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["explanation", "human_checks"],
+  "properties": {
+    "explanation": {"type": "string", "minLength": 20, "maxLength": 400},
+    "human_checks": {
+      "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true,
+      "items": {"type": "string", "minLength": 10, "maxLength": 150}
+    }
+  }
+}

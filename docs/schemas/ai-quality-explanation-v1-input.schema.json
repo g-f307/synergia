@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:synergia:ai-quality-explanation:input:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "groups"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"type": "string", "maxLength": 100},
+    "groups": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/group"}}
+  },
+  "$defs": {
+    "position": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["state"], "properties": {"state": {"const": "not_provided"}}},
+        {"type": "object", "additionalProperties": false, "required": ["state", "value"], "properties": {"state": {"const": "known"}, "value": {"type": ["string", "integer"], "maxLength": 200}}}
+      ]
+    },
+    "known_value": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["state"], "properties": {"state": {"const": "unavailable"}}},
+        {"type": "object", "additionalProperties": false, "required": ["state", "value"], "properties": {"state": {"const": "observed"}, "value": {"type": ["string", "number", "boolean"], "maxLength": 200}}}
+      ]
+    },
+    "occurrence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "severity", "reason", "field", "column", "row", "sheet", "known_value", "unknown_value"],
+      "properties": {
+        "evidence_id": {"type": "string", "pattern": "^ev-[0-9]+$"},
+        "severity": {"enum": ["error", "warning"]},
+        "reason": {"type": "string", "maxLength": 500},
+        "field": {"$ref": "#/$defs/position"},
+        "column": {"$ref": "#/$defs/position"},
+        "row": {"$ref": "#/$defs/position"},
+        "sheet": {"$ref": "#/$defs/position"},
+        "known_value": {"$ref": "#/$defs/known_value"},
+        "unknown_value": {"type": "object", "additionalProperties": false, "required": ["state"], "properties": {"state": {"enum": ["missing", "not_exposed", "not_applicable"]}}}
+      }
+    },
+    "group": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "category", "causal_evidence", "occurrences"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[a-z_]+$", "maxLength": 80},
+        "category": {"enum": ["reading", "completeness", "layout", "format", "reference", "consistency", "unknown"]},
+        "causal_evidence": {"const": "not_provided"},
+        "occurrences": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"$ref": "#/$defs/occurrence"}}
+      }
+    }
+  }
+}

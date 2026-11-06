@@ -90,6 +90,10 @@ deliberadamente deixada para issue posterior.
 
 ## Manutenção
 
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Refinar explicação assistida de ocorrências de qualidade | NF | fatos determinísticos; valor ausente explícito; frases validadas; fallback; área autenticada com geração real e dados sintéticos | [#179](https://github.com/g-f307/synergia/issues/179) | `backend/app/ai_quality.py`; núcleo compartilhado; `web/src/app/domains/ai-quality/`; [uso e referências visuais](ai-quality-ui.md) | testes API/Angular; rodada congelada; ensaio integrado com modelo real e capturas | Área experimental integrada; sem decisões ou dados operacionais; avaliação humana de utilidade pendente |
+
 ### Fechamento integrado da Etapa 4
 
 | Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |

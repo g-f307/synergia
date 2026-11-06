@@ -1,0 +1,17 @@
+{
+  "complete": true,
+  "planned_case_attempts_per_arm": 84,
+  "planned_group_attempts_per_arm": 96,
+  "duplicate_regression_attempts": 6,
+  "duplicate_regression_passed": true,
+  "unchanged_inference_sources": true,
+  "post_freeze_presentation_change": {
+    "file": "scripts/ai_quality_explanation_demo.html",
+    "reason": "Mobile browser test found native select wider than viewport; add width constraints only.",
+    "original_preserved": "docs/evidence/issue-179-quality-explanation/frozen-demo-template-v1.html",
+    "current_sha256": "ef7a55b9cd5d0f563e0ec76e88fae66f4b3d0f7967e0a239a8026f93420a48ee"
+  },
+  "accepted_explanations_equal_baseline": 96,
+  "groups_with_more_checks_than_baseline": 96,
+  "independent_human_utility_review": "not_performed"
+}
