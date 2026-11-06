@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-06T21:58:30.123224+00:00",
+  "branch": "feature/178-graylog-integration",
+  "revision_state": "tested_sources_committed",
+  "tests": [
+    {
+      "selection": "not integration",
+      "command": "pytest -q -m \"not integration\" --tb=short",
+      "result": "1764 passed, 800 deselected, 15 warnings in 78.31s (0:01:18)",
+      "exit_code": 0
+    },
+    {
+      "selection": "integration",
+      "command": "pytest -q -m \"integration\" --tb=short",
+      "result": "800 passed, 1764 deselected, 5 warnings in 259.82s (0:04:19)",
+      "exit_code": 0
+    }
+  ],
+  "initial_integration_attempt": {
+    "passed": 736,
+    "setup_errors": 64,
+    "cause": "PGHOST and PGPORT absent for fixtures using libpq environment",
+    "resolution": "Repeated on a new synthetic database with explicit PGHOST, PGPORT, PGUSER, PGDATABASE and PGPASSWORD; no tests disabled"
+  },
+  "checks_passed": [
+    "ruff check backend scripts",
+    "compileall",
+    "docker compose --env-file .env.example config --quiet",
+    "security_release.py validate",
+    "security_release.py secrets",
+    "validate_access_matrix.py",
+    "validate_web_journey_map.py",
+    "validate_http_security.py",
+    "security_matrix.py --check",
+    "validate_homologation_observability.py",
+    "git diff --check"
+  ],
+  "backend_image": {
+    "tag": "localhost/synergia-178-backend:final-validation",
+    "id": "fd04af84bb33c1e43768394743273dc7f9dc6a37ee683014d32b0530c8486468",
+    "revision_label": "unknown",
+    "nonroot_uid": 10001,
+    "network_none_cli_smoke": [
+      "init",
+      "check",
+      "run disabled"
+    ],
+    "status": "passed"
+  },
+  "not_run": [
+    "remote CI",
+    "full SYNERGIA frontend E2E",
+    "corporate deployment"
+  ],
+  "tests_executed_before_commit": true,
+  "source_commits": {
+    "collector": "815a515a22d18b0192446b3abe36ae5e4f047179",
+    "laboratory": "998a11aa366a0ead39d39c9c0d115ad6c38cbf53"
+  },
+  "local_prepublication_source_commits": {
+    "collector": "de43c14b530ceba604b41ffa1303546ad91d8d08",
+    "laboratory": "766dbeb24882ef9206bc26dc4f2988edf10d49cd"
+  },
+  "publication_method": "GitHub Git Data API; identical source trees verified by Git SHA"
+}

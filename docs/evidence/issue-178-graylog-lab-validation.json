@@ -1,0 +1,40 @@
+{
+  "status": "validated_real_graylog",
+  "graylog_version": "7.2.2+94adc86",
+  "started_at": "2026-11-06T21:50:28.167030+00:00",
+  "finished_at": "2026-11-06T21:50:42.504600+00:00",
+  "http_statuses": {
+    "invalid_login": 401,
+    "valid_login": 200,
+    "denied_access": 403,
+    "login_while_input_stopped": 401
+  },
+  "import_http_status": 422,
+  "distinct_event_ids": 12,
+  "scenario_counts": {
+    "access": 3,
+    "import": 3,
+    "recovery": 1
+  },
+  "source_and_index_ids_match": true,
+  "accepted_repeat_processed": 0,
+  "recovered_repeat_processed": 0,
+  "incorrect_input_credential": "http_401",
+  "corporate_deployment": "not_evaluated",
+  "indexed_actions": [
+    "auth.login_failed",
+    "auth.login_failed",
+    "auth.login_succeeded",
+    "authorization.denied",
+    "execution_failed",
+    "execution_transitioned",
+    "file_rejected",
+    "notification.created",
+    "notification.delivered",
+    "session.created",
+    "user.created",
+    "user.updated"
+  ],
+  "environment": "local WSL Fedora / Podman / synthetic isolated PostgreSQL",
+  "human_utility_assessment": "pending"
+}
