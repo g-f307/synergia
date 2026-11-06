@@ -61,6 +61,9 @@ test('quality AI uses the authenticated Synergia shell and read-only synthetic s
   await expect(page.locator('.explanation')).toContainText('O valor ausente não pode ser determinado.');
   for (const theme of ['light', 'dark']) {
     if (theme === 'dark') await page.getByRole('button', { name: /alternar tema/i }).click();
+    await page.locator('.quality-page').evaluate(async element => {
+      await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished));
+    });
     const results = await new AxeBuilder({ page }).include('.quality-page').analyze();
     expect(results.violations.filter(v => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
     await page.screenshot({ path: info.outputPath(`quality-${theme}.png`) });
