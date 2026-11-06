@@ -1,5 +1,8 @@
 # Primeiros passos no SYNERGIA
 
+Para implantar em homologação, atualizar, diagnosticar ou recuperar, use a
+[entrada operacional de implantação](deployment/README.md). Este roteiro é local.
+
 Este roteiro sobe PostgreSQL, migrations, API FastAPI e aplicação Angular em
 containers. Ele usa somente configuração e dados locais; não representa a
 implantação corporativa da LG.
