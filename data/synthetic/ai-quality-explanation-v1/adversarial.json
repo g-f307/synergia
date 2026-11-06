@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "origin": "Casos ficcionais adversariais da issue #179; regressão conhecida, sem nova amostra reservada ou revisão humana independente.",
+  "cases": [
+    {"case_id": "QE-A01", "label": "Serial ausente na coluna B", "source": "GMES/OQC", "headers": ["workorder_number", "serial_number"], "rows": [["WO-SYN-17901", ""]], "occurrences": [{"evidence_id": "ev-1", "code": "required_field", "severity": "error", "reason": "Campo obrigatório vazio: serial_number", "sheet": "synthetic", "row": 2, "column": "B"}]},
+    {"case_id": "QE-A02", "label": "Mesmo código em duas posições", "source": "GMES/OQC", "headers": ["workorder_number", "serial_number"], "rows": [["WO-SYN-17902", "SYN-179-A"], ["WO-SYN-17903", "SYN-179-A"], ["WO-SYN-17904", "SYN-179-A"]], "occurrences": [{"evidence_id": "ev-1", "code": "duplicate_serial", "severity": "error", "reason": "Serial duplicado; primeira ocorrência em synthetic:2", "sheet": "synthetic", "row": 3, "column": "B"}, {"evidence_id": "ev-2", "code": "duplicate_serial", "severity": "warning", "reason": "Serial duplicado; primeira ocorrência em synthetic:2", "sheet": "synthetic", "row": 4, "column": "B"}]},
+    {"case_id": "QE-A03", "label": "Quantidade inválida sem causa comprovada", "source": "N-FP", "headers": ["workorder_number", "planned_quantity"], "rows": [["WO-SYN-17905", -7]], "occurrences": [{"evidence_id": "ev-1", "code": "invalid_quantity", "severity": "error", "reason": "Quantidade inválida: planned_quantity", "sheet": "synthetic", "row": 2, "column": "B"}]},
+    {"case_id": "QE-A04", "label": "Referência ausente sem valor inferível", "source": "N-FP", "headers": ["workorder_number"], "rows": [["WO-SYN-17906"]], "occurrences": [{"evidence_id": "ev-1", "code": "missing_reference_data", "severity": "warning", "reason": "Base de referência não fornecida", "sheet": null, "row": null, "column": null}]}
+  ]
+}

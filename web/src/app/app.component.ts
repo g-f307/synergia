@@ -35,7 +35,8 @@ export class AppComponent {
     { label: 'navigation.executions', route: '/executions', permission: 'execution.read', icon: 'run.svg', implemented: true },
     { label: 'navigation.search', route: '/search', permission: 'business.read', icon: 'search.svg', implemented: true },
     { label: 'navigation.pending', route: '/pending-items', permission: 'pending.read', icon: 'queue.svg', implemented: true },
-    { label: 'navigation.reports', route: '/reports', permission: 'report.read', icon: 'report.svg', implemented: true }
+    { label: 'navigation.reports', route: '/reports', permission: 'report.read', icon: 'report.svg', implemented: true },
+    { label: 'quality.navigation', route: '/ai/quality', permission: 'execution.read', icon: 'human-review.svg', implemented: true }
   ];
   readonly visibleItems = computed(() => this.items.filter((item) => item.implemented && this.session.hasPermission(item.permission)));
 
@@ -55,6 +56,11 @@ export class AppComponent {
     });
   }
 
+  feedbackSource(): string {
+    let snapshot = this.router.routerState.snapshot.root;
+    while (snapshot.firstChild) snapshot = snapshot.firstChild;
+    return snapshot.routeConfig?.path || 'profile';
+  }
   toggleMenu(): void { this.menuOpen.update((value) => !value); }
   toggleSidebar(): void {
     this.sidebarCollapsed.update((value) => !value);
@@ -77,6 +83,8 @@ export class AppComponent {
 
   private navigationContextFor(url: string): NavigationContext {
     const path = url.split('?')[0];
+    if (path === '/ai/quality') return { label: 'quality.navigation', icon: 'human-review.svg', hideBreadcrumbs: true };
+    if (path.startsWith('/feedback')) return { label: path.startsWith('/feedback/triage') ? 'feedback.triage' : path === '/feedback/new' ? 'feedback.send' : 'feedback.own', icon: 'mail.svg', hideBreadcrumbs: true };
     if (path === '/dashboard/related/workorders') return { label: 'dashboard.workorders', icon: 'production.svg', hideBreadcrumbs: true };
     if (path.startsWith('/workorders/')) return { label: 'dashboard.workorders', icon: 'production.svg', detail: decodeURIComponent(path.slice('/workorders/'.length)), hideBreadcrumbs: true };
     if (path.startsWith('/pending-items/')) return { label: 'navigation.pending', icon: 'queue.svg', detail: decodeURIComponent(path.slice('/pending-items/'.length)), hideBreadcrumbs: true };

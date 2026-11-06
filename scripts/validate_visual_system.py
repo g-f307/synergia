@@ -78,6 +78,17 @@ def validate() -> None:
     failures = [pair for pair in checks if _contrast(*pair) < 4.5]
     if failures:
         raise ValueError(f"Contraste AA insuficiente: {failures}")
+    tokens = {}
+    for selector in (":root", "[data-theme=dark]"):
+        block = re.search(re.escape(selector) + r"\{([^}]+)\}", css)
+        if block is None:
+            raise ValueError(f"Tema visual ausente: {selector}")
+        tokens.update(re.findall(r"(--[\w-]+):([^;]+)", block.group(1)))
+        pair = (tokens["--syn-unavailable"], tokens["--syn-unavailable-bg"])
+        if _contrast(*pair) < 4.5:
+            raise ValueError(
+                f"Contraste AA insuficiente em unavailable ({selector}): {pair}"
+            )
     journeys = ("login", "profile", "import", "execution")
     viewports = ("desktop", "mobile")
     for capture in (

@@ -44,6 +44,8 @@ Não há herança implícita nem papel `superuser`.
 | `artifact.read` | validação, normalizado, divergência e evidência | — | ✓ | ✓ | ✓ | — |
 | `execution.reprocess` | execução | — | ✓ | — | — | — |
 | `audit.read` | histórico auditável | ✓ | ✓ | ✓ | — | — |
+| `feedback.triage` | triagem de feedback organizacional | — | ✓ | — | — | — |
+| `audit.export` | exportar auditoria sanitizada | — | ✓ | ✓ | — | — |
 | `artifact.export` | download de evidência aceita | — | ✓ | ✓ | — | — |
 | `report.export` | exportar versão concluída de relatório | — | ✓ | ✓ | — | — |
 | `report.generate` | nova versão de relatório | — | ✓ | — | — | — |
@@ -89,6 +91,13 @@ também dependerá da política de rede da TI.
 | `GET /auth/sessions` | `session.revoke.own` | sessões próprias ativas | `own` | admin, gestor, analista, operador, consulta |
 | `POST /auth/sessions/revoke-others` | `session.revoke.own` | outras sessões próprias | `own` | admin, gestor, analista, operador, consulta |
 | `DELETE /auth/sessions/{session_id}` | `session.revoke.own` | sessão própria indicada | `own` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/policy` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `POST /feedback` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/{feedback_id}` | `feedback.own` | feedback | `own/org` | admin, gestor, analista, operador, consulta |
+| `GET /feedback/triage` | `feedback.triage` | feedback | `org` | gestor |
+| `GET /feedback/triage/{feedback_id}` | `feedback.triage` | feedback | `org` | gestor |
+| `PATCH /feedback/triage/{feedback_id}` | `feedback.triage` | feedback | `org` | gestor |
 | `GET /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `PATCH /me` | `profile.own` | perfil próprio | `own` | admin, gestor, analista, operador, consulta |
 | `POST /me/avatar` | `profile.own` | avatar próprio | `own` | admin, gestor, analista, operador, consulta |
@@ -102,6 +111,8 @@ também dependerá da política de rede da TI.
 | `GET /imports/{execution_id}/normalized-data` | `artifact.read` | dados normalizados | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/pipeline-summary` | `import.read` | resumo do pipeline | `org` | gestor, analista, operador |
 | `GET /executions` | `execution.read` | catálogo de execuções | `org` | gestor, analista, operador, consulta |
+| `GET /ai/quality/scenarios` | `execution.read` | cenários de qualidade exclusivamente sintéticos | `synthetic` | gestor, analista, operador, consulta |
+| `POST /ai/quality/scenarios/{scenario_id}/explanations` | `execution.read` | explicação assistida sem mutação ou dados operacionais | `synthetic` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}` | `execution.read` | execução | `org` | gestor, analista, operador, consulta |
 | `GET /workorders/{workorder_number}` | `business.read` | Workorder | `org` | gestor, analista, operador, consulta |
 | `GET /search` | `business.read` | busca operacional persistida | `org` | gestor, analista, operador, consulta |
@@ -110,6 +121,8 @@ também dependerá da política de rede da TI.
 | `GET /pending-items` | `pending.read` | pendências | `org` | gestor, analista, operador, consulta |
 | `GET /pending-items/{pending_id}` | `pending.read` | pendência | `org` | gestor, analista, operador, consulta |
 | `GET /history` | `audit.read` | eventos | `org` | admin, gestor, analista |
+| `GET /audit/events` | `audit.read` | auditoria sanitizada | `org/global` | admin, gestor, analista |
+| `GET /audit/events/export` | `audit.export` | exportação de auditoria | `org/global` | gestor, analista |
 | `GET /workorders/{workorder_number}/consolidated-result` | `business.read` | consolidado | `org` | gestor, analista, operador, consulta |
 | `POST /executions/{execution_id}/reprocess` | `execution.reprocess` | execução | `org` | gestor |
 | `GET /indicators` | `dashboard.read` | indicadores | `org` | gestor, analista, operador, consulta |
@@ -196,6 +209,11 @@ administração a `access.admin`.
 
 ## Escopo por organização
 
+A auditoria consolidada exige uma única organização autorizada por requisição,
+ou exclusivamente eventos globais com concessão global explícita. Exportar
+também exige `audit.read` no mesmo escopo de `audit.export`; nenhum papel
+administrativo implica exportação. Consulte [audit-export.md](audit-export.md).
+
 O escopo organizacional é **obrigatório** para dados operacionais. Cada vínculo
 de papel terá `organization_scope = list` com um ou mais `organization_id`, ou
 `all` quando aprovado. `all` não decorre do papel `admin`; é uma concessão
@@ -275,3 +293,7 @@ Além dos portões `ID-P01` a `ID-P07` da ADR (registro em
 | AUTH-P03 | classificar campos sensíveis de normalizados, evidências e exportações | Segurança/DPO/Gestor |
 | AUTH-P04 | definir limite operacional para exportações; os formatos iniciais aprovados são CSV e JSON | Gestor |
 | AUTH-P05 | revisar esta matriz por integrante diferente do autor antes do merge | Revisor do PR |
+
+
+
+Feedback exige vínculo organizacional ativo único, derivado no servidor. Concessões globais não criam vínculo. Autores consultam exclusivamente seus registros; triadores precisam de `feedback.triage` nesse vínculo. Nenhum payload escolhe organização.

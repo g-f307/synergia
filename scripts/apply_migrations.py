@@ -11,6 +11,8 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0035": ("feedback_contract", "synergia", ""),
+    "0034": ("audit_export_contract", "synergia", ""),
     "0033": (
         "checks_contain",
         "",
@@ -72,6 +74,52 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "feedback_contract":
+        if not object_exists(connection, "table", "synergia", "permissions"):
+            return False
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
+            to_regclass('synergia.feedback') IS NOT NULL
+            AND to_regclass('synergia.feedback_events') IS NOT NULL
+            AND (SELECT count(*) FROM pg_trigger
+                 WHERE tgname IN ('feedback_events_immutable',
+                     'feedback_mutation_guard', 'feedback_audit_created')
+                     AND tgenabled <> 'D') = 3
+            AND EXISTS (SELECT 1 FROM synergia.permissions
+                        WHERE normalized_key = 'feedback.triage'
+                          AND catalog_version = '1.5.0' AND is_reserved)"""
+            ).fetchone()
+            is not None
+        )
+    if kind == "audit_export_contract":
+        if not object_exists(connection, "table", "synergia", "permissions"):
+            return False
+        row = connection.execute(
+            """SELECT 1
+            WHERE EXISTS (
+                SELECT 1 FROM pg_class
+                WHERE oid = to_regclass('synergia.audit_event_catalog')
+                  AND relkind = 'v'
+            ) AND EXISTS (
+                SELECT 1 FROM pg_trigger
+                WHERE tgrelid = to_regclass('synergia.audit_export_events')
+                  AND tgname = 'audit_export_events_immutable'
+                  AND tgenabled <> 'D'
+            ) AND to_regclass('synergia.audit_export_events_one_result') IS NOT NULL
+            AND (SELECT count(*) FROM pg_constraint
+                 WHERE conrelid = to_regclass('synergia.audit_export_events')
+                   AND conname IN (
+                       'audit_export_events_event_count_check',
+                       'audit_export_events_export_format_check'
+                   )) = 2
+            AND EXISTS (
+                SELECT 1 FROM synergia.permissions
+                WHERE normalized_key = 'audit.export'
+                  AND catalog_version = '1.4.0' AND is_reserved
+            )"""
+        ).fetchone()
+        return row is not None
     if kind == "schema":
         row = connection.execute(
             "SELECT 1 FROM information_schema.schemata WHERE schema_name = %s",

@@ -12,10 +12,17 @@ describe('I18nService', () => {
   });
 
   it('uses Brazilian Portuguese as the safe fallback', () => {
-    service.configure('es-ES', 'UTC');
+    service.configure('fr-FR', 'UTC');
 
     expect(service.locale()).toBe('pt-BR');
     expect(document.documentElement.lang).toBe('pt-BR');
+    expect(service.t('auth.submit')).toBe('Entrar');
+  });
+
+  it('translates the feedback journey into Spanish with a legacy fallback', () => {
+    service.configure('es-ES', 'UTC');
+    expect(service.t('feedback.send')).toBe('Enviar comentarios');
+    expect(service.t('feedback.state.resolved')).toBe('Resuelto');
     expect(service.t('auth.submit')).toBe('Entrar');
   });
 

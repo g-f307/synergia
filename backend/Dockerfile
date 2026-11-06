@@ -1,8 +1,12 @@
 FROM docker.io/library/python:3.14-alpine
 
+ARG SYNERGIA_BUILD_REVISION=unknown
+LABEL org.opencontainers.image.revision=$SYNERGIA_BUILD_REVISION
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/opt/synergia/backend
+    PYTHONPATH=/opt/synergia/backend \
+    SYNERGIA_BUILD_REVISION=$SYNERGIA_BUILD_REVISION
 
 WORKDIR /opt/synergia/backend
 
@@ -23,6 +27,7 @@ RUN addgroup --gid 10001 --system synergia \
 COPY --chown=synergia:synergia backend/app app
 COPY --chown=synergia:synergia scripts/apply_migrations.py scripts/apply_migrations.py
 COPY --chown=synergia:synergia scripts/container_entrypoint.py scripts/container_entrypoint.py
+COPY --chown=synergia:synergia scripts/smoke_containers.py scripts/smoke_containers.py
 COPY --chown=synergia:synergia scripts/process_email_notifications.py scripts/process_email_notifications.py
 COPY --chown=synergia:synergia scripts/reconcile_smtp_delivery.py scripts/reconcile_smtp_delivery.py
 COPY --chown=synergia:synergia scripts/smoke_smtp_delivery.py scripts/smoke_smtp_delivery.py

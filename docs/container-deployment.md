@@ -45,6 +45,12 @@ e permissões desses volumes antes da homologação.
 
 ## Sondas e operação
 
+O fluxo versionado de instalação, atualização, verificação, rollback e
+reconciliação está em [deploy-automation.md](deploy-automation.md). A ferramenta
+atual administra o PostgreSQL do Compose; a alternativa de banco gerenciado
+corporativo requer adaptação e contrato próprios. Não se presume esse suporte
+apenas pela possibilidade arquitetural registrada acima.
+
 - `GET /health/live`: processo da API vivo;
 - `GET /health/ready`: banco, schema e armazenamento prontos;
 - frontend `/`: conteúdo servido pelo Nginx.

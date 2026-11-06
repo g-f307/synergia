@@ -8,6 +8,7 @@ deliberadamente deixada para issue posterior.
 
 | Requisito | Tipo | Regra ou decisão relacionada | Issue | Implementação principal | Evidência automatizada | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| Automatizar implantação e recuperação da aplicação | NF | projeto explícito; configuração externa; diagnóstico sem alterações; pausa dos escritores e promoção após smoke; rollback por IDs, volumes existentes e ledger compatível; portas efetivas verificadas; reconciliação explícita sem repetir SQL; retomada da inicialização antes da primeira tentativa SQL | [#166](https://github.com/g-f307/synergia/issues/166) | `scripts/deploy*.py`; `scripts/validate_deploy.py`; `app/deployment_environment.py`; `docs/deploy-automation.md` | `test_deploy*.py`; `test_container_entrypoint.py`; 22 cenários Docker, incluindo timeout inicial e adoção da main anterior com PostgreSQL parado; `docs/deploy-validation-report.md`; job `deployment` | Atendido tecnicamente em homologação sintética local; correções da revisão validadas localmente, nova CI e revisão pendentes; não implica implantação LG |
 | Aplicação web oficial sem substituir o protótipo publicado | NF | Angular é a implementação; protótipo é referência separada | [#1](https://github.com/g-f307/synergia/issues/1) | `web/src/app/`, `web/angular.json` | `app.component.spec.ts`; job `frontend` | Atendido |
 | Congelar e publicar o protótipo navegável sem duplicá-lo na `main` | NF | branch `prototype-pages` e tag imutável | [#2](https://github.com/g-f307/synergia/issues/2) | branch `prototype-pages`; configuração GitHub Pages | job `prototype` verifica `index.html`, `styles.css` e `script.js` | Atendido |
 | Validar aplicação e dados sem alterar a branch publicada | NF | PRs contra `main`; protótipo somente leitura | [#3](https://github.com/g-f307/synergia/issues/3) | `.github/workflows/ci.yml`, `scripts/validate_project_assets.py` | cinco jobs do workflow `CI` | Atendido |
@@ -90,6 +91,10 @@ deliberadamente deixada para issue posterior.
 
 ## Manutenção
 
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Refinar explicação assistida de ocorrências de qualidade | NF | fatos determinísticos; valor ausente explícito; frases validadas; fallback; área autenticada com geração real e dados sintéticos | [#179](https://github.com/g-f307/synergia/issues/179) | `backend/app/ai_quality.py`; núcleo compartilhado; `web/src/app/domains/ai-quality/`; [uso e referências visuais](ai-quality-ui.md) | testes API/Angular; rodada congelada; ensaio integrado com modelo real e capturas | Área experimental integrada; sem decisões ou dados operacionais; avaliação humana de utilidade pendente |
+
 ### Fechamento integrado da Etapa 4
 
 | Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
@@ -101,3 +106,16 @@ correspondente. Nova capacidade deve adicionar linha com issue e teste; mudança
 de regra deve apontar a versão do catálogo aplicável. Componentes futuros de
 [architecture.md](architecture.md) permanecem `Planejado` até possuírem issue,
 implementação e evidência próprias.
+
+## Auditoria e exportação controlada
+
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Consultar e exportar auditoria com proteção de dados | F/NF | inventário de onze fontes; JSON/CSV com filtros equivalentes; escopo único; permissão explícita; UTC; ordem estável; limites; sanitização; CSV injection neutralizada; solicitação e resultado append-only; download de evidência auditado | [#169](https://github.com/g-f307/synergia/issues/169) | `backend/app/audit.py`; migration `0034`; `execution_monitoring.py`; `docs/audit-event-inventory.json`; `docs/audit-export.md` | `test_audit.py`, `test_audit_persistence.py`, regressão de evidências e matriz real de autorização; exemplos sintéticos | Atendido no contrato de API; destino e retenção corporativos fora do escopo |
+
+
+## Feedback pela aplicação
+
+| Requisito | Tipo | Critério verificável | Origem | Implementação | Evidência | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Registrar e tratar bugs e sugestões com isolamento | F/NF | vínculo organizacional único derivado; autor consulta próprios registros; permissão de triagem; origem permitida; protocolo imutável; filtros; justificativa; concorrência; auditoria sanitizada; pt/en/es; acessibilidade | [#168](https://github.com/g-f307/synergia/issues/168) | `backend/app/feedback.py`; migration 0035; `web/src/app/domains/feedback/`; [contrato](product-feedback.md) | `test_feedback_persistence.py`, testes de baseline/IAM, testes Angular e `web/e2e/feedback.spec.ts`; [validação](feedback-validation.md) | Implementado e validado localmente; revisão e CI no PR |

@@ -17,11 +17,13 @@ manuais e dados sintéticos; integrações RPA serão incorporadas posteriorment
 O README é o ponto de entrada. Os detalhes vigentes ficam em:
 
 - [guia consolidado de implantação, diagnóstico, atualização e recuperação](docs/deployment/README.md);
+- [consulta, exportação segura e inventário de auditoria](docs/audit-export.md);
 - [arquitetura implementada e componentes planejados](docs/architecture.md);
 - [matriz de rastreabilidade dos requisitos e issues](docs/traceability-matrix.md);
 - [roadmap e estado das etapas](docs/roadmap.md);
 - [propostas e contratos das PoCs locais de IA](docs/ai-poc-proposals.md);
 - [plano de avaliação das PoCs locais de IA](docs/ai-poc-evaluation-plan.md);
+- [IA — Qualidade integrada à interface, geração local e referências visuais](docs/ai-quality-ui.md);
 - [apresentação e roteiros do Demo Day de IA](docs/demo-day/README.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);

@@ -27,6 +27,11 @@ não são expostos por verificações organizacionais.
 
 ## Auditoria e correlação
 
+A consulta consolidada exige `audit.read`; a exportação também exige
+`audit.export` no mesmo escopo. Cada requisição seleciona uma organização
+autorizada ou exclusivamente eventos globais com concessão global explícita.
+Consulte [audit-export.md](audit-export.md) para o contrato e os limites.
+
 A API aceita `X-Correlation-ID` no formato UUID ou gera um novo valor e sempre
 o devolve na resposta. Negações relevantes registram ação, método, rota
 normalizada, UUID interno do ator, sessão, organização e correlation ID. Tokens,

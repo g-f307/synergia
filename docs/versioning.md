@@ -1,5 +1,11 @@
 # Convenções de versionamento
 
+A API `0.10.0` acrescenta `GET /audit/events` e
+`GET /audit/events/export` (#169), preservando `GET /history`.
+A migration `0034` publica a permissão `audit.export` no catálogo `1.4.0`.
+O formato de exportação possui versão própria `1.0.0`, documentada em
+[audit-export.md](audit-export.md).
+
 O repositório usa GitHub Flow, releases com versionamento semântico e artefatos
 de domínio versionados junto ao código. A versão permite responder qual
 contrato, schema e conjunto de regras produziram um resultado.
@@ -15,6 +21,12 @@ Tags de release seguem `vMAJOR.MINOR.PATCH`:
 Uma release só pode partir da `main`, com CI verde, documentação coerente e sem
 issue bloqueadora conhecida. O título e as notas relacionam issues e PRs. Tags
 publicadas não são movidas ou recriadas; uma correção gera nova versão.
+
+A automação de implantação registra separadamente o SHA completo do checkout
+e os IDs imutáveis das imagens. O SHA aparece na label OCI
+`org.opencontainers.image.revision` e no startup do backend. Esse identificador
+operacional não altera `info.version` da API nem cria automaticamente uma tag
+ou release. Consulte [deploy-automation.md](deploy-automation.md).
 
 Antes da primeira release estável, a fundação pode permanecer em `0.x.y`, mas
 toda incompatibilidade ainda deve ser destacada no PR e nas notas.

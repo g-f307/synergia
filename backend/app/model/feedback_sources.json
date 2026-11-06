@@ -1,0 +1,185 @@
+{
+  "version": "1.0.0",
+  "sources": {
+    "ai/quality": {
+      "route": "/ai/quality",
+      "permission": "execution.read",
+      "global": false
+    },
+    "dashboard": {
+      "route": "/dashboard",
+      "permission": "dashboard.read",
+      "global": false
+    },
+    "dashboard/related/workorders": {
+      "route": "/dashboard/related/workorders",
+      "permission": "dashboard.read",
+      "global": false
+    },
+    "imports/new": {
+      "route": "/imports/new",
+      "permission": "import.create",
+      "global": false
+    },
+    "imports/:executionId": {
+      "route": "/imports/:executionId",
+      "permission": "import.read",
+      "global": false
+    },
+    "executions": {
+      "route": "/executions",
+      "permission": "execution.read",
+      "global": false
+    },
+    "tv": {
+      "route": "/tv",
+      "permission": "execution.read",
+      "global": false
+    },
+    "executions/:executionId": {
+      "route": "/executions/:executionId",
+      "permission": "execution.read",
+      "global": false
+    },
+    "search": {
+      "route": "/search",
+      "permission": "business.read",
+      "global": false
+    },
+    "workorders/:workorderNumber": {
+      "route": "/workorders/:workorderNumber",
+      "permission": "business.read",
+      "global": false
+    },
+    "lots/:lotNumber": {
+      "route": "/lots/:lotNumber",
+      "permission": "business.read",
+      "global": false
+    },
+    "serials/:serialNumber": {
+      "route": "/serials/:serialNumber",
+      "permission": "business.read",
+      "global": false
+    },
+    "pending-items": {
+      "route": "/pending-items",
+      "permission": "pending.read",
+      "global": false
+    },
+    "pending-items/:pendingId": {
+      "route": "/pending-items/:pendingId",
+      "permission": "pending.read",
+      "global": false
+    },
+    "profile": {
+      "route": "/profile",
+      "permission": null,
+      "global": false
+    },
+    "admin": {
+      "route": "/admin",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/users": {
+      "route": "/admin/users",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/users/new": {
+      "route": "/admin/users/new",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/users/:userId": {
+      "route": "/admin/users/:userId",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/groups": {
+      "route": "/admin/groups",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/groups/new": {
+      "route": "/admin/groups/new",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/groups/:groupId": {
+      "route": "/admin/groups/:groupId",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/roles": {
+      "route": "/admin/roles",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/roles/new": {
+      "route": "/admin/roles/new",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/roles/:roleId": {
+      "route": "/admin/roles/:roleId",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/notification-templates": {
+      "route": "/admin/notification-templates",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/notification-templates/new": {
+      "route": "/admin/notification-templates/new",
+      "permission": "access.admin",
+      "global": true
+    },
+    "admin/notification-templates/:templateId": {
+      "route": "/admin/notification-templates/:templateId",
+      "permission": "access.admin",
+      "global": true
+    },
+    "reports": {
+      "route": "/reports",
+      "permission": "report.read",
+      "global": false
+    },
+    "reports/:reportId": {
+      "route": "/reports/:reportId",
+      "permission": "report.read",
+      "global": false
+    },
+    "notifications": {
+      "route": "/notifications",
+      "permission": "notification.read",
+      "global": false
+    },
+    "feedback": {
+      "route": "/feedback",
+      "permission": null,
+      "global": false
+    },
+    "feedback/new": {
+      "route": "/feedback/new",
+      "permission": null,
+      "global": false
+    },
+    "feedback/:feedbackId": {
+      "route": "/feedback/:feedbackId",
+      "permission": null,
+      "global": false
+    },
+    "feedback/triage": {
+      "route": "/feedback/triage",
+      "permission": "feedback.triage",
+      "global": false
+    },
+    "feedback/triage/:feedbackId": {
+      "route": "/feedback/triage/:feedbackId",
+      "permission": "feedback.triage",
+      "global": false
+    }
+  }
+}

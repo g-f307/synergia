@@ -51,3 +51,35 @@ def test_i18n_validator_rejects_orphan_keys(tmp_path: Path) -> None:
     (source / "component.ts").write_text("export const value = true", encoding="utf-8")
 
     assert validate(catalogs, source) == ["chave órfã: page.title"]
+
+
+def test_feedback_requires_a_complete_spanish_catalog(tmp_path: Path) -> None:
+    catalogs, source = tmp_path / "catalogs", tmp_path / "source"
+    source.mkdir()
+    _write_catalogs(
+        catalogs, {"feedback.state.under_review": "Em análise"},
+        {"feedback.state.under_review": "Under review"},
+    )
+    (source / "component.ts").write_text("'feedback.state.under_review'")
+    assert any("es-ES" in error for error in validate(catalogs, source))
+    (catalogs / "es-ES.json").write_text("{}")
+    assert "es-ES: chave ausente: feedback.state.under_review" in validate(
+        catalogs, source
+    )
+    (catalogs / "es-ES.json").write_text(
+        json.dumps({"feedback.state.under_review": "En análisis"})
+    )
+    assert validate(catalogs, source) == []
+
+
+def test_spanish_extension_rejects_empty_and_unknown_keys(tmp_path: Path) -> None:
+    catalogs, source = tmp_path / "catalogs", tmp_path / "source"
+    source.mkdir()
+    _write_catalogs(catalogs, {"feedback.send": "Enviar"}, {"feedback.send": "Send"})
+    (source / "component.ts").write_text("'feedback.send'")
+    (catalogs / "es-ES.json").write_text(
+        json.dumps({"feedback.send": "", "feedback.unknown": "Extra"})
+    )
+    errors = validate(catalogs, source)
+    assert "es-ES: valor vazio: feedback.send" in errors
+    assert "es-ES: chave extra: feedback.unknown" in errors

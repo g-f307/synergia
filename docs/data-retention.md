@@ -67,6 +67,12 @@ Auditoria, aprovações, relatórios, notificações, uploads aceitos e avatares
 explicitamente bloqueados pela allowlist. Uma tentativa aplicada é registrada
 como `refused`, sem executar exclusão.
 
+A trilha `audit_export_events` da #169 integra a auditoria protegida e o backup
+do schema; não recebe expurgo automático. Os arquivos JSON/CSV são gerados em
+memória e não ficam armazenados no servidor. A cópia baixada fica sob controle
+do destinatário e exige política corporativa própria, conforme
+[audit-export.md](audit-export.md).
+
 ## Anonimização
 
 Uma solicitação futura de anonimização deve desativar a identidade, revogar

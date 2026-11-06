@@ -1,0 +1,3 @@
+record_type,format_version,timezone,generated_at,event_count,filters,id,occurred_at,organization_id,actor_id,actor_type,action,resource_type,resource_id,outcome,correlation_id,metadata,origin
+manifest,1.0.0,UTC,2026-09-02T00:00:00Z,1,"{""action"": null, ""actor_id"": null, ""occurred_from"": ""2026-09-01T00:00:00Z"", ""occurred_to"": ""2026-09-02T00:00:00Z"", ""organization_id"": ""44444444-4444-4444-8444-444444444444"", ""outcome"": null, ""resource_id"": null, ""resource_type"": null, ""sort"": ""oldest""}",,,,,,,,,,,,
+event,,,,,,identity:1,2026-09-01T12:00:00Z,44444444-4444-4444-8444-444444444444,00000000-0000-4000-8000-000000000001,user,user.admin_updated,user,00000000-0000-4000-8000-000000000002,success,55555555-5555-4555-8555-555555555555,{},identity_access_events

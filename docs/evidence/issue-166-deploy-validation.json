@@ -1,0 +1,140 @@
+{
+  "cases": [
+    {
+      "id": "diagnosis_read_only_empty",
+      "seconds": 0.217,
+      "status": "passed"
+    },
+    {
+      "id": "invalid_configuration_blocked",
+      "seconds": 0.159,
+      "status": "passed"
+    },
+    {
+      "id": "initial_readiness_failure_after_creation",
+      "seconds": 244.069,
+      "status": "passed"
+    },
+    {
+      "id": "initial_installation",
+      "seconds": 48.512,
+      "status": "passed"
+    },
+    {
+      "id": "source_metadata_non_root_and_worker_opt_in",
+      "seconds": 0.385,
+      "status": "passed"
+    },
+    {
+      "id": "repeat_update_preserves_data",
+      "seconds": 21.52,
+      "status": "passed"
+    },
+    {
+      "id": "postgres_port_change_blocked",
+      "seconds": 2.454,
+      "status": "passed"
+    },
+    {
+      "id": "diagnosis_read_only_running",
+      "seconds": 0.797,
+      "status": "passed"
+    },
+    {
+      "id": "concurrent_client_blocked",
+      "seconds": 0.621,
+      "status": "passed"
+    },
+    {
+      "id": "real_build_failure",
+      "seconds": 3.602,
+      "status": "passed"
+    },
+    {
+      "id": "real_migration_failure",
+      "seconds": 34.803,
+      "status": "passed"
+    },
+    {
+      "id": "real_health_failure",
+      "seconds": 27.045,
+      "status": "passed"
+    },
+    {
+      "id": "real_smoke_failure",
+      "seconds": 37.083,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_client_resume",
+      "seconds": 23.531,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_client_rollback",
+      "seconds": 32.607,
+      "status": "passed"
+    },
+    {
+      "id": "interrupted_live_migration",
+      "seconds": 31.742,
+      "status": "passed"
+    },
+    {
+      "id": "schema_divergence_blocks_rollback",
+      "seconds": 1.752,
+      "status": "passed"
+    },
+    {
+      "id": "altered_recovery_artifact_blocked",
+      "seconds": 0.793,
+      "status": "passed"
+    },
+    {
+      "id": "legacy_previous_version",
+      "seconds": 123.074,
+      "status": "passed"
+    },
+    {
+      "id": "unmanaged_stopped_postgres_update",
+      "seconds": 55.454,
+      "status": "passed"
+    },
+    {
+      "id": "private_artifact_and_journal_hygiene",
+      "seconds": 0.003,
+      "status": "passed"
+    },
+    {
+      "id": "missing_application_volume_blocks_recovery",
+      "seconds": 0.938,
+      "status": "passed"
+    }
+  ],
+  "cleanup": "passed",
+  "environment": "homologation",
+  "finished_at": "2026-11-03T23:58:45.068849+00:00",
+  "format": 1,
+  "preexisting_resources_preserved": true,
+  "previous_revision": "04769a84423eac2544b7e3a81dfa48232e6e7344",
+  "previous_version_outcome": "restored",
+  "result": "passed",
+  "source_revision": "965d972880443fe3a71b5f477fb2f2cf9ad04f45",
+  "source_sha256": {
+    "backend/Dockerfile": "5d93e09192e105fc4fdd1d60a19f1dce9b0e3b70b5a7d1051bd49a4484361312",
+    "backend/app/container_runtime.py": "b0c2825a2a541e681e61bf693b79b046d473904153569a1247e820a05b979b91",
+    "backend/app/deployment_environment.py": "110801f5eb8c4ff7482ccc5c7146a8d4fb9379d40464a2c8e14e723e1f899d97",
+    "docker-compose.yml": "6968940f24d51e4411273ebf7c721acc1f8669a02c9b372f46bdf43bac9d771b",
+    "scripts/apply_migrations.py": "343065907be24131f13ac8fdf9024c122753f5539ab8ffc870cd5c2d2504ff5d",
+    "scripts/container_entrypoint.py": "c98d9a9eafc7d92cfafcef7e54f830994cb889bbb4bf99302d2d77986978affd",
+    "scripts/deploy.py": "0323e83958ff61c03cb3c854b8d91c0838aa9585ee477d17df9b00abe6597a70",
+    "scripts/deploy_common.py": "1be1e45bfdfee77c0dfa4431e7e16a5789eedaf52bf07504d51d747af625f416",
+    "scripts/deploy_flow.py": "d9ef68c3723971943ea9e1115c02b220d90cd9d5487b3fa9bc0fbaba0a8286b3",
+    "scripts/deploy_recovery.py": "e5d40e0028298ec5bb227e91a084f4d5837e0fb1b90451bab62b1039f27307f5",
+    "scripts/smoke_containers.py": "7c152f0ca8cf11fa6897ff8f8f1351a0c729e5ce6905358a36fd1875528b2dce",
+    "scripts/validate_deploy.py": "69057d28d5349f700bea40ec1dff1579d6048a9905feb79eb253da1fc1912067",
+    "web/Dockerfile": "4dfbf0dbc77a3d35754547d59d82543201e67397e3af322fd9121d204294a35e"
+  },
+  "started_at": "2026-11-03T23:48:06.131226+00:00",
+  "synthetic_only": true
+}

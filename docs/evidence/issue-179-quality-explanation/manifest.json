@@ -1,0 +1,1630 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 179,
+  "scope": "known_regression_and_adversarial_not_holdout",
+  "configuration": {
+    "schema_version": "1.0.0",
+    "model": "qwen3:4b-instruct",
+    "evaluated_model_alias": "qwen3:4b-instruct-2507-q4_K_M",
+    "model_digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+    "runtime_version": "0.40.12",
+    "endpoint": "http://127.0.0.1:11434/api/generate",
+    "think": false,
+    "keep_alive_seconds": 600,
+    "request_timeout_seconds": 300,
+    "repetitions": 3,
+    "options": {
+      "num_ctx": 4096,
+      "num_predict": 2048,
+      "temperature": 0,
+      "seed": 125,
+      "num_thread": 6
+    }
+  },
+  "files": {
+    "backend/app/__init__.py": "7e96bd19c2a136cf0d72033a983115aca471d1e8d574ef8e07e90ad3f7732baf",
+    "backend/app/access_control.py": "9597771175663654a8bb946c1a4df36e6ece10e5436043d5db24f1ce63366a17",
+    "backend/app/approvals.py": "b85d58e628dd0b98d361889874f61af4c1bfd0ed10f02a060219e2a4e5dd13f3",
+    "backend/app/audit.py": "90dd6b949fae429a057e121f4e1bebfac3518b8a0c4f795ff31aa29840414169",
+    "backend/app/auth/__init__.py": "55645ffecea6b8a445730c66ca08b6515d332fae9a3de1da4d46f7af6dc3b26e",
+    "backend/app/auth/config.py": "399ef9cec76ebabc86df0a14c7ad21874d62cf17ce885c8bbd2f67933a57f8ea",
+    "backend/app/auth/identity_provider.py": "74b0eda3118f77f54ca2187cab596fbe7d369917db90564f306afa8f378f6b22",
+    "backend/app/auth/models.py": "6e01057aae2a2341a627910af64769d87c83b45f40823e1082210f7bd0619350",
+    "backend/app/auth/repository.py": "ad2b413b14159bc623299f6d61c1fc93470029b959c23edd09b756579db91673",
+    "backend/app/auth/routes.py": "d9a09b2dc02fd873d693c7c2b29e9cce5f8061a246c6c965bbda289f2ca4cfeb",
+    "backend/app/auth/security.py": "be375473de4a6a76d7e661cb9ac7f03237ae0aae4cee04fce3dc2c69456654c3",
+    "backend/app/auth/service.py": "29b1aaad72bab583d900f01f8640dd224cf7d15c96bb647aaca214bcdef9c165",
+    "backend/app/authorization.py": "07e9c3ecd03fc583e36a6b8a12e40ae69573bd686f224d4922b4dd5589ce8b49",
+    "backend/app/business_rules.py": "c516c479e2d43abdc018daf04d717a87c4dbd34311563a493ebc706a4544eb05",
+    "backend/app/consolidation.py": "fa21be07cb427f650cdbcc92d5ce42cc4937a02c5b690cc6182b8426bdcc4d8f",
+    "backend/app/container_runtime.py": "b0c2825a2a541e681e61bf693b79b046d473904153569a1247e820a05b979b91",
+    "backend/app/data_operations.py": "5a89f75014ecd9ca8831fa906109f8b7adef114a51f6a65c4094cddb3167b8be",
+    "backend/app/deployment_environment.py": "110801f5eb8c4ff7482ccc5c7146a8d4fb9379d40464a2c8e14e723e1f899d97",
+    "backend/app/email_config.py": "7f835e0b95c95b256c8bd5c42ba86bc923201d7e516284b1068339acd1b30822",
+    "backend/app/email_contracts.py": "acc1e53dcbc38a3ae9e54b7c9846efd11f5b0ed6a963274eab84b33457bab986",
+    "backend/app/email_delivery.py": "70f18242c3edb5bdf598ab7a76ebe3ea2ff668ef29e7de6b8c4addc7eb5066a6",
+    "backend/app/email_reconciliation.py": "ced1371b8697b7f3bc2e70cf2d1534e60ef754c01013a0b969fe85a59e5156ee",
+    "backend/app/email_smoke.py": "09dc0875bd6637383db389d1499693170017a68086374a2a507f0a1b0768829b",
+    "backend/app/errors.py": "77f17a9af67268306e03b6af6f076d1402a5efbc4fccae48e13667f60e433c74",
+    "backend/app/execution.py": "1fdcc5ab27d0d1ea7d284ef66615a4076594443da4a2ad0036662340ca53878f",
+    "backend/app/execution_monitoring.py": "ec9700df746564b8a5c00a3a68b07a87fbd8f4d97129e1f5d8b63f78e74f0a9f",
+    "backend/app/feedback.py": "57b2205ebc0a9041e111d623378454e0f179fc9de030393950ed3c1d13b30855",
+    "backend/app/http_security.py": "0ff43e3dc43f834b04bbf157580e9574608f0ce6ffd9eb513b9033678153c5e4",
+    "backend/app/import_recovery.py": "9e5eef4d800e12cb2bc5e55781e99d7b404c045864dc4a13f1993b1b66575904",
+    "backend/app/imports.py": "3ccd941bec5b46740e1d4a6010a1fd14db9f678dfe224a5ba4e0bbe3aaa1bdca",
+    "backend/app/ingestion_budget.py": "039491c93b041fdd0057ef256cee88b655113a47df26a19a33f9a6ed3abc0f0a",
+    "backend/app/main.py": "5a718a22992cba11313d6af57aa507df45ea997a340a0b00427a1334f827c7ac",
+    "backend/app/model/__init__.py": "c4422614152c008624e4786a2ec557fd350b2d58820cce7b225092576efe1816",
+    "backend/app/normalization.py": "628d1104bc01fb6009f8878d47627476eae91838ebef3aee28ab4769d026aaab",
+    "backend/app/notification_templates.py": "2150642a5ed936e05d56fd0f8782261800dbe3e70f0d3d9a1242bfe268931104",
+    "backend/app/notifications.py": "4d2fb187c29bef674855a0960af20a61c43c64db8f30061bcdb983cbdf56cf3c",
+    "backend/app/observability/__init__.py": "75bdbff4566dccb38ec1623eea02dc88eeedda6eb7b030e47680ea70c4536329",
+    "backend/app/observability/config.py": "ed8776e658fef022e8b4200a6ed318f33eadbf374aec53cc577ba5e78c819b67",
+    "backend/app/observability/health.py": "2ae55a80583f7ab76d89148bff978531c3909c6c44aa24a617f7ae391aba71b2",
+    "backend/app/observability/metrics.py": "c15f1e396b57801f164281f5b6aa819562e29684c20c269c979913f61afbad4d",
+    "backend/app/observability/routes.py": "e4b1e210d3e0f6c0a506210aa05dafa7359e0005aad777741d0330e8c5608d1b",
+    "backend/app/observability/telemetry.py": "e4b1437471fca3b9ba81a1f01f187bcb1bb97ef09747c93858e9ad2193b287bc",
+    "backend/app/pacing.py": "d48130a6c6ab7ba3093c8d814e6500f3a9cdcba72f1b1e94a4f82cd4220a1965",
+    "backend/app/persistence.py": "d2a5caba2839932a084e0563102b04d81d0d8e691bbfacafec6cd8256cf1e1f7",
+    "backend/app/pipeline.py": "52e5ab666fc69732d77185b46875a95ca39b85d572efe79f50fee2dcf8b5472c",
+    "backend/app/processing.py": "6d3a47d40cb99eb8049bc4ee06f09a89fe8f07f0eb41057adcb3deefebc103c4",
+    "backend/app/profile.py": "56e17ff19832888b51e2e6ed26fed94978e76058af7657a5e9f65615aa15b5a9",
+    "backend/app/queries.py": "2f01048b5d3fca7b3c02aee97021082e19632df272fe33b04e078fadf1a564dc",
+    "backend/app/rate_limiting.py": "a468db9b36a7e64bb3d8af8403c8734327907bf91432c94eed417295473b10aa",
+    "backend/app/reports.py": "bb3f08200463366655fff6cabea2ae21538e95843e35b584f98a4fe3bf3e3fe4",
+    "backend/app/request_context.py": "e94009bdf274e16ca4b7a62fb788b8a1254e90d567909d3b8d56640d6cb99390",
+    "backend/app/smtp_email_provider.py": "983f326dbeae53cafc353777b863024ad33fe5f36e38edefdbeea8b6c95c76f5",
+    "backend/app/spreadsheet_reader.py": "fa1e342359ef8e8bb3d386ff4beae43851e8151ba082eed611df72faa418272f",
+    "backend/app/total_decision.py": "ead767e7738100ebb032b4ed35cda825032e6a2ecf9197c6bc900cb7d724cc2e",
+    "backend/app/total_decision_report.py": "62ce61e0c685a6300202afc0ebd68afdf89075b2e6d585492f78ba1942b33a94",
+    "backend/app/total_decision_spec.py": "27617a05c4d398b16e5270be90f3926a404be59da9a47be8b4ccee578986186d",
+    "backend/app/upload_security.py": "f8748917f199ed34d9f251befceede251cb1b42493073a86fc678ab85a5df28e",
+    "backend/app/users.py": "fca0587b5d1b4dc284653923640bf52bef84cb3bd5256beb106fbf20414e5014",
+    "backend/app/validation.py": "9254e67d43f860f0211c33bfd4bc2e3428484ebfbbca2b89848cdbbd7d13b939",
+    "backend/app/wo_status.py": "d1ca8ee2f0a4ac2998d5b170d9e57673d69125515cddf9e624b61f7cf3f684fd",
+    "backend/app/wo_status_report.py": "a0f2ab98468e7367b3f5eed0e459e1502a684a5e09976b7f44e47b4d6705f298",
+    "backend/app/wo_status_spec.py": "ad1c44d2227b85848a5e4bd0a0a5861f6a248e29946edcb1fd152884bae72e71",
+    "backend/app/xlsx_package.py": "4e5c7b2da9c2c914215b4b3af8377b1a269ab7413c7649910d76579957f7b2c2",
+    "backend/tests/test_ai_quality_explanation.py": "a6ed67b0595ba081396c3365903efac502ffdcd65b1292c2999dedd15a395edf",
+    "data/synthetic/ai-quality-explanation-v1/adversarial.json": "ec7e1578afce97ab8fb9ee4185b4b6e91617f53629ba853380377140576cd53f",
+    "data/synthetic/ai-quality-v3/development/QD3-D01.csv": "a5d32c29ae5a5f4560ecc2709bb7cb6b1bf7995d3b5ef5f3eb63d324819e6902",
+    "data/synthetic/ai-quality-v3/development/QD3-D01.xlsx": "29168c5a4a3afd9216a00d5c0c232a9f2d116aab5c5258c6a1dfcf3a51fafda1",
+    "data/synthetic/ai-quality-v3/development/QD3-D02.csv": "b3e2d3973bb4235e6993f4e9f2a6f3e4b8a2d13ca96fe3b2ab59afd6009082d5",
+    "data/synthetic/ai-quality-v3/development/QD3-D02.xlsx": "b04a216aa4a8b9b5b783d853843a06890ddb49ba15b2bf84ad548825e72ed324",
+    "data/synthetic/ai-quality-v3/development/QD3-D03.csv": "bc608c758cbaf507f9b2b1ffa46fcf13064fea195669b77efb9e5c663f8f562e",
+    "data/synthetic/ai-quality-v3/development/QD3-D03.xlsx": "07b1bb165c0f38f39e21f66a421a0c042b9d80d666918f53a676fb2322926b89",
+    "data/synthetic/ai-quality-v3/development/QD3-D04.csv": "eec585abc3b8915c2849e44507a10e4ff6bb505abb83184250bc7425b15b2d53",
+    "data/synthetic/ai-quality-v3/development/QD3-D04.xlsx": "e18df63659fb5b0261a53e72f8715024ef229eb2f9e19e06d4e5fbb104488fbc",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E01.csv": "c107a818e509d3f041ecab4215e3e077a2fe8881ce6ad83a2843ec9436688455",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E01.xlsx": "cb4802ab9ca67bc03c996825394b37fe5207cd0acfccd3b795bd457a4c58948f",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E02.csv": "b436e02e1f5e873986dd5680e098b4c833ff2cd060a7f216a8cecccd2803962f",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E02.xlsx": "c84adc9b1eca1aeeb871b6157c318e65e2da3af58322edde8e2873554a2c3a49",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E03.csv": "4b95b7365f8c092eb015d6d09dda6faeb0753fbec2447a1114f22df748a9a75d",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E03.xlsx": "e6183aa1dd100296a8e3a967f64fde4a51359534983de91e44428df239ac328b",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E04.csv": "42eb3201da0357f5a0bdadd43708bfbaaaa24ba83f690b40646f4aecbe84e3d5",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E04.xlsx": "8e674a8cc30367c534100a5a397a719d8088d65c5c788370e79523b1109ff5e1",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E05.csv": "43a55cba5feaa0e79161e995806eb0beac7db5e8af719dd90ba2f4a282b5fd80",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E05.xlsx": "afdab38c91cd38cfc0a68b52766ce18396139299524b18690cd3eea843161412",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E06.csv": "ea6a5a22666459a7eb0d4f859b1bc83cb4e4889524be825d005d7d1733fbc69f",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E06.xlsx": "9b70fdbbffddb29daacfc6967d925b7d63649dabb3f8db2af5a08027b1f21eda",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E07.csv": "fc3b5d5b2723a2d7926658cdb097e0fe954adc33836c76f62a73c1c300a784fd",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E07.xlsx": "a1446f7e26bfa45389b0569c99e67239fac1ee21a8f837ac1aa02f91a6a624a9",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E08.csv": "e02f89315e99a3648491676d430ab43d5cbfab51327f703756d22d2d9f99dd78",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E08.xlsx": "2e632c139b8377b65fc45170485854afcdcce4b11805d324c51bfcd3200dcc32",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E09.csv": "5b34c23c632d6485138c71cdbcc0bef9cabbb3e2f4846d6d42bc0fc6e2030779",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E09.xlsx": "0e3febf3af0ad1cccb44b372e5b9370fdb02dc14db32f03d4960d1e4c2dbfa41",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E10.csv": "edbe281c62f8d6ea705e2bb7915e44693cda01560d25aee7f9d0df3ddda169a4",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E10.xlsx": "84e34fb8b47b908ea7ee9d61b5dd771b28c6b34c2aa822c190c62ff3ea914144",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E11.csv": "184855063da9714801fd4258c8247d754f7c197a492ce3b8a669d88b2e7880f4",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E11.xlsx": "0e147dd4ce36ca3872cc9a769f21282829eb6c450f5af014dc9a55024f0377fb",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E12.csv": "df4e88c207dd7bb70309994bab6bf43cd3ab14e9b351275135cc24c47cfea787",
+    "data/synthetic/ai-quality-v3/evaluation/QD3-E12.xlsx": "def632dce02e8c703fc96a38d11fc810a5c1f78083aebdf9d13a6bd893a87a75",
+    "data/synthetic/ai-quality-v3/manifest.json": "2169b3fc27ec1309faea3738fbd7d0e976dfce1930a052774411acf86f07f393",
+    "data/synthetic/ai-quality-v3/scenarios.json": "a42546115c96cc4b639508054cc3f028fd5f0184eeced42f683c80f808a2ce17",
+    "docs/ai-reevaluation-protocol.json": "fcf34b206392ad4176bfb5344126ac174f06a337df7bec4d742ec996e115a961",
+    "docs/schemas/ai-quality-diagnosis-input.schema.json": "dee194cae2bba03f0b8be5729cfaaed0082cbbae7755c0983d18d3a74e68afd3",
+    "docs/schemas/ai-quality-diagnosis-output.schema.json": "d1de44ac8c59d179660e81f714ffbc65c73fc932376ef504362ba52b82f5bdb7",
+    "docs/schemas/ai-quality-diagnosis-v2-input.schema.json": "41adfaba0d2a73b77355a8143007c4bd8e463fd430f4503a6081b0d959cbf1b4",
+    "docs/schemas/ai-quality-diagnosis-v2-output.schema.json": "b7adf6dce9e9030fcfa0cab7d684d490385a52eeb218465093986a7a79d7fa3f",
+    "docs/schemas/ai-quality-explanation-v1-input.schema.json": "d8ecf774c6ef314edcd01981038eccdb42a5f1ad00260f7ddc9b183806015a17",
+    "docs/schemas/ai-quality-explanation-v1-output.schema.json": "3ef1039a63c46ccbf8d71ff98927829affd53909680d37e86f7012b5caa01f98",
+    "scripts/ai_operational_summary.py": "822eb9ed4fe66d95b652c68f8fa152b08288d4b3cbbc1615057a71bd3c71516a",
+    "scripts/ai_poc_evaluation.py": "154b0629d10fd50fbbed1f512a7bf765e6cc9c90c0d1d3cecfdc202d263cd723",
+    "scripts/ai_poc_foundation.py": "8632073774dbade135b54289259e326a3410876f1089ed537dbab61a09aaf860",
+    "scripts/ai_poc_prompts/quality-explanation-v1.txt": "2ad1245875c1506491ad2125a5ae2a80bbf878e95d7881ed09835c296c536eb1",
+    "scripts/ai_quality_diagnosis.py": "c5733541cde7a70ca8df488dbe45816c0d31c6af42d6e85aaf7ef356580334c3",
+    "scripts/ai_quality_explanation.py": "df25552a29032ffa8e0323dde33fd6626537110005bb7a1bd7eea43b2a3f484e",
+    "scripts/ai_quality_explanation_config.json": "397ffa73cf628d1c1e1806951754a481960c2d5fd71c3a1bdbc0767edbd1b19a",
+    "scripts/ai_quality_explanation_demo.html": "764d8d26290610c087eb3266a8aea85837f742fe085e5a8dc86818e256ad3686",
+    "scripts/ai_reevaluation.py": "ef60507942ac85bc47325e285e18705b74ce539e42a4033628a7d033f751236b",
+    "scripts/ai_reevaluation_guidance.py": "a70a1969ec7b0e1dd8d45b5bda767441e61a61c8c2d129351d425a8ee34b3c7c",
+    "scripts/ai_reevaluation_native.py": "6c0f9731d7d1c8eab36ae211599edb460d4409ba0edac0fea1b80c8906854e07",
+    "scripts/ai_reevaluation_telemetry.py": "58610fbcc62b8be69d24b329c76db8330e8188c278251b64c8f0529a541934d3",
+    "scripts/render_ai_quality_explanation.py": "09788b1dd3743859b113530f2ae6beee878ff6e19ba571d5bb46b60d2cd37b01",
+    "scripts/run_ai_quality_explanation.py": "b297c29d4664d3f5c7cc3a637cb598f519420148235c931d9ceb823c153d2bb0"
+  },
+  "cases": [
+    {
+      "key": "evaluation/QD3-E01.csv",
+      "label": "zero-and-positive-quantities",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E01",
+        "groups": []
+      }
+    },
+    {
+      "key": "evaluation/QD3-E01.xlsx",
+      "label": "zero-and-positive-quantities",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E01",
+        "groups": []
+      }
+    },
+    {
+      "key": "evaluation/QD3-E02.csv",
+      "label": "required-and-negative-produced",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E02",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Quantidade inválida: produced_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "produced_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": -9
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "required_field",
+            "category": "completeness",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Campo obrigatório vazio: workorder_number",
+                "field": {
+                  "state": "known",
+                  "value": "workorder_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "A"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "missing"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E02.xlsx",
+      "label": "required-and-negative-produced",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E02",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Quantidade inválida: produced_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "produced_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": -9
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "required_field",
+            "category": "completeness",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Campo obrigatório vazio: workorder_number",
+                "field": {
+                  "state": "known",
+                  "value": "workorder_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "A"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "missing"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E03.csv",
+      "label": "fractions-in-two-rows",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E03",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Quantidade inválida: planned_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "planned_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": 2.25
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              },
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Quantidade inválida: produced_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "produced_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "C"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": 3.75
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E03.xlsx",
+      "label": "fractions-in-two-rows",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E03",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Quantidade inválida: planned_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "planned_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": 2.25
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              },
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Quantidade inválida: produced_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "produced_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "C"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": 3.75
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E04.csv",
+      "label": "invalid-calendar-date",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E04",
+        "groups": [
+          {
+            "code": "invalid_date",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Data inválida: production_date",
+                "field": {
+                  "state": "known",
+                  "value": "production_date"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "2026-02-30"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E04.xlsx",
+      "label": "invalid-calendar-date",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E04",
+        "groups": [
+          {
+            "code": "invalid_date",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Data inválida: production_date",
+                "field": {
+                  "state": "known",
+                  "value": "production_date"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "2026-02-30"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E05.csv",
+      "label": "divergent-reference-in-second-row",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E05",
+        "groups": [
+          {
+            "code": "unmatched_key",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Chave sem correspondência no Workorder da linha",
+                "field": {
+                  "state": "known",
+                  "value": "workorder_reference"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "WO-SYN-3999"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E05.xlsx",
+      "label": "divergent-reference-in-second-row",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E05",
+        "groups": [
+          {
+            "code": "unmatched_key",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Chave sem correspondência no Workorder da linha",
+                "field": {
+                  "state": "known",
+                  "value": "workorder_reference"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "WO-SYN-3999"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E06.csv",
+      "label": "serial-repeated-between-workorders",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E06",
+        "groups": [
+          {
+            "code": "duplicate_serial",
+            "category": "consistency",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Serial duplicado; primeira ocorrência em CSV:2",
+                "field": {
+                  "state": "known",
+                  "value": "serial_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SER-SYN-3210"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E06.xlsx",
+      "label": "serial-repeated-between-workorders",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E06",
+        "groups": [
+          {
+            "code": "duplicate_serial",
+            "category": "consistency",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Serial duplicado; primeira ocorrência em Dados:2",
+                "field": {
+                  "state": "known",
+                  "value": "serial_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SER-SYN-3210"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E07.csv",
+      "label": "unmapped-values-after-valid-row",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E07",
+        "groups": [
+          {
+            "code": "unknown_oqc_flag",
+            "category": "unknown",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "warning",
+                "reason": "Valor sem mapeamento conhecido",
+                "field": {
+                  "state": "known",
+                  "value": "oqc_flag"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "oqc_flag"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-UNKNOWN-E"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "unknown_state",
+            "category": "unknown",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "warning",
+                "reason": "Valor sem mapeamento conhecido",
+                "field": {
+                  "state": "known",
+                  "value": "status"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "status"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-UNMAPPED-E"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E07.xlsx",
+      "label": "unmapped-values-after-valid-row",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E07",
+        "groups": [
+          {
+            "code": "unknown_oqc_flag",
+            "category": "unknown",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "warning",
+                "reason": "Valor sem mapeamento conhecido",
+                "field": {
+                  "state": "known",
+                  "value": "oqc_flag"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "oqc_flag"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-UNKNOWN-E"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "unknown_state",
+            "category": "unknown",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "warning",
+                "reason": "Valor sem mapeamento conhecido",
+                "field": {
+                  "state": "known",
+                  "value": "status"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "status"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-UNMAPPED-E"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E08.csv",
+      "label": "quantity-and-missing-reference",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E08",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Quantidade inválida: planned_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "planned_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": -11
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "missing_reference_data",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "warning",
+                "reason": "Base de referência não fornecida",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "not_provided"
+                },
+                "row": {
+                  "state": "not_provided"
+                },
+                "sheet": {
+                  "state": "not_provided"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E08.xlsx",
+      "label": "quantity-and-missing-reference",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E08",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Quantidade inválida: planned_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "planned_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": -11
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "missing_reference_data",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "warning",
+                "reason": "Base de referência não fornecida",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "not_provided"
+                },
+                "row": {
+                  "state": "not_provided"
+                },
+                "sheet": {
+                  "state": "not_provided"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E09.csv",
+      "label": "missing-column-with-other-columns",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E09",
+        "groups": [
+          {
+            "code": "missing_column",
+            "category": "layout",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Coluna obrigatória ausente: workorder_number",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "workorder_number"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 1
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E09.xlsx",
+      "label": "missing-column-with-other-columns",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E09",
+        "groups": [
+          {
+            "code": "missing_column",
+            "category": "layout",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Coluna obrigatória ausente: workorder_number",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "workorder_number"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 1
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E10.csv",
+      "label": "broken-reference-and-date",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E10",
+        "groups": [
+          {
+            "code": "broken_reference",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Erro de fórmula preservado: #REF!",
+                "field": {
+                  "state": "known",
+                  "value": "reason"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "#REF!"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "invalid_date",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Data inválida: production_date",
+                "field": {
+                  "state": "known",
+                  "value": "production_date"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "C"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "CSV"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "2026-04-31"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E10.xlsx",
+      "label": "broken-reference-and-date",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E10",
+        "groups": [
+          {
+            "code": "broken_reference",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Erro de fórmula preservado: #REF!",
+                "field": {
+                  "state": "known",
+                  "value": "reason"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "#REF!"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          },
+          {
+            "code": "invalid_date",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-2",
+                "severity": "error",
+                "reason": "Data inválida: production_date",
+                "field": {
+                  "state": "known",
+                  "value": "production_date"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "C"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "Dados"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "2026-04-31"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E11.csv",
+      "label": "untrusted-prose-excluded",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E11",
+        "groups": []
+      }
+    },
+    {
+      "key": "evaluation/QD3-E11.xlsx",
+      "label": "untrusted-prose-excluded",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E11",
+        "groups": []
+      }
+    },
+    {
+      "key": "evaluation/QD3-E12.csv",
+      "label": "unreadable-paired-formats",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E12",
+        "groups": [
+          {
+            "code": "read_error",
+            "category": "reading",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Não foi possível ler o arquivo sintético",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "not_provided"
+                },
+                "row": {
+                  "state": "not_provided"
+                },
+                "sheet": {
+                  "state": "not_provided"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "evaluation/QD3-E12.xlsx",
+      "label": "unreadable-paired-formats",
+      "provenance": "known_regression_issue_148",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QD3-E12",
+        "groups": [
+          {
+            "code": "read_error",
+            "category": "reading",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Não foi possível ler o arquivo sintético",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "not_provided"
+                },
+                "row": {
+                  "state": "not_provided"
+                },
+                "sheet": {
+                  "state": "not_provided"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "QE-A01",
+      "label": "Serial ausente na coluna B",
+      "provenance": "synthetic_adversarial_pipeline_fixture",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QE-A01",
+        "groups": [
+          {
+            "code": "required_field",
+            "category": "completeness",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Campo obrigatório vazio: serial_number",
+                "field": {
+                  "state": "known",
+                  "value": "serial_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "synthetic"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "missing"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "QE-A02",
+      "label": "Mesmo código em duas posições",
+      "provenance": "synthetic_adversarial_pipeline_fixture",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QE-A02",
+        "groups": [
+          {
+            "code": "duplicate_serial",
+            "category": "consistency",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Serial duplicado; primeira ocorrência em synthetic:2",
+                "field": {
+                  "state": "known",
+                  "value": "serial_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 3
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "synthetic"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-179-A"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              },
+              {
+                "evidence_id": "ev-2",
+                "severity": "warning",
+                "reason": "Serial duplicado; primeira ocorrência em synthetic:2",
+                "field": {
+                  "state": "known",
+                  "value": "serial_number"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 4
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "synthetic"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": "SYN-179-A"
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "QE-A03",
+      "label": "Quantidade inválida sem causa comprovada",
+      "provenance": "synthetic_adversarial_pipeline_fixture",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QE-A03",
+        "groups": [
+          {
+            "code": "invalid_quantity",
+            "category": "format",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "error",
+                "reason": "Quantidade inválida: planned_quantity",
+                "field": {
+                  "state": "known",
+                  "value": "planned_quantity"
+                },
+                "column": {
+                  "state": "known",
+                  "value": "B"
+                },
+                "row": {
+                  "state": "known",
+                  "value": 2
+                },
+                "sheet": {
+                  "state": "known",
+                  "value": "synthetic"
+                },
+                "known_value": {
+                  "state": "observed",
+                  "value": -7
+                },
+                "unknown_value": {
+                  "state": "not_applicable"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "QE-A04",
+      "label": "Referência ausente sem valor inferível",
+      "provenance": "synthetic_adversarial_pipeline_fixture",
+      "envelope": {
+        "schema_version": "1.0.0",
+        "case_id": "QE-A04",
+        "groups": [
+          {
+            "code": "missing_reference_data",
+            "category": "reference",
+            "causal_evidence": "not_provided",
+            "occurrences": [
+              {
+                "evidence_id": "ev-1",
+                "severity": "warning",
+                "reason": "Base de referência não fornecida",
+                "field": {
+                  "state": "not_provided"
+                },
+                "column": {
+                  "state": "not_provided"
+                },
+                "row": {
+                  "state": "not_provided"
+                },
+                "sheet": {
+                  "state": "not_provided"
+                },
+                "known_value": {
+                  "state": "unavailable"
+                },
+                "unknown_value": {
+                  "state": "not_exposed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "python": "3.12.15",
+  "packages": {
+    "jsonschema": "4.26.0",
+    "openpyxl": "3.1.5",
+    "pydantic": "2.14.3"
+  }
+}

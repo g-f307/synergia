@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
-  "issue": 147,
+  "version": "1.6.0",
+  "issue": 179,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
     "loading",
@@ -12,6 +12,8 @@
     "unavailable"
   ],
   "supporting_operations": [
+    {"method": "GET", "path": "/audit/events", "permission": "audit.read", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
+    {"method": "GET", "path": "/audit/events/export", "permission": "audit.export", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
     {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell", "evidence": ["web/src/app/core/session.service.ts"]},
     {"method": "POST", "path": "/auth/logout-all", "permission": "session.revoke.own", "scope": "own", "exposure": "deferred", "consumer": "none", "decision": "A revogação global, incluindo a sessão atual, permanece disponível na API; o perfil oferece revogação individual e das outras sessões.", "target": "future-global-logout-ui"},
     {"method": "GET", "path": "/auth/sessions", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "profile", "evidence": ["web/src/app/core/session.service.ts"]},
@@ -616,6 +618,209 @@
       "url_state": ["filter", "sort", "page", "pageSize"],
       "states": ["loading", "empty", "error", "forbidden", "unavailable"],
       "owner": "domains/notifications"
+    },
+    {
+      "id": "feedback-new",
+      "route": "/feedback/new",
+      "status": "implemented",
+      "issue": 168,
+      "prototype_pages": [],
+      "menu": "Feedback",
+      "permission": "feedback.own",
+      "scope": "own/org",
+      "evidence": [
+        "web/src/app/domains/feedback/feedback.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/feedback/policy",
+          "permission": "feedback.own"
+        },
+        {
+          "method": "POST",
+          "path": "/feedback",
+          "permission": "feedback.own"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/feedback"
+    },
+    {
+      "id": "feedback-own",
+      "route": "/feedback",
+      "status": "implemented",
+      "issue": 168,
+      "prototype_pages": [],
+      "menu": "Feedback",
+      "permission": "feedback.own",
+      "scope": "own/org",
+      "evidence": [
+        "web/src/app/domains/feedback/feedback.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/feedback",
+          "permission": "feedback.own"
+        }
+      ],
+      "url_state": [
+        "protocol",
+        "kind",
+        "state",
+        "from",
+        "to",
+        "page"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/feedback"
+    },
+    {
+      "id": "feedback-detail",
+      "route": "/feedback/:feedbackId",
+      "status": "implemented",
+      "issue": 168,
+      "prototype_pages": [],
+      "menu": "Feedback",
+      "permission": "feedback.own",
+      "scope": "own/org",
+      "evidence": [
+        "web/src/app/domains/feedback/feedback.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/feedback/{feedback_id}",
+          "permission": "feedback.own"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/feedback"
+    },
+    {
+      "id": "feedback-triage",
+      "route": "/feedback/triage",
+      "status": "implemented",
+      "issue": 168,
+      "prototype_pages": [],
+      "menu": "Feedback",
+      "permission": "feedback.triage",
+      "scope": "org",
+      "evidence": [
+        "web/src/app/domains/feedback/feedback.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/feedback/triage",
+          "permission": "feedback.triage"
+        }
+      ],
+      "url_state": [
+        "protocol",
+        "kind",
+        "state",
+        "from",
+        "to",
+        "page"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/feedback"
+    },
+    {
+      "id": "feedback-triage-detail",
+      "route": "/feedback/triage/:feedbackId",
+      "status": "implemented",
+      "issue": 168,
+      "prototype_pages": [],
+      "menu": "Feedback",
+      "permission": "feedback.triage",
+      "scope": "org",
+      "evidence": [
+        "web/src/app/domains/feedback/feedback.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/feedback/triage/{feedback_id}",
+          "permission": "feedback.triage"
+        },
+        {
+          "method": "PATCH",
+          "path": "/feedback/triage/{feedback_id}",
+          "permission": "feedback.triage"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/feedback"
+    },
+    {
+      "id": "ai-quality",
+      "route": "/ai/quality",
+      "status": "implemented",
+      "issue": 179,
+      "prototype_pages": [],
+      "menu": "IA — Qualidade",
+      "permission": "execution.read",
+      "scope": "synthetic",
+      "evidence": [
+        "web/src/app/domains/ai-quality/ai-quality.service.ts"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/ai/quality/scenarios",
+          "permission": "execution.read"
+        },
+        {
+          "method": "POST",
+          "path": "/ai/quality/scenarios/{scenario_id}/explanations",
+          "permission": "execution.read"
+        }
+      ],
+      "url_state": [],
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "forbidden",
+        "unavailable"
+      ],
+      "owner": "domains/ai-quality"
     }
   ]
 }

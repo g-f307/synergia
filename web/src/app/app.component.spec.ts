@@ -359,7 +359,7 @@ describe('AppComponent', () => {
     expect(compact.getAttribute('src')).toBe('/assets/logos/logo-dark-horizontal.svg');
   });
 
-  it('renders the three header actions with one visual contract', () => {
+  it('renders feedback and the existing header actions with one visual contract', () => {
     authenticated.set(true);
     notificationPermission.set(true);
     profile.set({ display_name: 'Pessoa Sintética' });
@@ -367,7 +367,7 @@ describe('AppComponent', () => {
     fixture.detectChanges();
 
     const actions = fixture.nativeElement.querySelectorAll('.account .topbar-action');
-    expect(actions.length).toBe(3);
+    expect(actions.length).toBe(4);
     expect(fixture.nativeElement.querySelector('.logout-button img')?.getAttribute('src')).toContain('logout.svg');
     expect([...actions].every((action: Element) => getComputedStyle(action).width === getComputedStyle(action).height)).toBeTrue();
     const account = fixture.nativeElement.querySelector('.account') as HTMLElement;

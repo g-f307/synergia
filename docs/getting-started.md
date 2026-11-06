@@ -7,6 +7,11 @@ Este roteiro sobe PostgreSQL, migrations, API FastAPI e aplicação Angular em
 containers. Ele usa somente configuração e dados locais; não representa a
 implantação corporativa da LG.
 
+Para instalação ou atualização assistida com histórico, verificação e rollback,
+use a [automação de implantação](deploy-automation.md). Ela exige configuração
+externa privada, projeto explícito e checkout limpo. Os comandos diretos de
+Compose abaixo servem ao desenvolvimento local.
+
 ## 1. Pré-requisitos
 
 - Git;
@@ -103,7 +108,13 @@ Parar sem apagar dados:
 docker compose down
 ```
 
-Atualizar código e imagens preservando volumes:
+Para uma atualização assistida, obtenha o commit desejado em checkout limpo e
+execute `python3 scripts/deploy.py apply` conforme
+[o roteiro de implantação](deploy-automation.md#instalação-e-atualização).
+O fluxo constrói a candidata, controla as migrations, verifica e registra a
+versão. Ele não executa `git pull` nem troca de branch por conta própria.
+
+Somente no desenvolvimento local, atualizar manualmente preservando volumes:
 
 ```bash
 git pull --ff-only

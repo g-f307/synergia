@@ -36,6 +36,7 @@ class RatePolicy:
 
 
 DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
+    "ai_quality_generate": (3, 300, True),
     "login": (10, 60, True),
     "refresh": (30, 60, True),
     "upload": (20, 60, True),
@@ -43,6 +44,11 @@ DEFAULTS: Final[dict[str, tuple[int, int, bool]]] = {
     "reprocess": (10, 300, True),
     "report_generate": (20, 300, True),
     "report_export": (60, 60, True),
+    "audit_read": (60, 60, True),
+    "audit_export": (10, 60, True),
+    "feedback_create": (10, 60, True),
+    "feedback_read": (120, 60, True),
+    "feedback_triage": (30, 60, True),
     "decision": (30, 60, True),
     "session_read": (30, 60, True),
     "session_revoke": (10, 60, True),
@@ -54,6 +60,8 @@ ORGANIZATION_PERMISSIONS: Final[dict[str, str]] = {
     "reprocess": "execution.reprocess",
     "report_generate": "report.generate",
     "report_export": "report.export",
+    "audit_read": "audit.read",
+    "audit_export": "audit.export",
 }
 
 
@@ -82,6 +90,24 @@ def policies_from_env() -> dict[str, RatePolicy]:
 
 
 def classify_operation(method: str, path: str) -> str | None:
+    parts = path.strip("/").split("/")
+    if (
+        method == "POST"
+        and len(parts) == 5
+        and parts[:3] == ["ai", "quality", "scenarios"]
+        and parts[4] == "explanations"
+    ):
+        return "ai_quality_generate"
+    if method == "GET" and (path == "/feedback" or path.startswith("/feedback/")):
+        return "feedback_read"
+    if method == "POST" and path == "/feedback":
+        return "feedback_create"
+    if method == "PATCH" and path.startswith("/feedback/triage/"):
+        return "feedback_triage"
+    if method == "GET" and path == "/audit/events":
+        return "audit_read"
+    if method == "GET" and path == "/audit/events/export":
+        return "audit_export"
     if method == "POST" and path == "/auth/login":
         return "login"
     if method == "POST" and path == "/auth/refresh":

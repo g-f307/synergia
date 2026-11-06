@@ -21,6 +21,12 @@ from app.rate_limiting import (
 
 def test_operation_matrix_covers_every_critical_contract() -> None:
     cases = {
+        ("POST", "/ai/quality/scenarios/QE-A01/explanations"): "ai_quality_generate",
+        ("POST", "/feedback"): "feedback_create",
+        ("GET", "/feedback/policy"): "feedback_read",
+        ("PATCH", "/feedback/triage/id"): "feedback_triage",
+        ("GET", "/audit/events"): "audit_read",
+        ("GET", "/audit/events/export"): "audit_export",
         ("POST", "/auth/login"): "login",
         ("POST", "/auth/refresh"): "refresh",
         ("POST", "/imports"): "upload",
@@ -43,6 +49,17 @@ def test_operation_matrix_covers_every_critical_contract() -> None:
     }
     for request, expected in cases.items():
         assert classify_operation(*request) == expected
+
+
+def test_quality_generation_policy_is_separate_and_configurable(monkeypatch) -> None:
+    policy = policies_from_env()["ai_quality_generate"]
+    assert (policy.limit, policy.window_seconds, policy.fail_closed) == (3, 300, True)
+    monkeypatch.setenv("RATE_LIMIT_AI_QUALITY_GENERATE_LIMIT", "2")
+    monkeypatch.setenv("RATE_LIMIT_AI_QUALITY_GENERATE_WINDOW_SECONDS", "600")
+    policy = policies_from_env()["ai_quality_generate"]
+    assert (policy.limit, policy.window_seconds) == (2, 600)
+    assert classify_operation("GET", "/ai/quality/scenarios") is None
+    assert classify_operation("POST", "/ai/quality/scenarios/id/other") is None
 
 
 def test_invalid_configuration_is_rejected(monkeypatch) -> None:

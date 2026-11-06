@@ -32,6 +32,7 @@ ALL_PERMISSIONS = {
         "artifact.read",
         "execution.reprocess",
         "audit.read",
+        "audit.export",
         "artifact.export",
         "report.export",
         "report.generate",

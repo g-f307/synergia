@@ -28,6 +28,9 @@ pytestmark = [
 CASES = load_cases()
 KEY = "runtime-security-matrix-signing-key-at-least-32-bytes"
 PATH_VALUES = {
+    # Exercise authorization without generating model output in the IAM matrix.
+    "scenario_id": "matrix-synthetic-not-found",
+    "feedback_id": "00000000-0000-4000-8000-00000000000b",
     "execution_id": "security-missing-execution",
     "workorder_number": "SECURITY-MISSING-WO",
     "lot_number": "SECURITY-MISSING-LOT",
@@ -55,6 +58,7 @@ class RuntimeActors:
     config: AuthConfig
     users: dict[str, UUID]
     sessions: dict[str, UUID]
+    organization_id: UUID
 
     def token(self, role: str, *, disposable: bool = False) -> str:
         session_id = self.sessions[role]
@@ -151,7 +155,9 @@ def runtime_actors() -> RuntimeActors:
                 """,
                 (user_id, None if role == "admin" else organization_id, role),
             )
-    actors = RuntimeActors(database_url, AuthConfig.from_env(), users, sessions)
+    actors = RuntimeActors(
+        database_url, AuthConfig.from_env(), users, sessions, organization_id
+    )
     try:
         yield actors
     finally:
@@ -214,6 +220,10 @@ def test_role_route_method_matrix_executes_real_authorization(
             case.method,
             concrete_path(case.path),
             headers=headers,
+            params=(
+                {"organization_id": str(runtime_actors.organization_id)}
+                if case.path.startswith("/audit/events") else None
+            ),
             json={} if case.method in {"POST", "PUT", "PATCH", "DELETE"} else None,
         )
 
