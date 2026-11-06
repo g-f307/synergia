@@ -29,6 +29,7 @@ COPY --chown=synergia:synergia scripts/apply_migrations.py scripts/apply_migrati
 COPY --chown=synergia:synergia scripts/container_entrypoint.py scripts/container_entrypoint.py
 COPY --chown=synergia:synergia scripts/smoke_containers.py scripts/smoke_containers.py
 COPY --chown=synergia:synergia scripts/process_email_notifications.py scripts/process_email_notifications.py
+COPY --chown=synergia:synergia scripts/process_graylog.py scripts/process_graylog.py
 COPY --chown=synergia:synergia scripts/reconcile_smtp_delivery.py scripts/reconcile_smtp_delivery.py
 COPY --chown=synergia:synergia scripts/smoke_smtp_delivery.py scripts/smoke_smtp_delivery.py
 COPY --chown=synergia:synergia database/migrations database/migrations

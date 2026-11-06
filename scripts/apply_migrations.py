@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0036": ("graylog_contract", "synergia", ""),
     "0035": ("feedback_contract", "synergia", ""),
     "0034": ("audit_export_contract", "synergia", ""),
     "0033": (
@@ -74,6 +75,26 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "graylog_contract":
+        return connection.execute(
+            """SELECT 1 WHERE
+            to_regclass('synergia.graylog_deliveries') IS NOT NULL
+            AND to_regclass('synergia.graylog_delivery_history') IS NOT NULL
+            AND to_regclass('synergia.graylog_scan_windows') IS NOT NULL
+            AND to_regclass('synergia.observability_events') IS NOT NULL
+            AND to_regclass('synergia.audit_event_catalog_v1') IS NOT NULL
+            AND EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'synergia' AND table_name = 'graylog_deliveries'
+                  AND column_name = 'source_snapshot' AND data_type = 'jsonb')
+            AND EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'synergia' AND table_name = 'graylog_deliveries'
+                  AND column_name = 'confirmed_at')
+            AND EXISTS (SELECT 1 FROM pg_trigger
+                WHERE tgrelid = to_regclass('synergia.graylog_delivery_history')
+                  AND tgname = 'graylog_history_immutable' AND tgenabled <> 'D')
+            AND (SELECT count(*) FROM pg_trigger
+                 WHERE tgname = 'graylog_source_insert' AND tgenabled <> 'D') = 13"""
+        ).fetchone() is not None
     if kind == "feedback_contract":
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False

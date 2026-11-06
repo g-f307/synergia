@@ -27,7 +27,13 @@
     "is_active",
     "from_state",
     "to_state",
-    "format"
+    "format",
+    "fallback",
+    "model",
+    "model_digest",
+    "executor",
+    "operation",
+    "tool"
   ],
   "sources": [
     {
@@ -203,15 +209,48 @@
       "emitters": [
         "backend/app/audit.py"
       ]
+    },
+    {
+      "table": "observability_events",
+      "id_prefix": "llm",
+      "organization": "global synthetic quality demonstrator; no business organization inferred",
+      "actions": [
+        "llm.requested",
+        "llm.completed",
+        "llm.failed"
+      ],
+      "emitters": [
+        "backend/app/model_audit.py"
+      ],
+      "implementation_status": "implemented",
+      "limitations": [
+        "No autonomous tools or business-data inference; tokens not exposed by current runtime adapter.",
+        "No prompt, response, response hash, cells or evidence in audit events."
+      ]
+    },
+    {
+      "table": "rate_limit_events",
+      "id_prefix": "security_rate",
+      "organization": "global; never infer organization from HMAC key",
+      "actions": [
+        "security.rate_limit_denied"
+      ],
+      "emitters": [
+        "database/migrations/0024_create_rate_limit_buckets.sql"
+      ],
+      "implementation_status": "implemented",
+      "limitations": [
+        "Only stable action, UTC time, correlation and source ID are projected. No key hash, IP, route, dimension or identifier."
+      ]
     }
   ],
   "excluded_sources": {
     "execution_state_transitions": "Represented by execution events; no duplicate projection.",
     "identity_login_attempts": "Transient abuse-control state; identifier/IP hashes are not exported.",
-    "rate_limit_events": "Technical abuse evidence with HMAC identifiers; not business audit export.",
     "stdout": "Technical logs; separate collection and policy.",
     "metrics": "Aggregates, not per-action audit events.",
-    "feedback_events": "Immutable product history; creation and state changes are atomically mirrored into identity_access_events without feedback content."
+    "feedback_events": "Immutable product history; creation and state changes are atomically mirrored into identity_access_events without feedback content.",
+    "graylog_delivery_history": "Private immutable collector delivery trail; deliberately excluded to prevent recursion."
   },
   "coverage_findings": [
     {
@@ -229,5 +268,72 @@
       "gap": "Some legacy sources omit actor UUID or correlation, and global identity events lack organization.",
       "resolution": "Preserve null/unknown and global-only scope; never infer historical actors or organizations from current memberships."
     }
-  ]
+  ],
+  "capabilities": {
+    "authentication": {
+      "status": "implemented",
+      "source": "identity_access_events",
+      "actions": [
+        "auth.login_succeeded",
+        "auth.login_failed",
+        "auth.login_rate_limited",
+        "auth.logout",
+        "auth.logout_others",
+        "auth.logout_all",
+        "auth.refresh_reused",
+        "authorization.denied"
+      ]
+    },
+    "smart_office_rpa": {
+      "status": "not_implemented",
+      "future_fields": [
+        "operation_id",
+        "started_at",
+        "finished_at",
+        "technical_actor_id",
+        "operation",
+        "duration_ms",
+        "correlation_id",
+        "outcome"
+      ],
+      "prohibited_fields": [
+        "content",
+        "files",
+        "business_payload"
+      ]
+    },
+    "llm_quality_explanation": {
+      "status": "implemented",
+      "source": "observability_events",
+      "model": "qwen3:4b-instruct",
+      "executor": "synergia-api",
+      "tool": "none",
+      "tokens": "not_available",
+      "scope": "authenticated synthetic scenarios; explicit local-model activation"
+    },
+    "llm_autonomous_tools": {
+      "status": "not_implemented",
+      "future_fields": [
+        "proposal_id",
+        "model_version",
+        "executor",
+        "tool",
+        "duration_ms",
+        "tokens",
+        "outcome",
+        "fallback"
+      ],
+      "prohibited_fields": [
+        "prompt",
+        "response",
+        "evidence",
+        "tool_arguments"
+      ]
+    },
+    "container_technical_logs": {
+      "status": "external_collection_pending_approval",
+      "stream": "separate from audit",
+      "allowed": "only sanitized synergia JSON; never raw container stdout/stderr"
+    }
+  }
 }

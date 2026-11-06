@@ -50,7 +50,7 @@ class ApplyWorkflow:
         self.active_operations = []
         for item in self.deployment.containers:
             if item["State"] not in {"exited", "created", "dead"} and (
-                item["Service"] in {"email-worker", "migrate", "config-check"}
+                item["Service"] in {"email-worker", "graylog-worker", "migrate", "config-check"}
                 or item.get("OneOff", "").lower() == "true"
             ):
                 self.active_operations.append(item)
@@ -341,6 +341,7 @@ class ApplyWorkflow:
                     "migrate",
                     "backend",
                     "email-worker",
+                    "graylog-worker",
                     "web",
                 ):
                     if name not in services:

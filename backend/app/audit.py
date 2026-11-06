@@ -39,6 +39,8 @@ ORIGINS = frozenset(
         "email_delivery_attempts",
         "email_delivery_reconciliations",
         "audit_export_events",
+        "observability_events",
+        "rate_limit_events",
     }
 )
 STATES = frozenset(state.value for state in ExecutionState) | {
@@ -184,7 +186,7 @@ def sanitize_event(row: dict) -> AuditEvent:
         value = raw.get(key)
         if type(value) is int and 0 <= value <= 2**63 - 1:
             metadata[key] = value
-    for key in ("consent", "is_active"):
+    for key in ("consent", "is_active", "fallback"):
         if type(raw.get(key)) is bool:
             metadata[key] = raw[key]
     for key in ("from_state", "to_state"):
@@ -193,6 +195,20 @@ def sanitize_event(row: dict) -> AuditEvent:
             metadata[key] = value
     if raw.get("format") in ("json", "csv"):
         metadata["format"] = raw["format"]
+    # Model execution metadata is a closed contract, not free-form LLM output.
+    if row["origin"] == "observability_events":
+        approved = {
+            "model": {"qwen3:4b-instruct"},
+            "executor": {"synergia-api"},
+            "operation": {"quality_explanation"},
+            "tool": {"none"},
+        }
+        for key, values in approved.items():
+            if isinstance(raw.get(key), str) and raw[key] in values:
+                metadata[key] = raw[key]
+        digest = raw.get("model_digest")
+        if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest):
+            metadata["model_digest"] = digest
     result = AuditEvent.model_validate(
         {key: row[key] for key in AuditEvent.model_fields if key != "metadata"}
         | {"metadata": metadata}
