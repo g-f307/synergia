@@ -9,12 +9,21 @@ Os exemplos com domínio `.invalid` não são destinos acessíveis.
 
 `--env-file` alimenta a interpolação do Compose; **não injeta automaticamente
 cada variável no container**. A coluna “Aplicação” distingue repasse, valor fixo
-e configuração apenas do host. Para uma opção não repassada, é necessário um
-overlay privado revisado com `environment`/mounts explícitos, aplicado em todos
-os comandos da operação com os mesmos `-f`. Não editar o Compose rastreado para
-inserir endereços ou segredos. Tokens de métricas e limites de ingestão são
-exemplos que precisam desse repasse adicional. Credenciais SMTP nunca devem
-ser acrescentadas ao backend.
+e configuração apenas do host. Para uma opção não repassada, um fluxo Compose
+manual especializado precisa de overlay privado revisado com
+`environment`/mounts explícitos e os mesmos `-f` em toda a operação.
+**A CLI `deploy.py` usa apenas o Compose base versionado e não aceita overlays
+arbitrários nem `--file`.** Não misture alterações manuais de runtime com seu
+histórico. Se a implantação depende de mounts/opções ausentes do base, pare e
+encaminhe a extensão do contrato de automação para implementação e teste antes
+de adotá-la. O overlay SMTP permanece restrito ao procedimento especializado do
+worker e seus transmissores devem estar parados durante o deploy.
+
+A automação também ignora o `.env` implícito e variáveis de aplicação/Compose
+exportadas no shell. Edite o arquivo externo aprovado; não use prefixos de
+variáveis no comando para substituir sua configuração. Tokens de métricas e
+limites de ingestão são exemplos que exigem repasse adicional antes de uso em
+container. Credenciais SMTP nunca devem ser acrescentadas ao backend.
 
 Em todos os perfis o Compose exige `SYNERGIA_ENV` e `POSTGRES_PASSWORD`.
 Fora de development/test, config-check rejeita padrões locais, segredos vazios
@@ -39,7 +48,7 @@ houver exigência específica, a opção é ajustável e usa o padrão da aplica
 | `POSTGRES_USER` | Compose / repassada conforme serviço | synergia | Nome PostgreSQL; padrão synergia; manter idêntico em toda a operação. |
 | `POSTGRES_PASSWORD` | Compose / repassada conforme serviço | configuração privada | Obrigatória na interpolação. Segredo privado, distinto dos padrões locais fora de dev. Alterar o arquivo não altera senha de volume existente. |
 | `POSTGRES_PORT` | Compose / repassada conforme serviço | 5432 | Porta publicada no host; ajustar disponibilidade/rede. Não muda a porta interna. |
-| `SYNERGIA_IMAGE_TAG` | Compose / repassada conforme serviço | local | Tag imutável vinculada ao SHA fora de dev; não reutilizar tags entre versões. |
+| `SYNERGIA_IMAGE_TAG` | Compose / repassada conforme serviço | local | Referência explícita fora de dev; apply gera tags únicas e fixa imagens por ID. Não sobrescrever tags anteriores nem usá-las para inferir o runtime confirmado. |
 | `MIGRATION_BASELINE_THROUGH` | Compose / repassada conforme serviço | vazio / opcional conforme regra | Vazia em bancos novos; uso único em legado, nome SQL exato comprovado; remover após adoção. |
 | `DATABASE_URL` | Host; exige overlay para container | conninfo privado, sem valor publicado | Obrigatória no processo Python do host. Nos containers, entrypoint gera conninfo por make_conninfo a partir de PG*, preservando caracteres especiais. |
 | `SYNERGIA_ENV` | Compose / repassada conforme serviço | development | Obrigatória em todos os perfis; development/test locais, homologation assistido, production condicionado. |
@@ -101,6 +110,18 @@ houver exigência específica, a opção é ajustável e usa o padrão da aplica
 | `RATE_LIMIT_REPORT_EXPORT_WINDOW_SECONDS` | Host; exige overlay para container | 60 | Cota ou janela em segundos por operação; respeitar contrato de rate limiting. |
 | `RATE_LIMIT_DECISION_LIMIT` | Host; exige overlay para container | 30 | Cota ou janela em segundos por operação; respeitar contrato de rate limiting. |
 | `RATE_LIMIT_DECISION_WINDOW_SECONDS` | Host; exige overlay para container | 60 | Cota ou janela em segundos por operação; respeitar contrato de rate limiting. |
+| `RATE_LIMIT_AI_QUALITY_GENERATE_LIMIT` | Host; não repassada pelo Compose base | 3 | Cota da geração de explicação; desabilitar o modelo não remove a cota do POST. |
+| `RATE_LIMIT_AI_QUALITY_GENERATE_WINDOW_SECONDS` | Host; não repassada pelo Compose base | 300 | Janela da geração em segundos; diagnóstico detalhado em IA — Qualidade. |
+
+## Demonstrador de IA — Qualidade
+
+O Compose padrão não inclui Ollama. A consulta a fatos/baseline determinístico
+permanece disponível sem modelo. Veja [IA — Qualidade](../ai-quality-ui.md).
+
+| Variável | Aplicação | Modelo / formato | Regra por perfil e exemplo seguro |
+| --- | --- | --- | --- |
+| `SYNERGIA_AI_QUALITY_MODEL_ENABLED` | Host; não repassada pelo Compose base | false | Manter false no Compose padrão; a geração só deve ser habilitada em runtime provisionado e validado conforme o contrato do demonstrador. |
+| `SYNERGIA_AI_QUALITY_ENDPOINT` | Host; não repassada pelo Compose base | http://127.0.0.1:11434 | Loopback do processo backend; loopback de container não alcança automaticamente o host. Não publicar porta do modelo para contornar essa restrição. |
 
 ## Storage e ingestão
 
@@ -176,6 +197,9 @@ python3 -c "from datetime import UTC, datetime, timedelta; print((datetime.now(U
 - **Resultado esperado:** 0; chave com mais de 32 bytes e data ISO 8601 com fuso.
 - **Interpretação de falhas:** Python incompatível; não improvisar chave curta.
 - **Próxima ação:** guardar a chave diretamente no arquivo privado, gerar outra independente para rate limiting e conferir expiração no momento da implantação. Não copiar as saídas para chamados.
+- **Pré-condições:** Terminal privado sem transcrição e Python 3.11+ disponível; nenhuma saída deve ser publicada.
+- **Entradas:** Aleatoriedade do sistema e relógio UTC; nenhum segredo existente é consumido.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ```bash
 docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env config --quiet
@@ -185,7 +209,10 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 - **Efeito:** somente leitura; valida interpolação sem imprimir segredos.
 - **Resultado esperado:** 0, sem saída.
 - **Interpretação de falhas:** variável obrigatória ausente ou sintaxe inválida. Sucesso não comprova regras do perfil.
-- **Próxima ação:** executar build/config-check da [primeira implantação](deployment-guide.md); `scripts/deploy.py precheck` depende da #166, indisponível neste checkout.
+- **Próxima ação:** executar `scripts/deploy.py precheck` e o fluxo da [primeira implantação](deployment-guide.md); a CLI valida também as regras do perfil e a identidade dos recursos.
+- **Pré-condições:** Host e autorizações do passo disponíveis; executar um comando por vez e interromper em falha.
+- **Entradas:** Ferramentas e configuração indicadas no comando; caminhos são exemplos privados a substituir.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 Contratos detalhados: [autenticação](../authentication.md),
 [rate limiting](../rate-limiting.md), [orçamento XLSX](../xlsx-ingestion-budget.md),

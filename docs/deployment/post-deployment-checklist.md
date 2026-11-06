@@ -1,9 +1,10 @@
 # Aceite pós-implantação
 
-Execute após primeira instalação, atualização e recuperação. Use as portas,
-origens e overlays aprovados; exemplos `.invalid` exigem substituição privada.
+Execute após primeira instalação, atualização e recuperação. Use portas,
+origens e histórico aprovados; exemplos `.invalid` exigem substituição privada.
 
 - [ ] SHA aprovado, checkout limpo e tags imutáveis retidas.
+- [ ] deploy.py verify aprovado; referência ativa, IDs das imagens e portas coincidem com o runtime.
 - [ ] Perfil efetivo confirmado como homologation (ou perfil autorizado).
 - [ ] Backend UID 10001 e web nginx, ambos sem root.
 - [ ] Migration retornou 0; ledger contém filenames e SHA-256 correspondentes ao checkout.
@@ -18,6 +19,7 @@ origens e overlays aprovados; exemplos `.invalid` exigem substituição privada.
 ## Código, perfil, processos e ledger
 
 ```bash
+python3 scripts/deploy.py verify --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
 git status --short
 git diff --exit-code
 git rev-parse HEAD
@@ -30,10 +32,13 @@ sha256sum database/migrations/*.sql
 ```
 
 - **Onde executar:** host, raiz do checkout implantado, terminal restrito.
-- **Efeito:** somente leitura; consulta código, processos, logs e ledger; calcula hashes locais.
-- **Resultado esperado:** status Git vazio, diff 0, SHA aprovado; log `synergia startup: environment=homologation`; backend 10001, web nginx sem UID 0; cada SQL com filename/hash idêntico no ledger (atualmente 0001 a 0033).
-- **Interpretação de falhas:** migrate descartável não aparece após run --rm; conferir retorno da execução. Hash/arquivo ausente ou extra bloqueia aceite; não editar ledger.
+- **Efeito:** verify inclui readiness com escrita temporária; demais inspeções consultam código/processos/logs/ledger e calculam hashes locais, sem migrations.
+- **Resultado esperado:** verified: true, Git limpo, SHA aprovado e label org.opencontainers.image.revision correspondente; backend 10001, web nginx sem UID 0; filenames/hashes iguais ao inventário SQL da revisão, sem fixar número de migrations.
+- **Interpretação de falhas:** use journal/reconcile para conferir a tentativa SQL e seu container preservado. Hash/arquivo ausente ou extra bloqueia aceite; não editar ledger nem active.json.
 - **Próxima ação:** se aprovado seguir sondas; caso contrário usar [diagnóstico](troubleshooting.md).
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ## Sondas e navegador
 
@@ -48,6 +53,9 @@ curl --fail --silent --show-error --output /dev/null --dump-header - --request O
 - **Resultado esperado:** smoke 0 com quatro alvos ok, CSP com origem API; preflight 200 e Access-Control-Allow-Origin igual à origem web permitida.
 - **Interpretação de falhas:** 400 no preflight indica origem/método não autorizado; smoke não valida login nem acesso da estação remota.
 - **Próxima ação:** conferir no navegador autorizado login/refresh, console sem bloqueio CSP/CORS e jornada sintética de [primeiros passos](../getting-started.md). Não compartilhar cookies/tokens/headers brutos.
+- **Pré-condições:** Instalação disponível para sondas e portas/origens ajustadas; readiness requer permissão de escrita temporária.
+- **Entradas:** Portas efetivas, origem API/web e configuração de implantação aprovada.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ## Exercício independente de configuração
 
@@ -56,16 +64,20 @@ Registrar primeiro baseline saudável. O cenário abaixo não altera o arquivo
 principal nem inicia dependências; exige imagem da revisão já construída.
 
 ```bash
-install -m 0600 /caminho/privado/synergia-config/homologation.env /caminho/privado/synergia-config/fault.env
-SYNERGIA_API_ORIGIN=http://localhost:8000 docker compose --project-name synergia --env-file /caminho/privado/synergia-config/fault.env run --rm --no-deps config-check
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env run --rm --no-deps config-check
+test ! -e /caminho/privado/synergia-config/fault.env && install -m 0600 /caminho/privado/synergia-config/homologation.env /caminho/privado/synergia-config/fault.env
+python3 -c "from pathlib import Path; p=Path('/caminho/privado/synergia-config/fault.env'); rows=p.read_text().splitlines(); assert any(r.startswith('SYNERGIA_API_ORIGIN=') for r in rows); p.write_text('\n'.join('SYNERGIA_API_ORIGIN=http://localhost:8000' if r.startswith('SYNERGIA_API_ORIGIN=') else r for r in rows)+'\n')"
+python3 scripts/deploy.py precheck --project synergia --env-file /caminho/privado/synergia-config/fault.env --state-dir /caminho/privado/deploy-history
+python3 scripts/deploy.py precheck --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
 ```
 
 - **Onde executar:** host de ensaio, raiz do checkout; fault.env deve ser destino novo e privado.
-- **Efeito:** mutável apenas na cópia e tarefas temporárias; sobreposição de origem dura um comando. Banco e serviços existentes permanecem.
-- **Resultado esperado:** comando de falha retorna não zero com `invalid deployment configuration: SYNERGIA_API_ORIGIN must not use a local address outside development`; execução final válida retorna 0.
+- **Efeito:** mutável somente na cópia privada; precheck é leitura. A CLI ignora variáveis de aplicação exportadas no shell, por isso a falha é inserida no arquivo de ensaio.
+- **Resultado esperado:** precheck de falha retorna 1 indicando SYNERGIA_API_ORIGIN local fora de development; precheck com arquivo original retorna 0. Não executar apply com fault.env.
 - **Interpretação de falhas:** se falhar em outro campo, baseline não está válido; se localhost passar, perfil/revisão incorretos. `config --quiet` sozinho não detecta esta falha de perfil.
-- **Próxima ação:** segundo executor identifica a causa usando Ambiente no diagnóstico, registra correção e repete o smoke saudável; remover cópia privada depois conforme retenção local.
+- **Próxima ação:** segundo executor identifica a causa usando Ambiente no diagnóstico, registra correção e repete verify/smoke saudáveis; reter cópia privada conforme política local, sem publicá-la.
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ## Exercício de dependência
 
@@ -84,6 +96,9 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 - **Resultado esperado:** liveness 200, readiness 503 indicando postgresql; após reinício e banco healthy, smoke volta a passar com readiness 200.
 - **Interpretação de falhas:** falha adicional ou suspeita de dados reais exige interromper exercício e restaurar serviço; HTTP 503 não torna curl não zero sem --fail.
 - **Próxima ação:** executar smoke acima e [runbook de exercícios](../runbooks/homologation-observability.md), registrar tempos e diagnóstico antes de liberar ambiente.
+- **Pré-condições:** Baseline saudável, janela autorizada e instância descartável sem dados reais ou outros usuários.
+- **Entradas:** Configuração da instância de ensaio e portas efetivamente publicadas.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ## Registro sanitizado de aceite
 

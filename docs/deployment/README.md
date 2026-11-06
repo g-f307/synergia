@@ -4,6 +4,10 @@ Esta é a entrada única para primeira implantação, diagnóstico, atualizaçã
 verificação e recuperação. Os contratos conceituais continuam nos documentos
 referenciados; siga os procedimentos desta área na ordem indicada.
 
+A [revisão da issue #167](../evidence/issue-167-deployment-guide-validation.md)
+registra verificações realmente executadas, limites de ambiente e o aceite
+independente ainda pendente.
+
 | Guia | Público | Quando usar |
 | --- | --- | --- |
 | [Referência de ambiente](environment-reference.md) | Plataforma e segurança | Preparar configuração privada e entender quais variáveis chegam aos containers |
@@ -25,10 +29,12 @@ referenciados; siga os procedimentos desta área na ordem indicada.
   expressa o contrato, não uma liberação. Depende de HTTPS, secrets montados e
   adaptador corporativo aprovado. Veja o [contrato de identidade](../corporate-identity-contract.md).
 
-Neste checkout, `scripts/deploy.py` da issue #166 está **indisponível**.
-O fluxo executável usa Docker Compose e os scripts existentes. Não execute a
-automação antes de sua entrega e revisão; as regras previstas estão em
-[atualização e rollback](update-and-rollback.md).
+`scripts/deploy.py`, entregue pela #166, é o fluxo principal de implantação:
+`diagnose`/`precheck` → `apply` → `verify`, com `rollback` e `reconcile`
+para recuperação. Os contratos detalhados permanecem em
+[automação de implantação](../deploy-automation.md); os procedimentos por tarefa
+estão nos guias acima. O aceite por pessoa independente continua pendente,
+conforme o [checklist](post-deployment-checklist.md).
 
 ## Host, acesso e topologia
 
@@ -56,14 +62,15 @@ backend e acesso aos volumes, conforme [atualização](update-and-rollback.md).
 Volumes lógicos `synergia-postgres` em `/var/lib/postgresql/data` e
 `synergia-application-data` em `/var/lib/synergia` (`imports`, `avatars`,
 `email-capture`). Seus nomes físicos recebem o prefixo do projeto Compose.
-Use sempre `--project-name synergia`; trocar o projeto pode criar volumes vazios.
+Use sempre `--project synergia` na automação e `--project-name synergia` nas
+inspeções Compose; trocar o projeto pode criar volumes vazios.
 Nunca use remoção de volumes para resolver falha operacional.
 Detalhes: [contrato de containers](../container-deployment.md).
 
 ## Estações com Podman
 
-O ambiente do responsável utiliza Podman 5.8.9 e podman-compose 1.6.0.
-A interpolação do Compose base foi verificada nesse ambiente:
+Uma verificação anterior usou Podman 5.8.9 e podman-compose 1.6.0 para
+interpolação do Compose base. O comando de inspeção correspondente é:
 
 ```bash
 podman-compose --env-file .env.example config --quiet
@@ -74,9 +81,12 @@ podman-compose --env-file .env.example config --quiet
 - **Resultado esperado:** saída 0, sem saída de configuração expandida.
 - **Interpretação de falhas:** conferir instalação, acesso rootless e variáveis obrigatórias; no sandbox, acesso a /run/user pode estar bloqueado.
 - **Próxima ação:** para homologação, preparar arquivo privado e validar o ciclo completo no ambiente de ensaio antes do aceite.
+- **Pré-condições:** Host e autorizações do passo disponíveis; executar um comando por vez e interromper em falha.
+- **Entradas:** Ferramentas e configuração indicadas no comando; caminhos são exemplos privados a substituir.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 Esse resultado não comprova implantação completa com Podman. Os procedimentos
-principais e quatro testes existentes usam Docker Compose; o podman-compose
+principais usam Docker Compose; o podman-compose
 1.6.0 não oferece `config --format json`. Não usar alias como prova de
 compatibilidade. Migrações, condições de dependência, saúde, secrets e permissões
 dos volumes rootless ainda precisam de validação com Podman. A seleção do

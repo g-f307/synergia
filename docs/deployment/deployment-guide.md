@@ -1,10 +1,9 @@
 # Primeira implantação
 
-Comece pelo [mapa e pré-requisitos](README.md). Este procedimento instala
-homologação assistida com banco novo. Banco existente exige o procedimento de
-[atualização e adoção de legado](update-and-rollback.md). Os caminhos abaixo
-são exemplos: substitua `/caminho/privado` por um diretório autorizado fora do
-checkout. Execute em Bash e não habilite rastreamento de comandos (`set -x`).
+Comece pelo [mapa e pré-requisitos](README.md). O fluxo usa a automação da
+#166 para homologação assistida em instalação nova. Instalação existente
+segue [atualização e recuperação](update-and-rollback.md). Use Bash no host
+Linux, configuração externa privada e o mesmo projeto em toda a operação.
 
 ## 1. Host e revisão
 
@@ -17,9 +16,12 @@ docker info --format '{{.ServerVersion}}'
 
 - **Onde executar:** terminal do host Linux autorizado.
 - **Efeito:** somente leitura; verifica ferramentas e acesso ao daemon.
-- **Resultado esperado:** saída 0 em cada comando; Python >= 3.11, Compose v2.
-- **Interpretação de falhas:** ferramenta ausente ou acesso ao daemon negado.
+- **Resultado esperado:** saída 0 em cada comando; Python >= 3.11 e Compose com config/ps em JSON.
+- **Interpretação de falhas:** ferramenta ausente ou acesso ao daemon negado impede prosseguir.
 - **Próxima ação:** plataforma corrige o host; depois obtenha o checkout.
+- **Pré-condições:** Host e autorizações do passo disponíveis; executar um comando por vez e interromper em falha.
+- **Entradas:** Ferramentas e configuração indicadas no comando; caminhos são exemplos privados a substituir.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ```bash
 git clone https://github.com/g-f307/synergia.git
@@ -30,89 +32,102 @@ git diff --exit-code
 git rev-parse HEAD
 ```
 
-- **Onde executar:** host, diretório de trabalho; substitua `REVISAO_APROVADA` por tag/SHA aprovado.
-- **Efeito:** mutável; clona e seleciona código, depois inspeciona estado e SHA.
+- **Onde executar:** host, diretório de trabalho; substituir REVISAO_APROVADA por tag/SHA aprovado.
+- **Efeito:** cria checkout e seleciona código; não modifica instalação existente.
 - **Resultado esperado:** comandos com 0, status vazio e SHA igual ao aprovado.
-- **Interpretação de falhas:** revisão ausente, acesso negado ou alterações locais; não sobrescrever trabalho existente.
-- **Próxima ação:** resolver acesso/revisão e usar checkout limpo; preparar configuração.
+- **Interpretação de falhas:** revisão ausente, acesso negado ou mudanças locais; não sobrescrever trabalho existente.
+- **Próxima ação:** preparar configuração com checkout limpo; a CLI não faz pull nem troca a revisão.
+- **Pré-condições:** Destino novo, acesso autorizado ao repositório e revisão aprovada conhecida; não sobrescrever checkout existente.
+- **Entradas:** Repositório e tag/SHA aprovados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-Se o clone já existir, comece pela conferência do estado; não repita clone nem
-troque de revisão com mudanças locais. Todos os próximos comandos Compose são
-executados na raiz desse checkout, com o mesmo projeto e arquivo externo.
+Se já houver clone, confira o estado antes de trocar a revisão. O precheck
+recusa alterações rastreadas ou arquivos não ignorados. Não guarde configuração,
+histórico ou backups no checkout, mesmo em diretórios ignorados. Não habilite
+`set -x` nem publique configuração ou logs brutos.
 
 ## 2. Configuração privada
 
 ```bash
 install -d -m 0700 /caminho/privado/synergia-config /caminho/privado/deploy-history
-install -m 0600 .env.homologation.example /caminho/privado/synergia-config/homologation.env
+test ! -e /caminho/privado/synergia-config/homologation.env && install -m 0600 .env.homologation.example /caminho/privado/synergia-config/homologation.env
 ```
 
-- **Onde executar:** host, raiz do checkout, somente na primeira preparação (destino ausente).
-- **Efeito:** mutável; cria diretórios e copia modelo sem segredos reais. Não sobrescrever configuração existente.
-- **Resultado esperado:** saída 0; arquivo 0600 fora do Git.
-- **Interpretação de falhas:** caminho ou permissão inválidos; interromper antes de iniciar containers.
-- **Próxima ação:** editar o arquivo privado com editor autorizado e seguir a referência de ambiente.
+- **Onde executar:** host, raiz do checkout; preparação inicial em diretórios autorizados, sem configuração anterior no destino.
+- **Efeito:** cria diretórios e copia modelo 0600. Não gera usuários nem configura credenciais reais.
+- **Resultado esperado:** saída 0; arquivo e histórico pertencem ao operador e ficam fora do Git.
+- **Interpretação de falhas:** destino já existente, caminho ou permissões inválidos exigem parar; não substituir configuração anterior.
+- **Próxima ação:** editar a cópia com editor autorizado, conforme [referência de ambiente](environment-reference.md).
+- **Pré-condições:** Diretórios externos aprovados e destino ausente; não sobrescrever configuração existente.
+- **Entradas:** Modelo ou cópia privada indicada e diretórios autorizados fora do Git.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-Preencha senhas e chaves independentes, origens acessíveis pelo navegador,
-tag imutável ligada ao SHA e abas permitidas. Remova todos os placeholders.
-Para login local temporário, defina expiração com fuso. Nenhum usuário é criado
-automaticamente por estes comandos: o responsável por IAM deve fornecer uma
-identidade autorizada conforme [autenticação](../authentication.md).
-Mantenha o e-mail desabilitado na instalação inicial.
-Veja [variáveis e geração de chaves](environment-reference.md).
+Substitua os placeholders por segredos independentes, origens acessíveis ao
+navegador e abas autorizadas. Login local temporário exige data futura com fuso
+e até 90 dias. Mantenha e-mail desabilitado. IAM deve fornecer uma identidade
+autorizada; o deploy não faz bootstrap de contas.
 
-## 3. Pré-validação sem iniciar banco
+A CLI usa somente o Compose base versionado. `.env` implícito, variáveis de
+aplicação no shell e overlays arbitrários não alteram esse fluxo. Dependência
+de mounts/configurações ausentes exige extensão aprovada da automação,
+não edição ad hoc de arquivos ou containers.
+
+## 3. Diagnóstico e pré-validação
 
 ```bash
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env config --quiet
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env build
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env run --rm --no-deps config-check
+python3 scripts/deploy.py diagnose --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
+python3 scripts/deploy.py precheck --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
 ```
 
-- **Onde executar:** host, raiz do checkout.
-- **Efeito:** mutável; valida interpolação, constrói imagens e executa tarefa isolada sem dependências. Não inicia PostgreSQL.
-- **Resultado esperado:** 0 em cada comando; `synergia startup: environment=homologation` e `deployment configuration valid`.
-- **Interpretação de falhas:** `config --quiet` só valida Compose; o entrypoint de config-check também valida o perfil. Build pode falhar por rede/registry.
-- **Próxima ação:** só prosseguir após todos passarem; em erro seguir [diagnóstico](troubleshooting.md).
+- **Onde executar:** host, raiz da revisão limpa, configuração preenchida e acesso ao Docker.
+- **Efeito:** somente leitura; confere configuração, ferramentas, daemon, projeto, volumes e histórico; não executa HTTP, build, SQL ou worker.
+- **Resultado esperado:** saída 0 e JSON sanitizado com revisão, perfil e inventário. Imagens ausentes podem ser informação esperada antes do build.
+- **Interpretação de falhas:** saída 1 identifica a etapa; ausência de containers não comprova instalação nova se volumes já existem. Não criar outro projeto para ocultar recursos anteriores.
+- **Próxima ação:** revisar inventário; usar --initialize somente sem containers ou volumes desse projeto. Recursos parciais seguem [reconciliação](update-and-rollback.md#operação-interrompida-e-reconciliação).
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-O shell pode sobrepor valores de `--env-file`. Use terminal operacional sem
-variáveis exportadas conflitantes; não carregue `.env` do Compose como script
-shell. Não publique saída de `docker compose config` sem `--quiet`.
+Diagnose/precheck não confirmam saúde funcional nem criam histórico.
+Confirme capacidade de build/registry: em rede restrita, dependências e imagens
+precisam estar disponíveis por meio aprovado. O deploy não provisiona acesso.
 
-## 4. Banco, migrations e aplicação
+## 4. Instalar uma única vez
 
 ```bash
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env up -d postgres
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env run --rm --no-deps migrate
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env up -d --no-deps backend web
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env ps --all
+python3 scripts/deploy.py apply --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history --revision "$(git rev-parse HEAD)" --initialize
 ```
 
-- **Onde executar:** host, raiz do checkout; execute um comando por vez, interrompendo em falha.
-- **Efeito:** mutável; cria volumes/banco, aplica SQL e inicia API/web. A migração é uma tarefa descartável.
-- **Resultado esperado:** banco healthy antes de migrar; migrate retorna 0 com `apply`/`skip`; API/web tornam-se healthy.
-- **Interpretação de falhas:** banco pode ainda estar iniciando; se migrate falhar, não iniciar a aplicação. Não há container migrate persistente após `run --rm`.
-- **Próxima ação:** se PostgreSQL ainda não estiver healthy, aguardar e consultar diagnóstico antes de repetir migrate; após sucesso executar aceite.
+- **Onde executar:** host, raiz da revisão aprovada, após precheck e autorização de instalação nova.
+- **Efeito:** mutável; constrói imagens, valida perfil, inicializa PostgreSQL/volumes, aplica migrations, inicia e verifica backend/web antes de confirmar o manifesto.
+- **Resultado esperado:** saída 0, operação confirmada com revisão/IDs e referência ativa gravada somente após verify; sem bootstrap de usuários ou envio de e-mail.
+- **Interpretação de falhas:** saída 1 interrompe o fluxo. Em running/uncertain preserve recursos e histórico; não repita apply nem rode migrate manualmente. A inicialização pode ter criado volumes antes da falha.
+- **Próxima ação:** em sucesso executar verify/checklist; em falha consultar diagnose e reconcile em inspeção antes de decidir retomada.
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador. Precheck aprovado, janela e backup recuperável; initialize somente em instalação nova.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-`--no-deps` impede repetir migrations indiretamente; torna obrigatória a
-ordem acima. `config-check` pode aparecer como Exited (0), o que é esperado.
-Não confundir saída 0 da tarefa com saúde dos serviços permanentes.
+A automação chama o runner uma vez e sobe serviços sem dependências
+automáticas. Não execute `docker compose up` ou `run migrate` paralelamente.
+Falha após intenção de inicialização e antes da primeira tentativa SQL possui
+retomada explícita no guia de recuperação. `--initialize` não é adotado em
+instalação existente.
 
-## 5. Sondas e entrega
+## 5. Verificação e entrega
 
 ```bash
-python3 scripts/smoke_containers.py \
-  --backend-url http://127.0.0.1:8000 \
-  --web-url http://127.0.0.1:8080 \
-  --expected-api-origin http://api.homolog.example.invalid:8000
+python3 scripts/deploy.py verify --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
 ```
 
-- **Onde executar:** host, raiz do checkout; ajustar portas e origem para os valores privados aprovados.
-- **Efeito:** sondas HTTP; readiness também verifica escrita temporária no storage.
-- **Resultado esperado:** saída 0, quatro linhas `ok:` e readiness `status=ready`.
-- **Interpretação de falhas:** timeout, tipo de conteúdo incorreto ou origem runtime divergente; o script não carrega o arquivo passado ao Compose.
-- **Próxima ação:** executar [checklist pós-implantação](post-deployment-checklist.md), incluindo acesso pelo navegador de outra estação; se falhar usar diagnóstico.
+- **Onde executar:** host, raiz do checkout, com a mesma identidade de instalação e histórico da operação confirmada.
+- **Efeito:** verifica imagens efetivas, portas, ledger, endpoints e runtime web; readiness faz escrita temporária no storage. Não executa migration, build ou envio.
+- **Resultado esperado:** saída 0, verified: true e revisão confirmada.
+- **Interpretação de falhas:** divergência de runtime, ledger ou sondas impede aceite; não editar active.json para declarar sucesso.
+- **Próxima ação:** executar [checklist pós-implantação](post-deployment-checklist.md), incluindo login e navegador de outra estação; falhas seguem [diagnóstico](troubleshooting.md).
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-Para desenvolvimento local, use [primeiros passos](../getting-started.md).
-A automação #166 com `precheck` e `apply --initialize` depende da entrega de
-`scripts/deploy.py`, indisponível neste checkout.
+Verify usa a configuração congelada no histórico; mudanças posteriores no
+env-file não reconfiguram containers. Para aplicar configuração nova, faça uma
+atualização pela automação. Desenvolvimento local segue o [roteiro local](../getting-started.md).

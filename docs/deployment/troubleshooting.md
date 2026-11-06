@@ -1,6 +1,7 @@
 # Diagnóstico por sintoma
 
-Use o mesmo projeto, env-file e overlays da implantação. Examine saídas apenas
+Use o mesmo projeto, env-file e histórico da implantação. A CLI usa o Compose
+base versionado; overlays manuais não são incorporados ao histórico. Examine saídas apenas
 em terminal restrito; compartilhe códigos sanitizados, nunca configuração,
 URLs internas, tokens, dados de usuários ou logs brutos.
 
@@ -17,15 +18,18 @@ URLs internas, tokens, dados de usuários ou logs brutos.
 ## Ambiente
 
 ```bash
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env config --quiet
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env run --rm --no-deps config-check
+python3 scripts/deploy.py diagnose --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
+python3 scripts/deploy.py precheck --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
 ```
 
-- **Onde executar:** host, raiz do checkout já construído.
-- **Efeito:** valida interpolação e cria tarefa temporária sem banco.
-- **Resultado esperado:** 0; configuração válida e perfil homologation.
+- **Onde executar:** host, raiz do checkout limpo, com env-file preenchido.
+- **Efeito:** somente leitura; valida perfil, configuração e identidade dos recursos sem iniciar tarefas.
+- **Resultado esperado:** 0 e inventário sanitizado com perfil homologation; imagem ausente não comprova build.
 - **Interpretação de falhas:** mensagens abaixo identificam o campo bloqueado.
 - **Próxima ação:** corrigir arquivo privado e repetir pré-validação; seguir [primeira implantação](deployment-guide.md).
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 | Mensagem | Causa e correção |
 | --- | --- |
@@ -48,7 +52,10 @@ curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' http:
 - **Efeito:** consulta logs e readiness (sonda escreve arquivo temporário no storage).
 - **Resultado esperado:** perfil correto, readiness 200; verificar login separadamente no navegador autorizado.
 - **Interpretação de falhas:** readiness saudável não prova autenticação; usar tabela abaixo e painel Network sem copiar tokens.
-- **Próxima ação:** corrigir configuração/IAM; recriar backend/web conforme [atualização](update-and-rollback.md), depois validar sessão.
+- **Próxima ação:** corrigir configuração/IAM; aplicar atualização conforme [atualização](update-and-rollback.md), depois validar sessão.
+- **Pré-condições:** Instalação disponível para sondas e portas/origens ajustadas; readiness requer permissão de escrita temporária.
+- **Entradas:** Portas efetivas, origem API/web e configuração de implantação aprovada.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 - `AUTH_LOCAL_LOGIN_EXPIRES_AT must be in the future and at most 90 days`:
   autorização temporária expirada/inválida; responsável deve aprovar novo prazo.
@@ -70,11 +77,14 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env logs --tail 80 postgres migrate
 ```
 
-- **Onde executar:** host, raiz do checkout; logs de migrate só existem se foi criado como serviço persistente.
+- **Onde executar:** host, raiz do checkout; use também o journal para identificar o container de migration preservado pela automação.
 - **Efeito:** somente leitura; verifica disponibilidade e logs.
 - **Resultado esperado:** postgres healthy/accepting connections; migration concluída com 0.
-- **Interpretação de falhas:** pg_isready não comprova senha correta nem schema. Com `run --rm migrate`, usar resultado capturado da tarefa, não ausência no ps.
+- **Interpretação de falhas:** pg_isready não comprova senha correta nem schema. Ausência de migrate no ps não prova ausência de SQL; consultar reconcile e o container identificado no journal.
 - **Próxima ação:** seguir mensagem abaixo e [banco indisponível](../runbooks/database-unavailable.md); não apagar volume.
+- **Pré-condições:** Host e autorizações do passo disponíveis; executar um comando por vez e interromper em falha.
+- **Entradas:** Ferramentas e configuração indicadas no comando; caminhos são exemplos privados a substituir.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 | Mensagem/estado | Causa e ação |
 | --- | --- |
@@ -97,16 +107,22 @@ curl --fail --silent --show-error --head http://127.0.0.1:8080/
 - **Resultado esperado:** 200, `apiUrl` igual à origem aprovada, CSP com `connect-src 'self'` e a origem da API.
 - **Interpretação de falhas:** localhost aponta à máquina do navegador; CSP incorreta bloqueia requisições mesmo com API healthy.
 - **Próxima ação:** ajustar `SYNERGIA_API_ORIGIN`/CORS no arquivo privado, recriar serviços abaixo e reabrir navegador; se CSP persistir, revisar proxy/headers.
+- **Pré-condições:** Host e autorizações do passo disponíveis; executar um comando por vez e interromper em falha.
+- **Entradas:** Ferramentas e configuração indicadas no comando; caminhos são exemplos privados a substituir.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ```bash
-docker compose --project-name synergia --env-file /caminho/privado/synergia-config/homologation.env up -d --no-deps --force-recreate backend web
+python3 scripts/deploy.py apply --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history --revision "$(git rev-parse HEAD)"
 ```
 
 - **Onde executar:** host, raiz da revisão implantada, janela autorizada após correção do arquivo.
-- **Efeito:** mutável; recria containers para aplicar ambiente/runtime sem SQL.
-- **Resultado esperado:** healthy, runtime-config e CORS corrigidos.
-- **Interpretação de falhas:** restart simples não injeta novo ambiente; erro de perfil bloqueia backend.
+- **Efeito:** mutável; registra atualização com configuração corrigida, imagens e verificação; runner confere/aplica migrations pendentes, exigindo backup e revisão prévia.
+- **Resultado esperado:** operação confirmada, runtime-config e CORS corrigidos.
+- **Interpretação de falhas:** editar env-file não muda a configuração congelada da instalação ativa; failed/uncertain seguem recuperação, sem recriação manual para contornar journal.
 - **Próxima ação:** repetir smoke e [aceite](post-deployment-checklist.md).
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador. Precheck aprovado, janela e backup recuperável; initialize somente em instalação nova.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 ## Storage
 
@@ -120,6 +136,9 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 - **Resultado esperado:** status ready, storage pronto e UID 10001.
 - **Interpretação de falhas:** storage 503 indica montagem/permissão/espaço; rejeição de planilha com readiness saudável pode ser contrato ou orçamento.
 - **Próxima ação:** plataforma corrige acesso ao volume para UID/GID 10001; não usar chmod 777. Para abas, preencher INGESTION_ALLOWED_SHEETS com nomes exatos, repassar limites via overlay quando necessário.
+- **Pré-condições:** Instalação disponível para sondas e portas/origens ajustadas; readiness requer permissão de escrita temporária.
+- **Entradas:** Portas efetivas, origem API/web e configuração de implantação aprovada.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 Ver [storage](../runbooks/storage-unavailable.md),
 [arquivo inválido](../runbooks/invalid-file.md) e
@@ -136,6 +155,9 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 - **Resultado esperado:** evento email_worker.completed com contagens e outcome esperado.
 - **Interpretação de falhas:** saída 0 significa lote sem falhas OU canal desabilitado; 1 indica falha parcial/email_state_unavailable; 2 indica email_configuration_invalid. O entrypoint pode falhar antes do worker.
 - **Próxima ação:** verificar perfil/provedor, rede/TLS e configuração; seguir [operação de e-mail](lg-email-api.md).
+- **Pré-condições:** Canal/provedor autorizados, banco/migrations prontos e condições específicas de inspeção/resolução satisfeitas.
+- **Entradas:** Configuração externa, overlay SMTP quando indicado e UUIDs aprovados; segredo somente no transmissor.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
 O worker não é daemon nem possui agendamento automático. `uncertain` bloqueia
 reenvio: parar transmissores, inspecionar e reconciliar com evidência externa.
@@ -144,12 +166,21 @@ selecionando smtp; o adaptador HTTP depende de #171/#170.
 
 ## Deploy
 
-No fluxo manual, não existe estado automatizado `uncertain`: registrar a fase
-interrompida, suspender tráfego, consultar ledger e imagens antes de qualquer
-nova execução. Não repetir migrate por suposição de que houve rollback integral.
+```bash
+python3 scripts/deploy.py diagnose --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history
+python3 scripts/deploy.py reconcile --project synergia --env-file /caminho/privado/synergia-config/homologation.env --state-dir /caminho/privado/deploy-history --operation UUID_DA_OPERACAO
+```
 
-Para a automação #166, ainda indisponível aqui, o contrato previsto usa
-`scripts/deploy.py diagnose` e `reconcile` primeiro em inspeção. Estado `running`
-ou `uncertain` bloqueia apply/rollback até decisão; não remover arquivos de lock
-ou histórico. Regras de resume/rollback e recuperação completa estão em
-[atualização e rollback](update-and-rollback.md).
+- **Onde executar:** host, raiz do checkout; substituir UUID por operation.id do diagnóstico.
+- **Efeito:** inspeção somente leitura; sem resolução, build, SQL, início de containers ou readiness.
+- **Resultado esperado:** estado e evidências de ledger/processo da migration, ou initialization_pending.
+- **Interpretação de falhas:** running/uncertain bloqueia apply/rollback; not_found não prova que SQL não executou. Após tentativa SQL, resume exige ledger completo; SQL parcial impede retomada automática.
+- **Próxima ação:** escolher resolução com evidência conforme [atualização e rollback](update-and-rollback.md#operação-interrompida-e-reconciliação); não remover journal, intenção ou locks para forçar retry.
+- **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
+- **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
+- **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
+
+Em implantação manual anterior à automação, registre a fase interrompida e
+confirme ledger/runtime antes da adoção. Nunca declare operação resolvida
+apenas porque o banco iniciou. Falhas de readiness seguem também os
+[runbooks de observabilidade](../observability.md).
