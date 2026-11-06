@@ -1,10 +1,15 @@
 # Contrato sanitizado — API de e-mail LG (#171)
 
-**Estado: preparação concluída; validação interna não executada.**
+**Estado: preparação concluída; rodada interna de 2026-11-06 bloqueada por conectividade.**
 **Decisão: pendente. #170: aguardando validação e aprovação do contrato.**
 
-Este é um modelo, não uma evidência de execução. Não contém dados corporativos.
-Preencha com os resultados reais seguindo [o roteiro](lg-email-poc.md).
+Este contrato ainda não foi aprovado. A configuração local foi validada,
+mas a consulta à documentação terminou com timeout, o JSON não abriu no
+navegador e a conexão TCP não foi estabelecida na estação, conforme o
+[relato sanitizado da rodada](evidence/issue-171-lg-email-connectivity.md).
+Nenhum POST de envio foi executado no roteiro relatado.
+Os campos funcionais abaixo continuam pendentes. Preencha-os com os resultados
+reais seguindo [o roteiro](lg-email-poc.md).
 Não inserir URL interna, host, destinatário, remetente real, credencial,
 identificador corporativo, resposta bruta, caminho privado ou conteúdo real.
 Se não souber algo, mantenha `pendente`, `não comprovado` ou `não executado`.
@@ -13,14 +18,14 @@ Se não souber algo, mantenha `pendente`, `não comprovado` ou `não executado`.
 
 | Item | Resultado |
 | --- | --- |
-| Data/hora com fuso | Pendente |
-| Ambiente lógico | Validação interna (execução pendente) |
+| Data/hora com fuso | Relato em 2026-11-06, contexto America/Manaus; horários exatos não coletados |
+| Ambiente lógico | Windows na rede LG; configuração local validada e acesso ao serviço bloqueado |
 | SHA-256 da especificação | Pendente |
 | Versão lógica da especificação | Pendente; não copiar títulos/URLs internos |
-| Obtenção da especificação | Pendente: GET pelo utilitário ou exportação JSON autorizada |
-| Revisão base e hashes do kit | Pendente |
+| Obtenção da especificação | Não concluída: consulta GET terminou com timeout; hash indisponível |
+| Revisão base e hashes do kit | Preparação publicada em `5be58aef7d6cf8169b80f3648ad525609b795c65`; revisão efetivamente usada na estação e hashes do kit não coletados |
 | Aprovação da janela/conta/destinatários | Pendente; referenciar papéis, sem pessoas/contas reais |
-| Conectividade e autorização comprovadas | Pendente; indicar evidência, não só `check` local |
+| Conectividade e autorização comprovadas | Conexão não estabelecida: navegador sem acesso ao JSON e `TCP_OK=False`; autenticação/autorização no serviço não comprovadas |
 | Fonte da confirmação de recebimento | Pendente: destinatário/log corporativo |
 
 ## Contrato funcional e operacional
@@ -42,7 +47,7 @@ Se não souber algo, mantenha `pendente`, `não comprovado` ou `não executado`.
 | Identificador de correlação | Pendente: mecanismo e vínculo lógico; não publicar identificador real |
 | Consulta/callback/log de entrega | Pendente: mecanismo disponível e autoridade da confirmação |
 | Idempotência/deduplicação | Não comprovada; não inferir de entrega única |
-| Timeout/desconexão | Pendente: caso ocorrido ou não reproduzido, resultado e reconciliação |
+| Timeout/desconexão | Timeout observado somente no GET da documentação; POST, desconexão após envio e reconciliação não executados |
 | Retry | Cliente da PoC faz zero retries; política do serviço pendente |
 | Rate limit / Retry-After | Pendente; não provocar carga para descobrir |
 | Retenção | Pendente: regras e responsável pela evidência privada |
@@ -81,7 +86,7 @@ documentação, confirmação do responsável) e o que permanece não comprovado
 
 | Critério da #171 | Situação |
 | --- | --- |
-| Conectividade e autorização confirmadas internamente | Pendente |
+| Conectividade e autorização confirmadas internamente | Bloqueado por conectividade; autorização no serviço não comprovada |
 | Mensagem recebida e correlacionada em destino autorizado | Pendente |
 | To/CC, Unicode e obrigatoriedade comprovados | Pendente |
 | 200 e principais erros caracterizados | Pendente |
@@ -91,8 +96,12 @@ documentação, confirmação do responsável) e o que permanece não comprovado
 | Decisão explícita sobre iniciar #170 | Pendente |
 | Contrato baseado em execução além do Swagger | Pendente |
 
-- **Limitações e riscos observados:** pendentes de execução.
-- **Pendências, papel responsável e prazo:** a definir pela equipe.
+- **Limitações e riscos observados:** acesso ao serviço não estabelecido na
+  estação; contrato de envio, entrega, erros, limites e duplicidade não comprovado.
+- **Pendências, papel responsável e prazo:** TI/responsável pela API deve
+  confirmar destino, disponibilidade, origem de rede e requisitos de acesso;
+  responsáveis nominais e prazo não informados. A causa específica de rede
+  permanece sem diagnóstico da equipe.
 - **Recomendação:** pendente; selecionar integrar / integrar com restrições /
   não integrar com justificativa baseada nas evidências.
 - **#170 pode iniciar?** Não, enquanto o contrato e a decisão estiverem pendentes.

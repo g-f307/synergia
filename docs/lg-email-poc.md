@@ -6,7 +6,12 @@ Docker, PostgreSQL, backend ou frontend. O utilitário é isolado e não altera
 o transporte de e-mail da aplicação. A rede interna só é acessada nos comandos
 `spec --allow-network` e `probe --send --allow-real-send`.
 
-**Estado inicial: não executado na LG; #170 aguardando contrato e decisão.**
+**Estado em 2026-11-06: preparação executada na LG; validação de envio
+bloqueada por conectividade. #170 aguardando contrato e decisão.**
+O operador confirmou a configuração local, mas relatou timeout na consulta
+GET do OpenAPI, JSON inacessível no navegador e `TCP_OK=False`.
+Não houve POST de envio no roteiro relatado. A sequência e os limites da
+evidência estão no [relato sanitizado](evidence/issue-171-lg-email-connectivity.md).
 Testes automatizados sintéticos comprovam o comportamento da ferramenta,
 não conectividade, autenticação ou entrega corporativa. Não encerrar a #171
 como validada antes da execução interna e revisão das evidências.
@@ -61,15 +66,17 @@ Autentique pelo mecanismo aprovado; não coloque token na URL nem no terminal.
 ### Opção B — transferência aprovada, recomendada na rede restrita
 
 Ainda na máquina de preparação, depois de obter a revisão correta, crie um
-kit que contém só o utilitário, os testes sintéticos e os dois documentos.
+kit que contém só o utilitário, os testes sintéticos, o manual, o contrato e
+o relato sanitizado da rodada.
 Também funciona com as alterações locais ainda não commitadas:
 
 ```powershell
 $Kit = Join-Path $env:TEMP ("synergia-171-" + [guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path "$Kit\scripts", "$Kit\backend\tests", "$Kit\docs" | Out-Null
+New-Item -ItemType Directory -Path "$Kit\scripts", "$Kit\backend\tests", "$Kit\docs\evidence" | Out-Null
 Copy-Item scripts\lg_email_poc.py "$Kit\scripts\"
 Copy-Item backend\tests\test_lg_email_poc.py "$Kit\backend\tests\"
 Copy-Item docs\lg-email-poc.md, docs\lg-email-api-contract.md "$Kit\docs\"
+Copy-Item docs\evidence\issue-171-lg-email-connectivity.md "$Kit\docs\evidence\"
 git rev-parse HEAD | Set-Content -Encoding ascii "$Kit\BASE-COMMIT.txt"
 Push-Location $Kit
 Get-ChildItem scripts, backend, docs -File -Recurse | ForEach-Object {
@@ -222,6 +229,33 @@ aprovado e registre o método de obtenção no contrato. O `openapi_url` na
 configuração continua na mesma origem do endpoint, mesmo que não seja usado.
 Não substitua especificação já registrada na sessão. Se houver mudança de
 versão, combine nova sessão preservando a anterior.
+
+### Se a consulta ao OpenAPI terminar com timeout
+
+`configuration_valid_no_network` confirma somente as regras locais. Se o GET
+não concluir, abra no navegador o endereço exato de `openapi_url` e teste a
+conexão TCP a partir da mesma estação, lendo o destino da cópia privada:
+
+```powershell
+$PocConfig = Get-Content -Raw -LiteralPath "$Poc\config.json" | ConvertFrom-Json
+$ApiUri = [uri]$PocConfig.openapi_url
+$TcpOk = Test-NetConnection -ComputerName $ApiUri.Host -Port $ApiUri.Port -InformationLevel Quiet -WarningAction SilentlyContinue
+"TCP_OK=$TcpOk"
+```
+
+Esses passos não enviam e-mail. JSON inacessível no navegador e TCP falso
+significam que o acesso necessário não foi estabelecido nessa rodada; não
+isolam firewall, rota, proxy, destino incorreto ou serviço indisponível.
+Confirme os requisitos e a disponibilidade com a TI/responsável pelo serviço
+antes de prosseguir. Registre o bloqueio, mantendo os cenários POST como não
+executados. Um timeout de GET não valida o cenário `timeout` de envio.
+
+Ao usar snippets que chamam `load_config`, passe a **pasta privada** como
+argumento: essa função acrescenta `config.json` internamente. Passar o arquivo
+em vez da pasta causa `FileNotFoundError` no diagnóstico, sem provar falha de
+rede ou da API. Não publique caminhos, valores da configuração ou exceções
+brutas. A rodada de 2026-11-06 corrigiu esse erro de argumento em um snippet
+auxiliar antes de confirmar o timeout e a falha de conectividade.
 
 ## 5. Executar o primeiro envio e confirmar recebimento
 
