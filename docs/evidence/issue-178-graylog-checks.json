@@ -62,5 +62,14 @@
     "collector": "de43c14b530ceba604b41ffa1303546ad91d8d08",
     "laboratory": "766dbeb24882ef9206bc26dc4f2988edf10d49cd"
   },
-  "publication_method": "GitHub Git Data API; identical source trees verified by Git SHA"
+  "publication_method": "GitHub Git Data API; identical source trees verified by Git SHA",
+  "ci_lint_follow_up": {
+    "initial_run": "https://github.com/g-f307/synergia/actions/runs/42304362361",
+    "initial_result": "9 E501 errors in scripts; root lint used different configuration",
+    "correction": "Line wrapping only; no behavior change",
+    "lint_command": "cd backend && ruff check . ../scripts",
+    "lint_result": "passed",
+    "tests_command": "cd backend && pytest -q tests/test_graylog_lab.py tests/test_deploy_flow.py",
+    "tests_result": "41 passed"
+  }
 }

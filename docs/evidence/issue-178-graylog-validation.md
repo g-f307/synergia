@@ -65,6 +65,13 @@ usam `PGHOST`/`PGPORT`, não apenas `DATABASE_URL`. O ambiente foi corrigido e a
 seleção inteira foi repetida em banco novo, sem desativar testes ou mudar suas
 expectativas para contornar o erro.
 
+Na primeira CI do PR #182, o lint identificou nove linhas longas em scripts:
+a execução local anterior, feita na raiz, não lhes aplicava a configuração de
+`backend/pyproject.toml`. As linhas foram divididas sem alterar o comportamento.
+O comando exato do pipeline, `cd backend && ruff check . ../scripts`, passou,
+assim como 41 testes focados de laboratório e fluxo de implantação.
+O resultado remoto final deve ser consultado nos checks do PR.
+
 ## Resultado e arquitetura
 
 Implementado cliente GELF 1.1 HTTPS, fila PostgreSQL, checkpoint transacional

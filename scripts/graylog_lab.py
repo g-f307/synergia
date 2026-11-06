@@ -518,23 +518,28 @@ class Laboratory:
         email = "graylog-lab@example.invalid"
         with psycopg.connect(database_url) as connection:
             connection.execute(
-                """INSERT INTO synergia.iam_organizations (id, organization_code, display_name)
+                """INSERT INTO synergia.iam_organizations
+                (id, organization_code, display_name)
                 VALUES (%s, 'syn-graylog-lab', 'Synthetic Graylog Lab')""",
                 (ORGANIZATION,),
             )
             connection.execute(
-                """INSERT INTO synergia.identity_users (id, status, display_name, local_password_hash)
+                """INSERT INTO synergia.identity_users
+                (id, status, display_name, local_password_hash)
                 VALUES (%s, 'active', 'Synthetic Graylog Operator', %s)""",
                 (user_id, PasswordHasher().hash(access["application_password"])),
             )
             connection.execute(
-                """INSERT INTO synergia.user_emails (user_id, email, is_primary, is_verified, verified_at)
+                """INSERT INTO synergia.user_emails
+                (user_id, email, is_primary, is_verified, verified_at)
                 VALUES (%s, %s, true, true, now())""",
                 (user_id, email),
             )
             connection.execute(
-                """INSERT INTO synergia.user_role_assignments (user_id, role_id, organization_id)
-                SELECT %s, id, %s FROM synergia.roles WHERE normalized_key = 'operador'""",
+                """INSERT INTO synergia.user_role_assignments
+                (user_id, role_id, organization_id)
+                SELECT %s, id, %s FROM synergia.roles
+                WHERE normalized_key = 'operador'""",
                 (user_id, ORGANIZATION),
             )
         from app.main import app
@@ -672,7 +677,8 @@ class Laboratory:
                     raise LabError("unavailable_input_event_not_preserved")
                 with repository.locked() as connection:
                     held = connection.execute(
-                        "SELECT event_id FROM synergia.graylog_deliveries WHERE state = 'uncertain'"
+                        "SELECT event_id FROM synergia.graylog_deliveries "
+                        "WHERE state = 'uncertain'"
                     ).fetchone()["event_id"]
                 if self.search(f'event_id:"{held}"'):
                     raise LabError("unexpected_receipt_during_stopped_input")
@@ -694,12 +700,14 @@ class Laboratory:
             raise LabError("duplicate_indexed_event_id")
         with psycopg.connect(database_url, row_factory=dict_row) as connection:
             saved_payloads = connection.execute(
-                "SELECT payload FROM synergia.graylog_deliveries WHERE state = 'accepted'"
+                "SELECT payload FROM synergia.graylog_deliveries "
+                "WHERE state = 'accepted'"
             ).fetchall()
             accepted_ids = {
                 item["event_id"]
                 for item in connection.execute(
-                    "SELECT event_id FROM synergia.graylog_deliveries WHERE state = 'accepted'"
+                    "SELECT event_id FROM synergia.graylog_deliveries "
+                    "WHERE state = 'accepted'"
                 )
             }
         expected_total = len(accepted_ids)
