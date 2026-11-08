@@ -689,6 +689,22 @@ def test_backup_restore_integrity_retention_and_recovery(
         assert restored["outcome"] == "succeeded"
         verified = verify_restoration(target, bundle)
         assert verified["artifact_count"] == 5
+        # Only checkpoints caused by restore/verification audit may increase.
+        # An unrelated extra queue row must still fail reconciliation.
+        with psycopg.connect(target.database_url) as connection:
+            connection.execute(
+                """INSERT INTO synergia.graylog_deliveries
+                (event_key, origin, occurred_at)
+                VALUES ('identity:synthetic-forged', 'identity_access_events', now())"""
+            )
+        with pytest.raises(DataOperationError) as queue_drift:
+            verify_restoration(target, bundle)
+        assert queue_drift.value.reason_code == "record_count_mismatch"
+        with psycopg.connect(target.database_url) as connection:
+            connection.execute(
+                "DELETE FROM synergia.graylog_deliveries "
+                "WHERE event_key = 'identity:synthetic-forged'"
+            )
         with psycopg.connect(target.database_url) as connection:
             assert (
                 connection.execute(

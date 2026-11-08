@@ -21,6 +21,7 @@ from prometheus_client import (
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from psycopg.rows import dict_row
 
+from app.graylog_metrics import GraylogCollector
 from app.observability.telemetry import safe_log
 
 REGISTRY = CollectorRegistry()
@@ -507,6 +508,7 @@ class PostgresOperationalCollector:
 
 
 REGISTRY.register(PostgresOperationalCollector())
+REGISTRY.register(GraylogCollector())
 
 
 def render_metrics() -> bytes:

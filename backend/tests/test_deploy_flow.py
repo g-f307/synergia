@@ -271,7 +271,9 @@ def test_empty_installation_requires_explicit_confirmation(
     assert "build candidate" not in steps(flow)
 
 
-@pytest.mark.parametrize("service", ["email-worker", "migrate", "config-check"])
+@pytest.mark.parametrize(
+    "service", ["email-worker", "graylog-worker", "migrate", "config-check"]
+)
 def test_active_operations_block_before_any_build_or_shutdown(flow_factory, service):
     flow = flow_factory(existing=True)
     flow.runner.services[service] = "running"
@@ -279,6 +281,18 @@ def test_active_operations_block_before_any_build_or_shutdown(flow_factory, serv
         flow.apply(COMMIT)
     assert "build candidate" not in steps(flow)
     assert "stop application writers" not in steps(flow)
+
+
+def test_graylog_worker_uses_the_confirmed_immutable_backend_image(flow_factory):
+    flow = flow_factory()
+    flow.runner.config["services"]["graylog-worker"] = copy.deepcopy(
+        flow.runner.config["services"]["email-worker"]
+    )
+    flow.runner.config["services"]["graylog-worker"]["profiles"] = ["graylog"]
+    flow.apply(COMMIT, initialize=True)
+    saved = private_json(flow.compose_file)
+    assert saved["services"]["graylog-worker"]["image"] == IMAGE["backend"]
+    assert "graylog-worker" not in flow.runner.services
 
 
 @pytest.mark.parametrize(

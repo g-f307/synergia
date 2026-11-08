@@ -948,6 +948,17 @@ def verify_restoration(
                         raise DataOperationError(
                             "record_count_mismatch", "Restored record counts differ"
                         )
+                elif table == "graylog_deliveries":
+                    # Restore/verification append their own data-operation audit.
+                    # Each such row creates exactly one transactional checkpoint.
+                    # Permit only that exact increase, not arbitrary queue drift.
+                    audit_delta = counts.get("data_operation_events", 0) - (
+                        expected_counts.get("data_operation_events", 0)
+                    )
+                    if actual != expected + audit_delta:
+                        raise DataOperationError(
+                            "record_count_mismatch", "Restored record counts differ"
+                        )
                 elif actual != expected:
                     raise DataOperationError(
                         "record_count_mismatch", "Restored record counts differ"

@@ -2,7 +2,7 @@
 
 A API 0.10.0 exporta eventos de auditoria em JSON e CSV, sob demanda, sem
 coletar stdout, logs de containers ou métricas. O inventário versionado está em
-[audit-event-inventory.json](audit-event-inventory.json): onze fontes, seus
+[audit-event-inventory.json](audit-event-inventory.json): treze fontes, seus
 emissores, ações, atribuição organizacional e lacunas históricas.
 
 ## Finalidades e cobertura
@@ -175,7 +175,14 @@ manter as janelas UTC e verificar `event_count`. Deve refinar uma janela
 recusada, sem assumir sucesso parcial. Formatos incompatíveis exigem nova
 versão; a API e o catálogo de permissões têm versões independentes.
 
-SIEM, Loki, Splunk ou outro destino, conectividade, identidade técnica, TLS,
-retenção corporativa e envio automático dependem de decisão e autorização da
-LG. Esta entrega não escolhe plataforma, instala coletor ou envia eventos para
-endpoint externo. Uma interface Angular dedicada continua adiada.
+O coletor opt-in da [issue #178](graylog.md) reutiliza esse contrato para projetar
+eventos em GELF HTTP, com checkpoints transacionais, histórico de tentativas e
+reconciliação. Seu histórico de entrega não gera novos eventos exportáveis.
+O inventário inclui execução LLM sintética e a projeção mínima de negações do
+limitador, sem hashes de identificadores, IPs ou conteúdo de modelo. A API de
+exportação permanece sob demanda e com os mesmos limites/permissões.
+O [laboratório local](graylog-laboratorio.md) permite avaliar a integração com
+Graylog Open convencional. Input, conectividade, identidade técnica, TLS e
+retenção de uma eventual implantação corporativa serão definidos por seus
+responsáveis. Não se presume que a LG utilize essa ferramenta.
+Uma interface Angular dedicada continua adiada.

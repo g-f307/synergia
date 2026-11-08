@@ -1,5 +1,12 @@
 # Observabilidade operacional
 
+A integração opt-in com Graylog está documentada em [graylog.md](graylog.md),
+com [laboratório local](graylog-laboratorio.md) para avaliar funcionamento e utilidade.
+Ela projeta auditoria persistida por worker separado; o scrape Prometheus e as
+requisições da aplicação não consultam o Graylog. Logs técnicos têm política e
+stream separados. Implantação corporativa é uma decisão futura; não se presume
+que a LG utilize a ferramenta.
+
 A issue #93 entrega uma base local e reproduzível: logs JSON, sondas HTTP,
 métricas Prometheus, alertas preliminares e painel Grafana. A #94 acrescenta o
 estado de recuperação, runbooks e retenção operacional. A #145 consolida o

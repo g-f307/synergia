@@ -147,6 +147,26 @@ services:
         condition: service_completed_successfully
     restart: "no"
 
+  graylog-worker:
+    profiles: [graylog]
+    image: synergia-backend:${SYNERGIA_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "scripts/process_graylog.py", "--config", "/run/synergia-graylog/config.json", "run", "--allow-network"]
+    environment: *backend-environment
+    volumes:
+      - type: bind
+        source: ${GRAYLOG_CONFIG_DIR:-/dev/null}
+        target: /run/synergia-graylog
+        read_only: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   web:
     image: synergia-web:${SYNERGIA_IMAGE_TAG:-local}
     build:
