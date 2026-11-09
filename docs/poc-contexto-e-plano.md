@@ -19,6 +19,12 @@ três ciclos, validação desfavorável ao leitor e congelamento. Blocos 5/6 agu
 novo aceite; nenhuma inferência reservada ou integração foi executada. O desenho
 histórico abaixo não foi reescrito para acomodar os resultados.
 
+**Campanha reservada — 09/11/2026:** o bloco 5 foi autorizado separadamente e
+concluído, com 438 chamadas nos dois modelos/três seeds e comparador local. Os
+resultados e o gate de redação não atingido estão no
+[checkpoint 5](ai-knowledge-poc-checkpoint-5.md). O bloco 6 permanece pendente de
+autorização; a análise final não foi antecipada como encerramento da issue.
+
 Este documento reúne o histórico da discussão sobre o agente de qualidade anterior,
 as hipóteses e evidências que orientaram a reformulação e o plano aprovado para a
 nova prova de conceito. O contexto e o desenho experimental estão completos nas

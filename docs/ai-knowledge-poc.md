@@ -1,8 +1,8 @@
 # PoC de orientação investigativa com conhecimento documentado — #183
 
 Implementação isolada do [plano e contexto aprovados](poc-contexto-e-plano.md).
-Os blocos 1–4 foram autorizados e concluídos em 09/11/2026. Os blocos 5 e 6
-aguardam novo aceite. A integração do agente ao produto não faz parte desta issue.
+Os blocos 1–5 foram autorizados e concluídos em 09/11/2026. O bloco 6
+aguarda novo aceite. A integração do agente ao produto não faz parte desta issue.
 
 ## Insumos e contratos
 
@@ -192,6 +192,24 @@ ensaios dos blocos 3/4, a evidência inclui patches que reconstroem os arquivos 
 a partir dos entregues e os respectivos hashes. A avaliação registra separadamente
 as versões utilizadas para pontuar.
 
+## Campanha reservada — bloco 5
+
+A autorização específica está em [block5](ai-knowledge-poc-block5.json), vinculada
+ao hash do congelamento original, sem reescrevê-lo. O [checkpoint 5](ai-knowledge-poc-checkpoint-5.md)
+registra a campanha completa: 48 casos, dois modelos, três seeds e 438 chamadas.
+
+`scripts/run_ai_knowledge_final.py` executa a campanha com pedidos conferidos pela
+matriz, ledger anterior e um modelo por lote. `scripts/evaluate_ai_knowledge_final.py`
+só abre rótulos após a conclusão de todos os pedidos. O
+[comparador local](ai-knowledge-poc-comparison.html), produzido por
+`scripts/render_ai_knowledge_final.py`, reúne fatos, documentação e todas as seeds,
+incluindo erros e bloqueios. Abre como arquivo HTML e não se integra à aplicação.
+
+A [evidência sintética](evidence/issue-183-block5.json) preserva saídas completas,
+métricas por seed/estrato, rankings, hashes, recursos e orçamento. O gate de redação
+falhou: nenhuma prosa foi gerada e sua qualidade não foi medida nessa campanha.
+Os comandos de execução e as verificações estão no checkpoint.
+
 ## Continuidade
 
 Os checkpoints [1–2](ai-knowledge-poc-checkpoint-1-2.md) e
@@ -199,7 +217,10 @@ Os checkpoints [1–2](ai-knowledge-poc-checkpoint-1-2.md) e
 A recuperação melhorou, mas o leitor ficou abaixo das metas e expôs falsos positivos.
 Isso não será encoberto por acertos de schema, latência ou conhecimento anexado pelo código.
 
-Blocos 5/6 dependem de aprovação: executor final sobre os componentes congelados,
-48 casos × dois modelos × três seeds, baselines, redação condicional, apresentação
-estática e relatório. Ainda não houve inferência reservada, medição de utilidade
-com pessoas ou autorização para atualizar o agente do produto.
+O [bloco 5](ai-knowledge-poc-checkpoint-5.md) foi concluído após autorização. A
+precisão apresentada no reservado foi 49,43% no 4B e 54,36% no 8B, contra 80% no
+controle lexical; a redação condicional não executou por falha do gate.
+
+O bloco 6 depende de aprovação: auditoria final, incerteza por grupos, análise
+consolidada e recomendação por capacidade. Não houve medição de utilidade com
+pessoas nem autorização para atualizar o agente do produto.
