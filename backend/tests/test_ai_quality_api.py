@@ -16,6 +16,7 @@ from app.ai_quality_core import RuntimeUnavailable, baseline
 from app.auth.security import AccessClaims
 from app.authorization import get_actor_context
 from app.main import app
+from app.model_audit import get_model_audit_repository
 
 
 class Runtime:
@@ -32,6 +33,25 @@ class Runtime:
             raise self.error
         group = json.loads(prompt.splitlines()[-1])["facts"]
         return self.raw or json.dumps(baseline(group)), 0
+
+
+@pytest.fixture
+def model_audit():
+    class Repository:
+        def __init__(self):
+            self.events = []
+
+        def record(self, actor, operation_id, action, **metadata):
+            self.events.append((actor, operation_id, action, metadata))
+
+    return Repository()
+
+
+@pytest.fixture(autouse=True)
+def override_model_audit(model_audit):
+    app.dependency_overrides[get_model_audit_repository] = lambda: model_audit
+    yield
+    app.dependency_overrides.pop(get_model_audit_repository, None)
 
 
 @pytest.fixture
@@ -68,6 +88,36 @@ def test_catalog_and_live_generation_use_only_frozen_facts(service):
     assert data["groups"][0]["origin"] == "model"
     assert len(runtime.calls) == 1
     assert service.scenarios == before
+
+
+def test_model_audit_contains_only_execution_metadata(service, model_audit):
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/ai/quality/scenarios/QE-A02/explanations", json={"mode": "model"}
+            ).status_code
+            == 200
+        )
+    assert [event[2] for event in model_audit.events] == [
+        "llm.requested",
+        "llm.completed",
+    ]
+    assert model_audit.events[0][1] == model_audit.events[1][1]
+    assert set(model_audit.events[1][3]) == {"duration_ms", "fallback"}
+    assert model_audit.events[1][3]["fallback"] is False
+
+
+def test_model_audit_storage_failure_prevents_model_call(service, model_audit):
+    from app.errors import ApiError
+
+    def fail(*args, **kwargs):
+        raise ApiError(503, "model_audit_unavailable", "Auditoria indisponivel")
+
+    model_audit.record = fail
+    with TestClient(app) as client:
+        response = client.post("/ai/quality/scenarios/QE-A02/explanations", json={})
+    assert response.status_code == 503
+    assert service[1].calls == []
 
 
 @pytest.mark.parametrize(
