@@ -100,9 +100,12 @@ class Budget:
     blocks further inference until explicit reconciliation; it is never retried.
     """
 
-    def __init__(self, root: Path, protocol: dict):
+    def __init__(self, root: Path, protocol: dict, phase: str = "probes"):
         self.root = root
         self.spec = protocol["budget"]
+        if phase not in self.spec["generative_calls"]:
+            raise KnowledgeError("unknown_budget_phase")
+        self.phase = phase
         self.path = root / "budget.json"
         self.lock = root / "inference.lock"
         self.owned = False
@@ -174,14 +177,24 @@ class Budget:
             > self.spec["active_inference_seconds"]
         ):
             raise KnowledgeError("inference_time_budget_exhausted")
+        phase_used = sum(
+            r["count"]
+            for r in self.state["receipts"]
+            if r["route"] == "chat" and r.get("phase", "probes") == self.phase
+        )
         if (
             route == "chat"
-            and self.state["generative_calls"] + count
-            > self.spec["generative_calls"]["probes"]
+            and phase_used + count > self.spec["generative_calls"][self.phase]
         ):
-            raise KnowledgeError("block2_probe_quota_exhausted")
+            code = (
+                "block2_probe_quota_exhausted"
+                if self.phase == "probes"
+                else "phase_quota_exhausted"
+            )
+            raise KnowledgeError(code)
         attempt = {
             "route": route,
+            "phase": self.phase,
             "count": count,
             "result": str(result_path.relative_to(self.root)),
             "state": "started",

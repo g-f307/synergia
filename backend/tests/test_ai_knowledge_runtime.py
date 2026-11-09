@@ -133,3 +133,23 @@ def test_cli_has_no_reserved_split_and_requires_explicit_inference_flag():
     with pytest.raises(SystemExit) as exc:
         main(["retrieval", "--budget-root", "/tmp/x", "--output-dir", "/tmp/x/run"])
     assert exc.value.code == 2
+
+
+def test_phase_quotas_share_global_budget_and_keep_legacy_probe_receipts(tmp_path):
+    p = protocol()
+    p["budget"]["generative_calls"]["probes"] = 1
+    p["budget"]["generative_calls"]["calibration"] = 1
+    fake = FakeRuntime()
+    with Budget(tmp_path, p) as budget:
+        budget.call(fake, "chat", {}, tmp_path / "probe.json", 1)
+        # Simulate an existing block-2 receipt, which predates phase labels.
+        del budget.state["receipts"][0]["phase"]
+        budget.save()
+    with Budget(tmp_path, p, "calibration") as budget:
+        budget.call(fake, "chat", {}, tmp_path / "calibration.json", 1)
+        with pytest.raises(KnowledgeError, match="phase_quota"):
+            budget.call(fake, "chat", {}, tmp_path / "over.json", 1)
+    with Budget(tmp_path, p) as budget:
+        with pytest.raises(KnowledgeError, match="probe_quota"):
+            budget.call(fake, "chat", {}, tmp_path / "over-probe.json", 1)
+    assert read(tmp_path / "budget.json")["generative_calls"] == fake.calls == 2

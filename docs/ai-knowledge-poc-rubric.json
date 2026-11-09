@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "issue": 183,
+  "standing": "Fictional-domain technical rubric; no independent operational/user validation",
+  "raw_reader": {
+    "schema": "Unique JSON keys; exact schema; truncated/invalid/failed attempt incorrect",
+    "status": "Exact match to frozen reference, no post-hoc repair",
+    "references": "Existing IDs plus decisive fields required by documented state; status correctness judged separately",
+    "missing": "Only genuinely unavailable fields, plus at least one critical unavailable discriminator for possible structured cards"
+  },
+  "presentation": {
+    "precision": "Fully correct displayed items / all displayed items; null if none",
+    "coverage": "Answerable cases with at least one fully correct displayed relevant card / all answerable cases",
+    "complete_case_accuracy": "Cases with exactly all relevant cards displayed correctly and no extra items / all cases, including negatives",
+    "next_check_relevance": "Answerable cases with at least one correct documented check and no incorrect displayed item / all answerable cases; check ID is attached by code, not selected intelligently by model",
+    "semantic_gain": "Difference in complete_case_accuracy against B1 on the pre-labelled semantic subset; include negative controls and correlated variants"
+  },
+  "severity": {
+    "high": "Any supported status against a non-supported reference; invented facts/causes/procedures in prose. Report raw, blocked and exposed. Conservative structured proxy, not exhaustive semantic safety detection.",
+    "medium": "Other wrong status, false possible orientation, missing decisive evidence or essential uncertainty, missed applicable card or invalid/failed output",
+    "low": "Redundant/unclear prose or omitted secondary detail without factual change"
+  },
+  "comparators": {
+    "B0": "Same facts plus generic request to check source records; no specific card/check, so specific task coverage is zero rather than a fluent-text success",
+    "B1": "Focused BM25 candidates, same documented objective scope controls, lexical status control and literal checks",
+    "B2": "Focused dense candidates and literal document presentation; report candidate retrieval as such, not validated applicability",
+    "paired_lexical": "Same selected retriever as C4/C8 with lexical status control; isolates the reader contribution",
+    "C4_C8": "Selected retriever plus individual-card interpretation, objective guard, immutable check text",
+    "R_star": "Predeclared manually supplied development cards in calibration/triage; diagnose interpretation independent of retrieval"
+  },
+  "policy_selection": [
+    "zero exposed high errors first",
+    "complete_case_accuracy",
+    "coverage",
+    "precision",
+    "latency for ties"
+  ],
+  "generation_gate": {
+    "scope": "Chosen validation model; gate evaluated on its complete final classification campaign before generation, without changing the frozen configuration",
+    "requirements": {
+      "precision_at_least": 0.9,
+      "coverage_at_least": 0.75,
+      "next_check_relevance_at_least": 0.85,
+      "high_errors_exposed": 0
+    },
+    "not_required_for_gate": "Semantic gain/retrieval targets remain viability criteria, but the writing test independently measures added content after an acceptable selection. Do not claim overall AI viability merely because this gate passes.",
+    "eligible": "Preselected case with at least one guard-accepted displayed card; select first such card in frozen ranking. No generation call when none, record not_eligible_selection and retain in end-to-end denominator.",
+    "assessment": "Fact/document support per claim; no invented causes, absent-as-unknown confusion or procedures. At most two sentences/60 words. Added content must give a correct fact/document relation or verification rationale beyond the literal panel; paraphrase alone fails.",
+    "targets": {
+      "fidelity": 0.9,
+      "added_content": 0.25,
+      "high_errors_exposed": 0
+    },
+    "judging": "Assistant review against frozen fictitious documents; not the tested LLM as sole judge. Conditional and end-to-end counts both required."
+  },
+  "uncertainty": "Report fractions; Wilson for binary items where appropriate; paired resampling by group for differences. Seeds/variants are not independent samples.",
+  "next_step": "Final evaluator/runner may add measurement plumbing without changing frozen reader/retrieval/rubric. No reserved inference until new approval."
+}

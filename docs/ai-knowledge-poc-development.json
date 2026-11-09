@@ -1,0 +1,145 @@
+{
+  "version": "1.1.0-development",
+  "issue": 183,
+  "extends": "docs/ai-knowledge-poc-protocol.json",
+  "source_checkpoint": "739d3fd",
+  "client_date": "2026-11-09 America/Manaus",
+  "authorization": {
+    "blocks": [
+      3,
+      4
+    ],
+    "evaluation_authorized": false,
+    "next_approval_before_block": 5
+  },
+  "immutable_corpus": "data/synthetic/ai-knowledge-v1",
+  "calibration_pairs": [
+    [
+      "D01",
+      "K01"
+    ],
+    [
+      "D03",
+      "K02"
+    ],
+    [
+      "D05",
+      "K05"
+    ],
+    [
+      "D06",
+      "K05"
+    ],
+    [
+      "D09",
+      "K04"
+    ],
+    [
+      "D10",
+      "K04"
+    ],
+    [
+      "D18",
+      "K03"
+    ],
+    [
+      "D23",
+      "K07"
+    ]
+  ],
+  "calibration_profiles": [
+    "historical",
+    "recommended"
+  ],
+  "calibration_seeds": [
+    125,
+    126
+  ],
+  "refinement_pairs": [
+    [
+      "D02",
+      "K01"
+    ],
+    [
+      "D07",
+      "K06"
+    ],
+    [
+      "D08",
+      "K06"
+    ],
+    [
+      "D11",
+      "K03"
+    ],
+    [
+      "D12",
+      "K04"
+    ],
+    [
+      "D21",
+      "K05"
+    ],
+    [
+      "D22",
+      "K06"
+    ],
+    [
+      "D24",
+      "K07"
+    ]
+  ],
+  "cycle1": {
+    "hypothesis": "Prioritize the note view for semantic documents; exclude objectively contradicted or out-of-scope structured cards. Evaluate raw readers separately from code controls.",
+    "retrieval_variants": [
+      "initial",
+      "focused"
+    ],
+    "reader_variants": [
+      "minimal",
+      "checklist"
+    ]
+  },
+  "cycle2": {
+    "hypothesis": "Cycle1 errors were dominated by known fields declared missing. Test dynamic missing_fields enums against the same checklist, without changing factual inputs, semantic states, citation requirements or objective guards.",
+    "reader_variants": [
+      "checklist",
+      "typed_checklist"
+    ],
+    "supersedes": "Contrastive examples were planned but not executed. This is a registered replacement before cycle2 inference, within the original 32-call quota; cycle1 and its original design preserved.",
+    "attribution": "Constrained-output improvement is code, not independent model inference."
+  },
+  "cycle3": {
+    "purpose": "Full 32-case development confirmation of selected candidates, maximum two cards/case/model."
+  },
+  "validation": {
+    "cases": 16,
+    "seeds": [
+      125
+    ],
+    "models": [
+      "qwen3:4b-instruct",
+      "qwen3:8b"
+    ],
+    "fit_after_validation": false,
+    "selection_policies": [
+      "supported_and_possible",
+      "supported_only"
+    ],
+    "selection_order": [
+      "uncontained_high_errors",
+      "complete_case_accuracy",
+      "coverage",
+      "precision",
+      "latency"
+    ]
+  },
+  "generation": {
+    "prompt": "Explain in Portuguese, at most two sentences/60 words, why the documented explanation fits these observed facts and which uncertainty the documented verification would clarify. Do not invent, repeat or paraphrase procedures, infer a cause or turn unknown into absence. No other text.",
+    "role": "separate generation after accepted selection; not part of classification",
+    "gate_frozen_before_reserved": true
+  },
+  "unchanged_budget": true,
+  "reserved_inference_forbidden": true,
+  "reference_limits": "Assistant-authored cases/gold. Grouped A/B variants. Code-derived conditions are not credited as independent model intelligence."
+}
