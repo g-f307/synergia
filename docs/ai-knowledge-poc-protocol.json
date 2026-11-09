@@ -1,0 +1,165 @@
+{
+  "version": "1.0.0-preparation",
+  "issue": 183,
+  "client_date": "2026-11-09 America/Manaus",
+  "scope": "Isolated synthetic investigative guidance; no product integration",
+  "authorization": {
+    "plan_approved": true,
+    "current_blocks": [
+      1,
+      2
+    ],
+    "require_user_approval_before_block": 3,
+    "operational_expert_validation_required": false
+  },
+  "knowledge": {
+    "path": "data/synthetic/ai-knowledge-v1",
+    "standing": "Fictitious knowledge and assistant-authored gold, not independent operational validation",
+    "cards": 12,
+    "current_cards": 10,
+    "archived_cards": 2,
+    "raw_real_data_allowed": false,
+    "field_origins_required": true
+  },
+  "splits": {
+    "development": 32,
+    "validation": 16,
+    "evaluation": 48
+  },
+  "groups": {
+    "total": 48,
+    "variants_per_group": 2,
+    "development": 16,
+    "validation": 8,
+    "evaluation": 24,
+    "independent_case_claim": false
+  },
+  "retrieval": {
+    "arms": [
+      "bm25",
+      "dense",
+      "hybrid"
+    ],
+    "embedding_model": "qwen3-embedding:0.6b",
+    "query_instruction": "Given an operational occurrence, retrieve experimental knowledge cards relevant to investigating its evidence and missing information.",
+    "document_instruction": null,
+    "query_views": [
+      "observed_signals",
+      "provided_note"
+    ],
+    "rrf_constant": 60,
+    "k": [
+      1,
+      2,
+      3,
+      5
+    ],
+    "reader_max_cards": 2,
+    "calibration_in_block2": false,
+    "block2_split": "development",
+    "document_text": "title, scope, situation, vocabulary, criteria, verification, limits",
+    "exclude_archived_by_code": true,
+    "no_applicable_threshold": "not_calibrated; report suggestions separately from applicability",
+    "embedding_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d"
+  },
+  "models": {
+    "qwen3:4b-instruct": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+    "qwen3:8b": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
+  },
+  "profiles": {
+    "historical": {
+      "temperature": 0,
+      "think": false
+    },
+    "recommended": {
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "min_p": 0,
+      "think": false
+    },
+    "optional_8b_thinking": {
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "min_p": 0,
+      "think": true
+    }
+  },
+  "runtime": {
+    "endpoint": "http://127.0.0.1:11434",
+    "version": "0.40.12",
+    "context": 4096,
+    "output_tokens": 512,
+    "threads": 6,
+    "timeout_seconds": 45,
+    "thinking_timeout_seconds": 90,
+    "probe_cases": [
+      "D03",
+      "D05",
+      "D15"
+    ],
+    "probe_cards": [
+      "K02",
+      "K05",
+      "K02"
+    ],
+    "probe_seed": 125,
+    "probe_calls": 6,
+    "probe_profile": "historical",
+    "probe_is_quality_evaluation": false,
+    "one_model_at_a_time": true,
+    "network_redirects_allowed": false,
+    "retries": 0
+  },
+  "budget": {
+    "generative_calls": {
+      "probes": 24,
+      "calibration": 64,
+      "refinement": 192,
+      "validation": 64,
+      "evaluation": 576,
+      "conditional_generation": 72
+    },
+    "planned_calls": 992,
+    "hard_call_limit": 1000,
+    "embedding_texts": 800,
+    "active_inference_seconds": 7200,
+    "max_batch_seconds": 600,
+    "minimum_disk_free_bytes": 4294967296,
+    "swap_growth_stop_bytes": 536870912,
+    "consecutive_timeouts_stop": 2,
+    "count_failed_attempts": true,
+    "count_embedding_inference_time": true,
+    "count_model_loading_in_time": true
+  },
+  "evaluation": {
+    "seeds": [
+      125,
+      126,
+      127
+    ],
+    "refinement_cycles_max": 3,
+    "generation_cases_preselect": 24,
+    "require_final_freeze": true,
+    "retuning_on_reserved_allowed": false,
+    "raw_and_displayed_results_separate": true,
+    "report_retrieval_two_card_ceiling": true,
+    "semantic_held_out_cases": 20,
+    "expert_or_real_user_benefit_claim": false
+  },
+  "targets": {
+    "recall_at_2": 0.9,
+    "displayed_orientation_precision": 0.9,
+    "answerable_coverage": 0.75,
+    "next_check_relevance": 0.85,
+    "semantic_task_gain_percentage_points": 10,
+    "maximum_overall_loss_percentage_points": 5,
+    "uncontained_high_errors": 0,
+    "warm_case_p95_seconds": 30,
+    "conditional_generation_fidelity": 0.9,
+    "conditional_generation_added_content": 0.25,
+    "production_sla": false
+  },
+  "profiles_note": "Historical control preserves temperature zero and inherits the pinned model sampling parameters, captured in each runtime snapshot; no claim of a pure size comparison."
+}

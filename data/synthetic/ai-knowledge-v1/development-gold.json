@@ -1,0 +1,890 @@
+{
+  "D01": {
+    "group_id": "G01",
+    "stratum": "clear",
+    "context": "pallet de reposição",
+    "variant": "A",
+    "expected": {
+      "K01": "supported",
+      "K02": "rejected",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "rejected",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K01"
+    ],
+    "expected_checks": [
+      "V01"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D02": {
+    "group_id": "G01",
+    "stratum": "clear",
+    "context": "pallet de reposição",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D03": {
+    "group_id": "G02",
+    "stratum": "clear",
+    "context": "decisão de turno",
+    "variant": "A",
+    "expected": {
+      "K01": "rejected",
+      "K02": "supported",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "rejected",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K02"
+    ],
+    "expected_checks": [
+      "V02"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D04": {
+    "group_id": "G02",
+    "stratum": "clear",
+    "context": "decisão de turno",
+    "variant": "B",
+    "expected": {
+      "K01": "rejected",
+      "K02": "possible",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "possible",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K02",
+      "K08"
+    ],
+    "expected_checks": [
+      "V02",
+      "V08"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D05": {
+    "group_id": "G07",
+    "stratum": "semantic",
+    "context": "segunda medição",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "supported",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K05"
+    ],
+    "expected_checks": [
+      "V05"
+    ],
+    "semantic_annotations": {
+      "K05": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D06": {
+    "group_id": "G07",
+    "stratum": "semantic",
+    "context": "segunda medição",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "rejected",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {
+      "K05": "rejected"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D07": {
+    "group_id": "G08",
+    "stratum": "semantic",
+    "context": "leitura da identificação",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "supported",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K06"
+    ],
+    "expected_checks": [
+      "V06"
+    ],
+    "semantic_annotations": {
+      "K06": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D08": {
+    "group_id": "G08",
+    "stratum": "semantic",
+    "context": "leitura da identificação",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "rejected",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {
+      "K06": "rejected"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D09": {
+    "group_id": "G13",
+    "stratum": "unknown",
+    "context": "justificativa vazia",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "supported",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K04"
+    ],
+    "expected_checks": [
+      "V04"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D10": {
+    "group_id": "G13",
+    "stratum": "unknown",
+    "context": "justificativa vazia",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "possible",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K04"
+    ],
+    "expected_checks": [
+      "V04"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D11": {
+    "group_id": "G14",
+    "stratum": "unknown",
+    "context": "restrição não esclarecida",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "supported",
+      "K04": "possible",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K03",
+      "K04"
+    ],
+    "expected_checks": [
+      "V03",
+      "V04"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D12": {
+    "group_id": "G14",
+    "stratum": "unknown",
+    "context": "restrição não esclarecida",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "supported",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K03"
+    ],
+    "expected_checks": [
+      "V03"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D13": {
+    "group_id": "G19",
+    "stratum": "chronology",
+    "context": "relógios com offset",
+    "variant": "A",
+    "expected": {
+      "K01": "rejected",
+      "K02": "supported",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "rejected",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K02"
+    ],
+    "expected_checks": [
+      "V02"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D14": {
+    "group_id": "G19",
+    "stratum": "chronology",
+    "context": "relógios com offset",
+    "variant": "B",
+    "expected": {
+      "K01": "rejected",
+      "K02": "rejected",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "supported",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K08"
+    ],
+    "expected_checks": [
+      "V08"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D15": {
+    "group_id": "G20",
+    "stratum": "chronology",
+    "context": "mesmo instante",
+    "variant": "A",
+    "expected": {
+      "K01": "rejected",
+      "K02": "rejected",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "supported",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K08"
+    ],
+    "expected_checks": [
+      "V08"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D16": {
+    "group_id": "G20",
+    "stratum": "chronology",
+    "context": "mesmo instante",
+    "variant": "B",
+    "expected": {
+      "K01": "rejected",
+      "K02": "rejected",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "rejected",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D17": {
+    "group_id": "G25",
+    "stratum": "flags",
+    "context": "retenção prolongada",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "supported",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K03"
+    ],
+    "expected_checks": [
+      "V03"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D18": {
+    "group_id": "G25",
+    "stratum": "flags",
+    "context": "retenção prolongada",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D19": {
+    "group_id": "G26",
+    "stratum": "flags",
+    "context": "Projeção limitada aos campos do contrato atual; não preencher campos ausentes do adaptador.",
+    "variant": "A",
+    "expected": {
+      "K01": "possible",
+      "K02": "possible",
+      "K03": "possible",
+      "K04": "possible",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "possible",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K01",
+      "K02",
+      "K03",
+      "K04",
+      "K08"
+    ],
+    "expected_checks": [
+      "V01",
+      "V02",
+      "V03",
+      "V04",
+      "V08"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "current_contract_only"
+  },
+  "D20": {
+    "group_id": "G26",
+    "stratum": "flags",
+    "context": "Projeção limitada aos campos do contrato atual; não preencher campos ausentes do adaptador.",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "possible",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K03"
+    ],
+    "expected_checks": [
+      "V03"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "current_contract_only"
+  },
+  "D21": {
+    "group_id": "G31",
+    "stratum": "conflict",
+    "context": "ensaio e volume",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "supported",
+      "K06": "supported",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K05",
+      "K06"
+    ],
+    "expected_checks": [
+      "V05",
+      "V06"
+    ],
+    "semantic_annotations": {
+      "K05": "supported",
+      "K06": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D22": {
+    "group_id": "G31",
+    "stratum": "conflict",
+    "context": "ensaio e volume",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "rejected",
+      "K06": "supported",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K06"
+    ],
+    "expected_checks": [
+      "V06"
+    ],
+    "semantic_annotations": {
+      "K05": "rejected",
+      "K06": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D23": {
+    "group_id": "G32",
+    "stratum": "conflict",
+    "context": "fonte administrativa contraditória",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "possible",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K07"
+    ],
+    "expected_checks": [
+      "V07"
+    ],
+    "semantic_annotations": {
+      "K07": "possible"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D24": {
+    "group_id": "G32",
+    "stratum": "conflict",
+    "context": "fonte administrativa contraditória",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "rejected",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "supported",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K07"
+    ],
+    "expected_checks": [
+      "V07"
+    ],
+    "semantic_annotations": {
+      "K07": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D25": {
+    "group_id": "G37",
+    "stratum": "distractors",
+    "context": "saldo de carga",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "possible",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [
+      "K09"
+    ],
+    "expected_checks": [
+      "V09"
+    ],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D26": {
+    "group_id": "G37",
+    "stratum": "distractors",
+    "context": "saldo de carga",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "rejected",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": false,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D27": {
+    "group_id": "G38",
+    "stratum": "distractors",
+    "context": "arquivo repetido",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "supported"
+    },
+    "relevant_cards": [
+      "K10"
+    ],
+    "expected_checks": [
+      "V10"
+    ],
+    "semantic_annotations": {
+      "K10": "supported"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D28": {
+    "group_id": "G38",
+    "stratum": "distractors",
+    "context": "arquivo repetido",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "rejected"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {
+      "K10": "rejected"
+    },
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D29": {
+    "group_id": "G43",
+    "stratum": "no_card",
+    "context": "prazo do transporte",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D30": {
+    "group_id": "G43",
+    "stratum": "no_card",
+    "context": "prazo do transporte",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D31": {
+    "group_id": "G44",
+    "stratum": "no_card",
+    "context": "posição da doca",
+    "variant": "A",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  },
+  "D32": {
+    "group_id": "G44",
+    "stratum": "no_card",
+    "context": "posição da doca",
+    "variant": "B",
+    "expected": {
+      "K01": "not_applicable",
+      "K02": "not_applicable",
+      "K03": "not_applicable",
+      "K04": "not_applicable",
+      "K05": "not_applicable",
+      "K06": "not_applicable",
+      "K07": "not_applicable",
+      "K08": "not_applicable",
+      "K09": "not_applicable",
+      "K10": "not_applicable"
+    },
+    "relevant_cards": [],
+    "expected_checks": [],
+    "semantic_annotations": {},
+    "semantic_case": true,
+    "review": "Anotação editorial pelo assistente; condições objetivas conferidas por projeção; sem homologação operacional independente.",
+    "data_profile": "enriched_synthetic"
+  }
+}

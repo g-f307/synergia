@@ -1,0 +1,22 @@
+{
+  "all_values_synthetic": true,
+  "origin_describes_future_availability_not_real_data": true,
+  "fields": {
+    "approval": "application_contract",
+    "hold": "application_contract",
+    "approval_lot": "synthetic_extension",
+    "hold_lot": "application_contract",
+    "long_hold": "workbook_only",
+    "ship_block": "workbook_only",
+    "reason": "workbook_only",
+    "note": "synthetic_extension",
+    "approved_at": "synthetic_extension",
+    "held_at": "synthetic_extension",
+    "release_record": "synthetic_extension",
+    "loading": "synthetic_extension",
+    "planned": "application_contract",
+    "loaded": "application_contract",
+    "oqc_pending": "workbook_only"
+  },
+  "reason": "Field origin does not make it available in the current application; no ingestion changes."
+}

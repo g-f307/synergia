@@ -1,0 +1,2274 @@
+[
+  {
+    "case_id": "D01",
+    "group_id": "G01",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G01-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G01-A"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G01-B"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Conferência da remessa substituta na doca."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D02",
+    "group_id": "G01",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G01-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G01-A"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G01-B"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Conferência da remessa substituta na doca. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D03",
+    "group_id": "G02",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G02-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G02-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G02-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Registro das decisões do turno noturno."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-01T08:00:00-04:00"
+      },
+      "held_at": {
+        "state": "observed",
+        "value": "2026-10-02T10:00:00-04:00"
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D04",
+    "group_id": "G02",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G02-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G02-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G02-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Registro das decisões do turno noturno. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-01T08:00:00-04:00"
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D05",
+    "group_id": "G07",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G07-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G07-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G07-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O laboratório separou outra amostra; o parecer da nova medição ainda não voltou."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D06",
+    "group_id": "G07",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G07-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G07-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G07-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Não há outra medição pendente; o laboratório encerrou a confirmação."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D07",
+    "group_id": "G08",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G08-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G08-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G08-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O código impresso na caixa não corresponde ao volume que foi separado."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D08",
+    "group_id": "G08",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G08-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G08-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G08-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O código impresso corresponde ao volume; nenhuma divergência de identificação foi encontrada."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D09",
+    "group_id": "G13",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G13-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G13-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G13-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "confirmed_absent",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "O extrato de conferência não contém texto de justificativa."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D10",
+    "group_id": "G13",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G13-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G13-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G13-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A projeção usada nesta consulta não disponibiliza o campo de justificativa."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D11",
+    "group_id": "G14",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G14-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G14-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G14-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": true
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "unknown",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "O painel omite detalhes da restrição longa."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D12",
+    "group_id": "G14",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G14-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G14-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G14-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": true
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Justificativa sintética preenchida"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O painel omite detalhes da restrição longa. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D13",
+    "group_id": "G19",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G19-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G19-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G19-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Decisões em registros com fusos explicitamente informados."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-01T10:00:00+00:00"
+      },
+      "held_at": {
+        "state": "observed",
+        "value": "2026-10-01T07:00:00-04:00"
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D14",
+    "group_id": "G19",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G19-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G19-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G19-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Decisões em registros com fusos explicitamente informados. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-01T10:00:00+00:00"
+      },
+      "held_at": {
+        "state": "observed",
+        "value": "2026-10-01T05:00:00-04:00"
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D15",
+    "group_id": "G20",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G20-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G20-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G20-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Os dois eventos têm o mesmo instante documentado."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-04T08:00:00-04:00"
+      },
+      "held_at": {
+        "state": "observed",
+        "value": "2026-10-04T08:00:00-04:00"
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D16",
+    "group_id": "G20",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G20-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G20-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G20-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Os dois eventos têm o mesmo instante documentado. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "observed",
+        "value": "2026-10-04T08:00:00-04:00"
+      },
+      "held_at": {
+        "state": "observed",
+        "value": "2026-10-04T08:00:00-04:00"
+      },
+      "release_record": {
+        "state": "observed",
+        "value": true
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D17",
+    "group_id": "G25",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G25-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G25-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G25-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": true
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Texto sintético de referência"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O quadro mantém a indicação específica de prazo prolongado."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D18",
+    "group_id": "G25",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G25-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G25-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G25-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Texto sintético de referência"
+      },
+      "note": {
+        "state": "observed",
+        "value": "O quadro mantém a indicação específica de prazo prolongado. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D19",
+    "group_id": "G26",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G26-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G26-L"
+      },
+      "long_hold": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "ship_block": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "approved_at": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "held_at": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "release_record": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "loading": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "not_exposed",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D20",
+    "group_id": "G26",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G26-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G26-L"
+      },
+      "long_hold": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "ship_block": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "approved_at": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "held_at": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "release_record": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "loading": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "not_exposed",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D21",
+    "group_id": "G31",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G31-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G31-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G31-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Aguarda nova medição da amostra; a etiqueta do pallet também diverge do volume."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D22",
+    "group_id": "G31",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G31-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G31-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G31-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "A nova medição terminou, mas a etiqueta do pallet continua divergente."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D23",
+    "group_id": "G32",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G32-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G32-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G32-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Um registro diz documento fiscal pendente; outro da mesma precedência diz documentos concluídos. Não há regra de prevalência."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D24",
+    "group_id": "G32",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G32-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": true
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G32-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G32-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "observed",
+        "value": "Referência sintética disponível"
+      },
+      "note": {
+        "state": "observed",
+        "value": "Os dois registros agora confirmam documento fiscal pendente."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D25",
+    "group_id": "G37",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G37-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G37-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G37-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A carga do container ainda não atingiu o planejamento."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": true
+      },
+      "planned": {
+        "state": "observed",
+        "value": 220
+      },
+      "loaded": {
+        "state": "observed",
+        "value": 39
+      },
+      "oqc_pending": {
+        "state": "observed",
+        "value": 39
+      }
+    }
+  },
+  {
+    "case_id": "D26",
+    "group_id": "G37",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G37-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G37-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G37-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A carga do container ainda não atingiu o planejamento. O resumo não informa outras decisões."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": true
+      },
+      "planned": {
+        "state": "observed",
+        "value": 220
+      },
+      "loaded": {
+        "state": "observed",
+        "value": 39
+      },
+      "oqc_pending": {
+        "state": "observed",
+        "value": 0
+      }
+    }
+  },
+  {
+    "case_id": "D27",
+    "group_id": "G38",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G38-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G38-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G38-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "Arquivo já importado. Nenhum novo processamento foi iniciado."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D28",
+    "group_id": "G38",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G38-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G38-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G38-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "Foi iniciada uma importação nova; não se trata de arquivo repetido."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D29",
+    "group_id": "G43",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G43-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G43-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G43-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "O veículo previsto atrasou por remanejamento da rota."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D30",
+    "group_id": "G43",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G43-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G43-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G43-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A previsão de chegada foi atualizada pelo transporte."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D31",
+    "group_id": "G44",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G44-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": false
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G44-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G44-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A doca reservada mudou de posição no turno."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  },
+  {
+    "case_id": "D32",
+    "group_id": "G44",
+    "split": "development",
+    "entity": {
+      "type": "lot",
+      "id": "SYN-G44-ENTITY"
+    },
+    "fields": {
+      "approval": {
+        "state": "observed",
+        "value": true
+      },
+      "hold": {
+        "state": "observed",
+        "value": false
+      },
+      "approval_lot": {
+        "state": "observed",
+        "value": "SYN-G44-L"
+      },
+      "hold_lot": {
+        "state": "observed",
+        "value": "SYN-G44-L"
+      },
+      "long_hold": {
+        "state": "observed",
+        "value": false
+      },
+      "ship_block": {
+        "state": "observed",
+        "value": false
+      },
+      "reason": {
+        "state": "not_exposed",
+        "value": null
+      },
+      "note": {
+        "state": "observed",
+        "value": "A posição da doca foi confirmada para o próximo turno."
+      },
+      "approved_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "held_at": {
+        "state": "unknown",
+        "value": null
+      },
+      "release_record": {
+        "state": "unknown",
+        "value": null
+      },
+      "loading": {
+        "state": "observed",
+        "value": false
+      },
+      "planned": {
+        "state": "unknown",
+        "value": null
+      },
+      "loaded": {
+        "state": "unknown",
+        "value": null
+      },
+      "oqc_pending": {
+        "state": "unknown",
+        "value": null
+      }
+    }
+  }
+]
