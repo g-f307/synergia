@@ -1,0 +1,2435 @@
+{
+  "issue": 183,
+  "client_date": "2026-11-09 America/Manaus",
+  "completed_blocks": [
+    1,
+    2
+  ],
+  "block3_authorized": false,
+  "corpus": {
+    "splits": {
+      "development": {
+        "cases": 32,
+        "strata": {
+          "clear": 4,
+          "semantic": 4,
+          "unknown": 4,
+          "chronology": 4,
+          "flags": 4,
+          "conflict": 4,
+          "distractors": 4,
+          "no_card": 4
+        }
+      },
+      "validation": {
+        "cases": 16,
+        "strata": {
+          "clear": 2,
+          "semantic": 2,
+          "unknown": 2,
+          "chronology": 2,
+          "flags": 2,
+          "conflict": 2,
+          "distractors": 2,
+          "no_card": 2
+        }
+      },
+      "evaluation": {
+        "cases": 48,
+        "strata": {
+          "clear": 6,
+          "semantic": 6,
+          "unknown": 6,
+          "chronology": 6,
+          "flags": 6,
+          "conflict": 6,
+          "distractors": 6,
+          "no_card": 6
+        }
+      }
+    },
+    "groups": 48,
+    "knowledge_cards": 12
+  },
+  "semantic_evaluation_instances": 20,
+  "current_contract_only_instances": 2,
+  "enriched_instances": 94,
+  "retrieval": {
+    "split": "development",
+    "calibration": false,
+    "cases": 32,
+    "unique_embedding_texts": 58,
+    "new_embedding_texts": 58,
+    "metrics": {
+      "bm25": {
+        "cases": 32,
+        "answerable": 21,
+        "without_applicable_card": 11,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.43809523809523804,
+            "precision_all_cases_macro": 0.34375
+          },
+          "2": {
+            "recall_answerable_macro": 0.7095238095238096,
+            "precision_all_cases_macro": 0.28125
+          },
+          "3": {
+            "recall_answerable_macro": 0.8380952380952381,
+            "precision_all_cases_macro": 0.22916666666666666
+          },
+          "5": {
+            "recall_answerable_macro": 0.9190476190476191,
+            "precision_all_cases_macro": 0.15625
+          }
+        },
+        "mrr_answerable": 0.7076719576719577,
+        "two_card_oracle_ceiling": 0.9714285714285713,
+        "negative_cases_with_suggestions": 11,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      },
+      "dense": {
+        "cases": 32,
+        "answerable": 21,
+        "without_applicable_card": 11,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.22380952380952382,
+            "precision_all_cases_macro": 0.1875
+          },
+          "2": {
+            "recall_answerable_macro": 0.4,
+            "precision_all_cases_macro": 0.171875
+          },
+          "3": {
+            "recall_answerable_macro": 0.5761904761904761,
+            "precision_all_cases_macro": 0.16666666666666666
+          },
+          "5": {
+            "recall_answerable_macro": 0.9666666666666667,
+            "precision_all_cases_macro": 0.1625
+          }
+        },
+        "mrr_answerable": 0.503968253968254,
+        "two_card_oracle_ceiling": 0.9714285714285713,
+        "negative_cases_with_suggestions": 11,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      },
+      "hybrid": {
+        "cases": 32,
+        "answerable": 21,
+        "without_applicable_card": 11,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.3190476190476191,
+            "precision_all_cases_macro": 0.25
+          },
+          "2": {
+            "recall_answerable_macro": 0.5904761904761905,
+            "precision_all_cases_macro": 0.25
+          },
+          "3": {
+            "recall_answerable_macro": 0.8380952380952381,
+            "precision_all_cases_macro": 0.22916666666666666
+          },
+          "5": {
+            "recall_answerable_macro": 0.9190476190476191,
+            "precision_all_cases_macro": 0.15625
+          }
+        },
+        "mrr_answerable": 0.623015873015873,
+        "two_card_oracle_ceiling": 0.9714285714285713,
+        "negative_cases_with_suggestions": 11,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      }
+    },
+    "semantic_metrics": {
+      "bm25": {
+        "cases": 14,
+        "answerable": 7,
+        "without_applicable_card": 7,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.0,
+            "precision_all_cases_macro": 0.0
+          },
+          "2": {
+            "recall_answerable_macro": 0.42857142857142855,
+            "precision_all_cases_macro": 0.10714285714285714
+          },
+          "3": {
+            "recall_answerable_macro": 0.7857142857142857,
+            "precision_all_cases_macro": 0.14285714285714285
+          },
+          "5": {
+            "recall_answerable_macro": 1.0,
+            "precision_all_cases_macro": 0.1142857142857143
+          }
+        },
+        "mrr_answerable": 0.39285714285714285,
+        "two_card_oracle_ceiling": 1.0,
+        "negative_cases_with_suggestions": 7,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      },
+      "dense": {
+        "cases": 14,
+        "answerable": 7,
+        "without_applicable_card": 7,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.0,
+            "precision_all_cases_macro": 0.0
+          },
+          "2": {
+            "recall_answerable_macro": 0.14285714285714285,
+            "precision_all_cases_macro": 0.03571428571428571
+          },
+          "3": {
+            "recall_answerable_macro": 0.14285714285714285,
+            "precision_all_cases_macro": 0.023809523809523808
+          },
+          "5": {
+            "recall_answerable_macro": 0.9285714285714286,
+            "precision_all_cases_macro": 0.1
+          }
+        },
+        "mrr_answerable": 0.2571428571428572,
+        "two_card_oracle_ceiling": 1.0,
+        "negative_cases_with_suggestions": 7,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      },
+      "hybrid": {
+        "cases": 14,
+        "answerable": 7,
+        "without_applicable_card": 7,
+        "k": {
+          "1": {
+            "recall_answerable_macro": 0.0,
+            "precision_all_cases_macro": 0.0
+          },
+          "2": {
+            "recall_answerable_macro": 0.21428571428571427,
+            "precision_all_cases_macro": 0.07142857142857142
+          },
+          "3": {
+            "recall_answerable_macro": 0.7857142857142857,
+            "precision_all_cases_macro": 0.14285714285714285
+          },
+          "5": {
+            "recall_answerable_macro": 0.9285714285714286,
+            "precision_all_cases_macro": 0.1
+          }
+        },
+        "mrr_answerable": 0.369047619047619,
+        "two_card_oracle_ceiling": 1.0,
+        "negative_cases_with_suggestions": 7,
+        "threshold": "not_calibrated; ranking is not an applicability decision"
+      }
+    },
+    "limitations": [
+      "Development challenge set, not final results or user benefit.",
+      "No applicability threshold calibrated; ranked candidates are not recommendations.",
+      "A/B variants clustered; no independent-sample claim.",
+      "Some cases have more than two relevant cards; report architectural ceiling."
+    ]
+  },
+  "probes": [
+    {
+      "case_id": "D03",
+      "card_id": "K02",
+      "model": "qwen3:4b-instruct",
+      "cold_first_call": true,
+      "schema_valid": true,
+      "parsed": {
+        "evidence_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F09",
+          "F10",
+          "F16",
+          "F17"
+        ],
+        "missing_fields": [],
+        "status": "supported"
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1335,
+      "eval_count": 62,
+      "load_seconds": 4.699436474,
+      "elapsed_seconds": 7.290578326000286,
+      "expected_status": "supported",
+      "status_matches_reference": true,
+      "request_sha256": "369be6588ba7d2345c69348510cce4fdc6f713d885f702039a032cd328412e6f",
+      "raw_response": {
+        "model": "qwen3:4b-instruct",
+        "created_at": "2026-11-09T17:16:09.928005902Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"evidence_ids\": [\"F01\", \"F02\", \"F03\", \"F04\", \"F09\", \"F10\", \"F16\", \"F17\"],\n  \"missing_fields\": [],\n  \"status\": \"supported\"\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 7289656324,
+        "load_duration": 4699436474,
+        "prompt_eval_count": 1335,
+        "prompt_eval_cached_count": 0,
+        "prompt_eval_duration": 900710000,
+        "eval_count": 62,
+        "eval_duration": 1679915000
+      }
+    },
+    {
+      "case_id": "D05",
+      "card_id": "K05",
+      "model": "qwen3:4b-instruct",
+      "cold_first_call": false,
+      "schema_valid": true,
+      "parsed": {
+        "evidence_ids": [
+          "F02",
+          "F08",
+          "F18"
+        ],
+        "missing_fields": [
+          "long_hold",
+          "ship_block"
+        ],
+        "status": "supported"
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1187,
+      "eval_count": 44,
+      "load_seconds": 0.000628661,
+      "elapsed_seconds": 1.9922303700000157,
+      "expected_status": "supported",
+      "status_matches_reference": true,
+      "request_sha256": "43809a17c2c0a5c0dc5765f2200a0ae953bd67354b5089c79f8352ca46d16b0f",
+      "raw_response": {
+        "model": "qwen3:4b-instruct",
+        "created_at": "2026-11-09T17:16:11.922167283Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"evidence_ids\": [\"F02\", \"F08\", \"F18\"],\n  \"missing_fields\": [\"long_hold\", \"ship_block\"],\n  \"status\": \"supported\"\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 1991583213,
+        "load_duration": 628661,
+        "prompt_eval_count": 1187,
+        "prompt_eval_cached_count": 148,
+        "prompt_eval_duration": 694420000,
+        "eval_count": 44,
+        "eval_duration": 1176980000
+      }
+    },
+    {
+      "case_id": "D15",
+      "card_id": "K02",
+      "model": "qwen3:4b-instruct",
+      "cold_first_call": false,
+      "schema_valid": true,
+      "parsed": {
+        "evidence_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F09",
+          "F10",
+          "F16"
+        ],
+        "missing_fields": [
+          "hold_after_pass"
+        ],
+        "status": "rejected"
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1335,
+      "eval_count": 61,
+      "load_seconds": 0.000608149,
+      "elapsed_seconds": 2.084763305999786,
+      "expected_status": "rejected",
+      "status_matches_reference": true,
+      "request_sha256": "b9975ea3130d3152a3cf53bfd383a1fb61b5e405fa3c16d15c67f5cd4bc1b7df",
+      "raw_response": {
+        "model": "qwen3:4b-instruct",
+        "created_at": "2026-11-09T17:16:14.008739738Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"evidence_ids\": [\"F01\", \"F02\", \"F03\", \"F04\", \"F09\", \"F10\", \"F16\"],\n  \"missing_fields\": [\"hold_after_pass\"],\n  \"status\": \"rejected\"\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 2084162372,
+        "load_duration": 608149,
+        "prompt_eval_count": 1335,
+        "prompt_eval_cached_count": 902,
+        "prompt_eval_duration": 280704000,
+        "eval_count": 61,
+        "eval_duration": 1651574000
+      }
+    },
+    {
+      "case_id": "D03",
+      "card_id": "K02",
+      "model": "qwen3:8b",
+      "cold_first_call": true,
+      "schema_valid": true,
+      "parsed": {
+        "status": "supported",
+        "evidence_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F09",
+          "F10",
+          "F16",
+          "F17"
+        ],
+        "missing_fields": []
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1343,
+      "eval_count": 62,
+      "load_seconds": 6.283502777,
+      "elapsed_seconds": 13.806673167000099,
+      "expected_status": "supported",
+      "status_matches_reference": true,
+      "request_sha256": "e5de06a7bb8409781e1d6cad34c8a874f4c8571fea18a770e981d00732e0122f",
+      "raw_response": {
+        "model": "qwen3:8b",
+        "created_at": "2026-11-09T17:16:27.817854429Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"status\": \"supported\",\n  \"evidence_ids\": [\"F01\", \"F02\", \"F03\", \"F04\", \"F09\", \"F10\", \"F16\", \"F17\"],\n  \"missing_fields\": []\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 13806125280,
+        "load_duration": 6283502777,
+        "prompt_eval_count": 1343,
+        "prompt_eval_cached_count": 0,
+        "prompt_eval_duration": 2092976000,
+        "eval_count": 62,
+        "eval_duration": 5418553000
+      }
+    },
+    {
+      "case_id": "D05",
+      "card_id": "K05",
+      "model": "qwen3:8b",
+      "cold_first_call": false,
+      "schema_valid": true,
+      "parsed": {
+        "status": "supported",
+        "evidence_ids": [
+          "F02",
+          "F08",
+          "F18"
+        ],
+        "missing_fields": [
+          "long_hold",
+          "ship_block",
+          "note",
+          "any_hold"
+        ]
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1195,
+      "eval_count": 51,
+      "load_seconds": 0.000723209,
+      "elapsed_seconds": 6.644693549000294,
+      "expected_status": "supported",
+      "status_matches_reference": true,
+      "request_sha256": "7f157fd4f20c4cd77495aa216b9be92bae1d2d6e7da7ec60be72b2e152483cc5",
+      "raw_response": {
+        "model": "qwen3:8b",
+        "created_at": "2026-11-09T17:16:34.464404995Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"status\": \"supported\",\n  \"evidence_ids\": [\"F02\", \"F08\", \"F18\"],\n  \"missing_fields\": [\"long_hold\", \"ship_block\", \"note\", \"any_hold\"]\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 6644116648,
+        "load_duration": 723209,
+        "prompt_eval_count": 1195,
+        "prompt_eval_cached_count": 148,
+        "prompt_eval_duration": 2076891999,
+        "eval_count": 51,
+        "eval_duration": 4408793000
+      }
+    },
+    {
+      "case_id": "D15",
+      "card_id": "K02",
+      "model": "qwen3:8b",
+      "cold_first_call": false,
+      "schema_valid": true,
+      "parsed": {
+        "status": "rejected",
+        "evidence_ids": [
+          "F01",
+          "F02",
+          "F03",
+          "F04",
+          "F09",
+          "F10",
+          "F16"
+        ],
+        "missing_fields": [
+          "hold_after_pass"
+        ]
+      },
+      "done_reason": "stop",
+      "prompt_eval_count": 1343,
+      "eval_count": 61,
+      "load_seconds": 0.000736353,
+      "elapsed_seconds": 6.160352282999611,
+      "expected_status": "rejected",
+      "status_matches_reference": true,
+      "request_sha256": "82be1b8d940060bc23282a3963a3b77d929d4bd5fe814b3e7907c745e486d65d",
+      "raw_response": {
+        "model": "qwen3:8b",
+        "created_at": "2026-11-09T17:16:40.626689565Z",
+        "message": {
+          "role": "assistant",
+          "content": "{\n  \"status\": \"rejected\",\n  \"evidence_ids\": [\"F01\", \"F02\", \"F03\", \"F04\", \"F09\", \"F10\", \"F16\"],\n  \"missing_fields\": [\"hold_after_pass\"]\n}"
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 6159777819,
+        "load_duration": 736353,
+        "prompt_eval_count": 1343,
+        "prompt_eval_cached_count": 902,
+        "prompt_eval_duration": 681627000,
+        "eval_count": 61,
+        "eval_duration": 5321034000
+      }
+    }
+  ],
+  "budget": {
+    "budget_sha256": "8e0f8553932cb4917c782545c127b6a63ad56f548db05337bcc219cc3c33db8a",
+    "generative_calls": 6,
+    "embedding_texts": 58,
+    "active_seconds": 51.83328326600122
+  },
+  "remaining_hard_budget": {
+    "generative_calls": 994,
+    "embedding_texts": 742,
+    "active_seconds": 7148.166716733998
+  },
+  "resources": {
+    "retrieval/initial": {
+      "samples": 28,
+      "before": {
+        "ram_available_bytes": 10464755712,
+        "swap_used_bytes": 0,
+        "model_rss_bytes": 41787392,
+        "gpus": [
+          {
+            "total_bytes": 4294967296,
+            "used_bytes": 67108864
+          }
+        ]
+      },
+      "after": {
+        "ram_available_bytes": 10356445184,
+        "swap_used_bytes": 0,
+        "model_rss_bytes": 42373120,
+        "gpus": [
+          {
+            "total_bytes": 4294967296,
+            "used_bytes": 67108864
+          }
+        ]
+      },
+      "sampled_rss_peak_bytes": 1009192960,
+      "sampled_total_gpu_used_peak_bytes": 1399848960,
+      "swap_used_peak_bytes": 0,
+      "resource_failure": null,
+      "unavailable": {
+        "rss": null,
+        "vram": null
+      },
+      "scope": "dedicated_runtime_rss_and_whole_gpu_usage_not_per_model_vram"
+    },
+    "runs/infrastructure": {
+      "samples": 72,
+      "before": {
+        "ram_available_bytes": 10446450688,
+        "swap_used_bytes": 0,
+        "model_rss_bytes": 42504192,
+        "gpus": [
+          {
+            "total_bytes": 4294967296,
+            "used_bytes": 67108864
+          }
+        ]
+      },
+      "after": {
+        "ram_available_bytes": 10492518400,
+        "swap_used_bytes": 1048576,
+        "model_rss_bytes": 42995712,
+        "gpus": [
+          {
+            "total_bytes": 4294967296,
+            "used_bytes": 67108864
+          }
+        ]
+      },
+      "sampled_rss_peak_bytes": 5596893184,
+      "sampled_total_gpu_used_peak_bytes": 2907701248,
+      "swap_used_peak_bytes": 1048576,
+      "resource_failure": null,
+      "unavailable": {
+        "rss": null,
+        "vram": null
+      },
+      "scope": "dedicated_runtime_rss_and_whole_gpu_usage_not_per_model_vram"
+    }
+  },
+  "runtime_inventory": {
+    "runtime": {
+      "version": "0.40.12"
+    },
+    "models": {
+      "qwen3:4b-instruct": {
+        "name": "qwen3:4b-instruct",
+        "digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+        "size": 2497293803,
+        "details": {
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "4.0B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "ggml"
+        }
+      },
+      "qwen3:8b": {
+        "name": "qwen3:8b",
+        "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "size": 5225388164,
+        "details": {
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "8.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 40960,
+          "embedding_length": 4096,
+          "runner": "ggml"
+        }
+      },
+      "qwen3-embedding:0.6b": {
+        "name": "qwen3-embedding:0.6b",
+        "digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+        "size": 639150858,
+        "details": {
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "595.78M",
+          "quantization_level": "Q8_0",
+          "context_length": 32768,
+          "embedding_length": 1024,
+          "runner": "ggml"
+        }
+      }
+    },
+    "configuration": {
+      "qwen3:4b-instruct": {
+        "parameters": "top_k                          20\ntop_p                          0.8\nrepeat_penalty                 1\nstop                           \"<|im_start|>\"\nstop                           \"<|im_end|>\"\ntemperature                    0.7",
+        "template_sha256": "05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9",
+        "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "qwen3:8b": {
+        "parameters": "temperature                    0.6\ntop_k                          20\ntop_p                          0.95\nrepeat_penalty                 1\nstop                           \"<|im_start|>\"\nstop                           \"<|im_end|>\"",
+        "template_sha256": "7d324826d81029e9cc04696166b97b66637ec0178f32f85c8c56ab61dc4141a1",
+        "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "qwen3-embedding:0.6b": {
+        "parameters": null,
+        "template_sha256": "3bd74c5f0a7abbccbbbed03dd91e5d25a2288e506d558e721d0fe60782bcf781",
+        "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      }
+    },
+    "loaded": {
+      "models": []
+    }
+  },
+  "hardware": {
+    "os": "Linux",
+    "kernel": "6.11.0-26-generic",
+    "python": "3.12.3",
+    "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics",
+    "ram_total_bytes": 15907291136,
+    "gpu_names_drivers": "NVIDIA GeForce RTX 3050 Laptop GPU, 580.178.04, 4096"
+  },
+  "frozen_source_hashes": {
+    "scripts/run_ai_knowledge_infrastructure.py": "55c723a34e8b6d4dbeda616f2c08bdc3898748b14732bbd75dafdb106d906dc3",
+    "scripts/ai_knowledge.py": "20ea39b9ac10eea7858860b8bf5f7fca2bd3f81eae97d0447fd7d424e72142dc",
+    "scripts/ai_knowledge_retrieval.py": "53fcee1126c81709ae30c7fcff8ac419d00501affa28ac2deadc563397feb1b7",
+    "scripts/ai_knowledge_runtime.py": "d17e003b0d0054919c7cdbcb0dd7a3a064266c09ad4824a51161b221c7dba6dc",
+    "scripts/ai_reevaluation_telemetry.py": "58610fbcc62b8be69d24b329c76db8330e8188c278251b64c8f0529a541934d3",
+    "docs/ai-knowledge-poc-protocol.json": "b0f120fa7508a81ac8563a0a597eaf030c2cbdf123a60e2f4404632d1ad0c70f",
+    "data/synthetic/ai-knowledge-v1/manifest.json": "4f3b7badc61460a7de27dd672654f57ffa3a04c0664be8341e2747640f96c7fc"
+  },
+  "retrieval_rankings": [
+    {
+      "case_id": "D01",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: lotes distintos. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Conferência da remessa substituta na doca."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K07",
+          "K03",
+          "K06",
+          "K02",
+          "K10",
+          "K05",
+          "K09",
+          "K01",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K05",
+          "K09",
+          "K04",
+          "K07",
+          "K03",
+          "K10",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K07",
+          "K03",
+          "K05",
+          "K01",
+          "K09",
+          "K06",
+          "K10",
+          "K04"
+        ]
+      },
+      "ranking_seconds": 0.00883687799978361
+    },
+    {
+      "case_id": "D02",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: lotes distintos. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Conferência da remessa substituta na doca. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K02",
+          "K07",
+          "K03",
+          "K10",
+          "K06",
+          "K09",
+          "K01",
+          "K04",
+          "K05"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K04",
+          "K09",
+          "K05",
+          "K07",
+          "K03",
+          "K10",
+          "K06"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K07",
+          "K01",
+          "K03",
+          "K09",
+          "K04",
+          "K10",
+          "K05",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.0065870560001712875
+    },
+    {
+      "case_id": "D03",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: sim. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Registro das decisões do turno noturno."
+      ],
+      "rankings": {
+        "bm25": [
+          "K02",
+          "K08",
+          "K03",
+          "K06",
+          "K07",
+          "K10",
+          "K01",
+          "K09",
+          "K05",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K07",
+          "K04",
+          "K03",
+          "K09",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K03",
+          "K07",
+          "K01",
+          "K06",
+          "K04",
+          "K09",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006735950000347657
+    },
+    {
+      "case_id": "D04",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Registro das decisões do turno noturno. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K02",
+          "K08",
+          "K03",
+          "K07",
+          "K10",
+          "K06",
+          "K09",
+          "K05",
+          "K01",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K07",
+          "K04",
+          "K03",
+          "K09",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K07",
+          "K03",
+          "K01",
+          "K09",
+          "K04",
+          "K10",
+          "K06",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006849020999652566
+    },
+    {
+      "case_id": "D05",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O laboratório separou outra amostra; o parecer da nova medição ainda não voltou."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K05",
+          "K02",
+          "K07",
+          "K10",
+          "K06",
+          "K01",
+          "K09",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K01",
+          "K05",
+          "K09",
+          "K04",
+          "K07",
+          "K03",
+          "K10",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K05",
+          "K03",
+          "K01",
+          "K07",
+          "K09",
+          "K10",
+          "K04",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.00675901700014947
+    },
+    {
+      "case_id": "D06",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Não há outra medição pendente; o laboratório encerrou a confirmação."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K05",
+          "K06",
+          "K02",
+          "K07",
+          "K09",
+          "K01",
+          "K10",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K05",
+          "K01",
+          "K04",
+          "K07",
+          "K09",
+          "K03",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K05",
+          "K02",
+          "K03",
+          "K01",
+          "K07",
+          "K06",
+          "K09",
+          "K04",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006865374999961205
+    },
+    {
+      "case_id": "D07",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O código impresso na caixa não corresponde ao volume que foi separado."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K06",
+          "K09",
+          "K03",
+          "K05",
+          "K02",
+          "K10",
+          "K04",
+          "K07",
+          "K01"
+        ],
+        "dense": [
+          "K08",
+          "K01",
+          "K02",
+          "K04",
+          "K06",
+          "K09",
+          "K03",
+          "K10",
+          "K07",
+          "K05"
+        ],
+        "hybrid": [
+          "K08",
+          "K06",
+          "K02",
+          "K09",
+          "K03",
+          "K01",
+          "K04",
+          "K05",
+          "K10",
+          "K07"
+        ]
+      },
+      "ranking_seconds": 0.006719455999700585
+    },
+    {
+      "case_id": "D08",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O código impresso corresponde ao volume; nenhuma divergência de identificação foi encontrada."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K06",
+          "K03",
+          "K04",
+          "K05",
+          "K09",
+          "K02",
+          "K10",
+          "K07",
+          "K01"
+        ],
+        "dense": [
+          "K01",
+          "K08",
+          "K02",
+          "K06",
+          "K04",
+          "K10",
+          "K09",
+          "K07",
+          "K03",
+          "K05"
+        ],
+        "hybrid": [
+          "K08",
+          "K06",
+          "K04",
+          "K02",
+          "K01",
+          "K03",
+          "K09",
+          "K10",
+          "K05",
+          "K07"
+        ]
+      },
+      "ranking_seconds": 0.006780861999686749
+    },
+    {
+      "case_id": "D09",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. ausência de motivo confirmada neste extrato",
+        "Observação do registro: O extrato de conferência não contém texto de justificativa."
+      ],
+      "rankings": {
+        "bm25": [
+          "K04",
+          "K08",
+          "K03",
+          "K07",
+          "K02",
+          "K05",
+          "K06",
+          "K10",
+          "K09",
+          "K01"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K04",
+          "K07",
+          "K01",
+          "K05",
+          "K09",
+          "K03",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K04",
+          "K08",
+          "K02",
+          "K07",
+          "K03",
+          "K05",
+          "K01",
+          "K06",
+          "K09",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006748295000306825
+    },
+    {
+      "case_id": "D10",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A projeção usada nesta consulta não disponibiliza o campo de justificativa."
+      ],
+      "rankings": {
+        "bm25": [
+          "K04",
+          "K08",
+          "K03",
+          "K06",
+          "K02",
+          "K07",
+          "K10",
+          "K09",
+          "K01",
+          "K05"
+        ],
+        "dense": [
+          "K08",
+          "K04",
+          "K02",
+          "K01",
+          "K09",
+          "K05",
+          "K07",
+          "K03",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K04",
+          "K08",
+          "K02",
+          "K03",
+          "K01",
+          "K06",
+          "K09",
+          "K07",
+          "K05",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006721810999806621
+    },
+    {
+      "case_id": "D11",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: sim. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. presença do motivo desconhecida",
+        "Observação do registro: O painel omite detalhes da restrição longa."
+      ],
+      "rankings": {
+        "bm25": [
+          "K03",
+          "K08",
+          "K06",
+          "K02",
+          "K10",
+          "K07",
+          "K04",
+          "K09",
+          "K01",
+          "K05"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K04",
+          "K03",
+          "K01",
+          "K07",
+          "K09",
+          "K06",
+          "K05",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K03",
+          "K02",
+          "K04",
+          "K06",
+          "K07",
+          "K01",
+          "K10",
+          "K09",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.0067104879999533296
+    },
+    {
+      "case_id": "D12",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: sim. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O painel omite detalhes da restrição longa. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K03",
+          "K08",
+          "K02",
+          "K06",
+          "K07",
+          "K10",
+          "K09",
+          "K01",
+          "K05",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K04",
+          "K03",
+          "K01",
+          "K07",
+          "K09",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K03",
+          "K02",
+          "K07",
+          "K04",
+          "K06",
+          "K01",
+          "K09",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006733584999892628
+    },
+    {
+      "case_id": "D13",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: sim. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Decisões em registros com fusos explicitamente informados."
+      ],
+      "rankings": {
+        "bm25": [
+          "K02",
+          "K06",
+          "K08",
+          "K01",
+          "K09",
+          "K03",
+          "K07",
+          "K10",
+          "K04",
+          "K05"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K04",
+          "K01",
+          "K07",
+          "K03",
+          "K09",
+          "K10",
+          "K06",
+          "K05"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K01",
+          "K06",
+          "K04",
+          "K07",
+          "K09",
+          "K03",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006723795000198152
+    },
+    {
+      "case_id": "D14",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Decisões em registros com fusos explicitamente informados. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K02",
+          "K08",
+          "K01",
+          "K06",
+          "K10",
+          "K03",
+          "K09",
+          "K07",
+          "K05",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K04",
+          "K01",
+          "K07",
+          "K03",
+          "K09",
+          "K10",
+          "K05",
+          "K06"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K01",
+          "K03",
+          "K04",
+          "K07",
+          "K10",
+          "K06",
+          "K09",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006770479999886447
+    },
+    {
+      "case_id": "D15",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Os dois eventos têm o mesmo instante documentado."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K01",
+          "K02",
+          "K03",
+          "K07",
+          "K09",
+          "K06",
+          "K04",
+          "K10",
+          "K05"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K07",
+          "K05",
+          "K01",
+          "K04",
+          "K10",
+          "K09",
+          "K03",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K01",
+          "K07",
+          "K03",
+          "K05",
+          "K04",
+          "K09",
+          "K10",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.006635684999764635
+    },
+    {
+      "case_id": "D16",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: não. Registro explícito de encerramento: sim. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Os dois eventos têm o mesmo instante documentado. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K02",
+          "K01",
+          "K03",
+          "K07",
+          "K09",
+          "K10",
+          "K05",
+          "K06",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K07",
+          "K01",
+          "K05",
+          "K04",
+          "K09",
+          "K03",
+          "K10",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K01",
+          "K07",
+          "K03",
+          "K05",
+          "K09",
+          "K04",
+          "K10",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.0068526190002558
+    },
+    {
+      "case_id": "D17",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: sim. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O quadro mantém a indicação específica de prazo prolongado."
+      ],
+      "rankings": {
+        "bm25": [
+          "K03",
+          "K08",
+          "K09",
+          "K06",
+          "K02",
+          "K07",
+          "K10",
+          "K01",
+          "K05",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K01",
+          "K04",
+          "K09",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K03",
+          "K02",
+          "K09",
+          "K07",
+          "K06",
+          "K01",
+          "K04",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.0067506000000321364
+    },
+    {
+      "case_id": "D18",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: O quadro mantém a indicação específica de prazo prolongado. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K03",
+          "K02",
+          "K08",
+          "K07",
+          "K09",
+          "K10",
+          "K06",
+          "K01",
+          "K05",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K03",
+          "K01",
+          "K07",
+          "K04",
+          "K09",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K03",
+          "K08",
+          "K02",
+          "K07",
+          "K01",
+          "K09",
+          "K04",
+          "K10",
+          "K06",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.00678811699981452
+    },
+    {
+      "case_id": "D19",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: sim. Retenção de longo prazo: desconhecido, não equivale a não. Bloqueio de embarque: desconhecido, não equivale a não. Relação entre lotes da aprovação e retenção: desconhecido, não equivale a não. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: desconhecido, não equivale a não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção"
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K02",
+          "K09",
+          "K01",
+          "K04",
+          "K07",
+          "K06",
+          "K10",
+          "K05"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K09",
+          "K03",
+          "K04",
+          "K07",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K03",
+          "K01",
+          "K09",
+          "K04",
+          "K07",
+          "K06",
+          "K05",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.0037094790000082867
+    },
+    {
+      "case_id": "D20",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: desconhecido, não equivale a não. Bloqueio de embarque: desconhecido, não equivale a não. Relação entre lotes da aprovação e retenção: desconhecido, não equivale a não. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: desconhecido, não equivale a não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção"
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K02",
+          "K09",
+          "K01",
+          "K04",
+          "K07",
+          "K06",
+          "K10",
+          "K05"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K09",
+          "K03",
+          "K04",
+          "K07",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K03",
+          "K01",
+          "K09",
+          "K04",
+          "K07",
+          "K06",
+          "K05",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.003657553000266489
+    },
+    {
+      "case_id": "D21",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Aguarda nova medição da amostra; a etiqueta do pallet também diverge do volume."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K06",
+          "K02",
+          "K05",
+          "K07",
+          "K10",
+          "K01",
+          "K09",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K01",
+          "K09",
+          "K02",
+          "K06",
+          "K05",
+          "K07",
+          "K03",
+          "K04",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K06",
+          "K02",
+          "K01",
+          "K03",
+          "K05",
+          "K09",
+          "K07",
+          "K10",
+          "K04"
+        ]
+      },
+      "ranking_seconds": 0.006658500999947137
+    },
+    {
+      "case_id": "D22",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: A nova medição terminou, mas a etiqueta do pallet continua divergente."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K02",
+          "K06",
+          "K03",
+          "K05",
+          "K10",
+          "K09",
+          "K01",
+          "K07",
+          "K04"
+        ],
+        "dense": [
+          "K08",
+          "K01",
+          "K02",
+          "K09",
+          "K06",
+          "K05",
+          "K07",
+          "K03",
+          "K04",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K06",
+          "K01",
+          "K09",
+          "K05",
+          "K03",
+          "K10",
+          "K07",
+          "K04"
+        ]
+      },
+      "ranking_seconds": 0.006636155999785842
+    },
+    {
+      "case_id": "D23",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Um registro diz documento fiscal pendente; outro da mesma precedência diz documentos concluídos. Não há regra de prevalência."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K07",
+          "K03",
+          "K06",
+          "K02",
+          "K01",
+          "K10",
+          "K05",
+          "K09",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K01",
+          "K07",
+          "K09",
+          "K04",
+          "K06",
+          "K03",
+          "K10",
+          "K05"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K07",
+          "K01",
+          "K03",
+          "K06",
+          "K09",
+          "K04",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006635713999912696
+    },
+    {
+      "case_id": "D24",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+        "Observação do registro: Os dois registros agora confirmam documento fiscal pendente."
+      ],
+      "rankings": {
+        "bm25": [
+          "K02",
+          "K07",
+          "K08",
+          "K01",
+          "K03",
+          "K06",
+          "K09",
+          "K05",
+          "K04",
+          "K10"
+        ],
+        "dense": [
+          "K08",
+          "K07",
+          "K02",
+          "K05",
+          "K01",
+          "K04",
+          "K06",
+          "K09",
+          "K03",
+          "K10"
+        ],
+        "hybrid": [
+          "K02",
+          "K08",
+          "K07",
+          "K01",
+          "K05",
+          "K06",
+          "K03",
+          "K04",
+          "K09",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006579199000043445
+    },
+    {
+      "case_id": "D25",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: sim. Quantidade planejada: 220. Quantidade carregada: 39. Indicador OQC Pending: 39. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A carga do container ainda não atingiu o planejamento."
+      ],
+      "rankings": {
+        "bm25": [
+          "K09",
+          "K08",
+          "K03",
+          "K07",
+          "K05",
+          "K02",
+          "K06",
+          "K01",
+          "K10",
+          "K04"
+        ],
+        "dense": [
+          "K09",
+          "K08",
+          "K02",
+          "K04",
+          "K01",
+          "K07",
+          "K03",
+          "K06",
+          "K05",
+          "K10"
+        ],
+        "hybrid": [
+          "K09",
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K01",
+          "K04",
+          "K05",
+          "K06",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006567164999978559
+    },
+    {
+      "case_id": "D26",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: sim. Quantidade planejada: 220. Quantidade carregada: 39. Indicador OQC Pending: 0. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A carga do container ainda não atingiu o planejamento. O resumo não informa outras decisões."
+      ],
+      "rankings": {
+        "bm25": [
+          "K09",
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K05",
+          "K06",
+          "K10",
+          "K01",
+          "K04"
+        ],
+        "dense": [
+          "K09",
+          "K08",
+          "K02",
+          "K04",
+          "K01",
+          "K07",
+          "K03",
+          "K05",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K09",
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K04",
+          "K01",
+          "K05",
+          "K06",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006580653000128223
+    },
+    {
+      "case_id": "D27",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: Arquivo já importado. Nenhum novo processamento foi iniciado."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K07",
+          "K10",
+          "K05",
+          "K02",
+          "K06",
+          "K04",
+          "K09",
+          "K01"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K01",
+          "K07",
+          "K10",
+          "K04",
+          "K09",
+          "K03",
+          "K05",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K07",
+          "K02",
+          "K10",
+          "K03",
+          "K01",
+          "K05",
+          "K04",
+          "K09",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.006599851999908424
+    },
+    {
+      "case_id": "D28",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: Foi iniciada uma importação nova; não se trata de arquivo repetido."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K07",
+          "K10",
+          "K05",
+          "K02",
+          "K06",
+          "K04",
+          "K09",
+          "K01"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K01",
+          "K07",
+          "K10",
+          "K05",
+          "K09",
+          "K04",
+          "K03",
+          "K06"
+        ],
+        "hybrid": [
+          "K08",
+          "K07",
+          "K02",
+          "K10",
+          "K03",
+          "K05",
+          "K01",
+          "K09",
+          "K04",
+          "K06"
+        ]
+      },
+      "ranking_seconds": 0.006525339000290842
+    },
+    {
+      "case_id": "D29",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: O veículo previsto atrasou por remanejamento da rota."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K06",
+          "K05",
+          "K07",
+          "K02",
+          "K09",
+          "K10",
+          "K04",
+          "K01"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K07",
+          "K04",
+          "K09",
+          "K03",
+          "K01",
+          "K06",
+          "K05",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K06",
+          "K09",
+          "K04",
+          "K05",
+          "K01",
+          "K10"
+        ]
+      },
+      "ranking_seconds": 0.006478323000010278
+    },
+    {
+      "case_id": "D30",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A previsão de chegada foi atualizada pelo transporte."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K04",
+          "K06",
+          "K10",
+          "K02",
+          "K05",
+          "K07",
+          "K09",
+          "K01"
+        ],
+        "dense": [
+          "K08",
+          "K02",
+          "K04",
+          "K09",
+          "K07",
+          "K01",
+          "K05",
+          "K03",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K04",
+          "K02",
+          "K03",
+          "K06",
+          "K09",
+          "K07",
+          "K05",
+          "K10",
+          "K01"
+        ]
+      },
+      "ranking_seconds": 0.006498705000012706
+    },
+    {
+      "case_id": "D31",
+      "queries": [
+        "Inspeção aprovada: não. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A doca reservada mudou de posição no turno."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K03",
+          "K06",
+          "K02",
+          "K07",
+          "K10",
+          "K05",
+          "K09",
+          "K01",
+          "K04"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K04",
+          "K01",
+          "K07",
+          "K09",
+          "K03",
+          "K06",
+          "K05",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K03",
+          "K07",
+          "K06",
+          "K04",
+          "K01",
+          "K09",
+          "K10",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006499986999642715
+    },
+    {
+      "case_id": "D32",
+      "queries": [
+        "Inspeção aprovada: sim. Retenção OQC comum: não. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa não disponibilizada pela projeção",
+        "Observação do registro: A posição da doca foi confirmada para o próximo turno."
+      ],
+      "rankings": {
+        "bm25": [
+          "K08",
+          "K04",
+          "K03",
+          "K10",
+          "K02",
+          "K06",
+          "K07",
+          "K09",
+          "K01",
+          "K05"
+        ],
+        "dense": [
+          "K02",
+          "K08",
+          "K07",
+          "K01",
+          "K04",
+          "K09",
+          "K05",
+          "K03",
+          "K06",
+          "K10"
+        ],
+        "hybrid": [
+          "K08",
+          "K02",
+          "K04",
+          "K07",
+          "K03",
+          "K01",
+          "K10",
+          "K09",
+          "K06",
+          "K05"
+        ]
+      },
+      "ranking_seconds": 0.006506701000034809
+    }
+  ],
+  "posthoc_view_inspection": {
+    "standing": "Post-hoc inspection of four development misses after aggregate results. No new inference, configuration or claim of validated improvement.",
+    "cases": [
+      {
+        "case_id": "D05",
+        "views": [
+          {
+            "query": "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+            "dense": [
+              "K02",
+              "K08",
+              "K01",
+              "K09",
+              "K03",
+              "K04",
+              "K07",
+              "K05",
+              "K06",
+              "K10"
+            ],
+            "bm25": [
+              "K08",
+              "K03",
+              "K02",
+              "K09",
+              "K01",
+              "K04",
+              "K07",
+              "K06",
+              "K05",
+              "K10"
+            ]
+          },
+          {
+            "query": "Observação do registro: O laboratório separou outra amostra; o parecer da nova medição ainda não voltou.",
+            "dense": [
+              "K05",
+              "K08",
+              "K01",
+              "K02",
+              "K10",
+              "K07",
+              "K04",
+              "K06",
+              "K09",
+              "K03"
+            ],
+            "bm25": [
+              "K05",
+              "K10",
+              "K07",
+              "K06",
+              "K08",
+              "K03",
+              "K02",
+              "K01",
+              "K04",
+              "K09"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "D07",
+        "views": [
+          {
+            "query": "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+            "dense": [
+              "K02",
+              "K08",
+              "K01",
+              "K09",
+              "K03",
+              "K04",
+              "K07",
+              "K05",
+              "K06",
+              "K10"
+            ],
+            "bm25": [
+              "K08",
+              "K03",
+              "K02",
+              "K09",
+              "K01",
+              "K04",
+              "K07",
+              "K06",
+              "K05",
+              "K10"
+            ]
+          },
+          {
+            "query": "Observação do registro: O código impresso na caixa não corresponde ao volume que foi separado.",
+            "dense": [
+              "K06",
+              "K04",
+              "K01",
+              "K08",
+              "K10",
+              "K09",
+              "K02",
+              "K07",
+              "K05",
+              "K03"
+            ],
+            "bm25": [
+              "K06",
+              "K05",
+              "K10",
+              "K08",
+              "K09",
+              "K07",
+              "K04",
+              "K03",
+              "K02",
+              "K01"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "D21",
+        "views": [
+          {
+            "query": "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+            "dense": [
+              "K02",
+              "K08",
+              "K01",
+              "K09",
+              "K03",
+              "K04",
+              "K07",
+              "K05",
+              "K06",
+              "K10"
+            ],
+            "bm25": [
+              "K08",
+              "K03",
+              "K02",
+              "K09",
+              "K01",
+              "K04",
+              "K07",
+              "K06",
+              "K05",
+              "K10"
+            ]
+          },
+          {
+            "query": "Observação do registro: Aguarda nova medição da amostra; a etiqueta do pallet também diverge do volume.",
+            "dense": [
+              "K06",
+              "K05",
+              "K09",
+              "K01",
+              "K08",
+              "K07",
+              "K10",
+              "K02",
+              "K04",
+              "K03"
+            ],
+            "bm25": [
+              "K06",
+              "K05",
+              "K10",
+              "K07",
+              "K08",
+              "K03",
+              "K02",
+              "K01",
+              "K04",
+              "K09"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "D23",
+        "views": [
+          {
+            "query": "Inspeção aprovada: não. Retenção OQC comum: sim. Retenção de longo prazo: não. Bloqueio de embarque: não. Relação entre lotes da aprovação e retenção: mesmo lote. Retenção posterior à aprovação: desconhecido, não equivale a não. Registro explícito de encerramento: desconhecido, não equivale a não. Situação de carregamento: não. Quantidade planejada: desconhecido, não equivale a não. Quantidade carregada: desconhecido, não equivale a não. Indicador OQC Pending: desconhecido, não equivale a não. justificativa preenchida",
+            "dense": [
+              "K02",
+              "K08",
+              "K01",
+              "K09",
+              "K03",
+              "K04",
+              "K07",
+              "K05",
+              "K06",
+              "K10"
+            ],
+            "bm25": [
+              "K08",
+              "K03",
+              "K02",
+              "K09",
+              "K01",
+              "K04",
+              "K07",
+              "K06",
+              "K05",
+              "K10"
+            ]
+          },
+          {
+            "query": "Observação do registro: Um registro diz documento fiscal pendente; outro da mesma precedência diz documentos concluídos. Não há regra de prevalência.",
+            "dense": [
+              "K07",
+              "K08",
+              "K02",
+              "K01",
+              "K06",
+              "K10",
+              "K04",
+              "K05",
+              "K09",
+              "K03"
+            ],
+            "bm25": [
+              "K07",
+              "K06",
+              "K10",
+              "K05",
+              "K08",
+              "K03",
+              "K01",
+              "K02",
+              "K04",
+              "K09"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "No validation/reserved inference or threshold tuning.",
+    "Probes have manually supplied cards; not full-answer accuracy.",
+    "Same assistant authored and reviewed cases; related variants are not independent.",
+    "Full trace/cache stays in ignored campaign folder; public evidence contains synthetic material only."
+  ],
+  "snapshots": {
+    "retrieval/initial": {
+      "requests_sha256": "fbc60d20533aefb53eb62a215d2a3be579cb70fac28b914a86b2dc5b25f80e9a",
+      "files": {
+        "scripts/run_ai_knowledge_infrastructure.py": "55c723a34e8b6d4dbeda616f2c08bdc3898748b14732bbd75dafdb106d906dc3",
+        "scripts/ai_knowledge.py": "20ea39b9ac10eea7858860b8bf5f7fca2bd3f81eae97d0447fd7d424e72142dc",
+        "scripts/ai_knowledge_retrieval.py": "53fcee1126c81709ae30c7fcff8ac419d00501affa28ac2deadc563397feb1b7",
+        "scripts/ai_knowledge_runtime.py": "d17e003b0d0054919c7cdbcb0dd7a3a064266c09ad4824a51161b221c7dba6dc",
+        "scripts/ai_reevaluation_telemetry.py": "58610fbcc62b8be69d24b329c76db8330e8188c278251b64c8f0529a541934d3",
+        "docs/ai-knowledge-poc-protocol.json": "b0f120fa7508a81ac8563a0a597eaf030c2cbdf123a60e2f4404632d1ad0c70f",
+        "data/synthetic/ai-knowledge-v1/manifest.json": "4f3b7badc61460a7de27dd672654f57ffa3a04c0664be8341e2747640f96c7fc"
+      }
+    },
+    "runs/infrastructure": {
+      "requests_sha256": "b66e29ea9e4b557a22dbc72294fad27837a0879abbca6d5c0b0484879350672f",
+      "files": {
+        "scripts/run_ai_knowledge_infrastructure.py": "55c723a34e8b6d4dbeda616f2c08bdc3898748b14732bbd75dafdb106d906dc3",
+        "scripts/ai_knowledge.py": "20ea39b9ac10eea7858860b8bf5f7fca2bd3f81eae97d0447fd7d424e72142dc",
+        "scripts/ai_knowledge_retrieval.py": "53fcee1126c81709ae30c7fcff8ac419d00501affa28ac2deadc563397feb1b7",
+        "scripts/ai_knowledge_runtime.py": "d17e003b0d0054919c7cdbcb0dd7a3a064266c09ad4824a51161b221c7dba6dc",
+        "scripts/ai_reevaluation_telemetry.py": "58610fbcc62b8be69d24b329c76db8330e8188c278251b64c8f0529a541934d3",
+        "docs/ai-knowledge-poc-protocol.json": "b0f120fa7508a81ac8563a0a597eaf030c2cbdf123a60e2f4404632d1ad0c70f",
+        "data/synthetic/ai-knowledge-v1/manifest.json": "4f3b7badc61460a7de27dd672654f57ffa3a04c0664be8341e2747640f96c7fc"
+      }
+    }
+  }
+}

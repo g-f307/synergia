@@ -8,6 +8,11 @@ e publicá-las junto ao trabalho da issue. Este documento será versionado; as
 evidências brutas das investigações anteriores continuam locais e ignoradas.
 As decisões e o desenho experimental abaixo permanecem preservados.
 
+**Execução — 09/11/2026:** o responsável autorizou os blocos 1 e 2, com resumo e
+novo aceite antes do bloco 3. A implementação e os resultados ficam no
+[guia da PoC #183](ai-knowledge-poc.md). Os estados de “não iniciada” abaixo
+pertencem ao registro histórico de elaboração, não ao progresso atual.
+
 Este documento reúne o histórico da discussão sobre o agente de qualidade anterior,
 as hipóteses e evidências que orientaram a reformulação e o plano aprovado para a
 nova prova de conceito. O contexto e o desenho experimental estão completos nas
