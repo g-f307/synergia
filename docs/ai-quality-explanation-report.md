@@ -1,7 +1,7 @@
 # Resultado da PoC de explicação assistida — #179
 
 **Escopo atualizado:** a entrega de interface é a
-[área IA — Qualidade integrada ao SYNERGIA](ai-quality-ui.md), com geração real.
+[área Agente de qualidade integrada ao SYNERGIA](ai-quality-ui.md), com geração real.
 Os números abaixo pertencem à rodada offline congelada anterior à integração;
 não são métricas de uma nova rodada sobre o código atual. As verificações da
 interface estão em `integrated-browser-checks.json`. Vídeo não integra a entrega.

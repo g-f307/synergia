@@ -8,14 +8,14 @@
     } @else {
       <div class="quality-controls"><label for="quality-scenario">{{ i18n.t('quality.scenario') }}<select id="quality-scenario" [ngModel]="selectedId()" (ngModelChange)="select($event)" [disabled]="generating()">@for(scenario of scenarios(); track scenario.id){<option [value]="scenario.id">{{ i18n.t(names[scenario.id]) }}</option>}</select></label><button type="button" (click)="generate()" [disabled]="generating() || !selected()?.groups?.length || modelStatus() !== 'available'" [attr.aria-busy]="generating()">{{ i18n.t(generating() ? 'quality.generating' : 'quality.generate') }}</button></div>
       @if(modelStatus() !== 'available'){
-        <syn-state state="unavailable" [title]="i18n.t(modelStatus() === 'disabled' ? 'quality.modelDisabled' : 'quality.modelUnavailable')" [message]="i18n.t('quality.baselineAvailable')"><button type="button" class="secondary" (click)="load()">{{ i18n.t('quality.checkAvailability') }}</button></syn-state>
+        <syn-state state="unavailable" [title]="i18n.t(modelStatus() === 'disabled' ? 'quality.modelDisabled' : 'quality.modelUnavailable')" [message]="i18n.t('quality.factsAvailable')"><button type="button" class="secondary" (click)="load()">{{ i18n.t('quality.checkAvailability') }}</button></syn-state>
       }
       <p class="language-note">{{ i18n.t('quality.language') }}</p>
       @if(generating()){<syn-state state="loading" [title]="i18n.t('quality.generating')" [message]="i18n.t('quality.generatingMessage')" />}
       @if(failure()){<syn-state [state]="failure()?.status === 403 ? 'forbidden' : 'error'" [title]="i18n.t('quality.generateFailed')" [message]="i18n.t(failure()?.status === 429 ? 'quality.rateLimited' : 'quality.generateFailedMessage')" />}
       @if(selected(); as scenario){
         @if(!scenario.groups.length){<syn-state state="empty" [title]="i18n.t('quality.clean')" [message]="i18n.t('quality.noModelCall')" />}
-        @for(group of scenario.groups; track group.code; let index = $index){
+        @for(group of scenario.groups; track group.code){
           <section class="quality-comparison" [attr.aria-label]="group.code">
             <article class="facts"><span class="source-label">{{ i18n.t('quality.pipeline') }}</span><h2 class="technical">{{ group.code }}</h2><p>{{ i18n.t('quality.count', {count: i18n.formatNumber(group.occurrences.length)}) }}</p>
               <syn-responsive-table><table><thead><tr><th>{{ i18n.t('quality.evidence') }}</th><th>{{ i18n.t('quality.location') }}</th><th>{{ i18n.t('quality.value') }}</th></tr></thead><tbody>
@@ -29,7 +29,6 @@
                 @if(result.rejection_code){<p class="rejection">{{ rejection(result.rejection_code) }}</p>}
                 <p class="language-note">{{ i18n.t('quality.elapsed',{value:i18n.formatNumber(result.elapsed_ms / 1000, {maximumFractionDigits: 2})}) }}</p>
               } @else {<h2>{{ i18n.t('quality.explanation') }}</h2><p class="waiting">{{ i18n.t('quality.waiting') }}</p>}
-              <details><summary>{{ i18n.t('quality.compareBaseline') }}</summary><p>{{ scenario.baseline[index].explanation }}</p><ul>@for(check of scenario.baseline[index].human_checks; track check){<li>{{ check }}</li>}</ul></details>
             </article>
           </section>
         }

@@ -1,6 +1,6 @@
 # Avaliação offline da explicação assistida — PoC #179
 
-O uso principal agora ocorre na [área IA — Qualidade do SYNERGIA](ai-quality-ui.md),
+O uso principal agora ocorre na [área Agente de qualidade do SYNERGIA](ai-quality-ui.md),
 com geração real pelo backend. Este documento descreve apenas a avaliação
 offline e seus contratos sintéticos; não é o roteiro de uso da interface.
 Não há decisão ou alteração automática de dados operacionais.

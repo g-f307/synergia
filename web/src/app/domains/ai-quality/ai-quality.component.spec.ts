@@ -31,6 +31,8 @@ describe('AiQualityComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Fatos do pipeline');
     expect(fixture.nativeElement.textContent).toContain('Gere a explicação');
     expect(getComputedStyle(fixture.nativeElement.querySelector('.quality-page')).borderRadius).toBe('28px');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toBe('Agente de qualidade');
+    expect(fixture.nativeElement.querySelector('details')).toBeNull();
     expect(generate).not.toHaveBeenCalled();
   });
   it('calls the API on demand and prevents duplicate generation while pending', async () => {
@@ -70,12 +72,14 @@ describe('AiQualityComponent', () => {
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
   });
   for (const status of ['disabled', 'unavailable'] as const) {
-    it(`disables generation when the model is ${status} and keeps the baseline visible`, () => {
+    it(`disables generation when the model is ${status} and keeps the facts visible without a baseline comparison`, () => {
       load(status); fixture.componentInstance.generate(); fixture.detectChanges();
       expect(generate).not.toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('.quality-controls button').disabled).toBeTrue();
       expect(fixture.nativeElement.textContent).toContain(status === 'disabled' ? 'Geração por modelo desabilitada' : 'Modelo validado indisponível');
-      expect(fixture.nativeElement.querySelector('details').textContent).toContain(text().explanation);
+      expect(fixture.nativeElement.textContent).toContain('Fatos do pipeline');
+      expect(fixture.nativeElement.querySelector('details')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('baseline');
       fixture.componentInstance.load(); load('available');
       expect(fixture.nativeElement.querySelector('.quality-controls button').disabled).toBeFalse();
     });
@@ -95,6 +99,7 @@ describe('AiQualityComponent', () => {
     TestBed.inject(I18nService).configure('en-US'); load();
     expect(fixture.nativeElement.textContent).toContain('Generate explanation');
     expect(fixture.nativeElement.textContent).toContain('in Portuguese');
+    expect(fixture.nativeElement.querySelector('h1').textContent).toBe('Quality agent');
     expect(fixture.nativeElement.querySelector('label').getAttribute('for')).toBe('quality-scenario');
   });
 });
