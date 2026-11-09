@@ -1,0 +1,47 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Synergia · PoC #183 · Comparação reservada</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;background:#f5f6f8;color:#182530;margin:0;padding:24px;max-width:1700px;margin:auto}
+h1{font-size:1.6rem}h2{font-size:1.2rem}h3{margin:.4em 0}.controls{position:sticky;top:0;background:#fff;padding:14px;border:1px solid #ccd4dc;z-index:1}
+select{font:inherit;margin:0 16px 0 4px}label{display:inline-block;margin:4px 0}#panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:16px}
+article{background:white;border:1px solid #ccd4dc;padding:16px;border-radius:8px;overflow-wrap:anywhere}.item{border-top:1px solid #dde3e9;padding:12px 0}.tag{font-size:.85rem;color:#405365}.bad{color:#a11515;font-weight:600}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.85rem}details{margin:12px 0}small{color:#405365}
+</style><h1>PoC #183 · orientação investigativa</h1>
+<p>Conhecimento e ocorrências fictícios. Este comparador preserva erros reais da campanha; as saídas não são recomendações operacionais. Não há integração com o sistema.</p>
+<div class="controls"><label>Caso <select id="case"></select></label><label>Seed <select id="seed"></select></label><label><input type="checkbox" id="audit"> Mostrar avaliação e respostas brutas</label></div>
+<details><summary>Fatos, estados e proveniência da ocorrência</summary><pre id="facts"></pre></details><p id="group"></p><div id="panels"></div>
+<script id="data" type="application/json">__POC_DATA__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent);
+const caseSelect=document.getElementById('case'),seedSelect=document.getElementById('seed');
+function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
+for(const c of data.cases){const o=element('option',c.case_id);o.value=c.case_id;caseSelect.append(o);}
+for(const s of data.seeds){const o=element('option',String(s));o.value=s;seedSelect.append(o);}
+function draw(){
+ const c=data.cases.find(c=>c.case_id===caseSelect.value),seed=Number(seedSelect.value),audit=document.getElementById('audit').checked;
+ document.getElementById('facts').textContent=JSON.stringify(c.facts,null,2);
+ document.getElementById('group').textContent=c.case_id+' · '+c.group_id+' · Verificação literal anexada pelo código; não é procedimento criado pelo modelo.';
+ const panels=document.getElementById('panels');panels.replaceChildren();
+ for(const p of c.panels.filter(p=>p.seed===null||p.seed===seed)){
+  const a=element('article');a.append(element('h2',p.name));
+  if(p.policy)a.append(element('small','Política congelada: '+p.policy));
+  if(p.message)a.append(element('p',p.message));
+  if(!p.items.length)a.append(element('p','Nenhuma orientação específica exibida.'));
+  for(const item of p.items){const box=element('div',undefined,'item');box.append(element('h3',item.card_id+' · '+item.title));
+   box.append(element('p','Estado: '+item.status, 'tag'));
+   box.append(element('p','Evidências: '+(item.evidence_ids.join(', ')||'não atribuídas pela busca')));
+   box.append(element('p','Lacunas indicadas: '+(item.missing_fields.join(', ')||'nenhuma listada')));
+   box.append(element('p','Verificação documental literal — '+item.verification.id+': '+item.verification.text));
+   box.append(element('small',item.limits));
+   if(audit&&item.correct!==undefined)box.append(element('p',item.correct?'Compatível com o gabarito fictício':'Orientação incorreta/incompleta'+(item.high_error?' · erro alto':''),item.correct?'tag':'bad'));
+   a.append(box);
+  }
+  if(audit&&p.blocked!==undefined)a.append(element('p','Respostas bloqueadas: '+p.blocked));
+  if(audit&&p.raw){const d=element('details');d.append(element('summary','Respostas brutas, bloqueios e referência'));d.append(element('pre',JSON.stringify(p.raw,null,2)));a.append(d);}
+  panels.append(a);
+ }
+}
+caseSelect.addEventListener('change',draw);seedSelect.addEventListener('change',draw);document.getElementById('audit').addEventListener('change',draw);draw();
+</script></html>
