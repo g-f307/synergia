@@ -1,8 +1,8 @@
 # PoC de orientação investigativa com conhecimento documentado — #183
 
 Implementação isolada do [plano e contexto aprovados](poc-contexto-e-plano.md).
-O responsável autorizou os blocos 1 e 2 em 09/11/2026; continuar no bloco 3 exige
-outro aceite. A integração do agente ao produto não faz parte desta issue.
+Os blocos 1–4 foram autorizados e concluídos em 09/11/2026. Os blocos 5 e 6
+aguardam novo aceite. A integração do agente ao produto não faz parte desta issue.
 
 ## Insumos e contratos
 
@@ -76,7 +76,9 @@ consulta registrada no protocolo. Documentos não recebem essa instrução.
 
 Rankings são candidatos, não decisões de aplicabilidade. Nesta etapa não há limiar
 de “nenhuma ficha”. Casos sem documentação pertinente continuam no relatório, com
-a quantidade de sugestões indevidas visível. Calibrar abstenção é trabalho futuro.
+a quantidade de sugestões indevidas visível. A variante focada dos blocos 3/4
+acrescenta filtros de escopo por código e apresentação condicionada ao estado do leitor; não foi ajustado um limiar numérico
+de similaridade.
 
 Reportar Recall@1/2/3/5, precisão, MRR e resultados do subconjunto semântico.
 Alguns casos exigem mais de duas fichas; calcular também o teto que o próprio
@@ -134,15 +136,70 @@ Reprodução usa novos nomes, conserva o ledger da campanha e conta o custo adic
 Nova campanha independente tem novo ledger e não pode apagar/substituir a anterior.
 
 Hashes de código, protocolo, manifestos e requisições são gravados antes da primeira
-inferência de cada rodada. Resultados brutos, cache e pesos não entram no Git.
-Evidências versionadas devem ser sanitizadas e suficientes para conferir os números.
+inferência de cada rodada. O diretório bruto da campanha, cache e pesos não entram
+no Git. Exportações de respostas exclusivamente sintéticas compõem as evidências
+sanitizadas versionadas, suficientes para conferir os números.
+
+## Desenvolvimento, validação e congelamento
+
+O [checkpoint 3–4](ai-knowledge-poc-checkpoint-3-4.md) registra resultados,
+limitações, decisões e custo. O [desenho de refinamentos](ai-knowledge-poc-development.json)
+estende o protocolo histórico, sem alterar seu orçamento. A
+[rubrica](ai-knowledge-poc-rubric.json) distingue resposta bruta, orientação exposta,
+cobertura e próxima verificação. O schema tipado restringe lacunas conhecidas por
+código; não comprova inteligência do modelo.
+
+`scripts/run_ai_knowledge_development.py` prepara pedidos imutáveis, executa lotes
+retomáveis e avalia somente desenvolvimento/validação. Não oferece modo reservado.
+Rótulos são abertos pelo avaliador depois que os pedidos congelados terminam.
+O orçamento agora possui quotas por fase, mantendo o ledger original e seus recibos.
+
+Exemplo reproduzível com novos diretórios, respeitando autorização e quotas:
+
+```bash
+backend/.venv/bin/python scripts/run_ai_knowledge_development.py prepare --kind calibration --output-dir .test-tmp/NOVA-CAMPANHA/development/calibration
+backend/.venv/bin/python scripts/run_ai_knowledge_development.py execute --budget-root .test-tmp/NOVA-CAMPANHA --run-dir .test-tmp/NOVA-CAMPANHA/development/calibration --max-calls 16 --allow-inference
+```
+
+Repetir `execute` continua apenas os índices pendentes. Depois de todas as chamadas,
+`score --run-dir <diretorio>` pontua sem nova inferência. Não reiniciar a calibração
+no ledger original: suas 64 chamadas já foram consumidas. Não criar outro ledger
+para contornar o teto cumulativo de uma campanha.
+
+As configurações de cada ciclo e rankings estão na
+[evidência sanitizada](evidence/issue-183-blocks-3-4.json), em `runs.<fase>.selection`
+e `retrieval`. Uma reprodução de triagem/confirmação usa esses objetos como JSON
+em `--selection`, sem transferir rótulos para o prompt. Triagem exige `--variants`;
+validação exige confirmação anterior e possui lock de campanha única.
+
+O [congelamento final](ai-knowledge-poc-final-config.json) fixa código, base, corpus,
+gabaritos por hash, parâmetros, políticas e rubrica. A
+[matriz](evidence/issue-183-final-matrix.json) registra consultas e hashes de todos
+os possíveis pedidos de leitura, não inferências. Seu preparo lê apenas entradas
+para serializar; não ajusta configuração pelos rótulos reservados.
+
+`scripts/freeze_ai_knowledge.py` não tem cliente de inferência. Seleciona política
+pelos scores de validação e gera o congelamento sem chamar modelos. Para conferir
+os artefatos entregues, sem consumir orçamento:
+
+```bash
+backend/.venv/bin/python -c "import sys; from pathlib import Path; sys.path.insert(0,'scripts'); from freeze_ai_knowledge import verify; verify(Path('docs/ai-knowledge-poc-final-config.json'))"
+```
+
+Os snapshots dos blocos 1/2 correspondem ao commit `739d3fd`; a evolução do runtime
+para quotas por fase não reescreve essa evidência histórica. Para os primeiros
+ensaios dos blocos 3/4, a evidência inclui patches que reconstroem os arquivos anteriores
+a partir dos entregues e os respectivos hashes. A avaliação registra separadamente
+as versões utilizadas para pontuar.
 
 ## Continuidade
 
-O resultado dos dois primeiros blocos está no
-[checkpoint 1–2](ai-knowledge-poc-checkpoint-1-2.md).
+Os checkpoints [1–2](ai-knowledge-poc-checkpoint-1-2.md) e
+[3–4](ai-knowledge-poc-checkpoint-3-4.md) contêm a evolução completa até o congelamento.
+A recuperação melhorou, mas o leitor ficou abaixo das metas e expôs falsos positivos.
+Isso não será encoberto por acertos de schema, latência ou conhecimento anexado pelo código.
 
-O próximo trabalho, após aprovação, é o bloco 3: selecionar hipóteses de refinamento
-com base nas falhas, sem abrir o reservado. O runtime/avaliador final, apresentação
-estática e decisão da PoC serão construídos nos blocos seguintes. A existência de
-um probe válido não antecipa essas entregas nem comprova benefício operacional.
+Blocos 5/6 dependem de aprovação: executor final sobre os componentes congelados,
+48 casos × dois modelos × três seeds, baselines, redação condicional, apresentação
+estática e relatório. Ainda não houve inferência reservada, medição de utilidade
+com pessoas ou autorização para atualizar o agente do produto.

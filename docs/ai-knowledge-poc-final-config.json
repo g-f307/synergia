@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0-final-frozen",
+  "issue": 183,
+  "authorized_completed_blocks": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "blocks_5_6_authorized": false,
+  "reserved_inference_executed": false,
+  "require_new_approval_before_inference": true,
+  "files": {
+    "scripts/run_ai_knowledge_development.py": "af4102cf0acee2a63acf8a51aa713c14f4b571cbfad556307edda1835be88200",
+    "scripts/ai_knowledge.py": "20ea39b9ac10eea7858860b8bf5f7fca2bd3f81eae97d0447fd7d424e72142dc",
+    "scripts/ai_knowledge_reader.py": "f2440a15f8d54b01acc90a899f3084fb845f9eca4f6af3b24a6897025c2db006",
+    "scripts/ai_knowledge_runtime.py": "c2e3b182a1f5c3f64266db89bd12a9bf54beb7ff75a94e4a853fc62bbd9487c7",
+    "scripts/ai_knowledge_retrieval.py": "53fcee1126c81709ae30c7fcff8ac419d00501affa28ac2deadc563397feb1b7",
+    "scripts/ai_reevaluation_telemetry.py": "58610fbcc62b8be69d24b329c76db8330e8188c278251b64c8f0529a541934d3",
+    "docs/ai-knowledge-poc-protocol.json": "b0f120fa7508a81ac8563a0a597eaf030c2cbdf123a60e2f4404632d1ad0c70f",
+    "docs/ai-knowledge-poc-development.json": "70d780bd4ba5b06d7160f1fab7d4e7130795d93cabb98af91c7baebdfe0a8241",
+    "docs/ai-knowledge-poc-rubric.json": "5130bbde689ee37bc6bf69a9392b4d783a54de3f81e5fbd4afb6fb31eafef498",
+    "data/synthetic/ai-knowledge-v1/manifest.json": "4f3b7badc61460a7de27dd672654f57ffa3a04c0664be8341e2747640f96c7fc",
+    "scripts/freeze_ai_knowledge.py": "47d418edefb5441b112c8a83d9d87f00cfebf8cd30468135b36396dbde98565f",
+    "data/synthetic/ai-knowledge-v1/development.json": "5b581b8695c62b638c28d4561bb6cef490fd608198c2027b222c21384e8f59dd",
+    "data/synthetic/ai-knowledge-v1/knowledge.json": "5e7b8afc09df6adb9d5b1facc369c5cc12b2d9a9a848692f66945b5544d26e4f",
+    "data/synthetic/ai-knowledge-v1/field-origins.json": "20f67e78aa4f0aee380c633fdd1e21f11c8f2ebc860d0762fec814a5a97ffd8f",
+    "data/synthetic/ai-knowledge-v1/README.md": "ac5d6a72a041b0ea719a95ac3ccdffa5c26fcc8ec0181486eae1da58a01cdbd6",
+    "data/synthetic/ai-knowledge-v1/development-gold.json": "94709c4ae24efc3eee7b788ed677a8144e2534523b9fe3cf1ff513c580f326e7",
+    "data/synthetic/ai-knowledge-v1/evaluation-gold.json": "88837bc70e159175f4a7964a931980602f18fda7b2fb7977b6fabe1da5a3f7a8",
+    "data/synthetic/ai-knowledge-v1/evaluation.json": "d7eb9344a46c59cc37d606677c4b19941bb8fc34df4831112c3f56c686ecaa45",
+    "data/synthetic/ai-knowledge-v1/validation.json": "f691aba62a044ac814edc262c1f8ea41c29bd0eb64eb26934ccb708541f2c873",
+    "data/synthetic/ai-knowledge-v1/validation-gold.json": "cd040700f824aa39ea8ca2962a052667a1f4228bcf52d1afac6d04be0889e4ed"
+  },
+  "validation_scores_sha256": "3d2698744c26e285396aaee6abd7892ab43819e01fcd3b8f42e3e5fed36a6bd9",
+  "validation_requests_sha256": "c02d4de47f0ee039a4801e9a505b1d56f52b9a56d4f3bd7e7ca684cddf5ec3ee",
+  "matrix_path": "docs/evidence/issue-183-final-matrix.json",
+  "matrix_sha256": "1fb3691cf9c2ec70898c482ee9f89ff6a4ce097cd1c0aee45e72ad38fb134457",
+  "models": {
+    "qwen3:4b-instruct": {
+      "profile": "historical",
+      "variant": "typed_checklist",
+      "policy": "supported_and_possible",
+      "validation": {
+        "cases": 16,
+        "answerable": 10,
+        "displayed_items": 15,
+        "correct_displayed_items": 7,
+        "precision": 0.4666666666666667,
+        "coverage": 0.6,
+        "complete_case_accuracy": 0.4375,
+        "high_errors_exposed": 7,
+        "next_check_relevance": 0.3,
+        "next_check_scope": "Documented ID attached by code, not a model procedure choice; missing answerable cases included."
+      },
+      "mean_reader_call_seconds": 1.784206096192345
+    },
+    "qwen3:8b": {
+      "profile": "recommended",
+      "variant": "typed_checklist",
+      "policy": "supported_only",
+      "validation": {
+        "cases": 16,
+        "answerable": 10,
+        "displayed_items": 19,
+        "correct_displayed_items": 7,
+        "precision": 0.3684210526315789,
+        "coverage": 0.7,
+        "complete_case_accuracy": 0.25,
+        "high_errors_exposed": 12,
+        "next_check_relevance": 0.0,
+        "next_check_scope": "Documented ID attached by code, not a model procedure choice; missing answerable cases included."
+      },
+      "mean_reader_call_seconds": 4.605908209615336
+    }
+  },
+  "model_pins": {
+    "qwen3:4b-instruct": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+    "qwen3:8b": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
+  },
+  "runtime": {
+    "endpoint": "http://127.0.0.1:11434",
+    "version": "0.40.12",
+    "context": 4096,
+    "output_tokens": 512,
+    "threads": 6,
+    "timeout_seconds": 45,
+    "thinking_timeout_seconds": 90,
+    "probe_cases": [
+      "D03",
+      "D05",
+      "D15"
+    ],
+    "probe_cards": [
+      "K02",
+      "K05",
+      "K02"
+    ],
+    "probe_seed": 125,
+    "probe_calls": 6,
+    "probe_profile": "historical",
+    "probe_is_quality_evaluation": false,
+    "one_model_at_a_time": true,
+    "network_redirects_allowed": false,
+    "retries": 0
+  },
+  "model_configuration_snapshot": {
+    "qwen3:4b-instruct": {
+      "parameters": "top_k                          20\ntop_p                          0.8\nrepeat_penalty                 1\nstop                           \"<|im_start|>\"\nstop                           \"<|im_end|>\"\ntemperature                    0.7",
+      "template_sha256": "05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9",
+      "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    "qwen3:8b": {
+      "parameters": "temperature                    0.6\ntop_k                          20\ntop_p                          0.95\nrepeat_penalty                 1\nstop                           \"<|im_start|>\"\nstop                           \"<|im_end|>\"",
+      "template_sha256": "7d324826d81029e9cc04696166b97b66637ec0178f32f85c8c56ab61dc4141a1",
+      "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    "qwen3-embedding:0.6b": {
+      "parameters": null,
+      "template_sha256": "3bd74c5f0a7abbccbbbed03dd91e5d25a2288e506d558e721d0fe60782bcf781",
+      "system_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    }
+  },
+  "retrieval_parameters": {
+    "arms": [
+      "bm25",
+      "dense",
+      "hybrid"
+    ],
+    "embedding_model": "qwen3-embedding:0.6b",
+    "query_instruction": "Given an operational occurrence, retrieve experimental knowledge cards relevant to investigating its evidence and missing information.",
+    "document_instruction": null,
+    "query_views": [
+      "observed_signals",
+      "provided_note"
+    ],
+    "rrf_constant": 60,
+    "k": [
+      1,
+      2,
+      3,
+      5
+    ],
+    "reader_max_cards": 2,
+    "calibration_in_block2": false,
+    "block2_split": "development",
+    "document_text": "title, scope, situation, vocabulary, criteria, verification, limits",
+    "exclude_archived_by_code": true,
+    "no_applicable_threshold": "not_calibrated; report suggestions separately from applicability",
+    "embedding_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d"
+  },
+  "generation_model": "qwen3:4b-instruct",
+  "retriever": "focused/dense",
+  "reader_max_cards": 2,
+  "seeds": [
+    125,
+    126,
+    127
+  ],
+  "generation": {
+    "prompt": "Explain in Portuguese, at most two sentences/60 words, why the documented explanation fits these observed facts and which uncertainty the documented verification would clarify. Do not invent, repeat or paraphrase procedures, infer a cause or turn unknown into absence. No other text.",
+    "role": "separate generation after accepted selection; not part of classification",
+    "gate_frozen_before_reserved": true
+  },
+  "rubric": "docs/ai-knowledge-poc-rubric.json",
+  "operational_batch_rule": "One model per batch, at most 32 calls/550 seconds; same resource stops. Verify memory/paging and runtime empty after any resource stop before resuming pending requests.",
+  "budget_at_freeze": {
+    "budget_sha256": "8e0f8553932cb4917c782545c127b6a63ad56f548db05337bcc219cc3c33db8a",
+    "generative_calls": 278,
+    "embedding_texts": 78,
+    "active_seconds": 959.1272045559995
+  },
+  "measurement_limits": "Warm reader timings have prepared context/embeddings; cold interactive embedding-to-reader switching is not a measured product SLA. Fictional assistant-authored corpus, correlated variants/seeds, no user utility measurement."
+}

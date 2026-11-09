@@ -13,6 +13,12 @@ novo aceite antes do bloco 3. A implementação e os resultados ficam no
 [guia da PoC #183](ai-knowledge-poc.md). Os estados de “não iniciada” abaixo
 pertencem ao registro histórico de elaboração, não ao progresso atual.
 
+**Novo checkpoint — 09/11/2026:** os blocos 3 e 4 também foram autorizados e
+concluídos. O [checkpoint 3–4](ai-knowledge-poc-checkpoint-3-4.md) registra calibração,
+três ciclos, validação desfavorável ao leitor e congelamento. Blocos 5/6 aguardam
+novo aceite; nenhuma inferência reservada ou integração foi executada. O desenho
+histórico abaixo não foi reescrito para acomodar os resultados.
+
 Este documento reúne o histórico da discussão sobre o agente de qualidade anterior,
 as hipóteses e evidências que orientaram a reformulação e o plano aprovado para a
 nova prova de conceito. O contexto e o desenho experimental estão completos nas
