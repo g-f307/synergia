@@ -5,8 +5,8 @@ verificação e recuperação. Os contratos conceituais continuam nos documentos
 referenciados; siga os procedimentos desta área na ordem indicada.
 
 A [revisão da issue #167](../evidence/issue-167-deployment-guide-validation.md)
-registra verificações realmente executadas, limites de ambiente e o aceite
-independente ainda pendente.
+registra verificações realmente executadas, limites de ambiente e dependências
+externas.
 
 | Guia | Público | Quando usar |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ independente ainda pendente.
 | [Primeira implantação](deployment-guide.md) | Operador de homologação | Instalar uma revisão aprovada em ambiente novo |
 | [Atualização e rollback](update-and-rollback.md) | Plataforma e banco | Preservar versão anterior, migrar e recuperar |
 | [Diagnóstico por sintoma](troubleshooting.md) | Suporte | Identificar causa e próxima ação |
-| [Aceite pós-implantação](post-deployment-checklist.md) | Operador e segundo executor | Verificar entrega e exercitar falha controlada |
+| [Aceite pós-implantação](post-deployment-checklist.md) | Operador | Verificar entrega e exercitar falha controlada |
 | [E-mail e API LG](lg-email-api.md) | Integrações e suporte | Operar worker e preparar validação da API interna |
 
 ## Perfis e limites atuais
@@ -33,8 +33,9 @@ independente ainda pendente.
 `diagnose`/`precheck` → `apply` → `verify`, com `rollback` e `reconcile`
 para recuperação. Os contratos detalhados permanecem em
 [automação de implantação](../deploy-automation.md); os procedimentos por tarefa
-estão nos guias acima. O aceite por pessoa independente continua pendente,
-conforme o [checklist](post-deployment-checklist.md).
+estão nos guias acima. O [checklist](post-deployment-checklist.md) orienta a
+verificação de cada implantação; seus exercícios são recomendações operacionais
+e não condicionam a conclusão documental da #167.
 
 ## Host, acesso e topologia
 

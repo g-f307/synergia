@@ -175,12 +175,11 @@ def test_documented_python_cli_options_exist_in_current_scripts(name: str) -> No
                         )
 
 
-def test_lg_integration_and_independent_acceptance_remain_explicitly_pending() -> None:
+def test_lg_integration_remains_explicitly_pending() -> None:
     email = _read("lg-email-api.md")
     assert "#171" in email and "#170" in email
     assert re.search(r"ainda\s*\n?>?\s*não é aceito", email)
     assert "multipart/form-data" in email and "uncertain" in email
-    assert "permanece pendente" in _read("post-deployment-checklist.md")
 
 
 def test_reference_tables_have_consistent_columns() -> None:
@@ -321,4 +320,3 @@ def test_automation_and_acceptance_gates_match_current_state() -> None:
     email = _read("lg-email-api.md")
     assert "06/11/2026" in email and "Não houve POST" in email
     assert "não identifica isoladamente" in email
-    assert "permanece pendente" in _read("post-deployment-checklist.md")

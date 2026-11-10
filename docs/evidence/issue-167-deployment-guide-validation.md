@@ -1,7 +1,8 @@
 # Revisão do guia operacional — issue #167 / PR #174
 
-Data: 06/11/2026. A entrega documental foi atualizada para a automação da
-#166 já presente na `main`, sem alteração no runtime da aplicação.
+Data da revisão original: 06/11/2026. Escopo de aceite alinhado em 10/11/2026
+à issue #167 e à revisão do PR #174. A entrega documental foi atualizada para
+a automação da #166 já presente na `main`, sem alteração no runtime da aplicação.
 
 ## Base e escopo
 
@@ -53,7 +54,19 @@ de `deploy.py`, executa o snippet de falha em uma cópia sintética e confirma
 o estado atual da automação e dos aceites externos. Os blocos de implantação
 não são executados pelos testes documentais.
 
-## Validações locais desta revisão
+## Ajuste de escopo e validação em 10/11/2026
+
+Removida a exigência de aceite independente do README, checklist, estado de
+entrega deste relatório e matriz de rastreabilidade. O exercício foi mantido
+como recomendação operacional; revisão por pares é opcional. Os testes deixaram
+de exigir o estado pendente, preservando as verificações das dependências LG.
+
+Nesta rodada, em Python 3.12.15: 42 testes de `test_deployment_docs.py` aprovados;
+`ruff check` e `ruff format --check` desse arquivo aprovados com a configuração
+do backend; compilação do teste e `git diff --check` aprovados. Não houve nova
+execução de deploy ou integração nesta rodada de ajuste documental.
+
+## Validações locais da revisão original
 
 Dependências do backend foram instaladas em ambientes temporários fora do
 checkout, sem nova dependência no projeto. As verificações usaram WSL/Fedora,
@@ -95,22 +108,25 @@ lido separadamente da rodada em Python 3.14.
   containers e implantação; consultar os resultados do novo head do PR.
 - A bateria sintética de 22 cenários da #166 é evidência histórica da
   automação, descrita em [deploy-validation-report.md](../deploy-validation-report.md),
-  não uma nova execução deste guia por operador independente.
-- Uma pessoa não envolvida deve executar instalação, atualização e diagnóstico
-  de falha simulada seguindo somente os guias e registrar evidência sanitizada.
-  Esse aceite permanece pendente. Nenhum teste estático ou relato de acesso
-  ao e-mail foi usado para declará-lo aprovado.
+  não uma nova execução operacional deste guia.
+- Recomenda-se exercitar instalação, atualização e diagnóstico de falha simulada
+  em ambiente de ensaio, pelo próprio operador ou em revisão por pares opcional,
+  registrando evidência sanitizada. Essa recomendação não condiciona a conclusão
+  da #167. Nenhum teste estático ou relato de acesso ao e-mail comprova uma
+  implantação real.
 - A conectividade e o contrato da API LG continuam dependências da #171; o
   provider HTTP da #170 não está implementado por este PR.
 
 ## Estado de entrega
 
-Implementação documental e testes preparados para revisão. A issue #167
-permanece **parcial por aceite operacional independente pendente**, sem
-autorização automática de produção. A descrição do PR deve manter `Refs #167`
-até a evidência do aceite; não declarar conclusão integral por ausência de
-falhas nos testes documentais.
+Implementação documental e testes concluídos no escopo da issue #167 e
+disponíveis para revisão. A descrição do PR usa `Closes #167`, em conformidade
+com os critérios atuais da issue, que não exigem um executor independente.
+O encerramento da entrega documental não constitui autorização de produção
+nem comprovação de execução dos passos registrados como não executados.
 
-Próxima ação: executar o
-[checklist por segundo operador](../deployment/post-deployment-checklist.md),
-anexar somente resultados sanitizados e registrar os aceites reais.
+Recomendação operacional: usar o
+[checklist pós-implantação](../deployment/post-deployment-checklist.md)
+a cada implantação, anexar somente resultados sanitizados e registrar os
+aceites reais do ambiente. Revisão por pares é opcional e não impede o
+encerramento da #167.

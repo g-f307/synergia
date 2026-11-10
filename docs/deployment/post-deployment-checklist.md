@@ -57,10 +57,11 @@ curl --fail --silent --show-error --output /dev/null --dump-header - --request O
 - **Entradas:** Portas efetivas, origem API/web e configuração de implantação aprovada.
 - **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
 
-## Exercício independente de configuração
+## Exercício recomendado de configuração
 
-Executar por pessoa diferente do autor, somente em homologação de ensaio.
-Registrar primeiro baseline saudável. O cenário abaixo não altera o arquivo
+Recomenda-se executar somente em homologação de ensaio, pelo próprio operador
+ou, opcionalmente, em revisão por pares. Registrar primeiro baseline saudável.
+O cenário abaixo não altera o arquivo
 principal nem inicia dependências; exige imagem da revisão já construída.
 
 ```bash
@@ -74,7 +75,7 @@ python3 scripts/deploy.py precheck --project synergia --env-file /caminho/privad
 - **Efeito:** mutável somente na cópia privada; precheck é leitura. A CLI ignora variáveis de aplicação exportadas no shell, por isso a falha é inserida no arquivo de ensaio.
 - **Resultado esperado:** precheck de falha retorna 1 indicando SYNERGIA_API_ORIGIN local fora de development; precheck com arquivo original retorna 0. Não executar apply com fault.env.
 - **Interpretação de falhas:** se falhar em outro campo, baseline não está válido; se localhost passar, perfil/revisão incorretos. `config --quiet` sozinho não detecta esta falha de perfil.
-- **Próxima ação:** segundo executor identifica a causa usando Ambiente no diagnóstico, registra correção e repete verify/smoke saudáveis; reter cópia privada conforme política local, sem publicá-la.
+- **Próxima ação:** operador identifica a causa usando Ambiente no diagnóstico, registra correção e repete verify/smoke saudáveis; reter cópia privada conforme política local, sem publicá-la.
 - **Pré-condições:** Checkout limpo, Docker acessível, projeto correto e env-file externo 0600 pertencente ao operador.
 - **Entradas:** Arquivo externo --env-file, histórico --state-dir e identidade --project; revisão/UUID quando indicados.
 - **Evidência permitida:** registrar data, revisão, etapa, saída/códigos e decisão sanitizados; nunca publicar configuração, chaves, dumps, hosts internos, usuários ou logs brutos.
@@ -102,13 +103,14 @@ docker compose --project-name synergia --env-file /caminho/privado/synergia-conf
 
 ## Registro sanitizado de aceite
 
-Preencher em chamado protegido: data UTC; SHA/tag; perfil; executor; segundo
-executor; checks aprovados/falhos/não executados; cenário; mensagem/código
+Preencher em chamado protegido: data UTC; SHA/tag; perfil; executor;
+revisor opcional; checks aprovados/falhos/não executados; cenário; mensagem/código
 sanitizado; diagnóstico; correção; tempo de recuperação; decisão e pendências.
 Não anexar `.env`, saída expandida do Compose, URLs/IPs internos, destinatários,
 tokens, senhas, dump, manifesto privado ou logs brutos.
 
-**Estado desta documentação:** roteiro preparado. O critério da issue #167
-“uma pessoa não envolvida executa um deploy de homologação e diagnostica uma
-falha simulada” permanece pendente até evidência dessa execução independente.
-Testes documentais não substituem esse aceite.
+**Estado desta documentação:** entrega documental da issue #167 concluída.
+Os exercícios são recomendações operacionais e não condicionam o encerramento
+da #167, nem exigem execução por pessoa diferente do autor. Registrar os
+resultados reais a cada implantação; testes documentais não comprovam a saúde
+do ambiente nem autorizam produção.
