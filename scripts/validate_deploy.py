@@ -83,9 +83,29 @@ class FaultRunner(CommandRunner):
         args = list(args)
         fault = self.fault
         if fault == "initial-readiness" and step == "PostgreSQL readiness":
-            # Real timeout after creation: the fresh container's first healthcheck
-            # runs at 5s, beyond this readiness deadline. Keep the trusted config.
+            # Delay every probe, including Compose start-interval probes, so the
+            # first success cannot race the one-second readiness deadline.
+            # The same container becomes healthy later for explicit resume.
             self.fault = None
+            override = self.directory / "fault-initial-readiness.json"
+            atomic_json(
+                override,
+                {
+                    "services": {
+                        "postgres": {
+                            "healthcheck": {
+                                "test": [
+                                    "CMD-SHELL",
+                                    'sleep 5; pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+                                ],
+                                "timeout": "10s",
+                            }
+                        }
+                    }
+                },
+            )
+            position = args.index("up")
+            args[position:position] = ["--file", str(override)]
             args[args.index("--wait-timeout") + 1] = "1"
             return super().run(args, step=step, timeout=timeout, input_text=input_text)
         matched = (
