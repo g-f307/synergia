@@ -117,6 +117,7 @@ def test_initial_readiness_fault_executes_real_up_with_short_deadline(
 
     def run(_self, args, **kwargs):
         calls.append((args, kwargs))
+        assert (tmp_path / "readiness-gate" / "blocked").exists()
         raise DeploymentError("real Compose readiness timeout")
 
     monkeypatch.setattr(CommandRunner, "run", run)
@@ -140,8 +141,9 @@ def test_initial_readiness_fault_executes_real_up_with_short_deadline(
     override = private_json(tmp_path / "fault-initial-readiness.json")
     probe = override["services"]["postgres"]["healthcheck"]
     assert probe["test"][0] == "CMD-SHELL"
-    assert probe["test"][1].startswith("sleep 5; pg_isready")
-    assert probe["timeout"] == "10s"
+    assert "test ! -f /run/readiness-gate/blocked" in probe["test"][1]
+    assert not (tmp_path / "readiness-gate" / "blocked").exists()
+    assert probe["start_period"] == "0s"
     assert calls[0][0][2:4] == [
         "--file",
         str(tmp_path / "fault-initial-readiness.json"),

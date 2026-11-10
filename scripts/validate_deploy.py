@@ -83,24 +83,38 @@ class FaultRunner(CommandRunner):
         args = list(args)
         fault = self.fault
         if fault == "initial-readiness" and step == "PostgreSQL readiness":
-            # Delay every probe, including Compose start-interval probes, so the
-            # first success cannot race the one-second readiness deadline.
-            # The same container becomes healthy later for explicit resume.
+            # Hold readiness behind a private gate until Compose really fails.
+            # Removing the gate lets explicit resume reuse the same container.
             self.fault = None
+            gate_dir = self.directory / "readiness-gate"
+            gate_dir.mkdir(mode=0o700)
+            gate = gate_dir / "blocked"
+            gate.touch(mode=0o600)
             override = self.directory / "fault-initial-readiness.json"
             atomic_json(
                 override,
                 {
                     "services": {
                         "postgres": {
+                            "volumes": [
+                                {
+                                    "type": "bind",
+                                    "source": str(gate_dir),
+                                    "target": "/run/readiness-gate",
+                                    "read_only": True,
+                                }
+                            ],
                             "healthcheck": {
                                 "test": [
                                     "CMD-SHELL",
-                                    'sleep 5; pg_isready -U "$$POSTGRES_USER" '
-                                    '-d "$$POSTGRES_DB"',
+                                    "test ! -f /run/readiness-gate/blocked && "
+                                    'pg_isready -U "$$POSTGRES_USER"',
                                 ],
-                                "timeout": "10s",
-                            }
+                                "interval": "1s",
+                                "timeout": "1s",
+                                "retries": 1,
+                                "start_period": "0s",
+                            },
                         }
                     }
                 },
@@ -108,7 +122,12 @@ class FaultRunner(CommandRunner):
             position = args.index("up")
             args[position:position] = ["--file", str(override)]
             args[args.index("--wait-timeout") + 1] = "1"
-            return super().run(args, step=step, timeout=timeout, input_text=input_text)
+            try:
+                return super().run(
+                    args, step=step, timeout=timeout, input_text=input_text
+                )
+            finally:
+                gate.unlink()
         matched = (
             fault == "build"
             and step == "build candidate"
