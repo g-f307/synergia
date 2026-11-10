@@ -184,6 +184,7 @@ permanece disponível sem modelo. Veja [IA — Qualidade](../ai-quality-ui.md).
 | `OBSERVABILITY_WORKER_STALE_SECONDS` | Host; exige overlay para container | 300 | Prazo em segundos para sonda, heartbeat ou degradação da fila; ver observabilidade. |
 | `OBSERVABILITY_QUEUE_DEGRADED_SECONDS` | Host; exige overlay para container | 300 | Prazo em segundos para sonda, heartbeat ou degradação da fila; ver observabilidade. |
 | `DATA_OPERATIONS_ACTOR` | Host; exige overlay para container | synergia-operator | Identidade técnica para trilha de operações; ajustar ao responsável autorizado. |
+| `GRAYLOG_CONFIG_DIR` | Compose / mount somente no graylog-worker | vazio; perfil desativado | Diretório privado com `config.json` do coletor finito, montado somente para leitura em `/run/synergia-graylog`. Ativar o perfil `graylog` apenas após aprovação corporativa; ver [Graylog](../graylog.md). |
 
 ## Gerar material privado e validar
 
