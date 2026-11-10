@@ -96,7 +96,8 @@ class FaultRunner(CommandRunner):
                             "healthcheck": {
                                 "test": [
                                     "CMD-SHELL",
-                                    'sleep 5; pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+                                    'sleep 5; pg_isready -U "$$POSTGRES_USER" '
+                                    '-d "$$POSTGRES_DB"',
                                 ],
                                 "timeout": "10s",
                             }
