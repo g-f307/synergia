@@ -25,6 +25,12 @@ resultados e o gate de redação não atingido estão no
 [checkpoint 5](ai-knowledge-poc-checkpoint-5.md). O bloco 6 permanece pendente de
 autorização; a análise final não foi antecipada como encerramento da issue.
 
+**Encerramento — 10/11/2026:** após autorização, o bloco 6 auditou os artefatos,
+contagens e incerteza por grupos, registrou a errata K03 sem reescrever a base e
+concluiu a investigação. O [relatório final](ai-knowledge-poc-final-report.md)
+recomenda não integrar a configuração avaliada. Geração não foi avaliada, e nenhum
+novo ciclo ou mudança do agente foi iniciado. As decisões históricas abaixo permanecem.
+
 Este documento reúne o histórico da discussão sobre o agente de qualidade anterior,
 as hipóteses e evidências que orientaram a reformulação e o plano aprovado para a
 nova prova de conceito. O contexto e o desenho experimental estão completos nas

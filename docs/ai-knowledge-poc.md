@@ -1,8 +1,8 @@
 # PoC de orientação investigativa com conhecimento documentado — #183
 
 Implementação isolada do [plano e contexto aprovados](poc-contexto-e-plano.md).
-Os blocos 1–5 foram autorizados e concluídos em 09/11/2026. O bloco 6
-aguarda novo aceite. A integração do agente ao produto não faz parte desta issue.
+Os blocos 1–5 foram concluídos em 09/11/2026; o bloco 6, após autorização,
+foi concluído em 10/11/2026. A integração do agente ao produto não faz parte desta issue.
 
 ## Insumos e contratos
 
@@ -210,6 +210,25 @@ métricas por seed/estrato, rankings, hashes, recursos e orçamento. O gate de r
 falhou: nenhuma prosa foi gerada e sua qualidade não foi medida nessa campanha.
 Os comandos de execução e as verificações estão no checkpoint.
 
+## Auditoria e encerramento — bloco 6
+
+O [relatório final](ai-knowledge-poc-final-report.md) consolida a decisão por capacidade,
+comparação por estrato, incerteza por grupos e limites. A configuração avaliada não
+foi aprovada para integração; a geração permaneceu não avaliada porque seu gate falhou.
+O [desenho da auditoria](ai-knowledge-poc-audit-design.json) registra a autorização
+específica e a análise pós-campanha, sem novas inferências.
+
+`scripts/audit_ai_knowledge.py` reconstrói os pedidos, reconta as métricas, confere o
+ledger e produz os intervalos sem serviços externos. A
+[evidência da auditoria](evidence/issue-183-audit.json) contém os casos, erros e
+sensibilidade da errata K03. A base/gabaritos congelados não foram corrigidos.
+Os [patches históricos](evidence/issue-183-historical-source-patches.json) permitem
+conferir a fonte do bloco 2 sem depender de commits intermediários após squash.
+
+A [cópia sem identificação](ai-knowledge-poc-comparison-blind.html) mantém todos os
+casos/seeds e embaralha nomes; o mapeamento está separado. Avaliação humana é
+opcional e não foi realizada. O comparador original foi preservado.
+
 ## Continuidade
 
 Os checkpoints [1–2](ai-knowledge-poc-checkpoint-1-2.md) e
@@ -221,6 +240,8 @@ O [bloco 5](ai-knowledge-poc-checkpoint-5.md) foi concluído após autorização
 precisão apresentada no reservado foi 49,43% no 4B e 54,36% no 8B, contra 80% no
 controle lexical; a redação condicional não executou por falha do gate.
 
-O bloco 6 depende de aprovação: auditoria final, incerteza por grupos, análise
-consolidada e recomendação por capacidade. Não houve medição de utilidade com
-pessoas nem autorização para atualizar o agente do produto.
+Os seis blocos da investigação foram concluídos. Não houve medição de utilidade
+com pessoas nem autorização para atualizar o agente do produto. O relatório encerra
+a PoC com recomendação de não integrar esta configuração, sem descartar toda IA.
+Publicação, PR, CI remota e merge seguem o fluxo do repositório; outro experimento
+ou uma implementação precisam de escopo e autorização próprios.
