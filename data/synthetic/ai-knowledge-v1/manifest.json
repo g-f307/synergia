@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0-pre-inference",
+  "issue": 183,
+  "standing": "Fictitious knowledge, assistant-authored cases/gold; no independent operational validation. Evaluation not run.",
+  "groups": 48,
+  "splits": {
+    "development": 32,
+    "validation": 16,
+    "evaluation": 48
+  },
+  "files": {
+    "development-gold.json": "94709c4ae24efc3eee7b788ed677a8144e2534523b9fe3cf1ff513c580f326e7",
+    "development.json": "5b581b8695c62b638c28d4561bb6cef490fd608198c2027b222c21384e8f59dd",
+    "evaluation-gold.json": "88837bc70e159175f4a7964a931980602f18fda7b2fb7977b6fabe1da5a3f7a8",
+    "evaluation.json": "d7eb9344a46c59cc37d606677c4b19941bb8fc34df4831112c3f56c686ecaa45",
+    "field-origins.json": "20f67e78aa4f0aee380c633fdd1e21f11c8f2ebc860d0762fec814a5a97ffd8f",
+    "knowledge.json": "5e7b8afc09df6adb9d5b1facc369c5cc12b2d9a9a848692f66945b5544d26e4f",
+    "validation-gold.json": "cd040700f824aa39ea8ca2962a052667a1f4228bcf52d1afac6d04be0889e4ed",
+    "validation.json": "f691aba62a044ac814edc262c1f8ea41c29bd0eb64eb26934ccb708541f2c873"
+  },
+  "notes": [
+    "A/B variants of the same situation remain together and are not independent observations.",
+    "Held-out means excluded from tuning/inference; same assistant authored all cases.",
+    "Raw spreadsheets and identifiers never used.",
+    "No inferential result may rewrite these fixture bytes."
+  ],
+  "editorial_revision": "Antes de qualquer inferência: campos pertinentes por ficha; estrato semântico inclui controles sem conhecimento; duas projeções do contrato atual; escopo K04 explícito para indicador não confirmado. Exemplos de desenvolvimento adicionados fora do prompt inicial; K08 explicita que instantes iguais tampouco provam encerramento. Nenhuma inferência executada antes dessas revisões."
+}

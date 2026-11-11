@@ -24,7 +24,8 @@ O README é o ponto de entrada. Os detalhes vigentes ficam em:
 - [roadmap e estado das etapas](docs/roadmap.md);
 - [propostas e contratos das PoCs locais de IA](docs/ai-poc-proposals.md);
 - [plano de avaliação das PoCs locais de IA](docs/ai-poc-evaluation-plan.md);
-- [IA — Qualidade integrada à interface, geração local e referências visuais](docs/ai-quality-ui.md);
+- [Agente de qualidade integrada à interface, geração local e referências visuais](docs/ai-quality-ui.md);
+- [PoC isolada de orientação investigativa com conhecimento documentado — #183](docs/ai-knowledge-poc.md);
 - [apresentação e roteiros do Demo Day de IA](docs/demo-day/README.md);
 - [convenções de versionamento](docs/versioning.md);
 - [reconstrução completa do ambiente local](docs/local-environment.md);

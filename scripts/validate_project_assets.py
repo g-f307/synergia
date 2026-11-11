@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 try:
+    from ai_knowledge import validate_corpus as verify_knowledge_corpus
     from build_ai_quality_dataset import verify as verify_quality_dataset
     from generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
@@ -15,6 +16,7 @@ try:
     from generate_synthetic_data import validate_manifest
     from ingestion_corpus import verify_manifest as verify_ingestion_manifest
 except ModuleNotFoundError:
+    from scripts.ai_knowledge import validate_corpus as verify_knowledge_corpus
     from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
     from scripts.generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
@@ -69,6 +71,17 @@ def validate_migrations() -> None:
 
 
 def validate_synthetic_data() -> None:
+    knowledge_dataset = SYNTHETIC_DATA / "ai-knowledge-v1"
+    knowledge_files = set()
+    if knowledge_dataset.exists():
+        verify_knowledge_corpus(knowledge_dataset)
+        knowledge_manifest = json.loads(
+            (knowledge_dataset / "manifest.json").read_text(encoding="utf-8")
+        )
+        knowledge_files = {
+            knowledge_dataset / "manifest.json",
+            *(knowledge_dataset / name for name in knowledge_manifest["files"]),
+        }
     ingestion_dataset = SYNTHETIC_DATA / "ingestion-v1"
     ingestion_files = set()
     if ingestion_dataset.exists():
@@ -102,7 +115,7 @@ def validate_synthetic_data() -> None:
     ]
 
     for path in files:
-        if path in quality_files or path in ingestion_files:
+        if path in quality_files or path in ingestion_files or path in knowledge_files:
             continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))

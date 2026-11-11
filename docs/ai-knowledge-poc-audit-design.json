@@ -1,0 +1,45 @@
+{
+  "issue": 183,
+  "block": 6,
+  "authorized": true,
+  "approval": "continue, after explicit request to authorize block6",
+  "client_date": "2026-11-10 America/Manaus",
+  "new_inference_authorized": false,
+  "analysis_standing": "Post-campaign audit; outcome rates were already known. No new preregistration or independent test claim.",
+  "inputs_sha256": {
+    "docs/evidence/issue-183-blocks-1-2.json": "8764fece128f7e75a6ca0b4a8fafff6537556654554e016ed63a1e3bfaa6a8e4",
+    "docs/evidence/issue-183-blocks-3-4.json": "792ec1e7731947fb8c23536982d9aca09ab081b3bc46baf0897376df8bcd2fe7",
+    "docs/evidence/issue-183-block5.json": "d01d72d6498e7884ee46e956e791c29e51cef2d7a05b3fccff800b99cc856ad3",
+    "docs/ai-knowledge-poc-final-config.json": "901057ae04b79d9ea7f50768a91967c6b6e6573568a728b10f1207510a33a269",
+    "docs/ai-knowledge-poc-rubric.json": "5130bbde689ee37bc6bf69a9392b4d783a54de3f81e5fbd4afb6fb31eafef498",
+    "docs/evidence/issue-183-historical-source-patches.json": "a4dca8306bbea82ea4b992ac586a1862edf0dc33fe17270237dafa8e424667f7"
+  },
+  "bootstrap": {
+    "draws": 10000,
+    "seed": 183006,
+    "unit": "group_id",
+    "interval": "percentile 2.5/97.5 using linear interpolation",
+    "pairing": "Same resampled groups for all arms; retain both variants, every seed and every item; repeated group draws keep multiplicity.",
+    "semantic_subset": "Pre-labelled subset; resample groups represented in that subset, without selecting by output.",
+    "no_denominator": "Return null, count omitted bootstrap draws explicitly; never impute perfect precision."
+  },
+  "wilson": {
+    "confidence": 0.95,
+    "z": 1.959963984540054,
+    "unit": "Group entirely correct across both variants and all available seeds; auxiliary stricter diagnostic, not original acceptance target."
+  },
+  "errata": {
+    "K03_false_overlap": "Preserve original rejected/not_applicable ambiguity; measure negative-state equivalence only as sensitivity, not new gold.",
+    "no_new_call_or_label_changes": true
+  },
+  "blind_presentation": {
+    "seed": 183007,
+    "unit": "case",
+    "action": "Shuffle six panel families and mask names/policy/raw/grade; same family label across seeds; mapping separate.",
+    "human_evaluation": "Optional, not executed or used to claim usefulness."
+  },
+  "sources": {
+    "wilson": "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+    "group_resampling": "https://www.stata.com/support/faqs/statistics/bootstrap-with-panel-data/"
+  }
+}

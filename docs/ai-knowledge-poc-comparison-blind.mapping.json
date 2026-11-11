@@ -1,0 +1,386 @@
+{
+  "E01": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "qwen3:8b"
+  },
+  "E02": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "qwen3:8b"
+  },
+  "E03": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E04": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E05": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E06": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "qwen3:8b"
+  },
+  "E07": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "qwen3:4b-instruct"
+  },
+  "E08": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "qwen3:8b",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E09": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "qwen3:8b"
+  },
+  "E10": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E11": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "qwen3:8b",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E12": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "qwen3:8b"
+  },
+  "E13": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "qwen3:4b-instruct"
+  },
+  "E14": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "qwen3:8b"
+  },
+  "E15": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "qwen3:8b",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E16": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "qwen3:8b",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E17": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "B2 · busca densa documental",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "qwen3:8b",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E18": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E19": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E20": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "B2 · busca densa documental",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E21": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "qwen3:8b",
+    "Painel E": "Controle lexical · mesmos candidatos do LLM",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E22": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "Controle lexical · mesmos candidatos do LLM",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E23": {
+    "Painel A": "B0 · mensagem genérica",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "qwen3:8b"
+  },
+  "E24": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E25": {
+    "Painel A": "B0 · mensagem genérica",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E26": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E27": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "B2 · busca densa documental",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E28": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E29": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "qwen3:8b",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E30": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E31": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "qwen3:8b"
+  },
+  "E32": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E33": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "qwen3:8b",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "B1 · BM25 e regras"
+  },
+  "E34": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B2 · busca densa documental",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E35": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "qwen3:8b",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "B0 · mensagem genérica",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E36": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "qwen3:8b",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E37": {
+    "Painel A": "B2 · busca densa documental",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "Controle lexical · mesmos candidatos do LLM",
+    "Painel F": "qwen3:8b"
+  },
+  "E38": {
+    "Painel A": "B0 · mensagem genérica",
+    "Painel B": "qwen3:4b-instruct",
+    "Painel C": "B2 · busca densa documental",
+    "Painel D": "Controle lexical · mesmos candidatos do LLM",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "qwen3:8b"
+  },
+  "E39": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "qwen3:4b-instruct"
+  },
+  "E40": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "B1 · BM25 e regras",
+    "Painel C": "qwen3:8b",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E41": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "qwen3:8b",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "B0 · mensagem genérica",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E42": {
+    "Painel A": "B1 · BM25 e regras",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "qwen3:8b",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "qwen3:4b-instruct",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E43": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "B2 · busca densa documental",
+    "Painel E": "qwen3:8b",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  },
+  "E44": {
+    "Painel A": "Controle lexical · mesmos candidatos do LLM",
+    "Painel B": "qwen3:8b",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "B0 · mensagem genérica"
+  },
+  "E45": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "Controle lexical · mesmos candidatos do LLM",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E46": {
+    "Painel A": "qwen3:8b",
+    "Painel B": "Controle lexical · mesmos candidatos do LLM",
+    "Painel C": "B0 · mensagem genérica",
+    "Painel D": "qwen3:4b-instruct",
+    "Painel E": "B1 · BM25 e regras",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E47": {
+    "Painel A": "B0 · mensagem genérica",
+    "Painel B": "qwen3:8b",
+    "Painel C": "qwen3:4b-instruct",
+    "Painel D": "B1 · BM25 e regras",
+    "Painel E": "Controle lexical · mesmos candidatos do LLM",
+    "Painel F": "B2 · busca densa documental"
+  },
+  "E48": {
+    "Painel A": "qwen3:4b-instruct",
+    "Painel B": "B0 · mensagem genérica",
+    "Painel C": "B1 · BM25 e regras",
+    "Painel D": "qwen3:8b",
+    "Painel E": "B2 · busca densa documental",
+    "Painel F": "Controle lexical · mesmos candidatos do LLM"
+  }
+}

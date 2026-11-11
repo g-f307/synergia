@@ -1,9 +1,9 @@
-# IA — Qualidade na interface do SYNERGIA
+# Agente de qualidade na interface do SYNERGIA
 
 ## Acesso e uso
 
 Entre normalmente no SYNERGIA com uma conta que tenha `execution.read` e abra
-**IA — Qualidade** no menu lateral, rota `/ai/quality`.
+**Agente de qualidade** no menu lateral, rota `/ai/quality`.
 
 1. Selecione um dos seis cenários sintéticos. As evidências do pipeline
    aparecem imediatamente, sem inferência.
@@ -12,8 +12,9 @@ Entre normalmente no SYNERGIA com uma conta que tenha `execution.read` e abra
    antes de devolvê-la.
 3. Compare fatos e evidências à esquerda com a explicação e as verificações
    humanas à direita. A origem do texto e o estado de validação são explícitos.
-4. Abra **Comparar com o baseline determinístico** para conferir a contribuição
-   do modelo. Trocar de cenário remove a resposta anterior.
+4. Confira a explicação e as verificações humanas junto às evidências. Trocar
+   de cenário remove a resposta anterior. A comparação com o baseline não é
+   exibida na interface; o fallback determinístico continua ativo e identificado.
 
 Há cenários de serial ausente, ocorrências repetidas, quantidade inválida,
 referência ausente, dois códigos simultâneos e arquivo sem ocorrências. No
@@ -36,7 +37,7 @@ sem caminho, credenciais, redirecionamento ou proxy. Não há download de pesos.
 
 A geração fica **desabilitada por padrão**. O Compose padrão não inclui Ollama:
 nesse ambiente, mantenha `SYNERGIA_AI_QUALITY_MODEL_ENABLED=false`. A tela informa
-a desativação, bloqueia **Gerar explicação** e mantém fatos e baseline acessíveis.
+a desativação, bloqueia **Gerar explicação** e mantém os fatos acessíveis.
 Não é necessário instalar o modelo para consultar o demonstrador.
 
 Para uma demonstração com geração, execute o backend no mesmo host do Ollama
@@ -125,7 +126,8 @@ fica bloqueado durante a geração, evitando associar resposta a outro conjunto
 de fatos. Controles têm label, foco e tamanho adequados; a tabela admite scroll
 horizontal identificado em tela estreita.
 
-Capturas sanitizadas da tela integrada, sem vídeo:
+Capturas sanitizadas da entrega inicial, anteriores à renomeação do módulo
+e à ocultação da comparação com o baseline, sem vídeo:
 
 - [Agrupamento e resposta do modelo](evidence/issue-179-quality-explanation/integrated-grouped-light.png).
 - [Valor ausente e abstenção](evidence/issue-179-quality-explanation/integrated-missing-light.png).
@@ -133,7 +135,8 @@ Capturas sanitizadas da tela integrada, sem vídeo:
 - [Tela estreita](evidence/issue-179-quality-explanation/integrated-mobile.png).
 
 Para gravar: mostre o agrupamento, gere a explicação, mude para o cenário de
-serial ausente e compare com o baseline. Mostre os estados realmente obtidos;
+serial ausente e confira a indicação de valor desconhecido. Mostre os estados
+realmente obtidos;
 não apresente um teste simulado como resposta real do modelo. Não exiba
 terminal, prompts, credenciais ou dados do cliente.
 

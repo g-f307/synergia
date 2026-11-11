@@ -32,6 +32,28 @@ def test_project_assets_accepts_frozen_quality_corpus(synthetic_root, monkeypatc
     assets.validate_synthetic_data()
 
 
+def test_project_assets_dispatches_knowledge_corpus(synthetic_root, monkeypatch):
+    shutil.copytree(
+        ROOT / "data/synthetic/ai-knowledge-v1",
+        synthetic_root / "ai-knowledge-v1",
+    )
+
+    def wrong_validator(path):
+        pytest.fail(f"Knowledge corpus reached generic validator: {path.name}")
+
+    monkeypatch.setattr(assets, "validate_manifest", wrong_validator)
+    assets.validate_synthetic_data()
+
+
+@pytest.mark.parametrize("filename", ["knowledge.json", "development-gold.json"])
+def test_project_assets_rejects_modified_knowledge(synthetic_root, filename):
+    target = synthetic_root / "ai-knowledge-v1"
+    shutil.copytree(ROOT / "data/synthetic/ai-knowledge-v1", target)
+    (target / filename).write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="fixture_hash_mismatch"):
+        assets.validate_synthetic_data()
+
+
 def test_project_assets_dispatches_operational_manifest_with_quality_corpus(
     synthetic_root,
 ):

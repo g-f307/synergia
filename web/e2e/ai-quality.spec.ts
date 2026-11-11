@@ -14,7 +14,7 @@ test('quality AI uses the authenticated Synergia shell and read-only synthetic s
   await page.getByRole('button', { name: /entrar|sign in/i }).click();
   await expect(page).toHaveURL(/\/profile/);
   const catalogResponse = page.waitForResponse(r => r.url().endsWith('/ai/quality/scenarios'));
-  await page.getByRole('link', { name: 'IA — Qualidade', exact: true }).click();
+  await page.getByRole('link', { name: 'Agente de qualidade', exact: true }).click();
   const catalog = await (await catalogResponse).json();
   const modelAvailable = catalog.model_status === 'available';
   await expect(page).toHaveURL(/\/ai\/quality$/);
@@ -45,8 +45,7 @@ test('quality AI uses the authenticated Synergia shell and read-only synthetic s
     expect(['disabled', 'unavailable']).toContain(catalog.model_status);
     await expect(generate).toBeDisabled();
     await expect(page.getByText(catalog.model_status === 'disabled' ? 'Geração por modelo desabilitada neste ambiente' : 'Modelo validado indisponível neste ambiente', { exact: true })).toBeVisible();
-    await page.locator('.explanation summary').click();
-    await expect(page.locator('.explanation details')).toContainText(catalog.scenarios.find((s: { id: string }) => s.id === 'QE-A02').baseline[0].explanation);
+    await expect(page.locator('.facts')).toContainText('Fatos do pipeline');
   }
   await expect(page.locator('tbody tr')).toHaveCount(2);
   await page.locator('#quality-scenario').selectOption('QE-A01');
@@ -54,11 +53,12 @@ test('quality AI uses the authenticated Synergia shell and read-only synthetic s
   if (modelAvailable) {
     await explain();
     await expect(page.locator('.explanation syn-badge')).toContainText(/Evidência insuficiente|Fallback determinístico/);
+    await expect(page.locator('.explanation')).toContainText('O valor ausente não pode ser determinado.');
   } else {
     await expect(generate).toBeDisabled();
-    await page.locator('.explanation summary').click();
   }
-  await expect(page.locator('.explanation')).toContainText('O valor ausente não pode ser determinado.');
+  await expect(page.locator('.quality-page h1')).toHaveText('Agente de qualidade');
+  await expect(page.locator('.explanation details')).toHaveCount(0);
   for (const theme of ['light', 'dark']) {
     if (theme === 'dark') await page.getByRole('button', { name: /alternar tema/i }).click();
     await page.locator('.quality-page').evaluate(async element => {

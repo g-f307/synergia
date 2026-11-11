@@ -1,0 +1,10 @@
+{
+  "source_commit": "739d3fd",
+  "purpose": "Reconstruct historical source hashes after squash/checkout without old Git objects.",
+  "patches": {
+    "scripts/ai_knowledge_runtime.py": {
+      "expected_sha256": "d17e003b0d0054919c7cdbcb0dd7a3a064266c09ad4824a51161b221c7dba6dc",
+      "patch": "--- delivered/scripts/ai_knowledge_runtime.py\n+++ block2/scripts/ai_knowledge_runtime.py\n@@ -100,12 +100,9 @@\n     blocks further inference until explicit reconciliation; it is never retried.\n     \"\"\"\n \n-    def __init__(self, root: Path, protocol: dict, phase: str = \"probes\"):\n+    def __init__(self, root: Path, protocol: dict):\n         self.root = root\n         self.spec = protocol[\"budget\"]\n-        if phase not in self.spec[\"generative_calls\"]:\n-            raise KnowledgeError(\"unknown_budget_phase\")\n-        self.phase = phase\n         self.path = root / \"budget.json\"\n         self.lock = root / \"inference.lock\"\n         self.owned = False\n@@ -177,24 +174,14 @@\n             > self.spec[\"active_inference_seconds\"]\n         ):\n             raise KnowledgeError(\"inference_time_budget_exhausted\")\n-        phase_used = sum(\n-            r[\"count\"]\n-            for r in self.state[\"receipts\"]\n-            if r[\"route\"] == \"chat\" and r.get(\"phase\", \"probes\") == self.phase\n-        )\n         if (\n             route == \"chat\"\n-            and phase_used + count > self.spec[\"generative_calls\"][self.phase]\n+            and self.state[\"generative_calls\"] + count\n+            > self.spec[\"generative_calls\"][\"probes\"]\n         ):\n-            code = (\n-                \"block2_probe_quota_exhausted\"\n-                if self.phase == \"probes\"\n-                else \"phase_quota_exhausted\"\n-            )\n-            raise KnowledgeError(code)\n+            raise KnowledgeError(\"block2_probe_quota_exhausted\")\n         attempt = {\n             \"route\": route,\n-            \"phase\": self.phase,\n             \"count\": count,\n             \"result\": str(result_path.relative_to(self.root)),\n             \"state\": \"started\",\n"
+    }
+  }
+}

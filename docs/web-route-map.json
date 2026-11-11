@@ -794,7 +794,7 @@
       "status": "implemented",
       "issue": 179,
       "prototype_pages": [],
-      "menu": "IA — Qualidade",
+      "menu": "Agente de qualidade",
       "permission": "execution.read",
       "scope": "synthetic",
       "evidence": [

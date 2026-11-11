@@ -1,0 +1,16 @@
+{
+  "issue": 183,
+  "approved_blocks": [
+    5
+  ],
+  "block6_authorized": false,
+  "approval_text": "faça o bloco 5",
+  "date": "2026-11-09 America/Manaus",
+  "frozen_config": "docs/ai-knowledge-poc-final-config.json",
+  "frozen_config_sha256": "901057ae04b79d9ea7f50768a91967c6b6e6573568a728b10f1207510a33a269",
+  "budget_root": ".test-tmp/quality-knowledge-poc-20261109",
+  "existing_budget_sha256": "8d3ce427fbac55ac11430ffa2940f73f777529c76e8794f9197c7f6e57490ae0",
+  "existing_receipts_count": 289,
+  "existing_receipts_sha256": "0382a6df904236c8d3b5f121f78751c9e830b30f013227d5d6fe0ab8c78ee020",
+  "scope": "Reserved campaign, baselines, static presentation and conditional generation; no retuning or integration; final audit/recommendation belongs to block6."
+}
