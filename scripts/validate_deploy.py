@@ -83,11 +83,51 @@ class FaultRunner(CommandRunner):
         args = list(args)
         fault = self.fault
         if fault == "initial-readiness" and step == "PostgreSQL readiness":
-            # Real timeout after creation: the fresh container's first healthcheck
-            # runs at 5s, beyond this readiness deadline. Keep the trusted config.
+            # Hold readiness behind a private gate until Compose really fails.
+            # Removing the gate lets explicit resume reuse the same container.
             self.fault = None
+            gate_dir = self.directory / "readiness-gate"
+            gate_dir.mkdir(mode=0o700)
+            gate = gate_dir / "blocked"
+            gate.touch(mode=0o600)
+            override = self.directory / "fault-initial-readiness.json"
+            atomic_json(
+                override,
+                {
+                    "services": {
+                        "postgres": {
+                            "volumes": [
+                                {
+                                    "type": "bind",
+                                    "source": str(gate_dir),
+                                    "target": "/run/readiness-gate",
+                                    "read_only": True,
+                                }
+                            ],
+                            "healthcheck": {
+                                "test": [
+                                    "CMD-SHELL",
+                                    "test ! -f /run/readiness-gate/blocked && "
+                                    'pg_isready -U "$$POSTGRES_USER"',
+                                ],
+                                "interval": "1s",
+                                "timeout": "1s",
+                                "retries": 1,
+                                "start_period": "0s",
+                            },
+                        }
+                    }
+                },
+            )
+            position = args.index("up")
+            args[position:position] = ["--file", str(override)]
             args[args.index("--wait-timeout") + 1] = "1"
-            return super().run(args, step=step, timeout=timeout, input_text=input_text)
+            try:
+                return super().run(
+                    args, step=step, timeout=timeout, input_text=input_text
+                )
+            finally:
+                gate.unlink()
         matched = (
             fault == "build"
             and step == "build candidate"
