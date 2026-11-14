@@ -41,6 +41,7 @@ ORIGINS = frozenset(
         "audit_export_events",
         "observability_events",
         "rate_limit_events",
+        "ai_assistance_events",
     }
 )
 STATES = frozenset(state.value for state in ExecutionState) | {
@@ -209,6 +210,28 @@ def sanitize_event(row: dict) -> AuditEvent:
         digest = raw.get("model_digest")
         if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest):
             metadata["model_digest"] = digest
+    if row["origin"] == "ai_assistance_events":
+        for key in ("context_sha256", "prompt_sha256", "response_sha256"):
+            value = raw.get(key)
+            if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+                metadata[key] = value
+        digest = raw.get("model_digest")
+        if isinstance(digest, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+            metadata["model_digest"] = digest
+        name = raw.get("model_name")
+        if isinstance(name, str) and safe_identifier(name) != "[redacted]":
+            metadata["model_name"] = name
+        for key, allowed in {
+            "state": {"processing", "ready", "insufficient_evidence", "rejected"},
+            "origin": {"model", "deterministic"},
+            "contract_version": {"1.0.0"},
+        }.items():
+            if isinstance(raw.get(key), str) and raw[key] in allowed:
+                metadata[key] = raw[key]
+        for key in ("execution_id", "rejection_code"):
+            value = raw.get(key)
+            if isinstance(value, str) and safe_identifier(value) != "[redacted]":
+                metadata[key] = value
     result = AuditEvent.model_validate(
         {key: row[key] for key in AuditEvent.model_fields if key != "metadata"}
         | {"metadata": metadata}

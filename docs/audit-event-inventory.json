@@ -33,7 +33,16 @@
     "model_digest",
     "executor",
     "operation",
-    "tool"
+    "tool",
+    "execution_id",
+    "state",
+    "origin",
+    "contract_version",
+    "model_name",
+    "context_sha256",
+    "prompt_sha256",
+    "response_sha256",
+    "rejection_code"
   ],
   "sources": [
     {
@@ -241,6 +250,27 @@
       "implementation_status": "implemented",
       "limitations": [
         "Only stable action, UTC time, correlation and source ID are projected. No key hash, IP, route, dimension or identifier."
+      ]
+    },
+    {
+      "table": "ai_assistance_events",
+      "id_prefix": "ai_assistance",
+      "organization": "explicit organization bound to execution at write time",
+      "actions": [
+        "ai.assistance.requested",
+        "ai.assistance.reused",
+        "ai.assistance.completed",
+        "ai.assistance.rejected",
+        "ai.assistance.read",
+        "ai.assistance.expired",
+        "ai.assistance.integrity_error"
+      ],
+      "emitters": [
+        "backend/app/ai_assistance_repository.py"
+      ],
+      "implementation_status": "implemented",
+      "limitations": [
+        "Metadata only; no prompt, context, result text or raw response."
       ]
     }
   ],
