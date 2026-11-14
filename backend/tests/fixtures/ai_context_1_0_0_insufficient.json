@@ -1,0 +1,59 @@
+{
+  "contract_version": "1.0.0",
+  "subject": {
+    "execution_id": "00000000-0000-4000-8000-000000000186",
+    "organization_id": "00000000-0000-4000-8000-000000000001",
+    "source": "OWM",
+    "status": "completed",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-14T00:00:00.000000Z",
+    "finished_at": "2026-11-14T00:00:01.000000Z"
+  },
+  "lifecycle": "completed",
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 1,
+    "files_rejected": 0,
+    "rows_read": 0,
+    "valid_records": 0,
+    "rejected_records": 0,
+    "normalized_records": 0,
+    "workorders": 0,
+    "lots": 0,
+    "serials": 0,
+    "classifications": 0,
+    "pending_items": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "divergences": [],
+  "pending_items": [],
+  "classifications": [],
+  "evidences": [
+    {
+      "ref_id": "EVI-d669015277c14a883e979adc97c7c6f0",
+      "safe_name": "evidence-d669015277c14a883e979adc97c7c6f0.csv",
+      "evidence_type": "source_file",
+      "media_type": "text/csv",
+      "size_bytes": null,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "available": false
+    }
+  ],
+  "state_history": [
+    {
+      "ref_id": "HIS-0aed57c6a5e7d261080cbbcd4b3b1687",
+      "from_state": "validating",
+      "to_state": "completed",
+      "state_version": 0,
+      "occurred_at": "2026-11-14T00:00:00.000000Z"
+    }
+  ],
+  "sufficiency": "insufficient",
+  "truncated_sections": [],
+  "generated_at": "2026-11-14T00:00:00.000000Z",
+  "context_sha256": "941824b3e25fa4d52722a5a44cc53e30d89a1ae6f00d4982f61d7ac2506ad049"
+}

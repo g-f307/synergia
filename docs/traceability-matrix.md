@@ -2,6 +2,7 @@
 
 | Entrega incremental | Issue | Implementação | Evidência |
 | --- | --- | --- | --- |
+| Contexto determinístico de assistência por execução | [#186](https://github.com/g-f307/synergia/issues/186) | `ai_assistance_context*.py`; [contrato 1.0.0](architecture/ai-assistance-context-1.0.0.md) | `test_ai_assistance_context.py`, `test_ai_assistance_context_persistence.py`; fixtures/schema/hashes, isolamento, limite de 8 KiB e planos SQL; [relatório](evidence/issue-186-ai-assistance-context.md) |
 | Contrato 1.0.0 de assistência, configuração segura e permissões por organização | [#185](https://github.com/g-f307/synergia/issues/185) | `ai_assistance_contract.py`, `ai_assistance_config.py`, `ai_assistance_access.py`, migration `0037`, serviço Angular de capacidade; [ADR 0002](architecture/0002-ai-assistance.md) | `test_ai_assistance_contract.py`, `test_ai_assistance_config.py`, `test_ai_assistance_access.py`, snapshot OpenAPI e testes PostgreSQL/Angular; geração nas #186–#192 |
 
 Esta matriz liga requisitos, regras, issues, implementação e evidências
