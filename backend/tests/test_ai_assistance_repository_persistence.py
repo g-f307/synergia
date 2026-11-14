@@ -603,3 +603,53 @@ def test_cleanup_command_dry_run_reports_only_count_and_range(setup, database):
             ).fetchone()[0]
             == 1
         )
+
+
+def test_read_revalidates_authorized_references(setup):
+    import json
+    from dataclasses import replace
+
+    repo, base, _, actor, correlation = setup
+    key = replace(base, model_name="model:local", model_digest="sha256:" + "d" * 64)
+    aid = repo.reserve(key, actor, correlation)
+    ref = "DIV-" + "1" * 32
+    example = contract_examples()["ready"]
+    example.update(assistance_id=str(aid), execution_id=str(key.execution_id))
+    example["created_at"] = datetime.now(UTC).isoformat()
+    example["provenance"].update(
+        model=key.model_name,
+        digest=key.model_digest,
+        origin="model",
+        context_hash=key.context_sha256,
+        prompt_hash=key.prompt_sha256,
+    )
+    example["findings"] = [
+        {
+            "title": "Divergência registrada",
+            "explanation": "Há um registro disponível para conferência.",
+            "evidence_refs": [ref],
+        }
+    ]
+    value = AiAssistanceResponse.model_validate_json(
+        json.dumps(example), context={"evidence_refs": {ref}}
+    )
+    repo.complete(
+        key,
+        aid,
+        actor,
+        correlation,
+        value,
+        evidence_refs=frozenset({ref}),
+        response_sha256="f" * 64,
+        rejection_code=None,
+        elapsed_ms=1,
+    )
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.get(
+            key.organization_id,
+            key.execution_id,
+            aid,
+            actor,
+            correlation,
+            evidence_refs=frozenset({"DIV-" + "2" * 32}),
+        )
