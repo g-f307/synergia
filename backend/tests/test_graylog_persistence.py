@@ -427,6 +427,11 @@ def test_manual_rollback_preserves_receipts_and_canonical_audit(
     with psycopg.connect(database, row_factory=dict_row) as connection:
         try:
             connection.execute(
+                (ROOT / "database/rollbacks" /
+                 "0037_create_ai_assistance_permissions.down.sql").read_text(),
+                prepare=False,
+            )
+            connection.execute(
                 (
                     ROOT / "database/rollbacks/0036_create_graylog_delivery.down.sql"
                 ).read_text(),

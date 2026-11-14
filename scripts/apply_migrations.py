@@ -80,9 +80,32 @@ def object_exists(
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False
         return connection.execute(
-            """SELECT 1 WHERE (SELECT count(*) FROM synergia.permissions
+            """WITH expected(role_key, permission_key, role_active) AS (
+                VALUES ('gestor', 'ai.assistance.read', true),
+                       ('gestor', 'ai.assistance.generate', true),
+                       ('analista', 'ai.assistance.read', true),
+                       ('analista', 'ai.assistance.generate', true)
+            ), actual AS (
+                SELECT r.normalized_key, p.normalized_key, r.is_active
+                FROM synergia.role_permissions rp
+                JOIN synergia.roles r ON r.id = rp.role_id
+                JOIN synergia.permissions p ON p.id = rp.permission_id
+                WHERE p.normalized_key IN
+                    ('ai.assistance.read', 'ai.assistance.generate')
+                  AND rp.revoked_at IS NULL
+            )
+            SELECT 1 WHERE EXISTS (
+                SELECT 1 FROM synergia.permission_catalog_versions
+                WHERE version = '1.6.0' AND is_active
+            ) AND (SELECT count(*) FROM synergia.permissions
             WHERE normalized_key IN ('ai.assistance.read', 'ai.assistance.generate')
-              AND catalog_version = '1.6.0' AND is_reserved) = 2"""
+              AND catalog_version = '1.6.0' AND is_reserved AND is_active
+              AND resource_type = 'execution') = 2
+            AND NOT EXISTS (
+                (SELECT * FROM expected EXCEPT SELECT * FROM actual)
+                UNION ALL
+                (SELECT * FROM actual EXCEPT SELECT * FROM expected)
+            )"""
         ).fetchone() is not None
     if kind == "graylog_contract":
         return connection.execute(

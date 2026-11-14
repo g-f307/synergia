@@ -137,6 +137,12 @@ devem ser aplicados nas respectivas entregas, sem alegar runtime já implementad
 Ativação somente após #186–#192 e revisão. Esta entrega não inicia Ollama, baixa
 modelos ou liga a flag. Rollback operacional: desligar a flag e reiniciar.
 Rollback SQL revoga grants e desativa permissões, preservando o histórico.
+Rollbacks de funcionalidades anteriores devem primeiro reverter `0037`, depois
+`0036` e as demais migrations em ordem inversa. A adoção de uma base legada até
+`0037` exige catálogo 1.6.0 ativo, ambas as permissões reservadas ativas para
+`execution` e exatamente os quatro grants ativos de Gestor/Analista, com papéis
+ativos. Catálogo/permissão/papel inativo, grant ausente, revogado ou indevido
+impedem registrar o baseline; o histórico de migrations permanece vazio.
 
 ## Ameaças e evidências
 

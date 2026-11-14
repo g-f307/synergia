@@ -105,6 +105,81 @@ def test_adopts_completely_legacy_database(migration_database: str) -> None:
     assert migration_count(migration_database) == len(MIGRATIONS)
 
 
+@pytest.mark.parametrize(
+    "damage,role,permission",
+    [
+        ("catalog_inactive", None, None),
+        *(
+            ("permission_inactive", None, permission)
+            for permission in ("ai.assistance.read", "ai.assistance.generate")
+        ),
+        *(
+            ("missing_grant", role, permission)
+            for role in ("gestor", "analista")
+            for permission in ("ai.assistance.read", "ai.assistance.generate")
+        ),
+        *(
+            ("unexpected_grant", role, "ai.assistance.read")
+            for role in ("admin", "operador", "consulta")
+        ),
+        ("revoked_grant", "analista", "ai.assistance.generate"),
+        ("inactive_role", "gestor", None),
+    ],
+)
+def test_ai_assistance_baseline_refuses_partial_access_contract(
+    migration_database: str,
+    damage: str,
+    role: str | None,
+    permission: str | None,
+) -> None:
+    index = next(i for i, path in enumerate(MIGRATIONS) if path.name.startswith("0037"))
+    apply_legacy_schema(migration_database, index + 1)
+    with psycopg.connect("", dbname=migration_database) as connection:
+        if damage == "catalog_inactive":
+            connection.execute(
+                "UPDATE synergia.permission_catalog_versions SET is_active = false "
+                "WHERE version = '1.6.0'"
+            )
+        elif damage == "permission_inactive":
+            connection.execute(
+                "UPDATE synergia.permissions SET is_active = false, "
+                "deactivated_at = now() WHERE normalized_key = %s",
+                (permission,),
+            )
+        elif damage == "inactive_role":
+            connection.execute(
+                "UPDATE synergia.roles SET is_active = false, deactivated_at = now() "
+                "WHERE normalized_key = %s",
+                (role,),
+            )
+        elif damage == "unexpected_grant":
+            connection.execute(
+                """INSERT INTO synergia.role_permissions (role_id, permission_id)
+                SELECT r.id, p.id FROM synergia.roles r
+                CROSS JOIN synergia.permissions p
+                WHERE r.normalized_key = %s AND p.normalized_key = %s""",
+                (role, permission),
+            )
+        else:
+            operation = (
+                "DELETE FROM synergia.role_permissions rp USING "
+                if damage == "missing_grant"
+                else "UPDATE synergia.role_permissions rp SET revoked_at = now() FROM "
+            )
+            connection.execute(
+                operation
+                + """synergia.roles r, synergia.permissions p
+                WHERE rp.role_id = r.id AND rp.permission_id = p.id
+                  AND r.normalized_key = %s AND p.normalized_key = %s""",
+                (role, permission),
+            )
+    result = run_migrations(migration_database, MIGRATIONS[index].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert MIGRATIONS[index].name in result.stderr
+    assert migration_count(migration_database) == 0
+
+
 @pytest.mark.parametrize("missing", ["provider", "reconciliations"])
 def test_smtp_baseline_requires_provider_and_reconciliation_schema(
     migration_database: str, missing: str

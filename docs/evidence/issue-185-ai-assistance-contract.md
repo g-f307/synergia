@@ -48,3 +48,26 @@ resultados ou alteração visual. Runtime, fundamentação, concorrência efetiv
 expiração e interface são responsabilidades #186–#192 descritas no
 [ADR 0002](../architecture/0002-ai-assistance.md). O filtro lexical não é prova
 de segurança semântica; fundamentação e revisão de evasões continuam obrigatórias.
+
+## Correções após revisão do PR #216
+
+A CI inicial encontrou quatro falhas de rollback por manter o catálogo 1.6.0
+ativo ao reativar versões antigas. Os testes de auditoria, feedback, templates,
+SMTP e Graylog agora revertem `0037` antes das migrations anteriores, em LIFO.
+As migrations e os scripts de rollback publicados não foram modificados.
+
+O probe de baseline agora exige catálogo 1.6.0 ativo, ambas as permissões
+reservadas e ativas para `execution` e exatamente os quatro grants ativos de
+Gestor/Analista, com papéis ativos. Doze novos casos recusam catálogo/permissão
+inativos, grants ausentes/indevidos/revogados e papel inativo. A recusa não
+registra nenhuma migration; a adoção de uma base completa continua aprovada.
+
+| Validação da correção | Resultado local |
+| --- | --- |
+| `pytest -q backend/tests/test_migration_runner.py backend/tests/test_audit_persistence.py backend/tests/test_feedback_persistence.py backend/tests/test_notification_templates_persistence.py backend/tests/test_smtp_queue_persistence.py backend/tests/test_graylog_persistence.py --tb=short` | 140 aprovados |
+| Backend: `pytest -q -m 'not integration' --tb=short` | 2053 aprovados; 819 desmarcados; 16 subtests aprovados |
+| Backend: `ruff check . ../scripts` | aprovado |
+| `git diff --check` | aprovado |
+
+Resultados da execução completa de persistência e da CI remota são registrados
+na descrição do PR, distinguindo-os destes resultados direcionados locais.

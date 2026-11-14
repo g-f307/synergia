@@ -462,6 +462,11 @@ def test_rollback_preserves_new_templates_used_by_notification_and_delivery(
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         try:
             cursor.execute(
+                (ROOT / "database/rollbacks" /
+                 "0037_create_ai_assistance_permissions.down.sql").read_text(),
+                prepare=False,
+            )
+            cursor.execute(
                 (ROOT / "database/rollbacks/0036_create_graylog_delivery.down.sql")
                 .read_text(encoding="utf-8"), prepare=False,
             )
