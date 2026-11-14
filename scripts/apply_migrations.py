@@ -86,10 +86,20 @@ def object_exists(
             AND to_regclass('synergia.ai_assistance_idempotency') IS NOT NULL
             AND to_regclass('synergia.ai_assistance_latest') IS NOT NULL
             AND to_regclass('synergia.ai_assistance_expiry') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_reservations') IS NOT NULL
             AND to_regclass('synergia.audit_event_catalog_v2') IS NOT NULL
+            AND to_regprocedure('synergia.ai_assistance_result_shape_valid(jsonb)') IS NOT NULL
+            AND EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid=to_regclass('synergia.ai_assistances')
+                  AND conname='ai_assistances_result_check' AND convalidated)
             AND EXISTS (SELECT 1 FROM pg_trigger
                 WHERE tgrelid=to_regclass('synergia.ai_assistance_events')
-                  AND tgname='graylog_ai_assistance_insert' AND NOT tgisinternal)
+                  AND tgname='graylog_ai_assistance_insert' AND NOT tgisinternal
+                  AND tgenabled <> 'D')
+            AND EXISTS (SELECT 1 FROM pg_trigger
+                WHERE tgrelid=to_regclass('synergia.ai_assistance_events')
+                  AND tgname='ai_assistance_events_immutable' AND NOT tgisinternal
+                  AND tgenabled <> 'D')
             """
             ).fetchone()
             is not None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID, uuid4
@@ -13,7 +14,8 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import ValidationError
 
-from app.ai_assistance_contract import AiAssistanceResponse
+from app.ai_assistance_contract import PRODUCT_NOTICE, AiAssistanceResponse
+from app.ai_assistance_fallback import FAILED, INSUFFICIENT, MISSING, NOTICE, TRUNCATED
 from app.ai_assistance_generator import validate_language
 from app.observability.metrics import REGISTRY
 
@@ -38,6 +40,61 @@ class AssistanceKey:
     model_name: str | None
     model_digest: str | None
     contract_version: str = "1.0.0"
+
+
+def _validate_result_text(result: AiAssistanceResponse) -> None:
+    """Only persist text the closed #187 generator can emit or contract examples."""
+    summary = result.summary
+    summary_pattern = (
+        r"(?:A execução registra|Foram registrados) \d{1,19} (?:erro|erros), "
+        r"\d{1,19} (?:aviso|avisos) e \d{1,19} (?:pendência|pendências)\."
+        r"(?: Referências disponíveis: (?:DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}"
+        r"(?:, (?:DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}){0,2}\.)?"
+    )
+    if summary not in {
+        "Os fatos autorizados estão disponíveis para conferência humana.",
+        "As evidências disponíveis são insuficientes.",
+        "A resposta gerada foi recusada pela validação.",
+    } and not re.fullmatch(summary_pattern, summary):
+        raise ValueError("invalid result summary")
+    if not set(result.human_checks) <= {
+        NOTICE,
+        "Conferência humana das referências disponíveis.",
+        "Conferência humana das evidências disponíveis.",
+    } or not set(result.limitations) <= {
+        NOTICE,
+        FAILED,
+        INSUFFICIENT,
+        MISSING,
+        TRUNCATED,
+        PRODUCT_NOTICE,
+    }:
+        raise ValueError("invalid result text")
+    titles = {
+        "Registros disponíveis",
+        "Registros para conferência",
+        "Divergência registrada",
+        "Pendência registrada",
+        "Classificação registrada",
+        "Evidência registrada",
+        "Transição registrada",
+    }
+    explanations = {
+        "Há um registro disponível para conferência.",
+        "Há registros disponíveis para conferência.",
+        "Os registros estão disponíveis para conferência.",
+    }
+    refs = []
+    for finding in result.findings:
+        if (
+            finding.title not in titles
+            or finding.explanation not in explanations
+            or not 1 <= len(finding.evidence_refs) <= 3
+        ):
+            raise ValueError("invalid result finding")
+        refs.extend(finding.evidence_refs)
+    if len(refs) != len(set(refs)):
+        raise ValueError("duplicate result references")
 
 
 def _event(connection, row, actor_id, correlation_id, action):
@@ -86,6 +143,12 @@ def _validated(row, evidence_refs):
             ),
         ):
             validate_language(text)
+        _validate_result_text(result)
+        summary_refs = set(
+            re.findall(r"\b(?:DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}\b", result.summary)
+        )
+        if not summary_refs <= set(evidence_refs):
+            raise ValueError("invalid summary references")
         provenance = result.provenance
         if (
             str(result.assistance_id) != str(row["id"])
@@ -178,6 +241,22 @@ class PostgresAiAssistanceRepository:
         rejection_code: str | None,
         elapsed_ms: int,
     ):
+        serialized = response.model_dump(mode="json")
+        _validated(
+            {
+                "result": serialized,
+                "id": assistance_id,
+                "execution_id": str(key.execution_id),
+                "state": response.state,
+                "origin": response.provenance.origin,
+                "context_sha256": key.context_sha256,
+                "prompt_sha256": key.prompt_sha256,
+                "model_name": key.model_name,
+                "model_digest": key.model_digest,
+                "contract_version": key.contract_version,
+            },
+            evidence_refs,
+        )
         with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
             row = connection.execute(
                 """UPDATE synergia.ai_assistances a
@@ -193,7 +272,7 @@ class PostgresAiAssistanceRepository:
                 (
                     response.state,
                     response.provenance.origin,
-                    Jsonb(response.model_dump(mode="json")),
+                    Jsonb(serialized),
                     response_sha256,
                     rejection_code,
                     elapsed_ms,

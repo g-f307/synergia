@@ -140,9 +140,10 @@ def test_concurrent_reservations_have_single_winner(setup):
         except AssistancePersistenceError:
             return None
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(lambda _: reserve(), range(2)))
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        results = list(pool.map(lambda _: reserve(), range(10)))
     assert sum(value is not None for value in results) == 1
+    assert sum(value is None for value in results) == 9
 
 
 def test_integrity_error_and_expiration(setup, database):
@@ -163,7 +164,7 @@ def test_integrity_error_and_expiration(setup, database):
     with psycopg.connect(database) as c:
         c.execute(
             "UPDATE synergia.ai_assistances SET "
-            "result=jsonb_set(result,'{summary}',to_jsonb('bad <html>'::text)) "
+            "result=jsonb_set(result,'{provenance,origin}',to_jsonb('model'::text)) "
             "WHERE id=%s",
             (aid,),
         )
@@ -335,8 +336,8 @@ def test_integrity_failure_emits_audit(setup, database):
     )
     with psycopg.connect(database) as c:
         c.execute(
-            "UPDATE synergia.ai_assistances SET result=jsonb_set(result, '{summary}', "
-            "to_jsonb('A causa foi a falha'::text)) WHERE id=%s",
+            "UPDATE synergia.ai_assistances SET result=jsonb_set(result, '{state}', "
+            "to_jsonb('ready'::text)) WHERE id=%s",
             (aid,),
         )
     with pytest.raises(AssistancePersistenceError, match="integrity_error"):
@@ -360,60 +361,110 @@ def test_integrity_failure_emits_audit(setup, database):
 
 
 def test_index_plans_with_representative_fixture(setup, database):
-    repo, key, _, actor, _ = setup
+    import json
+
+    _, key, _, actor, _ = setup
     with psycopg.connect(database) as c:
         c.execute(
             """INSERT INTO synergia.ai_assistances
-            (id,organization_id,execution_id,requested_by,state,contract_version,
-             context_sha256,prompt_sha256,expires_at,reservation_until)
-            SELECT gen_random_uuid(),%s,%s,%s,'processing','1.0.0',
-                   lpad(to_hex(n),64,'0'),%s,clock_timestamp()+interval '30 days',
-                   clock_timestamp()+interval '2 minutes'
+            (id,organization_id,execution_id,requested_by,state,origin,contract_version,
+             model_name,model_digest,context_sha256,prompt_sha256,response_sha256,
+             rejection_code,result,elapsed_ms,created_at,completed_at,expires_at,reservation_until)
+            SELECT gen_random_uuid(),%s,%s,%s,
+              CASE n%%4 WHEN 0 THEN 'processing' WHEN 1 THEN 'ready'
+                  WHEN 2 THEN 'insufficient_evidence' ELSE 'rejected' END,
+              CASE n%%4 WHEN 0 THEN NULL WHEN 1 THEN 'model' ELSE 'deterministic' END,
+              '1.0.0', CASE WHEN n%%4=1 THEN 'model:local' ELSE NULL END,
+              CASE WHEN n%%4=1 THEN 'sha256:' || repeat('d',64) ELSE NULL END,
+              %s,lpad(to_hex(n),64,'0'),
+              CASE WHEN n%%4=1 THEN repeat('f',64) ELSE NULL END,
+              CASE WHEN n%%4=3 THEN 'invalid_json' ELSE NULL END,
+              CASE WHEN n%%4=0 THEN NULL ELSE %s::jsonb END,
+              CASE WHEN n%%4=0 THEN NULL ELSE 1 END,
+              clock_timestamp()-interval '60 days' + n * interval '1 second',
+              CASE WHEN n%%4=0 THEN NULL ELSE clock_timestamp()-interval '1 day' END,
+              CASE WHEN n%%5=0 THEN clock_timestamp()-interval '1 hour'
+                   ELSE clock_timestamp()+interval '30 days' END,
+              CASE WHEN n%%4=0 THEN clock_timestamp()-interval '1 hour' ELSE NULL END
             FROM generate_series(1,3000) n""",
-            (key.organization_id, str(key.execution_id), actor, key.prompt_sha256),
+            (
+                key.organization_id,
+                str(key.execution_id),
+                actor,
+                key.context_sha256,
+                json.dumps(contract_examples()["insufficient_evidence"]),
+            ),
         )
         c.execute("ANALYZE synergia.ai_assistances")
-        latest = "\n".join(
-            row[0]
-            for row in c.execute(
-                """EXPLAIN SELECT a.* FROM synergia.ai_assistances a
-                JOIN synergia.executions e ON e.id=a.execution_id
-                WHERE a.organization_id=%s AND a.execution_id=%s
-                  AND e.organization_id=%s AND a.context_sha256=%s
-                  AND a.state <> 'processing' AND a.expires_at > clock_timestamp()
-                ORDER BY a.created_at DESC, a.id DESC LIMIT 1""",
-                (
-                    key.organization_id,
-                    str(key.execution_id),
-                    key.organization_id,
-                    f"{42:064x}",
-                ),
-            )
+
+        def explain(query, params):
+            return "\n".join(row[0] for row in c.execute("EXPLAIN " + query, params))
+
+        org, execution = key.organization_id, str(key.execution_id)
+        latest = explain(
+            """SELECT a.* FROM synergia.ai_assistances a
+            JOIN synergia.executions e ON e.id=a.execution_id
+            WHERE a.organization_id=%s AND a.execution_id=%s AND e.organization_id=%s
+              AND a.context_sha256=%s AND a.state <> 'processing'
+              AND a.expires_at > clock_timestamp()
+            ORDER BY a.created_at DESC, a.id DESC LIMIT 1""",
+            (org, execution, org, key.context_sha256),
         )
-        equivalent = "\n".join(
-            row[0]
-            for row in c.execute(
-                """EXPLAIN SELECT a.* FROM synergia.ai_assistances a
-                JOIN synergia.executions e ON e.id=a.execution_id
-                WHERE a.organization_id=%s AND a.execution_id=%s
-                AND e.organization_id=%s
-                AND a.context_sha256=%s AND a.prompt_sha256=%s
-                AND a.model_digest IS NOT DISTINCT FROM %s AND a.contract_version=%s
-                AND a.state <> 'processing' AND a.expires_at > clock_timestamp()""",
-                (
-                    key.organization_id,
-                    str(key.execution_id),
-                    key.organization_id,
-                    f"{42:064x}",
-                    key.prompt_sha256,
-                    key.model_digest,
-                    key.contract_version,
-                ),
-            )
+        equivalent = explain(
+            """SELECT a.* FROM synergia.ai_assistances a
+            JOIN synergia.executions e ON e.id=a.execution_id
+            WHERE a.organization_id=%s AND a.execution_id=%s AND e.organization_id=%s
+              AND a.context_sha256=%s AND a.prompt_sha256=%s
+              AND a.model_digest IS NOT DISTINCT FROM %s AND a.contract_version=%s
+              AND a.state <> 'processing' AND a.expires_at > clock_timestamp()""",
+            (org, execution, org, key.context_sha256, f"{42:064x}", None, "1.0.0"),
         )
-        assert "ai_assistance_idempotency" in latest or "ai_assistance_latest" in latest
+        get_plan = explain(
+            """SELECT a.* FROM synergia.ai_assistances a
+            JOIN synergia.executions e ON e.id=a.execution_id
+            WHERE a.id=%s AND a.organization_id=%s AND a.execution_id=%s
+              AND e.organization_id=%s AND a.state <> 'processing'
+              AND a.expires_at > clock_timestamp()""",
+            (uuid4(), org, execution, org),
+        )
+        expire_plan = explain(
+            """DELETE FROM synergia.ai_assistances WHERE id IN
+            (SELECT id FROM synergia.ai_assistances
+             WHERE expires_at <= clock_timestamp()
+             ORDER BY expires_at,id LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING *""",
+            (100,),
+        )
+        reserve_plan = explain(
+            """DELETE FROM synergia.ai_assistances a
+            USING synergia.executions e
+            WHERE a.organization_id=%s AND a.execution_id=%s
+              AND e.id=a.execution_id AND e.organization_id=a.organization_id
+              AND a.context_sha256=%s AND a.prompt_sha256=%s
+              AND a.model_digest IS NOT DISTINCT FROM %s AND a.contract_version=%s
+              AND ((a.state='processing' AND a.reservation_until <= clock_timestamp())
+                   OR a.expires_at <= clock_timestamp()) RETURNING a.*""",
+            (org, execution, key.context_sha256, f"{42:064x}", None, "1.0.0"),
+        )
+        reservation_scan = explain(
+            """SELECT id FROM synergia.ai_assistances
+            WHERE state='processing' AND reservation_until <= clock_timestamp()
+            ORDER BY reservation_until LIMIT 20""",
+            (),
+        )
         assert "ai_assistance_idempotency" in equivalent
-        print("\nlatest plan:\n" + latest + "\nidempotency plan:\n" + equivalent)
+        assert "ai_assistances_pkey" in get_plan
+        assert "ai_assistance_expiry" in expire_plan
+        assert "ai_assistance_idempotency" in reserve_plan
+        assert "ai_assistance_latest" in latest or "ai_assistance_idempotency" in latest
+        for label, plan in (
+            ("latest", latest),
+            ("find", equivalent),
+            ("get", get_plan),
+            ("expire", expire_plan),
+            ("reserve", reserve_plan),
+            ("reservation_monitor", reservation_scan),
+        ):
+            print(f"\n{label} plan:\n{plan}")
         c.rollback()
 
 
@@ -671,3 +722,111 @@ def test_database_constraints_reject_invalid_metadata(setup, database, mutation)
         with pytest.raises(psycopg.errors.CheckViolation):
             c.execute(mutation, (aid,))
         c.rollback()
+
+
+def test_expire_multiple_batches_preserves_unexpired(setup, database):
+    from dataclasses import replace
+
+    repo, key, _, actor, correlation = setup
+    while repo.expire(actor, correlation, batch_size=100)["count"]:
+        pass
+    ids = [
+        repo.reserve(replace(key, context_sha256=f"{n:064x}"), actor, correlation)
+        for n in range(1, 5)
+    ]
+    with psycopg.connect(database) as c:
+        for index, aid in enumerate(ids[:3]):
+            c.execute(
+                "UPDATE synergia.ai_assistances SET "
+                "created_at=clock_timestamp()-interval '5 days', "
+                "expires_at=clock_timestamp()-(%s * interval '1 day') WHERE id=%s",
+                (3 - index, aid),
+            )
+    assert repo.expire(actor, correlation, batch_size=2, dry_run=True)["count"] == 2
+    assert repo.expire(actor, correlation, batch_size=2)["count"] == 2
+    with psycopg.connect(database) as c:
+        remaining = {
+            row[0]
+            for row in c.execute(
+                "SELECT id FROM synergia.ai_assistances WHERE id=ANY(%s)", (ids,)
+            )
+        }
+        assert remaining == {ids[2], ids[3]}
+    assert repo.expire(actor, correlation, batch_size=2)["count"] == 1
+    assert repo.expire(actor, correlation, batch_size=2)["count"] == 0
+    with psycopg.connect(database) as c:
+        assert c.execute(
+            "SELECT id FROM synergia.ai_assistances WHERE id=ANY(%s)", (ids,)
+        ).fetchall() == [(ids[3],)]
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE action='expired' AND assistance_id=ANY(%s)",
+                (ids,),
+            ).fetchone()[0]
+            == 3
+        )
+
+
+def test_raw_content_rejected_by_application_and_database(setup, database):
+    import json
+
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    safe = result(key, aid)
+    forged = safe.model_copy(update={"summary": "token=synthetic_secret_188"})
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.finish(
+            key,
+            aid,
+            actor,
+            correlation,
+            forged,
+            evidence_refs=frozenset(),
+            response_sha256=None,
+            rejection_code=None,
+            elapsed_ms=1,
+        )
+    repo.finish(
+        key,
+        aid,
+        actor,
+        correlation,
+        safe,
+        evidence_refs=frozenset(),
+        response_sha256=None,
+        rejection_code=None,
+        elapsed_ms=1,
+    )
+    attacks = [
+        "result || jsonb_build_object('prompt', 'synthetic raw prompt')",
+        "jsonb_set(result, '{provenance,raw_response}', to_jsonb('raw'::text))",
+        "jsonb_set(result, '{provenance,model}', "
+        "jsonb_build_object('prompt', 'synthetic raw prompt'))",
+        "jsonb_set(result, '{created_at}', to_jsonb('synthetic raw prompt'::text))",
+        "jsonb_set(result, '{summary}', to_jsonb('token=synthetic_secret_188'::text))",
+    ]
+    with psycopg.connect(database) as c:
+        for attack in attacks:
+            with pytest.raises(psycopg.errors.CheckViolation):
+                with c.transaction():
+                    c.execute(
+                        "UPDATE synergia.ai_assistances SET result="
+                        + attack
+                        + " WHERE id=%s",
+                        (aid,),
+                    )
+        rows = c.execute(
+            "SELECT row_to_json(a) FROM synergia.ai_assistances a WHERE id=%s", (aid,)
+        ).fetchone()[0]
+        serialized = json.dumps(rows)
+        assert "synthetic_secret_188" not in serialized
+        assert "synthetic raw prompt" not in serialized
+        columns = {
+            row[0]
+            for row in c.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema='synergia' AND table_name='ai_assistances'"
+            )
+        }
+        assert not {"prompt", "context", "raw_response", "provider_payload"} & columns
