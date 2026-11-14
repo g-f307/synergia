@@ -653,3 +653,21 @@ def test_read_revalidates_authorized_references(setup):
             correlation,
             evidence_refs=frozenset({"DIV-" + "2" * 32}),
         )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "UPDATE synergia.ai_assistances SET context_sha256='bad' WHERE id=%s",
+        "UPDATE synergia.ai_assistances SET state='ready' WHERE id=%s",
+        "UPDATE synergia.ai_assistances SET elapsed_ms=-1 WHERE id=%s",
+        "UPDATE synergia.ai_assistances SET rejection_code='free_text' WHERE id=%s",
+    ],
+)
+def test_database_constraints_reject_invalid_metadata(setup, database, mutation):
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    with psycopg.connect(database) as c:
+        with pytest.raises(psycopg.errors.CheckViolation):
+            c.execute(mutation, (aid,))
+        c.rollback()
