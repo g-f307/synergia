@@ -237,3 +237,48 @@ def test_prompt_injection_from_database_is_excluded_before_generation():
     fake = InspectingFake(json.dumps(valid(ctx)).encode())
     result = AiAssistanceGenerator(fake).generate(ctx)
     assert fake.calls == 1 and result.state == "ready"
+
+
+def test_unexpected_error_logged_with_sanitized_trace(caplog):
+    import logging
+
+    from app.observability.telemetry import SafeJsonFormatter
+
+    secret = "prompt_context_raw_response_private_value"
+
+    class BrokenProvider(Fake):
+        def generate(self, system, prompt, schema):
+            raise RuntimeError(secret)
+
+    caplog.set_level(logging.ERROR, logger="synergia.telemetry")
+    result = AiAssistanceGenerator(BrokenProvider(None)).generate(context())
+    record = next(
+        r for r in caplog.records if r.msg == "ai.assistance.unexpected_error"
+    )
+    payload = json.loads(SafeJsonFormatter().format(record))
+    assert payload["exception_type"] == "RuntimeError"
+    assert "generate" in payload["stack_trace"]
+    assert "test_ai_assistance_generator.py" in payload["stack_trace"]
+    assert payload["error_code"] == "internal_error"
+    assert secret not in json.dumps(payload)
+    assert secret not in repr(result)
+    assert result.state == "unavailable" and result.origin == "deterministic"
+
+
+def test_request_schema_only_allows_applicable_limitations():
+    from app.ai_assistance_generator import SCHEMA
+
+    ctx = context()
+    data = valid(ctx)
+
+    class InspectingFake(Fake):
+        def generate(self, system, prompt, schema):
+            limitations = schema["properties"]["limitations"]
+            assert set(limitations["items"]["enum"]) == set(required_limitations(ctx))
+            assert limitations["minItems"] == limitations["maxItems"]
+            assert limitations["uniqueItems"] is True
+            assert "enum" not in SCHEMA["properties"]["limitations"]["items"]
+            return super().generate(system, prompt, schema)
+
+    fake = InspectingFake(json.dumps(data).encode())
+    assert AiAssistanceGenerator(fake).generate(ctx).state == "ready"

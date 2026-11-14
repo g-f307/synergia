@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import logging
 import re
 import time
 import unicodedata
@@ -37,6 +39,35 @@ DURATION = Histogram(
     "Assistance generation duration.",
     registry=REGISTRY,
 )
+
+
+def _log_unexpected_exception(exc: Exception) -> None:
+    """Log frame locations and type, never exception text, source lines or locals."""
+    frames = []
+    traceback = exc.__traceback__
+    while traceback is not None and len(frames) < 32:
+        code = traceback.tb_frame.f_code
+        filename = Path(code.co_filename).name
+        function = code.co_name
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", filename):
+            filename = "unknown"
+        if not re.fullmatch(r"[A-Za-z0-9_.<>-]{1,128}", function):
+            function = "unknown"
+        frames.append(f"{filename}:{traceback.tb_lineno}:{function}")
+        traceback = traceback.tb_next
+    exception_type = type(exc).__name__
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", exception_type):
+        exception_type = "Exception"
+    logging.getLogger("synergia.telemetry").error(
+        "ai.assistance.unexpected_error",
+        extra={
+            "synergia_fields": {
+                "exception_type": exception_type,
+                "stack_trace": " | ".join(frames),
+                "error_code": "internal_error",
+            }
+        },
+    )
 
 
 def validate_language(value: str) -> str:
@@ -213,8 +244,15 @@ class AiAssistanceGenerator:
         start = time.monotonic()
         # This also verifies the canonical context hash and size before any model call.
         snapshot = serialize_snapshot(context)
+        request_schema = copy.deepcopy(SCHEMA)
+        limitations = required_limitations(context)
+        limits_schema = request_schema["properties"]["limitations"]
+        limits_schema["items"]["enum"] = limitations
+        limits_schema["minItems"] = len(limitations)
+        limits_schema["maxItems"] = len(limitations)
+        limits_schema["uniqueItems"] = True
         prompt = TEMPLATE.format(
-            schema=json.dumps(SCHEMA, ensure_ascii=False, sort_keys=True),
+            schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
             data=snapshot.decode(),
         )
         prompt_hash = hashlib.sha256((SYSTEM + "\n" + prompt).encode()).hexdigest()
@@ -226,7 +264,7 @@ class AiAssistanceGenerator:
             state, origin = "insufficient_evidence", "deterministic"
         else:
             try:
-                raw = self.provider.generate(SYSTEM, prompt, SCHEMA)
+                raw = self.provider.generate(SYSTEM, prompt, request_schema)
                 if not isinstance(raw, bytes):
                     raise ProviderError("runtime_invalid_response")
                 response_hash = hashlib.sha256(raw).hexdigest()
@@ -260,7 +298,8 @@ class AiAssistanceGenerator:
                     "unavailable" if rejection.startswith("runtime_") else "rejected"
                 )
                 origin = "deterministic"
-            except Exception:
+            except Exception as exc:
+                _log_unexpected_exception(exc)
                 state, origin, rejection = (
                     "unavailable",
                     "deterministic",

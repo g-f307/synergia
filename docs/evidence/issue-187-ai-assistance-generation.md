@@ -81,3 +81,34 @@ com o prompt revisado. Nenhum texto bruto foi registrado.
 Uma tentativa adicional de esclarecer as limitações no prompt também foi recusada
 (`ungrounded_limitations`, 20639 ms, hash de resposta idêntico). A alteração
 experimental no prompt foi revertida; nenhuma resposta bruta foi registrada.
+
+## Revisão do PR #218: schema e validação finais
+
+O schema de entrada ao runtime agora restringe `limitations` às limitações
+constatadas no contexto, sem alterar o schema versionado base. A gramática e a
+validação posterior continuam recusando fatos não fundamentados. Os hashes do prompt
+incluem esse schema específico do contexto.
+
+Com Ollama 0.40.15 e o modelo `qwen3.5:4b` fixado pelo digest acima, o script
+`scripts/validate_ai_assistance_187.py` gerou `ready`, `origin=model` em 10622 ms.
+O contexto e o resultado validados estão em
+`docs/evidence/issue-187-real-model-sanitized.json`, SHA-256
+`80f9fa4a3b171726fd2aeefd4e4bad8080ea3336e97eacb3d933a7e194ec36a6`.
+A resposta bruta não é armazenada. Este resultado foi obtido após as alterações
+do schema por contexto e substitui as tentativas anteriores como evidência do
+fluxo atual. O fixture completo não foi reexecutado nesta revisão; o timeout
+anterior permanece um limite conhecido desta máquina.
+
+Reprodução a partir da raiz, com o runtime e digest fixados instalados:
+
+```bash
+SYNERGIA_AI_ASSISTANCE_ENABLED=true \
+SYNERGIA_AI_ASSISTANCE_ENDPOINT=http://127.0.0.1:11434 \
+SYNERGIA_AI_ASSISTANCE_MODEL=qwen3.5:4b \
+SYNERGIA_AI_ASSISTANCE_DIGEST=sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04 \
+PYTHONPATH=backend python scripts/validate_ai_assistance_187.py
+```
+
+Falhas inesperadas geram evento estruturado com tipo e localizações de frames;
+texto da exceção, dados locais, prompt e resposta não são registrados. O fallback
+continua sanitizado e o teste direcionado verifica o evento serializado.
