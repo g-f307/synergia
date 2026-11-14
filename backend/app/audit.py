@@ -228,10 +228,32 @@ def sanitize_event(row: dict) -> AuditEvent:
         }.items():
             if isinstance(raw.get(key), str) and raw[key] in allowed:
                 metadata[key] = raw[key]
-        for key in ("execution_id", "rejection_code"):
-            value = raw.get(key)
-            if isinstance(value, str) and safe_identifier(value) != "[redacted]":
-                metadata[key] = value
+        execution_id = raw.get("execution_id")
+        if isinstance(execution_id, str):
+            try:
+                metadata["execution_id"] = str(UUID(execution_id))
+            except ValueError:
+                pass
+        rejection_code = raw.get("rejection_code")
+        if isinstance(rejection_code, str) and rejection_code in {
+            "runtime_busy",
+            "runtime_timeout",
+            "runtime_unavailable",
+            "runtime_pin_mismatch",
+            "runtime_redirect",
+            "runtime_response_too_large",
+            "runtime_invalid_response",
+            "response_too_large",
+            "invalid_json",
+            "invalid_schema",
+            "invalid_reference",
+            "ungrounded_summary",
+            "ungrounded_finding",
+            "ungrounded_checks",
+            "ungrounded_limitations",
+            "missing_limitations",
+        }:
+            metadata["rejection_code"] = rejection_code
     result = AuditEvent.model_validate(
         {key: row[key] for key in AuditEvent.model_fields if key != "metadata"}
         | {"metadata": metadata}

@@ -124,3 +124,20 @@ def test_direct_asgi_startup_fails_closed(monkeypatch):
     monkeypatch.delenv(PREFIX + "DIGEST", raising=False)
     with pytest.raises(ValueError):
         create_app()
+
+
+@pytest.mark.parametrize("selected", ["homologation", "production"])
+def test_retention_required_for_enabled_non_development(selected):
+    from app.ai_assistance_config import AiAssistanceConfig
+
+    environment = {
+        "SYNERGIA_ENV": selected,
+        "SYNERGIA_AI_ASSISTANCE_ENABLED": "true",
+        "SYNERGIA_AI_ASSISTANCE_ENDPOINT": "http://127.0.0.1:11434",
+        "SYNERGIA_AI_ASSISTANCE_MODEL": "example:local",
+        "SYNERGIA_AI_ASSISTANCE_DIGEST": "sha256:" + "a" * 64,
+    }
+    with pytest.raises(ValueError, match="RETENTION_DAYS"):
+        AiAssistanceConfig.from_environment(environment)
+    environment["SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS"] = "14"
+    assert AiAssistanceConfig.from_environment(environment).retention_days == 14
