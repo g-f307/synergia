@@ -71,13 +71,11 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
     }:
         raise ValueError("invalid result text")
     titles = {
-        "Registros disponíveis",
-        "Registros para conferência",
-        "Divergência registrada",
-        "Pendência registrada",
-        "Classificação registrada",
-        "Evidência registrada",
-        "Transição registrada",
+        "DIV": "Divergência registrada",
+        "PEN": "Pendência registrada",
+        "CLA": "Classificação registrada",
+        "EVI": "Evidência registrada",
+        "HIS": "Transição registrada",
     }
     explanations = {
         "Há um registro disponível para conferência.",
@@ -86,10 +84,19 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
     }
     refs = []
     for finding in result.findings:
+        selected = finding.evidence_refs
+        allowed_titles = {"Registros disponíveis", "Registros para conferência"}
+        prefixes = {ref[:3] for ref in selected}
+        if len(prefixes) == 1 and next(iter(prefixes)) in titles:
+            allowed_titles.add(titles[next(iter(prefixes))])
         if (
-            finding.title not in titles
+            finding.title not in allowed_titles
             or finding.explanation not in explanations
-            or not 1 <= len(finding.evidence_refs) <= 3
+            or not 1 <= len(selected) <= 3
+            or (
+                len(selected) > 1
+                and finding.explanation == "Há um registro disponível para conferência."
+            )
         ):
             raise ValueError("invalid result finding")
         refs.extend(finding.evidence_refs)
