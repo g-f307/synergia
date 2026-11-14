@@ -485,7 +485,7 @@ def test_model_result_and_rejection_are_persisted_without_raw_content(setup, dat
         prompt_hash=key.prompt_sha256,
     )
     value = AiAssistanceResponse.model_validate_json(json.dumps(example))
-    repo.finish(
+    repo.complete(
         key,
         aid,
         actor,
@@ -517,7 +517,7 @@ def test_rejected_result_records_reason_and_audit(setup, database):
         context_hash=key.context_sha256, prompt_hash=key.prompt_sha256
     )
     value = AiAssistanceResponse.model_validate_json(json.dumps(example))
-    repo.finish(
+    repo.reject(
         key,
         aid,
         actor,

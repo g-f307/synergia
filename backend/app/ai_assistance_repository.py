@@ -219,6 +219,22 @@ class PostgresAiAssistanceRepository:
         EVENTS.labels("finish", "success").inc()
         return result
 
+    def complete(
+        self, key, assistance_id, actor_id, correlation_id, response, **options
+    ):
+        if response.state not in {"ready", "insufficient_evidence"}:
+            raise AssistancePersistenceError("invalid_completion_state")
+        return self.finish(
+            key, assistance_id, actor_id, correlation_id, response, **options
+        )
+
+    def reject(self, key, assistance_id, actor_id, correlation_id, response, **options):
+        if response.state != "rejected":
+            raise AssistancePersistenceError("invalid_rejection_state")
+        return self.finish(
+            key, assistance_id, actor_id, correlation_id, response, **options
+        )
+
     def find(
         self,
         key: AssistanceKey,
