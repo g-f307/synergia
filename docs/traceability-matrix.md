@@ -1,5 +1,9 @@
 # Matriz de rastreabilidade
 
+| Entrega incremental | Issue | Implementação | Evidência |
+| --- | --- | --- | --- |
+| Contrato 1.0.0 de assistência, configuração segura e permissões por organização | [#185](https://github.com/g-f307/synergia/issues/185) | `ai_assistance_contract.py`, `ai_assistance_config.py`, `ai_assistance_access.py`, migration `0037`, serviço Angular de capacidade; [ADR 0002](architecture/0002-ai-assistance.md) | `test_ai_assistance_contract.py`, `test_ai_assistance_config.py`, `test_ai_assistance_access.py`, snapshot OpenAPI e testes PostgreSQL/Angular; geração nas #186–#192 |
+
 Esta matriz liga requisitos, regras, issues, implementação e evidências
 automatizadas. `Atendido` significa que a capacidade está implementada e
 coberta na fundação atual; não implica que integrações futuras estejam prontas.

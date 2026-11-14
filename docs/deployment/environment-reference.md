@@ -58,6 +58,26 @@ houver exigência específica, a opção é ajustável e usa o padrão da aplica
 | `PGUSER` | Compose / repassada conforme serviço | synergia | Derivada de POSTGRES_USER pelo Compose. |
 | `PGPASSWORD` | Compose / repassada conforme serviço | configuração privada | Derivada de POSTGRES_PASSWORD; segredo, nunca imprimir. |
 
+## Assistência informativa de IA
+
+Contrato: [ADR 0002](../architecture/0002-ai-assistance.md). Configuração inválida
+impede inicialização; a indisponibilidade posterior do runtime não afeta readiness.
+A ativação operacional depende das entregas #186–#192.
+
+| Variável | Aplicação | Modelo / formato | Regra por perfil e exemplo seguro |
+| --- | --- | --- | --- |
+| `SYNERGIA_AI_ASSISTANCE_ENABLED` | Compose / backend | false | Opt-in explícito; somente true/false. |
+| `SYNERGIA_AI_ASSISTANCE_ENDPOINT` | Compose / backend | vazio | Quando ligado, origem HTTP de loopback ou serviço permitido; sem credenciais, path, query ou fragmento. |
+| `SYNERGIA_AI_ASSISTANCE_ALLOWED_SERVICE` | Compose / backend | vazio | Nome exato de um serviço em rede controlada; sem curingas. |
+| `SYNERGIA_AI_ASSISTANCE_MODEL` | Compose / backend | vazio | Identificador fixo obrigatório quando ligado; nunca enviado ao browser pela capacidade. |
+| `SYNERGIA_AI_ASSISTANCE_DIGEST` | Compose / backend | vazio | sha256: mais 64 hex; obrigatório com modelo, a conferir no runtime. |
+| `SYNERGIA_AI_ASSISTANCE_TIMEOUT_SECONDS` | Compose / backend | 30 | Fixo, orçamento total em segundos. |
+| `SYNERGIA_AI_ASSISTANCE_CONTEXT_MAX_BYTES` | Compose / backend | 8192 | Fixo, contexto JSON UTF-8 serializado. |
+| `SYNERGIA_AI_ASSISTANCE_RESPONSE_MAX_BYTES` | Compose / backend | 8192 | Fixo, resposta bruta antes de parse. |
+| `SYNERGIA_AI_ASSISTANCE_MAX_CONCURRENCY` | Compose / backend | 1 | Fixo, por instância. |
+| `SYNERGIA_AI_ASSISTANCE_FOLLOW_REDIRECTS` | Compose / backend | false | Fixo; recusar 3xx do runtime. |
+| `SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS` | Compose / backend | 30 | Inteiro de 1 a 365; aplicação pela persistência #188. |
+
 ## Origens e identidade
 
 | Variável | Aplicação | Modelo / formato | Regra por perfil e exemplo seguro |

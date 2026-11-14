@@ -1,5 +1,9 @@
 # Arquitetura vigente
 
+Contrato incremental de assistência informativa: [ADR 0002](architecture/0002-ai-assistance.md)
+(#185). A fundação publica contrato, configuração e capacidade; geração operacional
+permanece desabilitada até a integração das demais issues da milestone 10.
+
 Este documento registra a arquitetura implementada durante a Etapa 5. Ele
 separa explicitamente o que existe na `main` do que permanece planejado.
 

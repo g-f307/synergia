@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
+from app.ai_assistance_config import AiAssistanceConfig
+
 DEPLOYMENT_ENVIRONMENTS = frozenset(
     {"development", "test", "homologation", "production"}
 )
@@ -150,6 +152,7 @@ def validate_deployment_environment(environment: Mapping[str, str]) -> str:
     if selected not in DEPLOYMENT_ENVIRONMENTS:
         allowed = ", ".join(sorted(DEPLOYMENT_ENVIRONMENTS))
         raise ValueError(f"SYNERGIA_ENV must be explicit and one of: {allowed}")
+    AiAssistanceConfig.from_environment(environment)
     if selected in {"development", "test"}:
         return selected
 

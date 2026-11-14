@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0037": ("ai_assistance_contract", "synergia", ""),
     "0036": ("graylog_contract", "synergia", ""),
     "0035": ("feedback_contract", "synergia", ""),
     "0034": ("audit_export_contract", "synergia", ""),
@@ -75,6 +76,14 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_contract":
+        if not object_exists(connection, "table", "synergia", "permissions"):
+            return False
+        return connection.execute(
+            """SELECT 1 WHERE (SELECT count(*) FROM synergia.permissions
+            WHERE normalized_key IN ('ai.assistance.read', 'ai.assistance.generate')
+              AND catalog_version = '1.6.0' AND is_reserved) = 2"""
+        ).fetchone() is not None
     if kind == "graylog_contract":
         return connection.execute(
             """SELECT 1 WHERE

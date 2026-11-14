@@ -1,0 +1,484 @@
+{
+  "contract": {
+    "contract_version": "1.0.0",
+    "request": {
+      "$ref": "#/components/schemas/AiAssistanceRequest"
+    },
+    "response": {
+      "$ref": "#/components/schemas/AiAssistanceResponse"
+    },
+    "examples": {
+      "ready": {
+        "assistance_id": "00000000-0000-4000-8000-000000000001",
+        "execution_id": "00000000-0000-4000-8000-000000000002",
+        "state": "ready",
+        "summary": "Os fatos autorizados estão disponíveis para conferência humana.",
+        "findings": [],
+        "human_checks": [
+          "A conferência humana das evidências é necessária."
+        ],
+        "limitations": [
+          "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+        ],
+        "provenance": {
+          "contract_version": "1.0.0",
+          "model": null,
+          "digest": null,
+          "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "origin": "deterministic",
+          "timings": {
+            "context_ms": 0,
+            "generation_ms": 0,
+            "total_ms": 0
+          }
+        },
+        "created_at": "2026-11-14T00:00:00Z"
+      },
+      "insufficient_evidence": {
+        "assistance_id": "00000000-0000-4000-8000-000000000001",
+        "execution_id": "00000000-0000-4000-8000-000000000002",
+        "state": "insufficient_evidence",
+        "summary": "As evidências disponíveis são insuficientes.",
+        "findings": [],
+        "human_checks": [
+          "A conferência humana das evidências é necessária."
+        ],
+        "limitations": [
+          "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+        ],
+        "provenance": {
+          "contract_version": "1.0.0",
+          "model": null,
+          "digest": null,
+          "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "origin": "deterministic",
+          "timings": {
+            "context_ms": 0,
+            "generation_ms": 0,
+            "total_ms": 0
+          }
+        },
+        "created_at": "2026-11-14T00:00:00Z"
+      },
+      "unavailable": {
+        "assistance_id": "00000000-0000-4000-8000-000000000001",
+        "execution_id": "00000000-0000-4000-8000-000000000002",
+        "state": "unavailable",
+        "summary": "A assistência está indisponível.",
+        "findings": [],
+        "human_checks": [
+          "A conferência humana das evidências é necessária."
+        ],
+        "limitations": [
+          "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+        ],
+        "provenance": {
+          "contract_version": "1.0.0",
+          "model": null,
+          "digest": null,
+          "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "origin": "deterministic",
+          "timings": {
+            "context_ms": 0,
+            "generation_ms": 0,
+            "total_ms": 0
+          }
+        },
+        "created_at": "2026-11-14T00:00:00Z"
+      },
+      "rejected": {
+        "assistance_id": "00000000-0000-4000-8000-000000000001",
+        "execution_id": "00000000-0000-4000-8000-000000000002",
+        "state": "rejected",
+        "summary": "A resposta gerada foi recusada pela validação.",
+        "findings": [],
+        "human_checks": [
+          "A conferência humana das evidências é necessária."
+        ],
+        "limitations": [
+          "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+        ],
+        "provenance": {
+          "contract_version": "1.0.0",
+          "model": null,
+          "digest": null,
+          "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "origin": "deterministic",
+          "timings": {
+            "context_ms": 0,
+            "generation_ms": 0,
+            "total_ms": 0
+          }
+        },
+        "created_at": "2026-11-14T00:00:00Z"
+      }
+    },
+    "http_states": {
+      "200": "Resultado concluído, inclusive insufficient_evidence",
+      "403": "Falta de permissão",
+      "404": "Execução inexistente ou invisível na organização",
+      "409": "Execução ativa ou geração em andamento",
+      "422": "Contrato inválido",
+      "503": "Recurso desabilitado ou runtime indisponível antes do início",
+      "504": "Timeout após início da geração"
+    },
+    "notice": "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+  },
+  "schemas": {
+    "AiAssistanceCapability": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enabled"
+        },
+        "read": {
+          "type": "boolean",
+          "title": "Read"
+        },
+        "generate": {
+          "type": "boolean",
+          "title": "Generate"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled",
+        "read",
+        "generate"
+      ],
+      "title": "AiAssistanceCapability"
+    },
+    "AiAssistanceRequest": {
+      "additionalProperties": false,
+      "description": "An absent body or {}. Never accepts prompts, facts or model settings.",
+      "properties": {},
+      "title": "AiAssistanceRequest",
+      "type": "object"
+    },
+    "AiAssistanceFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "explanation": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[A-Za-z0-9_-]{1,64}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "explanation",
+        "evidence_refs"
+      ],
+      "title": "AiAssistanceFinding",
+      "type": "object"
+    },
+    "AiAssistanceProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "1.0.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Model"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Digest"
+        },
+        "context_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Context Hash",
+          "type": "string"
+        },
+        "prompt_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Prompt Hash",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "model",
+            "deterministic"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "timings": {
+          "$ref": "#/components/schemas/AiAssistanceTimings"
+        }
+      },
+      "required": [
+        "contract_version",
+        "model",
+        "digest",
+        "context_hash",
+        "prompt_hash",
+        "origin",
+        "timings"
+      ],
+      "title": "AiAssistanceProvenance",
+      "type": "object"
+    },
+    "AiAssistanceTimings": {
+      "additionalProperties": false,
+      "properties": {
+        "context_ms": {
+          "maximum": 30000,
+          "minimum": 0,
+          "title": "Context Ms",
+          "type": "integer"
+        },
+        "generation_ms": {
+          "maximum": 30000,
+          "minimum": 0,
+          "title": "Generation Ms",
+          "type": "integer"
+        },
+        "total_ms": {
+          "maximum": 30000,
+          "minimum": 0,
+          "title": "Total Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "context_ms",
+        "generation_ms",
+        "total_ms"
+      ],
+      "title": "AiAssistanceTimings",
+      "type": "object"
+    },
+    "AiAssistanceResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "assistance_id": {
+          "format": "uuid",
+          "title": "Assistance Id",
+          "type": "string"
+        },
+        "execution_id": {
+          "format": "uuid",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "insufficient_evidence",
+            "unavailable",
+            "rejected"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/components/schemas/AiAssistanceFinding"
+          },
+          "maxItems": 5,
+          "title": "Findings",
+          "type": "array"
+        },
+        "human_checks": {
+          "items": {
+            "maxLength": 600,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Human Checks",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "maxLength": 600,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/components/schemas/AiAssistanceProvenance"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assistance_id",
+        "execution_id",
+        "state",
+        "summary",
+        "findings",
+        "human_checks",
+        "limitations",
+        "provenance",
+        "created_at"
+      ],
+      "title": "AiAssistanceResponse",
+      "type": "object",
+      "examples": [
+        {
+          "assistance_id": "00000000-0000-4000-8000-000000000001",
+          "execution_id": "00000000-0000-4000-8000-000000000002",
+          "state": "ready",
+          "summary": "Os fatos autorizados estão disponíveis para conferência humana.",
+          "findings": [],
+          "human_checks": [
+            "A conferência humana das evidências é necessária."
+          ],
+          "limitations": [
+            "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+          ],
+          "provenance": {
+            "contract_version": "1.0.0",
+            "model": null,
+            "digest": null,
+            "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "origin": "deterministic",
+            "timings": {
+              "context_ms": 0,
+              "generation_ms": 0,
+              "total_ms": 0
+            }
+          },
+          "created_at": "2026-11-14T00:00:00Z"
+        },
+        {
+          "assistance_id": "00000000-0000-4000-8000-000000000001",
+          "execution_id": "00000000-0000-4000-8000-000000000002",
+          "state": "insufficient_evidence",
+          "summary": "As evidências disponíveis são insuficientes.",
+          "findings": [],
+          "human_checks": [
+            "A conferência humana das evidências é necessária."
+          ],
+          "limitations": [
+            "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+          ],
+          "provenance": {
+            "contract_version": "1.0.0",
+            "model": null,
+            "digest": null,
+            "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "origin": "deterministic",
+            "timings": {
+              "context_ms": 0,
+              "generation_ms": 0,
+              "total_ms": 0
+            }
+          },
+          "created_at": "2026-11-14T00:00:00Z"
+        },
+        {
+          "assistance_id": "00000000-0000-4000-8000-000000000001",
+          "execution_id": "00000000-0000-4000-8000-000000000002",
+          "state": "unavailable",
+          "summary": "A assistência está indisponível.",
+          "findings": [],
+          "human_checks": [
+            "A conferência humana das evidências é necessária."
+          ],
+          "limitations": [
+            "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+          ],
+          "provenance": {
+            "contract_version": "1.0.0",
+            "model": null,
+            "digest": null,
+            "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "origin": "deterministic",
+            "timings": {
+              "context_ms": 0,
+              "generation_ms": 0,
+              "total_ms": 0
+            }
+          },
+          "created_at": "2026-11-14T00:00:00Z"
+        },
+        {
+          "assistance_id": "00000000-0000-4000-8000-000000000001",
+          "execution_id": "00000000-0000-4000-8000-000000000002",
+          "state": "rejected",
+          "summary": "A resposta gerada foi recusada pela validação.",
+          "findings": [],
+          "human_checks": [
+            "A conferência humana das evidências é necessária."
+          ],
+          "limitations": [
+            "Assistência gerada por IA: pode conter erros. A conferência humana das evidências é necessária."
+          ],
+          "provenance": {
+            "contract_version": "1.0.0",
+            "model": null,
+            "digest": null,
+            "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "prompt_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "origin": "deterministic",
+            "timings": {
+              "context_ms": 0,
+              "generation_ms": 0,
+              "total_ms": 0
+            }
+          },
+          "created_at": "2026-11-14T00:00:00Z"
+        }
+      ]
+    }
+  }
+}
