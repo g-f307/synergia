@@ -66,8 +66,16 @@ registra nenhuma migration; a adoção de uma base completa continua aprovada.
 | --- | --- |
 | `pytest -q backend/tests/test_migration_runner.py backend/tests/test_audit_persistence.py backend/tests/test_feedback_persistence.py backend/tests/test_notification_templates_persistence.py backend/tests/test_smtp_queue_persistence.py backend/tests/test_graylog_persistence.py --tb=short` | 140 aprovados |
 | Backend: `pytest -q -m 'not integration' --tb=short` | 2053 aprovados; 819 desmarcados; 16 subtests aprovados |
+| `pytest -q -m integration backend/tests --tb=short` | 819 aprovados; 2053 desmarcados; PostgreSQL 16 descartável |
 | Backend: `ruff check . ../scripts` | aprovado |
 | `git diff --check` | aprovado |
 
-Resultados da execução completa de persistência e da CI remota são registrados
-na descrição do PR, distinguindo-os destes resultados direcionados locais.
+A execução remota seguinte também revelou incompatibilidade entre o cliente de
+backup do runner e o servidor 16: a restauração recusava `transaction_timeout`.
+O job agora usa `psql`, `pg_isready`, `pg_dump` e `pg_restore` do próprio serviço
+PostgreSQL 16, com stdin/stdout e variáveis de conexão repassados por wrappers.
+O passo YAML foi extraído e validado com `bash -n`; o script gerado realizou
+backup/restauração local de banco sintético e preservou o catálogo ativo 1.6.0.
+
+Resultados da CI remota são registrados na descrição do PR, distinguindo-os
+destes resultados locais. A aplicação principal permaneceu parada.
