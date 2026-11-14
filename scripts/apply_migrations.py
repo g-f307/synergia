@@ -78,8 +78,9 @@ def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
     if kind == "ai_assistance_persistence":
-        return connection.execute(
-            """SELECT 1 WHERE
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
             to_regclass('synergia.ai_assistances') IS NOT NULL
             AND to_regclass('synergia.ai_assistance_events') IS NOT NULL
             AND to_regclass('synergia.ai_assistance_idempotency') IS NOT NULL
@@ -90,7 +91,9 @@ def object_exists(
                 WHERE tgrelid=to_regclass('synergia.ai_assistance_events')
                   AND tgname='graylog_ai_assistance_insert' AND NOT tgisinternal)
             """
-        ).fetchone() is not None
+            ).fetchone()
+            is not None
+        )
     if kind == "ai_assistance_contract":
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False
