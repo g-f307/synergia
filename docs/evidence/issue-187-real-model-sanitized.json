@@ -72,9 +72,10 @@
     "context_sha256": "841bd8fd503bd3c5adebaaef6cbd8c254427b230ecfac4438c90026ac1ed6ee3",
     "prompt_sha256": "c5f8a964d379837bc06226edc822f8143ec3525d199aea24d505cc47ec69f253",
     "response_sha256": "7149bb00c1305fdbac80353191eda882c7adcbc56207817015f080446fb4b6b7",
-    "schema_sha256": "5b48b0e799ab28ea45ffa0e3b078ce766b8ae65ab7ac94f39a5a741e22916dd9",
+    "schema_sha256": "f857866351bcd2d4ec052e8bc2274e46d62c58620a3cf8b0bb964e36c65dbe00",
+    "base_schema_sha256": "5b48b0e799ab28ea45ffa0e3b078ce766b8ae65ab7ac94f39a5a741e22916dd9",
     "model": "qwen3.5:4b",
     "digest": "sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
-    "elapsed_ms": 10622
+    "elapsed_ms": 24133
   }
 }

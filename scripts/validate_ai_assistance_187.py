@@ -44,6 +44,7 @@ def main():
                 "prompt_sha256",
                 "response_sha256",
                 "schema_sha256",
+                "base_schema_sha256",
                 "model",
                 "digest",
                 "elapsed_ms",

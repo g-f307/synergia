@@ -282,3 +282,28 @@ def test_request_schema_only_allows_applicable_limitations():
 
     fake = InspectingFake(json.dumps(data).encode())
     assert AiAssistanceGenerator(fake).generate(ctx).state == "ready"
+
+
+def test_schema_hash_matches_provider_and_varies_with_context_limitations():
+    import hashlib
+
+    from app.ai_assistance_generator import SCHEMA_SHA256
+
+    class CapturingFake(Fake):
+        def generate(self, system, prompt, schema):
+            self.schema = schema
+            return super().generate(system, prompt, schema)
+
+    results = []
+    for name in ("complete", "truncated"):
+        ctx = context(name)
+        fake = CapturingFake(json.dumps(valid(ctx)).encode())
+        result = AiAssistanceGenerator(fake).generate(ctx)
+        serialized = json.dumps(
+            fake.schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        assert result.state == "ready"
+        assert result.schema_sha256 == hashlib.sha256(serialized).hexdigest()
+        assert result.base_schema_sha256 == SCHEMA_SHA256
+        results.append(result)
+    assert results[0].schema_sha256 != results[1].schema_sha256

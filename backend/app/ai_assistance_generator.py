@@ -131,6 +131,7 @@ class GenerationResult:
     prompt_sha256: str
     response_sha256: str | None
     schema_sha256: str
+    base_schema_sha256: str
     model: str
     digest: str
     elapsed_ms: int
@@ -251,6 +252,14 @@ class AiAssistanceGenerator:
         limits_schema["minItems"] = len(limitations)
         limits_schema["maxItems"] = len(limitations)
         limits_schema["uniqueItems"] = True
+        schema_sha256 = hashlib.sha256(
+            json.dumps(
+                request_schema,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
         prompt = TEMPLATE.format(
             schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
             data=snapshot.decode(),
@@ -319,6 +328,7 @@ class AiAssistanceGenerator:
             context.context_sha256,
             prompt_hash,
             response_hash,
+            schema_sha256,
             SCHEMA_SHA256,
             self.provider.model,
             self.provider.digest,

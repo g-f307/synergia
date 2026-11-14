@@ -90,10 +90,10 @@ validação posterior continuam recusando fatos não fundamentados. Os hashes do
 incluem esse schema específico do contexto.
 
 Com Ollama 0.40.15 e o modelo `qwen3.5:4b` fixado pelo digest acima, o script
-`scripts/validate_ai_assistance_187.py` gerou `ready`, `origin=model` em 10622 ms.
+`scripts/validate_ai_assistance_187.py` gerou `ready`, `origin=model` em 24133 ms.
 O contexto e o resultado validados estão em
 `docs/evidence/issue-187-real-model-sanitized.json`, SHA-256
-`80f9fa4a3b171726fd2aeefd4e4bad8080ea3336e97eacb3d933a7e194ec36a6`.
+`841e13f156e8b7c4ba5ee87677a96c7d2ca00ae336b980f68f24d9b77a0906c6`.
 A resposta bruta não é armazenada. Este resultado foi obtido após as alterações
 do schema por contexto e substitui as tentativas anteriores como evidência do
 fluxo atual. O fixture completo não foi reexecutado nesta revisão; o timeout
@@ -112,3 +112,15 @@ PYTHONPATH=backend python scripts/validate_ai_assistance_187.py
 Falhas inesperadas geram evento estruturado com tipo e localizações de frames;
 texto da exceção, dados locais, prompt e resposta não são registrados. O fallback
 continua sanitizado e o teste direcionado verifica o evento serializado.
+
+
+## Rastreabilidade do schema efetivo
+
+O resultado registra `schema_sha256` do schema efetivamente enviado ao provider,
+serializado como JSON UTF-8 com chaves ordenadas, sem espaços e sem escape de
+caracteres não ASCII. O hash do schema-base versionado é separado no campo
+`base_schema_sha256`. Para o contexto da evidência, os valores são respectivamente
+`f857866351bcd2d4ec052e8bc2274e46d62c58620a3cf8b0bb964e36c65dbe00` e
+`5b48b0e799ab28ea45ffa0e3b078ce766b8ae65ab7ac94f39a5a741e22916dd9`.
+O teste direcionado captura o schema no provider e comprova a correspondência
+do hash e sua mudança quando as limitações aplicáveis mudam.
