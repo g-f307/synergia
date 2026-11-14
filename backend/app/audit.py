@@ -219,7 +219,13 @@ def sanitize_event(row: dict) -> AuditEvent:
         if isinstance(digest, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
             metadata["model_digest"] = digest
         name = raw.get("model_name")
-        if isinstance(name, str) and safe_identifier(name) != "[redacted]":
+        if (
+            isinstance(name, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}", name)
+            and "://" not in name
+            and ".." not in name
+            and not SENSITIVE.search(name)
+        ):
             metadata["model_name"] = name
         for key, allowed in {
             "state": {"processing", "ready", "insufficient_evidence", "rejected"},

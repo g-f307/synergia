@@ -454,3 +454,28 @@ def test_completion_audit_failure_refuses_download_and_records_failure(
     assert "content-disposition" not in result.headers
     assert "private-audit-store-message" not in result.text
     assert [entry[1] for entry in repository.outcomes] == ["requested", "failed"]
+
+
+def test_assistance_metadata_accepts_local_namespaced_model_and_refuses_urls():
+    valid = sanitize_event(
+        event(
+            origin="ai_assistance_events",
+            metadata={
+                "model_name": "namespace/model:tag",
+                "context_sha256": "a" * 64,
+            },
+        )
+    )
+    assert valid.metadata["model_name"] == "namespace/model:tag"
+    assert valid.metadata["context_sha256"] == "a" * 64
+    unsafe = sanitize_event(
+        event(
+            origin="ai_assistance_events",
+            metadata={
+                "model_name": "https://private.example/model",
+                "rejection_code": "token-secret",
+                "execution_id": "not-a-uuid-private",
+            },
+        )
+    )
+    assert unsafe.metadata == {}
