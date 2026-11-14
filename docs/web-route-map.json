@@ -1,6 +1,6 @@
 {
-  "version": "1.6.0",
-  "issue": 179,
+  "version": "1.7.0",
+  "issue": 185,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
     "loading",
@@ -12,6 +12,7 @@
     "unavailable"
   ],
   "supporting_operations": [
+    {"method": "GET", "path": "/me/ai-assistance-capability", "permission": "execution.read + (ai.assistance.read ou ai.assistance.generate)", "scope": "org", "exposure": "technical", "consumer": "platform", "decision": "Fundacao de capacidade sem exposicao de endpoint/modelo; card de execucao sera integrado na issue #190.", "target": "issue-190", "evidence": ["web/src/app/core/ai-assistance-capability.service.ts"]},
     {"method": "GET", "path": "/audit/events", "permission": "audit.read", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
     {"method": "GET", "path": "/audit/events/export", "permission": "audit.export", "scope": "org/global", "exposure": "deferred", "consumer": "none", "decision": "Consulta e exportacao disponiveis na API com escopo unico e campos sanitizados; interface Angular dedicada adiada.", "target": "future-audit-ui"},
     {"method": "POST", "path": "/auth/logout", "permission": "session.revoke.own", "scope": "own", "exposure": "full", "consumer": "authenticated-shell", "evidence": ["web/src/app/core/session.service.ts"]},

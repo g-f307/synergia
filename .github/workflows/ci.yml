@@ -195,8 +195,25 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Instalar dependências de persistência
         run: pip install -r backend/requirements-dev.txt
+      - name: Usar ferramentas do serviço PostgreSQL 16
+        env:
+          POSTGRES_SERVICE_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          pg_tools_dir="$RUNNER_TEMP/synergia-postgres-tools"
+          mkdir -p "$pg_tools_dir"
+          for pg_tool in psql pg_isready pg_dump pg_restore; do
+            cat > "$pg_tools_dir/$pg_tool" <<EOF
+          #!/usr/bin/env bash
+          exec docker exec -i -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE "$POSTGRES_SERVICE_CONTAINER" "$pg_tool" "\$@"
+          EOF
+            chmod +x "$pg_tools_dir/$pg_tool"
+          done
+          echo "$pg_tools_dir" >> "$GITHUB_PATH"
       - name: Confirmar disponibilidade do PostgreSQL
-        run: pg_isready
+        run: |
+          pg_isready
+          pg_dump --version
+          pg_restore --version
       - name: Validar migrations e dados sintéticos
         run: |
           python scripts/validate_project_assets.py

@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0037": ("ai_assistance_contract", "synergia", ""),
     "0036": ("graylog_contract", "synergia", ""),
     "0035": ("feedback_contract", "synergia", ""),
     "0034": ("audit_export_contract", "synergia", ""),
@@ -75,6 +76,37 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_contract":
+        if not object_exists(connection, "table", "synergia", "permissions"):
+            return False
+        return connection.execute(
+            """WITH expected(role_key, permission_key, role_active) AS (
+                VALUES ('gestor', 'ai.assistance.read', true),
+                       ('gestor', 'ai.assistance.generate', true),
+                       ('analista', 'ai.assistance.read', true),
+                       ('analista', 'ai.assistance.generate', true)
+            ), actual AS (
+                SELECT r.normalized_key, p.normalized_key, r.is_active
+                FROM synergia.role_permissions rp
+                JOIN synergia.roles r ON r.id = rp.role_id
+                JOIN synergia.permissions p ON p.id = rp.permission_id
+                WHERE p.normalized_key IN
+                    ('ai.assistance.read', 'ai.assistance.generate')
+                  AND rp.revoked_at IS NULL
+            )
+            SELECT 1 WHERE EXISTS (
+                SELECT 1 FROM synergia.permission_catalog_versions
+                WHERE version = '1.6.0' AND is_active
+            ) AND (SELECT count(*) FROM synergia.permissions
+            WHERE normalized_key IN ('ai.assistance.read', 'ai.assistance.generate')
+              AND catalog_version = '1.6.0' AND is_reserved AND is_active
+              AND resource_type = 'execution') = 2
+            AND NOT EXISTS (
+                (SELECT * FROM expected EXCEPT SELECT * FROM actual)
+                UNION ALL
+                (SELECT * FROM actual EXCEPT SELECT * FROM expected)
+            )"""
+        ).fetchone() is not None
     if kind == "graylog_contract":
         return connection.execute(
             """SELECT 1 WHERE

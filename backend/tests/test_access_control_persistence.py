@@ -158,7 +158,7 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
             catalog = client.get("/admin/access/permissions", headers=headers)
             assert catalog.status_code == 200
             catalog_items = catalog.json()
-            assert len(catalog_items) == 24
+            assert len(catalog_items) == 26
             assert {item["catalog_version"] for item in catalog_items} == {
                 "1.0.0",
                 "1.1.0",
@@ -166,6 +166,7 @@ def test_access_control_contracts_and_effective_permissions(monkeypatch) -> None
                 "1.3.0",
                 "1.4.0",
                 "1.5.0",
+                "1.6.0",
             }
             assert {
                 "report.generate",
@@ -684,6 +685,11 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
                 (user_id,),
             )
             assert cursor.fetchone()[0] == 3
+            cursor.execute(
+                (ROOT / "database/rollbacks" /
+                 "0037_create_ai_assistance_permissions.down.sql")
+                .read_text(encoding="utf-8"), prepare=False,
+            )
             cursor.execute(
                 (ROOT / "database/rollbacks/0036_create_graylog_delivery.down.sql")
                 .read_text(encoding="utf-8"), prepare=False,

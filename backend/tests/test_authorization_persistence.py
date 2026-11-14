@@ -27,6 +27,8 @@ KEY = "authorization-test-signing-key-with-at-least-32-bytes"
 ROLE_PERMISSIONS = {
     "admin": {"audit.read", "access.admin", "session.revoke.any", "session.revoke.own"},
     "gestor": {
+        "ai.assistance.read",
+        "ai.assistance.generate",
         "dashboard.read",
         "execution.read",
         "business.read",
@@ -51,6 +53,8 @@ ROLE_PERMISSIONS = {
         "approval.decide",
     },
     "analista": {
+        "ai.assistance.read",
+        "ai.assistance.generate",
         "dashboard.read",
         "execution.read",
         "business.read",

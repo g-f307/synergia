@@ -1,7 +1,12 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.access_control import router as access_control_router
+from app.ai_assistance_access import router as ai_assistance_router
+from app.ai_assistance_config import AiAssistanceConfig
+from app.ai_assistance_contract import install_contract_openapi
 from app.ai_quality import router as ai_quality_router
 from app.approvals import router as approvals_router
 from app.audit import router as audit_router
@@ -25,10 +30,11 @@ from app.users import router as users_router
 
 
 def create_app() -> FastAPI:
+    AiAssistanceConfig.from_environment(os.environ)
     configure_logging()
     application = FastAPI(
         title="SYNERGIA API",
-        version="0.11.0",
+        version="0.12.0",
         description=(
             "Contratos estáveis para importação, acompanhamento, consultas, "
             "pendências, relatórios, notificações, reprocessamento, identidade "
@@ -52,6 +58,7 @@ def create_app() -> FastAPI:
     install_error_handlers(application)
     application.include_router(auth_router)
     application.include_router(ai_quality_router)
+    application.include_router(ai_assistance_router)
     application.include_router(audit_router)
     application.include_router(feedback_router)
     application.include_router(imports_router)
@@ -66,6 +73,7 @@ def create_app() -> FastAPI:
     application.include_router(approvals_router)
     application.include_router(observability_router)
 
+    install_contract_openapi(application)
     return application
 
 

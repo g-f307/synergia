@@ -37,6 +37,8 @@ Não há herança implícita nem papel `superuser`.
 | --- | --- | :---: | :---: | :---: | :---: | :---: |
 | `dashboard.read` | indicadores | — | ✓ | ✓ | ✓ | ✓ |
 | `execution.read` | execução, classificação e pendência | — | ✓ | ✓ | ✓ | ✓ |
+| `ai.assistance.read` | assistência informativa da execução | — | ✓ | ✓ | — | — |
+| `ai.assistance.generate` | solicitação de assistência da execução | — | ✓ | ✓ | — | — |
 | `business.read` | Workorder, lote, serial e consolidado | — | ✓ | ✓ | ✓ | ✓ |
 | `pending.read` | fila e detalhe de pendências | — | ✓ | ✓ | ✓ | ✓ |
 | `import.create` | arquivo de entrada | — | ✓ | — | ✓ | — |
@@ -111,6 +113,7 @@ também dependerá da política de rede da TI.
 | `GET /imports/{execution_id}/normalized-data` | `artifact.read` | dados normalizados | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/pipeline-summary` | `import.read` | resumo do pipeline | `org` | gestor, analista, operador |
 | `GET /executions` | `execution.read` | catálogo de execuções | `org` | gestor, analista, operador, consulta |
+| `GET /me/ai-assistance-capability` | `execution.read + (ai.assistance.read ou ai.assistance.generate)` | capacidade sem configuração interna | `org` | gestor, analista |
 | `GET /ai/quality/scenarios` | `execution.read` | cenários de qualidade exclusivamente sintéticos | `synthetic` | gestor, analista, operador, consulta |
 | `POST /ai/quality/scenarios/{scenario_id}/explanations` | `execution.read` | explicação assistida sem mutação ou dados operacionais | `synthetic` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}` | `execution.read` | execução | `org` | gestor, analista, operador, consulta |
