@@ -1,0 +1,84 @@
+{
+  "contract_version": "1.0.0",
+  "subject": {
+    "execution_id": "00000000-0000-4000-8000-000000000186",
+    "organization_id": "00000000-0000-4000-8000-000000000001",
+    "source": "OWM",
+    "status": "completed",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-14T00:00:00.000000Z",
+    "finished_at": "2026-11-14T00:00:01.000000Z"
+  },
+  "lifecycle": "completed",
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 1,
+    "files_rejected": 0,
+    "rows_read": 0,
+    "valid_records": 0,
+    "rejected_records": 0,
+    "normalized_records": 0,
+    "workorders": 0,
+    "lots": 0,
+    "serials": 0,
+    "classifications": 1,
+    "pending_items": 1,
+    "errors": 1,
+    "warnings": 0
+  },
+  "divergences": [
+    {
+      "ref_id": "DIV-f3d709147f6e374e760f468945a36060",
+      "severity": "error",
+      "code": "invalid_value",
+      "scope": "record",
+      "occurred_at": "2026-11-14T00:00:00.000000Z"
+    }
+  ],
+  "pending_items": [
+    {
+      "ref_id": "PEN-76d06cd23d629ce8e2a2ec3e55b69bff",
+      "rule_id": "oqc_pending",
+      "status": "open",
+      "priority_score": null,
+      "created_at": "2026-11-14T00:00:00.000000Z"
+    }
+  ],
+  "classifications": [
+    {
+      "ref_id": "CLA-f40c5c3d18bea87c8757c076e47b803d",
+      "rule_id": "oqc_pending",
+      "state": "active",
+      "data_quality": "partial",
+      "priority_score": 40,
+      "classified_at": "2026-11-14T00:00:00.000000Z"
+    }
+  ],
+  "evidences": [
+    {
+      "ref_id": "EVI-d669015277c14a883e979adc97c7c6f0",
+      "safe_name": "evidence-d669015277c14a883e979adc97c7c6f0.csv",
+      "evidence_type": "source_file",
+      "media_type": "text/csv",
+      "size_bytes": null,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "available": true
+    }
+  ],
+  "state_history": [
+    {
+      "ref_id": "HIS-0aed57c6a5e7d261080cbbcd4b3b1687",
+      "from_state": "validating",
+      "to_state": "completed",
+      "state_version": 0,
+      "occurred_at": "2026-11-14T00:00:00.000000Z"
+    }
+  ],
+  "sufficiency": "sufficient",
+  "truncated_sections": [],
+  "generated_at": "2026-11-14T00:00:00.000000Z",
+  "context_sha256": "ec7c00e363f49c7c60e145324ff996d9119f8d8b41749e2f213323e0cec4e917"
+}

@@ -1,0 +1,666 @@
+{
+  "$defs": {
+    "ContextClassification": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}$",
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "enum": [
+            "aging",
+            "container_impact",
+            "long_term_hold",
+            "missing_reason",
+            "oqc_hold",
+            "oqc_pass",
+            "oqc_pending",
+            "post_release_hold",
+            "pre_release_pending",
+            "rework",
+            "ship_block",
+            "source_divergence",
+            null
+          ],
+          "title": "Rule Id"
+        },
+        "state": {
+          "enum": [
+            "active",
+            "closed"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "data_quality": {
+          "enum": [
+            "complete",
+            "partial"
+          ],
+          "title": "Data Quality",
+          "type": "string"
+        },
+        "priority_score": {
+          "minimum": 0,
+          "title": "Priority Score",
+          "type": "integer"
+        },
+        "classified_at": {
+          "format": "date-time",
+          "title": "Classified At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_id",
+        "rule_id",
+        "state",
+        "data_quality",
+        "priority_score",
+        "classified_at"
+      ],
+      "title": "ContextClassification",
+      "type": "object"
+    },
+    "ContextCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "minimum": 0,
+          "title": "Files",
+          "type": "integer"
+        },
+        "files_received": {
+          "minimum": 0,
+          "title": "Files Received",
+          "type": "integer"
+        },
+        "files_accepted": {
+          "minimum": 0,
+          "title": "Files Accepted",
+          "type": "integer"
+        },
+        "files_rejected": {
+          "minimum": 0,
+          "title": "Files Rejected",
+          "type": "integer"
+        },
+        "rows_read": {
+          "minimum": 0,
+          "title": "Rows Read",
+          "type": "integer"
+        },
+        "valid_records": {
+          "minimum": 0,
+          "title": "Valid Records",
+          "type": "integer"
+        },
+        "rejected_records": {
+          "minimum": 0,
+          "title": "Rejected Records",
+          "type": "integer"
+        },
+        "normalized_records": {
+          "minimum": 0,
+          "title": "Normalized Records",
+          "type": "integer"
+        },
+        "workorders": {
+          "minimum": 0,
+          "title": "Workorders",
+          "type": "integer"
+        },
+        "lots": {
+          "minimum": 0,
+          "title": "Lots",
+          "type": "integer"
+        },
+        "serials": {
+          "minimum": 0,
+          "title": "Serials",
+          "type": "integer"
+        },
+        "classifications": {
+          "minimum": 0,
+          "title": "Classifications",
+          "type": "integer"
+        },
+        "pending_items": {
+          "minimum": 0,
+          "title": "Pending Items",
+          "type": "integer"
+        },
+        "errors": {
+          "minimum": 0,
+          "title": "Errors",
+          "type": "integer"
+        },
+        "warnings": {
+          "minimum": 0,
+          "title": "Warnings",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "files",
+        "files_received",
+        "files_accepted",
+        "files_rejected",
+        "rows_read",
+        "valid_records",
+        "rejected_records",
+        "normalized_records",
+        "workorders",
+        "lots",
+        "serials",
+        "classifications",
+        "pending_items",
+        "errors",
+        "warnings"
+      ],
+      "title": "ContextCounts",
+      "type": "object"
+    },
+    "ContextDivergence": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}$",
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "enum": [
+            "duplicate_record",
+            "empty_file",
+            "inconsistent_quantity",
+            "invalid_date",
+            "invalid_format",
+            "invalid_header",
+            "invalid_number",
+            "invalid_quantity",
+            "invalid_sheet",
+            "invalid_type",
+            "invalid_value",
+            "missing_required_column",
+            "missing_required_value",
+            "missing_sheet",
+            "quantity_mismatch",
+            "required_field",
+            "source_divergence",
+            "unknown_column",
+            null
+          ],
+          "title": "Code"
+        },
+        "scope": {
+          "enum": [
+            "file",
+            "structure",
+            "record"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_id",
+        "severity",
+        "code",
+        "scope",
+        "occurred_at"
+      ],
+      "title": "ContextDivergence",
+      "type": "object"
+    },
+    "ContextEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}$",
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "safe_name": {
+          "pattern": "^evidence-[a-f0-9]{32}\\.(csv|json|xlsx|bin)$",
+          "title": "Safe Name",
+          "type": "string"
+        },
+        "evidence_type": {
+          "const": "source_file",
+          "title": "Evidence Type",
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "text/csv",
+            "application/json",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/octet-stream"
+          ],
+          "title": "Media Type",
+          "type": "string"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Size Bytes"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "available": {
+          "title": "Available",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ref_id",
+        "safe_name",
+        "evidence_type",
+        "media_type",
+        "size_bytes",
+        "sha256",
+        "available"
+      ],
+      "title": "ContextEvidence",
+      "type": "object"
+    },
+    "ContextHistory": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}$",
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "from_state": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "validating",
+                "validation_failed",
+                "normalizing",
+                "consolidating",
+                "applying_rules",
+                "completed",
+                "completed_with_errors",
+                "failed",
+                "reprocessing",
+                "duplicate",
+                "cancelled"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "From State"
+        },
+        "to_state": {
+          "enum": [
+            "pending",
+            "validating",
+            "validation_failed",
+            "normalizing",
+            "consolidating",
+            "applying_rules",
+            "completed",
+            "completed_with_errors",
+            "failed",
+            "reprocessing",
+            "duplicate",
+            "cancelled"
+          ],
+          "title": "To State",
+          "type": "string"
+        },
+        "state_version": {
+          "minimum": 0,
+          "title": "State Version",
+          "type": "integer"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_id",
+        "from_state",
+        "to_state",
+        "state_version",
+        "occurred_at"
+      ],
+      "title": "ContextHistory",
+      "type": "object"
+    },
+    "ContextPending": {
+      "additionalProperties": false,
+      "properties": {
+        "ref_id": {
+          "pattern": "^(DIV|PEN|CLA|EVI|HIS)-[a-f0-9]{32}$",
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "enum": [
+            "aging",
+            "container_impact",
+            "long_term_hold",
+            "missing_reason",
+            "oqc_hold",
+            "oqc_pass",
+            "oqc_pending",
+            "post_release_hold",
+            "pre_release_pending",
+            "rework",
+            "ship_block",
+            "source_divergence",
+            null
+          ],
+          "title": "Rule Id"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "resolved",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "priority_score": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Priority Score"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref_id",
+        "rule_id",
+        "status",
+        "priority_score",
+        "created_at"
+      ],
+      "title": "ContextPending",
+      "type": "object"
+    },
+    "ContextSubject": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_id": {
+          "format": "uuid",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "organization_id": {
+          "format": "uuid",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "N-FP",
+                "OWM",
+                "GMES/OQC",
+                "TMS",
+                "WO Status",
+                "Total Decision"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "validating",
+            "validation_failed",
+            "normalizing",
+            "consolidating",
+            "applying_rules",
+            "completed",
+            "completed_with_errors",
+            "failed",
+            "reprocessing",
+            "duplicate",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "attempt": {
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "pipeline_version": {
+          "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}$",
+          "title": "Pipeline Version",
+          "type": "string"
+        },
+        "rule_catalog_version": {
+          "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}$",
+          "title": "Rule Catalog Version",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finished At"
+        }
+      },
+      "required": [
+        "execution_id",
+        "organization_id",
+        "source",
+        "status",
+        "attempt",
+        "pipeline_version",
+        "rule_catalog_version",
+        "started_at",
+        "finished_at"
+      ],
+      "title": "ContextSubject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "subject": {
+      "$ref": "#/$defs/ContextSubject"
+    },
+    "lifecycle": {
+      "enum": [
+        "completed",
+        "partial",
+        "failed"
+      ],
+      "title": "Lifecycle",
+      "type": "string"
+    },
+    "counts": {
+      "$ref": "#/$defs/ContextCounts"
+    },
+    "divergences": {
+      "items": {
+        "$ref": "#/$defs/ContextDivergence"
+      },
+      "maxItems": 20,
+      "title": "Divergences",
+      "type": "array"
+    },
+    "pending_items": {
+      "items": {
+        "$ref": "#/$defs/ContextPending"
+      },
+      "maxItems": 20,
+      "title": "Pending Items",
+      "type": "array"
+    },
+    "classifications": {
+      "items": {
+        "$ref": "#/$defs/ContextClassification"
+      },
+      "maxItems": 20,
+      "title": "Classifications",
+      "type": "array"
+    },
+    "evidences": {
+      "items": {
+        "$ref": "#/$defs/ContextEvidence"
+      },
+      "maxItems": 20,
+      "title": "Evidences",
+      "type": "array"
+    },
+    "state_history": {
+      "items": {
+        "$ref": "#/$defs/ContextHistory"
+      },
+      "maxItems": 10,
+      "title": "State History",
+      "type": "array"
+    },
+    "sufficiency": {
+      "enum": [
+        "sufficient",
+        "insufficient"
+      ],
+      "title": "Sufficiency",
+      "type": "string"
+    },
+    "truncated_sections": {
+      "items": {
+        "enum": [
+          "divergences",
+          "pending_items",
+          "classifications",
+          "evidences",
+          "state_history"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "title": "Truncated Sections",
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "context_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Context Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "subject",
+    "lifecycle",
+    "counts",
+    "divergences",
+    "pending_items",
+    "classifications",
+    "evidences",
+    "state_history",
+    "sufficiency",
+    "truncated_sections",
+    "generated_at",
+    "context_sha256"
+  ],
+  "title": "ExecutionAssistanceContext",
+  "type": "object"
+}

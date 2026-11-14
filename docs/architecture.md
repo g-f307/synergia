@@ -1,5 +1,9 @@
 # Arquitetura vigente
 
+O serviço interno da #186 monta o [contexto determinístico de assistência
+1.0.0](architecture/ai-assistance-context-1.0.0.md), com leitura por organização,
+snapshot consistente e orçamento de 8 KiB, independente do runtime de IA.
+
 Contrato incremental de assistência informativa: [ADR 0002](architecture/0002-ai-assistance.md)
 (#185). A fundação publica contrato, configuração e capacidade; geração operacional
 permanece desabilitada até a integração das demais issues da milestone 10.
