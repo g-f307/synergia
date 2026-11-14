@@ -1,0 +1,51 @@
+# Persistência interna da assistência por execução
+
+A migration `0038` cria `ai_assistances` e o histórico imutável
+`ai_assistance_events`. Cada resultado pertence à organização e à execução;
+consultas da aplicação devem verificar a permissão e reconstruir o conjunto de
+referências autorizadas antes de chamar o repositório. Não há rota nesta entrega.
+O repositório valida novamente o contrato e as referências em leitura, e registra
+falha de integridade sem devolver o resultado inválido.
+
+```text
+execução + organização ── reserva (processing) ── conclusão
+                              │                  ├─ ready (model)
+                              │                  ├─ insufficient_evidence (deterministic)
+                              │                  └─ rejected (deterministic)
+                              └─ expiração/retenção ── remoção
+                                        └─ evento imutável → auditoria → fila Graylog
+```
+
+A chave única inclui organização, execução, hashes de contexto/prompt, digest e
+versão; valores nulos de digest são comparados como iguais. Reserva e finalização
+são transações distintas: nunca mantenha uma conexão aberta para inferência. Uma
+reserva abandonada expira após dois minutos e pode ser substituída; o UUID antigo
+não pode finalizar a nova reserva. A orquestração da #189 deve chamar `find` antes
+de reservar e resolver o conflito de reserva sem nova inferência.
+
+A política padrão é 30 dias, com faixa de 1 a 365; quando habilitada em
+homologação ou produção a variável `SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS` é
+obrigatória. Um agendador externo executa o worker finito com a mesma política
+operacional dos demais workers: uma invocação processa no máximo um lote, sem
+laço permanente. A identidade técnica informada deve existir em `identity_users`.
+
+```bash
+PYTHONPATH=backend python scripts/expire_ai_assistance.py --actor-id <UUID-TECNICO> --batch-size 100 --dry-run
+PYTHONPATH=backend python scripts/expire_ai_assistance.py --actor-id <UUID-TECNICO> --batch-size 100
+```
+
+O primeiro comando não exclui dados; ambos mostram somente quantidade e intervalo
+de expiração. A seleção usa `FOR UPDATE SKIP LOCKED`; várias invocações podem ser
+repetidas até esgotar os vencidos. Os eventos persistem sob a retenção de auditoria.
+Não inclua credenciais em argumentos, comandos de evidência ou saída. Configure
+`DATABASE_URL` pelo mecanismo seguro do ambiente.
+
+A tabela guarda somente resultado validado e metadados de proveniência; prompt,
+contexto completo e resposta bruta não são gravados. Os eventos registram apenas
+identificadores, tempos, estados, modelo, hashes e códigos; o trigger grava uma
+projeção no mecanismo de fila do Graylog na mesma transação. O envio à infraestrutura
+externa depende da configuração e operação do worker existente.
+
+Para reverter, use `database/rollbacks/0038_create_ai_assistance_persistence.down.sql`
+conforme o procedimento de rollback de migrations; a reversão remove os resultados
+e eventos da assistência, portanto exige backup e decisão operacional prévia.
