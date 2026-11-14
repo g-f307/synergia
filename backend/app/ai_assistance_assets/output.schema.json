@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "explanation": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "explanation",
+        "evidence_refs"
+      ],
+      "title": "Finding",
+      "type": "object"
+    }
+  },
+  "$id": "urn:synergia:ai-assistance:model-output:1.0.0",
+  "additionalProperties": false,
+  "properties": {
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "maxItems": 5,
+      "title": "Findings",
+      "type": "array"
+    },
+    "human_checks": {
+      "items": {
+        "maxLength": 600,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Human Checks",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "maxLength": 600,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 5,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "summary": {
+      "maxLength": 600,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "summary",
+    "findings",
+    "human_checks",
+    "limitations"
+  ],
+  "title": "ModelOutput",
+  "type": "object"
+}

@@ -1,0 +1,81 @@
+{
+  "context": {
+    "contract_version": "1.0.0",
+    "subject": {
+      "execution_id": "00000000-0000-4000-8000-000000000186",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "source": "OWM",
+      "status": "completed",
+      "attempt": 1,
+      "pipeline_version": "1.0.0",
+      "rule_catalog_version": "1.0.0",
+      "started_at": "2026-11-14T00:00:00.000000Z",
+      "finished_at": "2026-11-14T00:00:01.000000Z"
+    },
+    "lifecycle": "completed",
+    "counts": {
+      "files": 1,
+      "files_received": 1,
+      "files_accepted": 1,
+      "files_rejected": 0,
+      "rows_read": 0,
+      "valid_records": 0,
+      "rejected_records": 0,
+      "normalized_records": 0,
+      "workorders": 0,
+      "lots": 0,
+      "serials": 0,
+      "classifications": 1,
+      "pending_items": 1,
+      "errors": 1,
+      "warnings": 0
+    },
+    "divergences": [
+      {
+        "ref_id": "DIV-f3d709147f6e374e760f468945a36060",
+        "severity": "error",
+        "code": "invalid_value",
+        "scope": "record",
+        "occurred_at": "2026-11-14T00:00:00.000000Z"
+      }
+    ],
+    "pending_items": [],
+    "classifications": [],
+    "evidences": [],
+    "state_history": [],
+    "sufficiency": "sufficient",
+    "truncated_sections": [],
+    "generated_at": "2026-11-14T00:00:00.000000Z",
+    "context_sha256": "841bd8fd503bd3c5adebaaef6cbd8c254427b230ecfac4438c90026ac1ed6ee3"
+  },
+  "result": {
+    "state": "ready",
+    "origin": "model",
+    "summary": "A execução registra 1 erro, 0 avisos e 1 pendência.",
+    "findings": [
+      {
+        "title": "Registros disponíveis",
+        "explanation": "Há registros disponíveis para conferência.",
+        "evidence_refs": [
+          "DIV-f3d709147f6e374e760f468945a36060"
+        ]
+      }
+    ],
+    "human_checks": [
+      "Conferência humana das referências disponíveis."
+    ],
+    "limitations": [
+      "A conferência humana das evidências é necessária.",
+      "Há dados ausentes ou indisponíveis no contexto."
+    ],
+    "rejection_code": null,
+    "context_sha256": "841bd8fd503bd3c5adebaaef6cbd8c254427b230ecfac4438c90026ac1ed6ee3",
+    "prompt_sha256": "c5f8a964d379837bc06226edc822f8143ec3525d199aea24d505cc47ec69f253",
+    "response_sha256": "7149bb00c1305fdbac80353191eda882c7adcbc56207817015f080446fb4b6b7",
+    "schema_sha256": "f857866351bcd2d4ec052e8bc2274e46d62c58620a3cf8b0bb964e36c65dbe00",
+    "base_schema_sha256": "5b48b0e799ab28ea45ffa0e3b078ce766b8ae65ab7ac94f39a5a741e22916dd9",
+    "model": "qwen3.5:4b",
+    "digest": "sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "elapsed_ms": 24133
+  }
+}

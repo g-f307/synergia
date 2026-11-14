@@ -44,6 +44,7 @@ SAFE_FIELDS = frozenset(
         "route",
         "service",
         "source",
+        "stack_trace",
         "status_code",
         "timestamp",
     }
