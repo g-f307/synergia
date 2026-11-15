@@ -22,6 +22,7 @@ from app.ai_assistance_contract import StrictContract, plain_text
 from app.ai_assistance_fallback import deterministic_fallback, required_limitations
 from app.ai_assistance_provider import AiModelProvider, ProviderError
 from app.observability.metrics import REGISTRY
+from app.observability.telemetry import safe_log
 
 _ASSETS = Path(__file__).parent / "ai_assistance_assets"
 SYSTEM = (_ASSETS / "system.txt").read_text(encoding="utf-8")
@@ -42,31 +43,15 @@ DURATION = Histogram(
 
 
 def _log_unexpected_exception(exc: Exception) -> None:
-    """Log frame locations and type, never exception text, source lines or locals."""
-    frames = []
-    traceback = exc.__traceback__
-    while traceback is not None and len(frames) < 32:
-        code = traceback.tb_frame.f_code
-        filename = Path(code.co_filename).name
-        function = code.co_name
-        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", filename):
-            filename = "unknown"
-        if not re.fullmatch(r"[A-Za-z0-9_.<>-]{1,128}", function):
-            function = "unknown"
-        frames.append(f"{filename}:{traceback.tb_lineno}:{function}")
-        traceback = traceback.tb_next
+    """Log only a sanitized exception type, without stack or exception content."""
     exception_type = type(exc).__name__
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", exception_type):
         exception_type = "Exception"
-    logging.getLogger("synergia.telemetry").error(
+    safe_log(
+        logging.ERROR,
         "ai.assistance.unexpected_error",
-        extra={
-            "synergia_fields": {
-                "exception_type": exception_type,
-                "stack_trace": " | ".join(frames),
-                "error_code": "internal_error",
-            }
-        },
+        exception_type=exception_type,
+        error_code="internal_error",
     )
 
 

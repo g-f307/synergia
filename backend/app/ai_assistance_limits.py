@@ -1,11 +1,12 @@
 """Shared sliding rate and in-flight limits for assistance requests."""
 
-from contextlib import contextmanager
+import logging
 from math import ceil
 
 import psycopg
 
 from app.errors import ApiError
+from app.observability.telemetry import safe_log
 from app.rate_limiting import PostgresRateLimiter
 
 
@@ -22,6 +23,7 @@ class AssistanceLimits:
         return digest, lock
 
     def consume(self, actor, organization_id):
+        blocked = None
         keys = [
             (kind, *self._key(kind, value))
             for kind, value in (
@@ -48,34 +50,35 @@ class AssistanceLimits:
                     (kind, digest),
                 ).fetchone()
                 if count >= 10:
-                    raise ApiError(
-                        429,
-                        "rate_limit_exceeded",
-                        "Limite de solicitações excedido",
-                        headers={"Retry-After": str(max(1, ceil(retry)))},
+                    blocked = (kind, digest, max(1, ceil(retry)))
+                    connection.execute(
+                        """INSERT INTO synergia.rate_limit_events
+                        (operation,dimension,key_hash,retry_after_seconds,
+                         correlation_id,method,route_group)
+                        VALUES ('ai_assistance_generate',%s,%s,%s,%s,'POST',
+                                'ai_assistance_generate')""",
+                        (*blocked, actor.correlation_id),
                     )
-            for kind, digest, _ in keys:
-                connection.execute(
-                    """INSERT INTO synergia.ai_assistance_rate_attempts
-                    (dimension, key_hash) VALUES (%s, %s)""",
-                    (kind, digest),
-                )
-
-    @contextmanager
-    def generation(self, actor, organization_id):
-        self.consume(actor, organization_id)
-        # Session locks are shared across workers with no open transaction while
-        # inference runs. Closing the connection releases locks on all exits.
-        with psycopg.connect(self.database_url, autocommit=True) as connection:
-            for kind, value in (
-                ("user", actor.user_id),
-                ("organization", organization_id),
-            ):
-                _, key = self._key(f"flight-{kind}", value)
-                if not connection.execute(
-                    "SELECT pg_try_advisory_lock(%s)", (key,)
-                ).fetchone()[0]:
-                    raise ApiError(
-                        409, "ai_assistance_in_progress", "Geração em andamento"
+                    break
+            if blocked is None:
+                for kind, digest, _ in keys:
+                    connection.execute(
+                        """INSERT INTO synergia.ai_assistance_rate_attempts
+                        (dimension, key_hash) VALUES (%s, %s)""",
+                        (kind, digest),
                     )
-            yield
+        if blocked is not None:
+            safe_log(
+                logging.WARNING,
+                "security.rate_limit.rejected",
+                operation="ai_assistance_generate",
+                dimension=blocked[0],
+                correlation_id=str(actor.correlation_id),
+                retry_after_seconds=blocked[2],
+            )
+            raise ApiError(
+                429,
+                "rate_limit_exceeded",
+                "Limite de solicitações excedido",
+                headers={"Retry-After": str(blocked[2])},
+            )

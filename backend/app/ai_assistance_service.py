@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import time
-from contextlib import nullcontext
 from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
@@ -80,21 +79,9 @@ class AiAssistanceService:
 
     def generate(self, actor: ActorContext, execution_id: UUID):
         started = time.monotonic()
-        restricted = _scoped_actor(actor, "ai.assistance.generate")
-        organization = self.contexts.organization(restricted, execution_id)
-        if organization is None:
-            raise _not_found_for_scope()
-        guard = (
-            self.limits.generation(actor, organization)
-            if self.limits is not None
-            else nullcontext()
-        )
-        with guard:
-            context = self._context(actor, execution_id, "generate")
-            if context.subject.organization_id != organization:
-                raise _not_found_for_scope()
-            context_ms = int((time.monotonic() - started) * 1000)
-            return self._generate(actor, execution_id, context, started, context_ms)
+        context = self._context(actor, execution_id, "generate")
+        context_ms = int((time.monotonic() - started) * 1000)
+        return self._generate(actor, execution_id, context, started, context_ms)
 
     def _generate(self, actor, execution_id, context, started, context_ms):
         _, _, prompt_hash, _ = prepare_prompt(context)
@@ -113,9 +100,11 @@ class AiAssistanceService:
             )
             if existing is not None:
                 return existing
+            if self.limits is not None:
+                self.limits.consume(actor, key.organization_id)
             try:
                 assistance_id = self.repository.reserve(
-                    key, actor.user_id, actor.correlation_id
+                    key, actor.user_id, actor.correlation_id, enforce_inflight=True
                 )
             except AssistancePersistenceError as exc:
                 if str(exc) != "conflict_or_not_found":

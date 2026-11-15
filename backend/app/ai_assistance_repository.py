@@ -197,8 +197,36 @@ class PostgresAiAssistanceRepository:
         self.database_url = database_url
         self.retention_days = retention_days
 
-    def reserve(self, key: AssistanceKey, actor_id: UUID, correlation_id: UUID):
+    def reserve(
+        self,
+        key: AssistanceKey,
+        actor_id: UUID,
+        correlation_id: UUID,
+        *,
+        enforce_inflight: bool = False,
+    ):
         with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
+            # Serialize the short reservation decision across both dimensions.
+            # Transaction-scoped locks are released before inference starts.
+            if enforce_inflight:
+                for value in sorted(
+                    (
+                        f"assistance-org:{key.organization_id}",
+                        f"assistance-user:{actor_id}",
+                    )
+                ):
+                    connection.execute(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                        (value,),
+                    )
+                busy = connection.execute(
+                    """SELECT 1 FROM synergia.ai_assistances
+                    WHERE state='processing' AND reservation_until > clock_timestamp()
+                      AND (organization_id=%s OR requested_by=%s) LIMIT 1""",
+                    (key.organization_id, actor_id),
+                ).fetchone()
+                if busy is not None:
+                    raise AssistancePersistenceError("conflict_or_not_found")
             abandoned = connection.execute(
                 """DELETE FROM synergia.ai_assistances a
                 USING synergia.executions e

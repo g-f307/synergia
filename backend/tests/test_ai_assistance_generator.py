@@ -284,8 +284,7 @@ def test_unexpected_error_logged_with_sanitized_trace(caplog):
     )
     payload = json.loads(SafeJsonFormatter().format(record))
     assert payload["exception_type"] == "RuntimeError"
-    assert "generate" in payload["stack_trace"]
-    assert "test_ai_assistance_generator.py" in payload["stack_trace"]
+    assert "stack_trace" not in payload
     assert payload["error_code"] == "internal_error"
     assert secret not in json.dumps(payload)
     assert secret not in repr(result)

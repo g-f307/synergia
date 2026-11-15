@@ -37,7 +37,7 @@ class Repository:
     def latest(self, *args, **kwargs):
         return self.result
 
-    def reserve(self, *args):
+    def reserve(self, *args, **kwargs):
         if self.conflict:
             raise AssistancePersistenceError("conflict_or_not_found")
         self.reservations += 1

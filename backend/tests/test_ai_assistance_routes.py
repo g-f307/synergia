@@ -143,3 +143,153 @@ def test_client_cancellation_does_not_interrupt_worker(client, monkeypatch):
         assert await asyncio.to_thread(finished.wait, 2)
 
     asyncio.run(scenario())
+
+
+def test_rejected_output_fallback_over_http(client):
+    http, _, _ = client
+    ctx = context()
+    provider = Fake(b'{"private_raw":"secret"}')
+    service = AiAssistanceService(
+        Contexts(ctx), AiAssistanceGenerator(provider), Repository()
+    )
+    http.app.dependency_overrides[get_actor_context] = lambda: make_actor(
+        ctx, "ai.assistance.generate"
+    )
+    http.app.dependency_overrides[get_assistance_service] = lambda: service
+    response = http.post(f"/executions/{ctx.subject.execution_id}/ai-assistance")
+    assert response.status_code == 200 and response.json()["state"] == "rejected"
+    assert "private_raw" not in response.text and provider.calls == 1
+
+
+def test_provider_unavailable_over_http(client):
+    from app.ai_assistance_provider import ProviderError
+
+    http, _, _ = client
+    ctx = context()
+    provider = Fake(ProviderError("runtime_unavailable"))
+    service = AiAssistanceService(
+        Contexts(ctx), AiAssistanceGenerator(provider), Repository()
+    )
+    http.app.dependency_overrides[get_actor_context] = lambda: make_actor(
+        ctx, "ai.assistance.generate"
+    )
+    http.app.dependency_overrides[get_assistance_service] = lambda: service
+    response = http.post(f"/executions/{ctx.subject.execution_id}/ai-assistance")
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "ai_assistance_runtime_unavailable"
+    assert provider.calls == 1
+
+
+@pytest.mark.parametrize(
+    "status,code",
+    [
+        (409, "ai_assistance_in_progress"),
+        (429, "rate_limit_exceeded"),
+        (500, "ai_assistance_integrity_error"),
+        (503, "ai_assistance_runtime_unavailable"),
+    ],
+)
+def test_failure_codes_through_http(client, monkeypatch, status, code):
+    from app.errors import ApiError
+
+    http, ctx, _ = client
+    service = http.app.dependency_overrides[get_assistance_service]()
+
+    def fail(*args):
+        raise ApiError(
+            status,
+            code,
+            "Falha segura",
+            headers={"Retry-After": "30"} if status == 429 else None,
+        )
+
+    monkeypatch.setattr(service, "generate", fail)
+    response = http.post(f"/executions/{ctx.subject.execution_id}/ai-assistance")
+    assert response.status_code == status and response.json()["error"]["code"] == code
+    if status == 429:
+        assert response.headers["retry-after"] == "30"
+
+
+def test_latest_denials_are_audited(client):
+    http, ctx, provider = client
+    denials = []
+    http.app.dependency_overrides[get_authorization_repository] = lambda: type(
+        "Audit", (), {"audit_denial": lambda self, *args: denials.append(args)}
+    )()
+    path = f"/executions/{ctx.subject.execution_id}/ai-assistance/latest"
+    http.app.dependency_overrides[get_actor_context] = lambda: make_actor(ctx)
+    assert http.get(path).status_code == 403
+    actor = make_actor(ctx, "ai.assistance.read")
+    actor.permissions["ai.assistance.read"] = frozenset({uuid4()})
+    http.app.dependency_overrides[get_actor_context] = lambda: actor
+    assert http.get(path).status_code == 404
+    assert len(denials) == 2 and provider.calls == 0
+
+
+def test_get_disabled(monkeypatch):
+    monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "false")
+    with TestClient(create_app()) as http:
+        response = http.get(f"/executions/{uuid4()}/ai-assistance/latest")
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "ai_assistance_disabled"
+
+
+def test_structured_logs_include_correlation_without_raw_error(
+    client, monkeypatch, caplog
+):
+    import logging
+
+    from app.observability.telemetry import SafeJsonFormatter
+
+    http, ctx, _ = client
+    service = http.app.dependency_overrides[get_assistance_service]()
+    logger = logging.getLogger("synergia.telemetry")
+    logger.addHandler(caplog.handler)
+    correlation = str(uuid4())
+    try:
+        success = http.post(
+            f"/executions/{ctx.subject.execution_id}/ai-assistance",
+            headers={"X-Correlation-ID": correlation},
+        )
+        assert success.status_code == 200
+
+        ctx = context()
+        service = AiAssistanceService(
+            Contexts(ctx),
+            AiAssistanceGenerator(
+                Fake(RuntimeError("secret endpoint http://private.invalid/raw"))
+            ),
+            Repository(),
+        )
+        http.app.dependency_overrides[get_actor_context] = lambda: make_actor(
+            ctx, "ai.assistance.generate"
+        )
+        http.app.dependency_overrides[get_assistance_service] = lambda: service
+        response = http.post(
+            f"/executions/{ctx.subject.execution_id}/ai-assistance",
+            headers={"X-Correlation-ID": correlation},
+        )
+    finally:
+        logger.removeHandler(caplog.handler)
+    assert response.status_code == 503
+    records = [
+        r
+        for r in caplog.records
+        if r.msg
+        in (
+            "http.request.failed",
+            "http.request.completed",
+            "ai.assistance.unexpected_error",
+        )
+    ]
+    assert records
+    assert {r.synergia_fields.get("status_code") for r in records} >= {200, 503}
+    rendered = "\n".join(SafeJsonFormatter().format(r) for r in records)
+    assert correlation in rendered
+    assert any(
+        r.msg == "ai.assistance.unexpected_error"
+        and r.synergia_fields.get("correlation_id") == correlation
+        for r in records
+    )
+    assert "secret" not in rendered and "private.invalid" not in rendered
+    assert "stack_trace" not in rendered
