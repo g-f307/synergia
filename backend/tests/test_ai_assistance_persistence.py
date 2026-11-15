@@ -35,6 +35,11 @@ def test_rollback_preserves_history_and_disables_permissions():
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         connection.execute(
             (Path(__file__).resolve().parents[2] / "database/rollbacks" /
+             "0039_create_ai_assistance_rate_attempts.down.sql").read_text(),
+            prepare=False,
+        )
+        connection.execute(
+            (Path(__file__).resolve().parents[2] / "database/rollbacks" /
              "0038_create_ai_assistance_persistence.down.sql").read_text(),
             prepare=False,
         )

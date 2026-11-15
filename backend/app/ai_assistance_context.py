@@ -142,6 +142,19 @@ class ExecutionContextBuilder:
     def __init__(self, reader: ContextReader):
         self.reader = reader
 
+    def organization(self, actor: ActorContext, execution_id: UUID) -> UUID | None:
+        """Resolve only a subject visible in the already restricted actor scope."""
+        with self.reader.snapshot() as session:
+            row = session.subject(
+                str(execution_id), actor.scope_filter("execution.read")
+            )
+            if row is None or row["organization_id"] is None:
+                return None
+            organization = row["organization_id"]
+            return (
+                organization if actor.allows("execution.read", organization) else None
+            )
+
     def build(
         self,
         actor: ActorContext,

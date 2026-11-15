@@ -463,6 +463,11 @@ def test_rollback_preserves_new_templates_used_by_notification_and_delivery(
         try:
             cursor.execute(
                 (Path(__file__).resolve().parents[2] / "database/rollbacks" /
+                 "0039_create_ai_assistance_rate_attempts.down.sql").read_text(),
+                prepare=False,
+            )
+            cursor.execute(
+                (Path(__file__).resolve().parents[2] / "database/rollbacks" /
                  "0038_create_ai_assistance_persistence.down.sql").read_text(),
                 prepare=False,
             )

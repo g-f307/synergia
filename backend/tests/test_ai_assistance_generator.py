@@ -1,11 +1,16 @@
 import json
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
 
 from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_fallback import required_limitations
-from app.ai_assistance_generator import AiAssistanceGenerator, validate_language
+from app.ai_assistance_generator import (
+    AiAssistanceGenerator,
+    prepare_prompt,
+    validate_language,
+)
 from app.ai_assistance_provider import ProviderError
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -64,6 +69,28 @@ def test_valid_and_insufficient():
         "deterministic",
         0,
     )
+
+
+def test_prompt_identity_ignores_context_assembly_time():
+    ctx = context()
+    later = ctx.model_copy(
+        update={"generated_at": ctx.generated_at + timedelta(hours=1)}
+    )
+    assert prepare_prompt(ctx) == prepare_prompt(later)
+    fake = Fake(json.dumps(valid(ctx), ensure_ascii=False).encode())
+    assert (
+        AiAssistanceGenerator(fake).generate(later).prompt_sha256
+        == prepare_prompt(ctx)[2]
+    )
+
+
+def test_prompt_identity_rejects_modified_context_with_stale_hash():
+    ctx = context()
+    changed = ctx.model_copy(
+        update={"counts": ctx.counts.model_copy(update={"errors": 42})}
+    )
+    with pytest.raises(ValueError):
+        prepare_prompt(changed)
 
 
 @pytest.mark.parametrize(
@@ -257,8 +284,7 @@ def test_unexpected_error_logged_with_sanitized_trace(caplog):
     )
     payload = json.loads(SafeJsonFormatter().format(record))
     assert payload["exception_type"] == "RuntimeError"
-    assert "generate" in payload["stack_trace"]
-    assert "test_ai_assistance_generator.py" in payload["stack_trace"]
+    assert "stack_trace" not in payload
     assert payload["error_code"] == "internal_error"
     assert secret not in json.dumps(payload)
     assert secret not in repr(result)

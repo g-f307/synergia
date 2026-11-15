@@ -71,6 +71,7 @@ class LocalAiModelProvider:
             checked.digest,
         )
         self.config = checked
+        self.timeout_seconds = TIMEOUT_SECONDS
         self.allowed_service = allowed_service
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}), _NoRedirect()
@@ -187,7 +188,7 @@ class LocalAiModelProvider:
             send = None
             # Reserve time for process termination and result assembly inside the
             # configured 30-second end-to-end envelope.
-            budget = TIMEOUT_SECONDS - 1 if TIMEOUT_SECONDS > 1 else TIMEOUT_SECONDS
+            budget = max(0.001, min(TIMEOUT_SECONDS - 1, self.timeout_seconds - 1))
             remaining = max(0.0, budget - (time.monotonic() - started))
             if not receive.poll(remaining):
                 raise ProviderError("runtime_timeout")

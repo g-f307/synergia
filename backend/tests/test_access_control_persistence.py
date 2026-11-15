@@ -687,6 +687,11 @@ def test_migration_0019_rollback_removes_direct_report_permission_grants() -> No
             assert cursor.fetchone()[0] == 3
             cursor.execute(
                 (Path(__file__).resolve().parents[2] / "database/rollbacks" /
+                 "0039_create_ai_assistance_rate_attempts.down.sql").read_text(),
+                prepare=False,
+            )
+            cursor.execute(
+                (Path(__file__).resolve().parents[2] / "database/rollbacks" /
                  "0038_create_ai_assistance_persistence.down.sql").read_text(),
                 prepare=False,
             )

@@ -359,6 +359,11 @@ def test_manual_feature_rollback_preserves_export_history(dataset):
         try:
             connection.execute(
                 (Path(__file__).resolve().parents[2] / "database/rollbacks" /
+                 "0039_create_ai_assistance_rate_attempts.down.sql").read_text(),
+                prepare=False,
+            )
+            connection.execute(
+                (Path(__file__).resolve().parents[2] / "database/rollbacks" /
                  "0038_create_ai_assistance_persistence.down.sql").read_text(),
                 prepare=False,
             )

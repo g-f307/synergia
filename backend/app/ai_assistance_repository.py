@@ -106,10 +106,13 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
 
 def _validate_actor(connection, actor_id):
     # Keep the identity alive until the event and its Graylog projection commit.
-    if connection.execute(
-        "SELECT id FROM synergia.identity_users WHERE id=%s FOR KEY SHARE",
-        (actor_id,),
-    ).fetchone() is None:
+    if (
+        connection.execute(
+            "SELECT id FROM synergia.identity_users WHERE id=%s FOR KEY SHARE",
+            (actor_id,),
+        ).fetchone()
+        is None
+    ):
         raise AssistancePersistenceError("actor_not_found")
 
 
@@ -194,8 +197,36 @@ class PostgresAiAssistanceRepository:
         self.database_url = database_url
         self.retention_days = retention_days
 
-    def reserve(self, key: AssistanceKey, actor_id: UUID, correlation_id: UUID):
+    def reserve(
+        self,
+        key: AssistanceKey,
+        actor_id: UUID,
+        correlation_id: UUID,
+        *,
+        enforce_inflight: bool = False,
+    ):
         with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
+            # Serialize the short reservation decision across both dimensions.
+            # Transaction-scoped locks are released before inference starts.
+            if enforce_inflight:
+                for value in sorted(
+                    (
+                        f"assistance-org:{key.organization_id}",
+                        f"assistance-user:{actor_id}",
+                    )
+                ):
+                    connection.execute(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                        (value,),
+                    )
+                busy = connection.execute(
+                    """SELECT 1 FROM synergia.ai_assistances
+                    WHERE state='processing' AND reservation_until > clock_timestamp()
+                      AND (organization_id=%s OR requested_by=%s) LIMIT 1""",
+                    (key.organization_id, actor_id),
+                ).fetchone()
+                if busy is not None:
+                    raise AssistancePersistenceError("conflict_or_not_found")
             abandoned = connection.execute(
                 """DELETE FROM synergia.ai_assistances a
                 USING synergia.executions e
@@ -245,6 +276,30 @@ class PostgresAiAssistanceRepository:
             _event(connection, row, actor_id, correlation_id, "requested")
         EVENTS.labels("reserve", "success").inc()
         return row["id"]
+
+    def abandon(self, key, assistance_id, actor_id, correlation_id, rejection_code):
+        """Release a failed reservation and audit only its safe error code."""
+        allowed = {
+            "runtime_busy",
+            "runtime_timeout",
+            "runtime_unavailable",
+            "runtime_pin_mismatch",
+            "runtime_redirect",
+            "runtime_response_too_large",
+            "runtime_invalid_response",
+        }
+        if rejection_code not in allowed:
+            rejection_code = "runtime_unavailable"
+        with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
+            row = connection.execute(
+                """DELETE FROM synergia.ai_assistances
+                WHERE id=%s AND organization_id=%s AND execution_id=%s
+                  AND state='processing' RETURNING *""",
+                (assistance_id, key.organization_id, str(key.execution_id)),
+            ).fetchone()
+            if row is not None:
+                row["rejection_code"] = rejection_code
+                _event(connection, row, actor_id, correlation_id, "rejected")
 
     def finish(
         self,

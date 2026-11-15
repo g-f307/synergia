@@ -16,12 +16,13 @@ from typing import Annotated
 from prometheus_client import Counter, Histogram
 from pydantic import AfterValidator, Field, ValidationError
 
-from app.ai_assistance_context import serialize_snapshot
+from app.ai_assistance_context import canonical_bytes, serialize_snapshot
 from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_contract import StrictContract, plain_text
 from app.ai_assistance_fallback import deterministic_fallback, required_limitations
 from app.ai_assistance_provider import AiModelProvider, ProviderError
 from app.observability.metrics import REGISTRY
+from app.observability.telemetry import safe_log
 
 _ASSETS = Path(__file__).parent / "ai_assistance_assets"
 SYSTEM = (_ASSETS / "system.txt").read_text(encoding="utf-8")
@@ -42,31 +43,15 @@ DURATION = Histogram(
 
 
 def _log_unexpected_exception(exc: Exception) -> None:
-    """Log frame locations and type, never exception text, source lines or locals."""
-    frames = []
-    traceback = exc.__traceback__
-    while traceback is not None and len(frames) < 32:
-        code = traceback.tb_frame.f_code
-        filename = Path(code.co_filename).name
-        function = code.co_name
-        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", filename):
-            filename = "unknown"
-        if not re.fullmatch(r"[A-Za-z0-9_.<>-]{1,128}", function):
-            function = "unknown"
-        frames.append(f"{filename}:{traceback.tb_lineno}:{function}")
-        traceback = traceback.tb_next
+    """Log only a sanitized exception type, without stack or exception content."""
     exception_type = type(exc).__name__
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", exception_type):
         exception_type = "Exception"
-    logging.getLogger("synergia.telemetry").error(
+    safe_log(
+        logging.ERROR,
         "ai.assistance.unexpected_error",
-        extra={
-            "synergia_fields": {
-                "exception_type": exception_type,
-                "stack_trace": " | ".join(frames),
-                "error_code": "internal_error",
-            }
-        },
+        exception_type=exception_type,
+        error_code="internal_error",
     )
 
 
@@ -237,34 +222,41 @@ def _decode(raw: bytes, context: ExecutionAssistanceContext) -> ModelOutput:
     return output
 
 
+def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str, str]:
+    # Verify the complete snapshot, but omit its volatile assembly timestamp
+    # from model input so equivalent contexts have the same idempotency key.
+    serialize_snapshot(context)
+    snapshot = canonical_bytes(context)
+    request_schema = copy.deepcopy(SCHEMA)
+    limitations = required_limitations(context)
+    limits_schema = request_schema["properties"]["limitations"]
+    limits_schema["items"]["enum"] = limitations
+    limits_schema["minItems"] = len(limitations)
+    limits_schema["maxItems"] = len(limitations)
+    limits_schema["uniqueItems"] = True
+    schema_sha256 = hashlib.sha256(
+        json.dumps(
+            request_schema,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    prompt = TEMPLATE.format(
+        schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
+        data=snapshot.decode(),
+    )
+    prompt_hash = hashlib.sha256((SYSTEM + "\n" + prompt).encode()).hexdigest()
+    return prompt, request_schema, prompt_hash, schema_sha256
+
+
 class AiAssistanceGenerator:
     def __init__(self, provider: AiModelProvider):
         self.provider = provider
 
     def generate(self, context: ExecutionAssistanceContext) -> GenerationResult:
         start = time.monotonic()
-        # This also verifies the canonical context hash and size before any model call.
-        snapshot = serialize_snapshot(context)
-        request_schema = copy.deepcopy(SCHEMA)
-        limitations = required_limitations(context)
-        limits_schema = request_schema["properties"]["limitations"]
-        limits_schema["items"]["enum"] = limitations
-        limits_schema["minItems"] = len(limitations)
-        limits_schema["maxItems"] = len(limitations)
-        limits_schema["uniqueItems"] = True
-        schema_sha256 = hashlib.sha256(
-            json.dumps(
-                request_schema,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-        ).hexdigest()
-        prompt = TEMPLATE.format(
-            schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
-            data=snapshot.decode(),
-        )
-        prompt_hash = hashlib.sha256((SYSTEM + "\n" + prompt).encode()).hexdigest()
+        prompt, request_schema, prompt_hash, schema_sha256 = prepare_prompt(context)
         response_hash = None
         state, origin, rejection = "ready", "model", None
         findings, checks = [], []

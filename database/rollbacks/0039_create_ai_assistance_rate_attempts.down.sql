@@ -1,0 +1,1 @@
+DROP TABLE synergia.ai_assistance_rate_attempts;

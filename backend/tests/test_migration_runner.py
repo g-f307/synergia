@@ -402,3 +402,12 @@ def test_ai_assistance_baseline_rejects_missing_guards(migration_database, missi
     assert result.returncode != 0
     assert "partial or incompatible" in result.stderr
     assert migration_count(migration_database) == 0
+
+
+def test_ai_assistance_rate_baseline_rejects_missing_index(migration_database):
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    with psycopg.connect("", dbname=migration_database) as connection:
+        connection.execute("DROP INDEX synergia.ai_assistance_rate_attempts_lookup")
+    result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
+    assert result.returncode != 0
+    assert "0039_create_ai_assistance_rate_attempts.sql" in result.stderr
