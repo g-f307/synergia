@@ -41,6 +41,7 @@ ORIGINS = frozenset(
         "audit_export_events",
         "observability_events",
         "rate_limit_events",
+        "ai_assistance_events",
     }
 )
 STATES = frozenset(state.value for state in ExecutionState) | {
@@ -209,6 +210,56 @@ def sanitize_event(row: dict) -> AuditEvent:
         digest = raw.get("model_digest")
         if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest):
             metadata["model_digest"] = digest
+    if row["origin"] == "ai_assistance_events":
+        for key in ("context_sha256", "prompt_sha256", "response_sha256"):
+            value = raw.get(key)
+            if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value):
+                metadata[key] = value
+        digest = raw.get("model_digest")
+        if isinstance(digest, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+            metadata["model_digest"] = digest
+        name = raw.get("model_name")
+        if (
+            isinstance(name, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}", name)
+            and "://" not in name
+            and ".." not in name
+            and not SENSITIVE.search(name)
+        ):
+            metadata["model_name"] = name
+        for key, allowed in {
+            "state": {"processing", "ready", "insufficient_evidence", "rejected"},
+            "origin": {"model", "deterministic"},
+            "contract_version": {"1.0.0"},
+        }.items():
+            if isinstance(raw.get(key), str) and raw[key] in allowed:
+                metadata[key] = raw[key]
+        execution_id = raw.get("execution_id")
+        if isinstance(execution_id, str):
+            try:
+                metadata["execution_id"] = str(UUID(execution_id))
+            except ValueError:
+                pass
+        rejection_code = raw.get("rejection_code")
+        if isinstance(rejection_code, str) and rejection_code in {
+            "runtime_busy",
+            "runtime_timeout",
+            "runtime_unavailable",
+            "runtime_pin_mismatch",
+            "runtime_redirect",
+            "runtime_response_too_large",
+            "runtime_invalid_response",
+            "response_too_large",
+            "invalid_json",
+            "invalid_schema",
+            "invalid_reference",
+            "ungrounded_summary",
+            "ungrounded_finding",
+            "ungrounded_checks",
+            "ungrounded_limitations",
+            "missing_limitations",
+        }:
+            metadata["rejection_code"] = rejection_code
     result = AuditEvent.model_validate(
         {key: row[key] for key in AuditEvent.model_fields if key != "metadata"}
         | {"metadata": metadata}

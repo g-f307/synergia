@@ -372,3 +372,33 @@ def test_feedback_baseline_requires_history_and_mutation_guards(
     result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
     assert result.returncode != 0
     assert "partial or incompatible" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["reservation_index", "immutable_trigger", "queue_trigger", "result_check"],
+)
+def test_ai_assistance_baseline_rejects_missing_guards(migration_database, missing):
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    with psycopg.connect("", dbname=migration_database) as connection:
+        if missing == "reservation_index":
+            connection.execute("DROP INDEX synergia.ai_assistance_reservations")
+        elif missing == "result_check":
+            connection.execute(
+                "ALTER TABLE synergia.ai_assistances "
+                "DROP CONSTRAINT ai_assistances_result_check"
+            )
+        else:
+            trigger = {
+                "immutable_trigger": "ai_assistance_events_immutable",
+                "queue_trigger": "graylog_ai_assistance_insert",
+            }[missing]
+            connection.execute(
+                sql.SQL(
+                    "ALTER TABLE synergia.ai_assistance_events DISABLE TRIGGER {}"
+                ).format(sql.Identifier(trigger))
+            )
+    result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
+    assert result.returncode != 0
+    assert "partial or incompatible" in result.stderr
+    assert migration_count(migration_database) == 0

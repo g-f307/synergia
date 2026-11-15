@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0038": ("ai_assistance_persistence", "synergia", ""),
     "0037": ("ai_assistance_contract", "synergia", ""),
     "0036": ("graylog_contract", "synergia", ""),
     "0035": ("feedback_contract", "synergia", ""),
@@ -76,6 +77,35 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_persistence":
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
+            to_regclass('synergia.ai_assistances') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_events') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_idempotency') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_latest') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_expiry') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_reservations') IS NOT NULL
+            AND to_regclass('synergia.audit_event_catalog_v2') IS NOT NULL
+            AND to_regprocedure(
+                'synergia.ai_assistance_result_shape_valid(jsonb)'
+            ) IS NOT NULL
+            AND EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid=to_regclass('synergia.ai_assistances')
+                  AND conname='ai_assistances_result_check' AND convalidated)
+            AND EXISTS (SELECT 1 FROM pg_trigger
+                WHERE tgrelid=to_regclass('synergia.ai_assistance_events')
+                  AND tgname='graylog_ai_assistance_insert' AND NOT tgisinternal
+                  AND tgenabled <> 'D')
+            AND EXISTS (SELECT 1 FROM pg_trigger
+                WHERE tgrelid=to_regclass('synergia.ai_assistance_events')
+                  AND tgname='ai_assistance_events_immutable' AND NOT tgisinternal
+                  AND tgenabled <> 'D')
+            """
+            ).fetchone()
+            is not None
+        )
     if kind == "ai_assistance_contract":
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False

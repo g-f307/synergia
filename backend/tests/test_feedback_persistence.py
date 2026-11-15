@@ -396,6 +396,7 @@ def test_database_guards_and_rollback_preserve_protocol_and_history(dataset):
                 with connection.transaction():
                     connection.execute(statement, (item["id"],))
         for filename in (
+            "0038_create_ai_assistance_persistence.down.sql",
             "0037_create_ai_assistance_permissions.down.sql",
             "0036_create_graylog_delivery.down.sql",
         ):

@@ -44,6 +44,13 @@ class AiAssistanceConfig:
         ):
             if value(key, fixed) != fixed:
                 raise ValueError(f"{PREFIX}{key} must be {fixed}")
+        if (
+            flag == "true"
+            and environment.get("SYNERGIA_ENV", "").strip().lower()
+            in {"homologation", "production"}
+            and not environment.get(PREFIX + "RETENTION_DAYS", "").strip()
+        ):
+            raise ValueError(f"{PREFIX}RETENTION_DAYS is required outside development")
         retention = value("RETENTION_DAYS", "30")
         if not retention.isascii() or not retention.isdecimal():
             raise ValueError(f"{PREFIX}RETENTION_DAYS must be an integer")

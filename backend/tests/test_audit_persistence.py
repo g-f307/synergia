@@ -358,6 +358,11 @@ def test_manual_feature_rollback_preserves_export_history(dataset):
     with psycopg.connect(dataset["database_url"]) as connection:
         try:
             connection.execute(
+                (Path(__file__).resolve().parents[2] / "database/rollbacks" /
+                 "0038_create_ai_assistance_persistence.down.sql").read_text(),
+                prepare=False,
+            )
+            connection.execute(
                 (root / "database/rollbacks" /
                  "0037_create_ai_assistance_permissions.down.sql").read_text(),
                 prepare=False,

@@ -76,7 +76,7 @@ A ativação operacional depende das entregas #186–#192.
 | `SYNERGIA_AI_ASSISTANCE_RESPONSE_MAX_BYTES` | Compose / backend | 8192 | Fixo, resposta bruta antes de parse. |
 | `SYNERGIA_AI_ASSISTANCE_MAX_CONCURRENCY` | Compose / backend | 1 | Fixo, por instância. |
 | `SYNERGIA_AI_ASSISTANCE_FOLLOW_REDIRECTS` | Compose / backend | false | Fixo; recusar 3xx do runtime. |
-| `SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS` | Compose / backend | 30 | Inteiro de 1 a 365; aplicação pela persistência #188. |
+| `SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS` | Compose / backend | 30 | Inteiro de 1 a 365; obrigatório quando a assistência estiver habilitada em homologação ou produção. |
 
 ## Origens e identidade
 
