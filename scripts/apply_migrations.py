@@ -86,7 +86,8 @@ def object_exists(
             AND to_regclass('synergia.ai_assistance_rate_attempts_lookup') IS NOT NULL
             AND to_regclass('synergia.ai_assistance_rate_attempts_expiry') IS NOT NULL
             AND (SELECT count(*) FROM information_schema.columns
-                 WHERE table_schema='synergia' AND table_name='ai_assistance_rate_attempts'
+                 WHERE table_schema='synergia'
+                   AND table_name='ai_assistance_rate_attempts'
                    AND column_name IN ('dimension','key_hash','occurred_at')) = 3"""
             ).fetchone()
             is not None
