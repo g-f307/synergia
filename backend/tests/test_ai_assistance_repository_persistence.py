@@ -91,7 +91,7 @@ def test_reserve_finish_read_and_tenant_isolation(setup, database):
         evidence_refs=frozenset(),
         response_sha256=None,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     assert repo.find(key, actor, correlation, evidence_refs=frozenset()) == value
     assert (
@@ -159,7 +159,7 @@ def test_integrity_error_and_expiration(setup, database):
         evidence_refs=frozenset(),
         response_sha256=None,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     with psycopg.connect(database) as c:
         c.execute(
@@ -210,7 +210,7 @@ def test_abandoned_reservation_recovered_and_old_token_cannot_finish(setup, data
             evidence_refs=frozenset(),
             response_sha256=None,
             rejection_code=None,
-            elapsed_ms=1,
+            elapsed_ms=0,
         )
     with psycopg.connect(database) as c:
         assert (
@@ -237,12 +237,179 @@ def test_failed_finish_rolls_back_result_and_event(setup, database):
             evidence_refs=frozenset(),
             response_sha256=None,
             rejection_code=None,
-            elapsed_ms=1,
+            elapsed_ms=0,
         )
     with psycopg.connect(database) as c:
         assert c.execute(
             "SELECT state,result FROM synergia.ai_assistances WHERE id=%s", (aid,)
         ).fetchone() == ("processing", None)
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE assistance_id=%s",
+                (aid,),
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_mismatched_duration_is_not_persisted_or_audited(setup, database):
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.finish(
+            key,
+            aid,
+            actor,
+            correlation,
+            result(key, aid),
+            evidence_refs=frozenset(),
+            response_sha256=None,
+            rejection_code=None,
+            elapsed_ms=1,
+        )
+    with psycopg.connect(database) as c:
+        assert c.execute(
+            "SELECT state,result,elapsed_ms FROM synergia.ai_assistances WHERE id=%s",
+            (aid,),
+        ).fetchone() == ("processing", None, None)
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE assistance_id=%s",
+                (aid,),
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.graylog_deliveries "
+                "WHERE origin='ai_assistance_events' "
+                "AND source_snapshot->>'resource_id'=%s",
+                (str(aid),),
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_missing_actor_rolls_back_finish_and_reads(setup, database):
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    missing = uuid4()
+    value = result(key, aid)
+    options = dict(
+        evidence_refs=frozenset(),
+        response_sha256=None,
+        rejection_code=None,
+        elapsed_ms=0,
+    )
+    with pytest.raises(AssistancePersistenceError, match="actor_not_found"):
+        repo.finish(key, aid, missing, correlation, value, **options)
+    with psycopg.connect(database) as c:
+        assert c.execute(
+            "SELECT state,result FROM synergia.ai_assistances WHERE id=%s", (aid,)
+        ).fetchone() == ("processing", None)
+    repo.finish(key, aid, actor, correlation, value, **options)
+    operations = (
+        lambda: repo.find(key, missing, correlation, evidence_refs=frozenset()),
+        lambda: repo.get(
+            key.organization_id,
+            key.execution_id,
+            aid,
+            missing,
+            correlation,
+            evidence_refs=frozenset(),
+        ),
+        lambda: repo.latest(
+            key.organization_id,
+            key.execution_id,
+            key.context_sha256,
+            missing,
+            correlation,
+            evidence_refs=frozenset(),
+        ),
+    )
+    for operation in operations:
+        with pytest.raises(AssistancePersistenceError, match="actor_not_found"):
+            operation()
+    with psycopg.connect(database) as c:
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE assistance_id=%s",
+                (aid,),
+            ).fetchone()[0]
+            == 2
+        )
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.graylog_deliveries "
+                "WHERE origin='ai_assistance_events' "
+                "AND source_snapshot->>'resource_id'=%s",
+                (str(aid),),
+            ).fetchone()[0]
+            == 2
+        )
+
+
+def test_read_detects_duration_changed_after_completion(setup, database):
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    repo.finish(
+        key,
+        aid,
+        actor,
+        correlation,
+        result(key, aid),
+        evidence_refs=frozenset(),
+        response_sha256=None,
+        rejection_code=None,
+        elapsed_ms=0,
+    )
+    with psycopg.connect(database) as c:
+        c.execute("UPDATE synergia.ai_assistances SET elapsed_ms=1 WHERE id=%s", (aid,))
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.find(key, actor, correlation, evidence_refs=frozenset())
+    with psycopg.connect(database) as c:
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE assistance_id=%s AND action='integrity_error'",
+                (aid,),
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_cleanup_worker_rejects_missing_actor_without_deletion(
+    setup, database, monkeypatch
+):
+    import sys
+
+    from scripts.expire_ai_assistance import main
+
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    with psycopg.connect(database) as c:
+        c.execute(
+            "UPDATE synergia.ai_assistances SET "
+            "created_at=clock_timestamp()-interval '2 days', "
+            "expires_at=clock_timestamp()-interval '1 day' WHERE id=%s",
+            (aid,),
+        )
+    monkeypatch.setenv("DATABASE_URL", database)
+    monkeypatch.setattr(
+        sys, "argv", ["expire_ai_assistance.py", "--actor-id", str(uuid4())]
+    )
+    with pytest.raises(AssistancePersistenceError, match="actor_not_found"):
+        main()
+    with psycopg.connect(database) as c:
+        assert (
+            c.execute(
+                "SELECT count(*) FROM synergia.ai_assistances WHERE id=%s", (aid,)
+            ).fetchone()[0]
+            == 1
+        )
         assert (
             c.execute(
                 "SELECT count(*) FROM synergia.ai_assistance_events "
@@ -332,7 +499,7 @@ def test_integrity_failure_emits_audit(setup, database):
         evidence_refs=frozenset(),
         response_sha256=None,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     with psycopg.connect(database) as c:
         c.execute(
@@ -481,7 +648,7 @@ def test_latest_is_tenant_and_context_bound(setup):
         evidence_refs=frozenset(),
         response_sha256=None,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     assert (
         repo.latest(
@@ -545,7 +712,7 @@ def test_model_result_and_rejection_are_persisted_without_raw_content(setup, dat
         evidence_refs=frozenset(),
         response_sha256="f" * 64,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     assert repo.find(key, actor, correlation, evidence_refs=frozenset()) == value
     with psycopg.connect(database) as c:
@@ -577,7 +744,7 @@ def test_rejected_result_records_reason_and_audit(setup, database):
         evidence_refs=frozenset(),
         response_sha256="f" * 64,
         rejection_code="invalid_json",
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     with psycopg.connect(database) as c:
         assert c.execute(
@@ -693,7 +860,7 @@ def test_read_revalidates_authorized_references(setup):
         evidence_refs=frozenset({ref}),
         response_sha256="f" * 64,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     with pytest.raises(AssistancePersistenceError, match="integrity_error"):
         repo.get(
@@ -785,7 +952,7 @@ def test_raw_content_rejected_by_application_and_database(setup, database):
             evidence_refs=frozenset(),
             response_sha256=None,
             rejection_code=None,
-            elapsed_ms=1,
+            elapsed_ms=0,
         )
     repo.finish(
         key,
@@ -796,7 +963,7 @@ def test_raw_content_rejected_by_application_and_database(setup, database):
         evidence_refs=frozenset(),
         response_sha256=None,
         rejection_code=None,
-        elapsed_ms=1,
+        elapsed_ms=0,
     )
     attacks = [
         "result || jsonb_build_object('prompt', 'synthetic raw prompt')",
@@ -870,7 +1037,7 @@ def test_rejects_mismatched_finding_type_before_writing(setup, database):
             evidence_refs=frozenset({ref}),
             response_sha256="f" * 64,
             rejection_code=None,
-            elapsed_ms=1,
+            elapsed_ms=0,
         )
     with psycopg.connect(database) as c:
         assert (

@@ -104,7 +104,17 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
         raise ValueError("duplicate result references")
 
 
+def _validate_actor(connection, actor_id):
+    # Keep the identity alive until the event and its Graylog projection commit.
+    if connection.execute(
+        "SELECT id FROM synergia.identity_users WHERE id=%s FOR KEY SHARE",
+        (actor_id,),
+    ).fetchone() is None:
+        raise AssistancePersistenceError("actor_not_found")
+
+
 def _event(connection, row, actor_id, correlation_id, action):
+    _validate_actor(connection, actor_id)
     connection.execute(
         """INSERT INTO synergia.ai_assistance_events
         (id, assistance_id, execution_id, organization_id, actor_user_id,
@@ -167,6 +177,7 @@ def _validated(row, evidence_refs):
             or provenance.model != row["model_name"]
             or provenance.digest != row["model_digest"]
             or provenance.contract_version != row["contract_version"]
+            or provenance.timings.total_ms != row["elapsed_ms"]
         ):
             raise ValueError("inconsistent result")
         return result
@@ -261,6 +272,7 @@ class PostgresAiAssistanceRepository:
                 "model_name": key.model_name,
                 "model_digest": key.model_digest,
                 "contract_version": key.contract_version,
+                "elapsed_ms": elapsed_ms,
             },
             evidence_refs,
         )
@@ -438,6 +450,7 @@ class PostgresAiAssistanceRepository:
         if type(batch_size) is not int or not 1 <= batch_size <= 1000:
             raise ValueError("invalid batch size")
         with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
+            _validate_actor(connection, actor_id)
             if dry_run:
                 return connection.execute(
                     """SELECT count(*) AS count, min(expires_at) AS oldest,

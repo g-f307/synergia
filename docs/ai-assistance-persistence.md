@@ -6,6 +6,10 @@ consultas da aplicação devem verificar a permissão e reconstruir o conjunto d
 referências autorizadas antes de chamar o repositório. Não há rota nesta entrega.
 O repositório valida novamente o contrato e as referências em leitura, e registra
 falha de integridade sem devolver o resultado inválido.
+Na finalização, `elapsed_ms` deve coincidir com `provenance.timings.total_ms`;
+a mesma consistência é verificada novamente na leitura. Cada ator de evento é
+validado em `identity_users` na transação que registra o evento; uma identidade
+inexistente interrompe a operação sem persistir alterações ou projeções.
 
 ```text
 execução + organização ── reserva (processing) ── conclusão
