@@ -15,6 +15,10 @@ class Contexts:
     def __init__(self, value):
         self.value = value
 
+    def organization(self, actor, execution_id):
+        organization = self.value.subject.organization_id
+        return organization if actor.allows("execution.read", organization) else None
+
     def build(self, actor, execution_id):
         if not actor.allows("execution.read", self.value.subject.organization_id):
             raise ApiError(404, "resource_not_found", "Recurso nao encontrado")
@@ -42,6 +46,9 @@ class Repository:
     def finish(self, key, assistance_id, actor, correlation, response, **kwargs):
         self.result = response
         return response
+
+    def abandon(self, *args):
+        pass
 
 
 def make_actor(ctx, *actions):

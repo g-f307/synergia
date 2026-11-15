@@ -199,4 +199,5 @@ def test_openapi_snapshot():
     }
     expected = Path(__file__).parent / "fixtures/ai_assistance_openapi_1_0_0.json"
     assert actual == json.loads(expected.read_text())
-    assert "/executions/{execution_id}/ai-assistance" not in schema["paths"]
+    assert "post" in schema["paths"]["/executions/{execution_id}/ai-assistance"]
+    assert "get" in schema["paths"]["/executions/{execution_id}/ai-assistance/latest"]
