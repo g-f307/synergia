@@ -11,7 +11,7 @@ export interface AiAssistanceCapability {
   generate: boolean;
 }
 
-/** Capability discovery only. The execution card is delivered in issue #190. */
+/** Server capability discovery; execution routes enforce organization scope. */
 @Injectable({ providedIn: 'root' })
 export class AiAssistanceCapabilityService {
   private readonly http = inject(HttpClient);

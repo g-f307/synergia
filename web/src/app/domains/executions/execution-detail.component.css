@@ -11,3 +11,5 @@
 .back-link{background:var(--syn-bg-card);border-radius:999px;font-size:.82rem;font-weight:600;gap:8px;height:auto;justify-content:flex-start;padding:8px 15px;width:auto}
 .back-link span{font-size:1.1rem}.execution-overview{grid-template-columns:auto minmax(0,1fr) auto}
 @media(max-width:650px){.detail-heading{padding:16px 18px}.detail-scroll{padding:18px}.execution-overview{grid-template-columns:auto minmax(0,1fr)}}
+
+.reference-location{min-width:0;overflow-wrap:anywhere}

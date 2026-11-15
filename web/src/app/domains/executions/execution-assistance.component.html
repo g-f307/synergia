@@ -1,0 +1,51 @@
+@if (visible()) {
+  <section class="assistance" aria-labelledby="assistance-title">
+    <header>
+      <h3 id="assistance-title">{{ i18n.t('assistance.title') }}</h3>
+      @if (result(); as analysis) {
+        <syn-badge [tone]="analysis.provenance.origin === 'model' ? 'success' : 'partial'">{{ i18n.t(analysis.provenance.origin === 'model' ? 'assistance.origin.model' : 'assistance.origin.deterministic') }}</syn-badge>
+        <time [attr.datetime]="analysis.created_at">{{ i18n.formatDate(analysis.created_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</time>
+      }
+    </header>
+    <p>{{ i18n.t('assistance.notice') }}</p>
+    <p class="assistance-status" role="status" aria-live="polite" aria-atomic="true">{{ stateLabel() }}</p>
+    @if (failed()) {
+      <syn-alert [title]="i18n.t('assistance.failure')" [message]="stateMessage()" />
+    } @else if (!result()) {
+      <p>{{ stateMessage() }}</p>
+    }
+    @if (result(); as analysis) {
+      <p class="assistance-summary">{{ analysis.summary }}</p>
+      @if (analysis.findings.length) {
+        <section><h4>{{ i18n.t('assistance.findings') }}</h4>
+          <ol class="findings">@for (finding of analysis.findings; track $index) {
+            <li><h5>{{ finding.title }}</h5><p>{{ finding.explanation }}</p>
+              <ul class="references" [attr.aria-label]="i18n.t('assistance.references')">
+                @for (reference of finding.evidence_refs; track reference) {
+                  <li>@if (referenceTab(reference); as target) {
+                    <a class="technical" [routerLink]="['/executions', execution.execution_id]" [queryParams]="{ tab: target, page: 1, reference: reference }" queryParamsHandling="merge">{{ reference }}</a>
+                  } @else { <span>{{ reference }} — {{ i18n.t('assistance.referenceRestricted') }}</span> }</li>
+                }
+              </ul>
+            </li>
+          }</ol>
+        </section>
+      }
+      @if (analysis.human_checks.length) {
+        <section><h4>{{ i18n.t('assistance.humanChecks') }}</h4><ul>@for (check of analysis.human_checks; track $index) {<li>{{ check }}</li>}</ul></section>
+      }
+      @if (analysis.limitations.length) {
+        <section class="limitations"><h4>{{ i18n.t('assistance.limitations') }}</h4><ul>@for (limitation of analysis.limitations; track $index) {<li>{{ limitation }}</li>}</ul></section>
+      }
+    }
+    @if (canGenerate()) {
+      <button type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="generate()">{{ i18n.t(state() === 'generating' ? 'assistance.generating' : 'assistance.generate') }}</button>
+    }
+    @if (failed() && state() !== 'forbidden' && state() !== 'expired') {
+      <button type="button" class="secondary" (click)="load()">{{ i18n.t(capability()?.read ? 'assistance.reload' : 'assistance.checkAvailability') }}</button>
+    }
+    @if (state() === 'expired') {
+      <a routerLink="/login" [queryParams]="{ returnUrl: '/executions/' + execution.execution_id }">{{ i18n.t('assistance.login') }}</a>
+    }
+  </section>
+}

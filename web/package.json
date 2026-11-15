@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "validate:ai-poc-schemas": "node scripts/validate_ai_poc_schemas.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "e2e:assistance": "playwright test --config=playwright.assistance.config.ts"
   },
   "private": true,
   "engines": {

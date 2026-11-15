@@ -257,6 +257,15 @@ jobs:
           E2E_RECORD_VIDEO: "false"
           E2E_PYTHON: python
         run: npm run e2e
+      - name: Validar assistência web com provider controlado
+        working-directory: web
+        env:
+          DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_e2e
+          E2E_BROWSER_CHANNEL: chrome
+          E2E_PYTHON: python
+        run: |
+          npx playwright install ffmpeg
+          npm run e2e:assistance
       - name: Publicar relatório de segurança PostgreSQL
         if: always() && hashFiles('backend/reports/integration.xml') != ''
         uses: actions/upload-artifact@v4
@@ -272,6 +281,8 @@ jobs:
           path: |
             web/reports/e2e-html/
             web/reports/e2e-results/
+            web/reports/e2e-assistance-html/
+            web/reports/e2e-assistance-results/
             docs/pre-rpa-validation-report.md
             docs/web-e2e-demonstration.md
           if-no-files-found: error

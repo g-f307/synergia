@@ -1,0 +1,290 @@
+{
+  "issue": 190,
+  "date": "2026-11-15",
+  "data": "synthetic",
+  "provider": "controlled; no model inference",
+  "audits": [
+    {
+      "name": "axe-insufficient",
+      "axe_version": "4.13.0",
+      "sha256": "1662a1db2777793946eb40ac0a0bd4d1033a0b685f6b6b68c471a32c3ac15461",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-rejected",
+      "axe_version": "4.13.0",
+      "sha256": "f1e4c858135e8d7ffdc3d704528b34ee7c7a9330d7b0692be292755eb218607e",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-dark-1440",
+      "axe_version": "4.13.0",
+      "sha256": "064357e877c9ca6851fb1276a9fbcde05de538e446948cac82e1e77dae3c3454",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-dark-390",
+      "axe_version": "4.13.0",
+      "sha256": "32a49edd79aede614d5e7d3d36ba81c3c50978f9c6bcecb1657f18a7e2a700f2",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-dark-768",
+      "axe_version": "4.13.0",
+      "sha256": "bf95148c385dc31627ad420d16ea8c31b75eef3e0bf44ceddf3e656bb79affa2",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-light-1440",
+      "axe_version": "4.13.0",
+      "sha256": "9667d7b1b5332f075ccb1e3adb4ca777ceac6be2127420f5efa35c50aafa2640",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-light-390",
+      "axe_version": "4.13.0",
+      "sha256": "db409b96970e16cbdd1df7e2f2a8a1216f18e1ef776f700617798ef9c00ac763",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-insufficient-light-768",
+      "axe_version": "4.13.0",
+      "sha256": "77ec865e7bb5f18b4e14ce342275c74367a6ec593c07d4cbebcad0d2ca836e5a",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-long-mobile",
+      "axe_version": "4.13.0",
+      "sha256": "4a954c55e11bdc3a1365306fee1ba5b70bf952b91a8c0ca5030f102a7edced8b",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-dark-1440",
+      "axe_version": "4.13.0",
+      "sha256": "9a8bba0866ab2b05186fcecef1ca5fad9d89e1302d097a0b24cf94a899f0b873",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-dark-390",
+      "axe_version": "4.13.0",
+      "sha256": "b051652a2354dbb9b7f5580423b8d1ec9076b73eb4b8e88fb2c9231e5850d736",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-dark-768",
+      "axe_version": "4.13.0",
+      "sha256": "026bfb66d4e01b842ac694e3ebfa5089bce0abcd4e7c15dbbc7d39046b3d890a",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-light-1440",
+      "axe_version": "4.13.0",
+      "sha256": "d2cdd4eeb09bd4f793845db116850e3ea60a9dde6a88218edc07a41a34377cf8",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-light-390",
+      "axe_version": "4.13.0",
+      "sha256": "1619d09df85f4bcce6a25ce33262b952386643bb02dad51033400eef1ed12f02",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-light-768",
+      "axe_version": "4.13.0",
+      "sha256": "359fd50cdb4fb35e9971e4139b25c861bd14b358de3dfe44dd13842858a8764d",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-dark-1440",
+      "axe_version": "4.13.0",
+      "sha256": "1bd4e67f592083315aa5c6e6b6c6e99d4cd380781d64aca7db4ab20a1cb9d85f",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-dark-390",
+      "axe_version": "4.13.0",
+      "sha256": "a673ad42213ef886cdcdbe794b4d0cc8b1acf83552b56fcd77b6148c3774c572",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-dark-768",
+      "axe_version": "4.13.0",
+      "sha256": "37c5cbfee1ebd9d9843e3a3c40398ae17995f7b13ed5332648d764f513e62a81",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-light-1440",
+      "axe_version": "4.13.0",
+      "sha256": "90ebdc8703ff840aca29b522cdfee5d8c0e5d3aeabc8f3e9c4a72fceb89b3002",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-light-390",
+      "axe_version": "4.13.0",
+      "sha256": "0627fef0093ed7edb706d974489054a69ac28309b3f8de558651f40d09420787",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable-light-768",
+      "axe_version": "4.13.0",
+      "sha256": "9cdb6195f57bb5b60afce4e1cdb33c7aa331bf61b007ba5e937fb459809282b1",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-unavailable",
+      "axe_version": "4.13.0",
+      "sha256": "f18ea998ce8905348e4c1584acf46254def614f77c29d2aa3934f62aff8fc4da",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-empty-desktop-light",
+      "axe_version": "4.13.0",
+      "sha256": "d4e68fe8cae986eb845eb8617f4c55b37b750927ff932269f8fc7d9129e07a64",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-generating-desktop-light",
+      "axe_version": "4.13.0",
+      "sha256": "fc6914bce188619c7993dd74c2ab82b55f1fc3cdf3b631b3d5b2c9c4bb10c0b1",
+      "violations": 0,
+      "passes": 17,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-ready-desktop-light",
+      "axe_version": "4.13.0",
+      "sha256": "896cd2eeb3e9e5a9e4a43edc5926faad2b2ddfc712959ffac36c055d90c5626c",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-zoom-250-dark",
+      "axe_version": "4.13.0",
+      "sha256": "d807cd47635df950230e63e0210cba0510c2b94bdbd508dd071c0fe0614f6735",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    },
+    {
+      "name": "axe-zoom-250-light",
+      "axe_version": "4.13.0",
+      "sha256": "76fd130059a7c9a1a1a7f5b55c49eef9c7c5b132f5da8fb6ebbb2f4bf28f58b2",
+      "violations": 0,
+      "passes": 18,
+      "incomplete_rules": [],
+      "scope": ".assistance"
+    }
+  ],
+  "total_audits": 27,
+  "total_violations": 0,
+  "captures": [
+    {
+      "file": "insufficient-light-390.png",
+      "bytes": 62088,
+      "sha256": "b5a7be307ff51773ded0de3973a7c2f5b6477ebe69cf6cb7ed14f19fd49de093"
+    },
+    {
+      "file": "ready-dark-390.png",
+      "bytes": 69827,
+      "sha256": "07dbdf3e9be495c1b304db01775f56595ecac0a323018f8b45a1baac4333a789"
+    },
+    {
+      "file": "ready-light-1440.png",
+      "bytes": 127047,
+      "sha256": "74de2d90660eab77823591c8a353356b7d3b9eeca15aad0a26c871b13d4542b2"
+    },
+    {
+      "file": "reference-navigation.png",
+      "bytes": 71952,
+      "sha256": "e0e5fb78b37514878d82386a376435426843d48dd8ba86e685c7fe090ae26a7e"
+    },
+    {
+      "file": "reference-navigation.webm",
+      "bytes": 150978,
+      "sha256": "f43f3ad5d0e9f4bd71b15380d6f7be1672326edebe501042ed9d1e75af776732"
+    },
+    {
+      "file": "unavailable-dark-390.png",
+      "bytes": 58845,
+      "sha256": "31e40863a0645d5ca8e6c0ea2618ed454b2136e079102333fd821406e28c2e4b"
+    },
+    {
+      "file": "zoom-250-dark.png",
+      "bytes": 109665,
+      "sha256": "a119ff7262632fe017d1237765bf482b75bd76abbb197de0e47cc99e2e0c3c11"
+    }
+  ]
+}
