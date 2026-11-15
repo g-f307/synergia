@@ -208,8 +208,15 @@ def concrete_path(path: str) -> str:
     ids=[f"{case.method}-{case.path}-{role}" for case in CASES for role in ROLES],
 )
 def test_role_route_method_matrix_executes_real_authorization(
-    case, role, runtime_actors
+    case, role, runtime_actors, monkeypatch
 ) -> None:
+    path = concrete_path(case.path)
+    if "/ai-assistance" in case.path:
+        monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "true")
+        monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENDPOINT", "http://127.0.0.1:11434")
+        monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_MODEL", "synthetic:1")
+        monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_DIGEST", "sha256:" + "a" * 64)
+        path = path.replace("security-missing-execution", str(uuid4()))
     headers = {
         "Authorization": f"Bearer {runtime_actors.token(role, disposable=True)}",
         "X-Correlation-ID": str(uuid4()),
@@ -218,7 +225,7 @@ def test_role_route_method_matrix_executes_real_authorization(
     with TestClient(app) as client:
         response = client.request(
             case.method,
-            concrete_path(case.path),
+            path,
             headers=headers,
             params=(
                 {"organization_id": str(runtime_actors.organization_id)}
