@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0039": ("ai_assistance_rate_attempts", "synergia", ""),
     "0038": ("ai_assistance_persistence", "synergia", ""),
     "0037": ("ai_assistance_contract", "synergia", ""),
     "0036": ("graylog_contract", "synergia", ""),
@@ -77,6 +78,19 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_rate_attempts":
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
+            to_regclass('synergia.ai_assistance_rate_attempts') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_rate_attempts_lookup') IS NOT NULL
+            AND to_regclass('synergia.ai_assistance_rate_attempts_expiry') IS NOT NULL
+            AND (SELECT count(*) FROM information_schema.columns
+                 WHERE table_schema='synergia' AND table_name='ai_assistance_rate_attempts'
+                   AND column_name IN ('dimension','key_hash','occurred_at')) = 3"""
+            ).fetchone()
+            is not None
+        )
     if kind == "ai_assistance_persistence":
         return (
             connection.execute(
@@ -109,8 +123,9 @@ def object_exists(
     if kind == "ai_assistance_contract":
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False
-        return connection.execute(
-            """WITH expected(role_key, permission_key, role_active) AS (
+        return (
+            connection.execute(
+                """WITH expected(role_key, permission_key, role_active) AS (
                 VALUES ('gestor', 'ai.assistance.read', true),
                        ('gestor', 'ai.assistance.generate', true),
                        ('analista', 'ai.assistance.read', true),
@@ -136,10 +151,13 @@ def object_exists(
                 UNION ALL
                 (SELECT * FROM actual EXCEPT SELECT * FROM expected)
             )"""
-        ).fetchone() is not None
+            ).fetchone()
+            is not None
+        )
     if kind == "graylog_contract":
-        return connection.execute(
-            """SELECT 1 WHERE
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
             to_regclass('synergia.graylog_deliveries') IS NOT NULL
             AND to_regclass('synergia.graylog_delivery_history') IS NOT NULL
             AND to_regclass('synergia.graylog_scan_windows') IS NOT NULL
@@ -156,7 +174,9 @@ def object_exists(
                   AND tgname = 'graylog_history_immutable' AND tgenabled <> 'D')
             AND (SELECT count(*) FROM pg_trigger
                  WHERE tgname = 'graylog_source_insert' AND tgenabled <> 'D') = 13"""
-        ).fetchone() is not None
+            ).fetchone()
+            is not None
+        )
     if kind == "feedback_contract":
         if not object_exists(connection, "table", "synergia", "permissions"):
             return False

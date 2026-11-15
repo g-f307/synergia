@@ -384,9 +384,15 @@ def test_read_detects_duration_changed_after_completion(setup, database):
 def test_cleanup_worker_rejects_missing_actor_without_deletion(
     setup, database, monkeypatch
 ):
+    import importlib.util
     import sys
 
-    from scripts.expire_ai_assistance import main
+    spec = importlib.util.spec_from_file_location(
+        "expire_ai_assistance", ROOT / "scripts/expire_ai_assistance.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    main = module.main
 
     repo, key, _, actor, correlation = setup
     aid = repo.reserve(key, actor, correlation)
@@ -425,6 +431,14 @@ def test_rollback_migration_is_reversible(database):
         ROOT / "database/rollbacks/0038_create_ai_assistance_persistence.down.sql"
     )
     with psycopg.connect(database) as c:
+        c.execute(
+            (
+                ROOT / "database/rollbacks"
+                / "0039_create_ai_assistance_rate_attempts.down.sql"
+            )
+            .read_text(),
+            prepare=False,
+        )
         c.execute(rollback.read_text(), prepare=False)
         assert (
             c.execute("SELECT to_regclass('synergia.ai_assistances')").fetchone()[0]
@@ -438,6 +452,11 @@ def test_rollback_migration_is_reversible(database):
         )
         forward = ROOT / "database/migrations/0038_create_ai_assistance_persistence.sql"
         c.execute(forward.read_text(), prepare=False)
+        c.execute(
+            (ROOT / "database/migrations/0039_create_ai_assistance_rate_attempts.sql")
+            .read_text(),
+            prepare=False,
+        )
         assert (
             c.execute(
                 "SELECT to_regclass('synergia.ai_assistance_idempotency')"
