@@ -201,3 +201,23 @@ O teste `test_audit_projection_is_sanitized_and_exportable` compara metadados da
 view com a projeção na fila e converte um evento para GELF. Isso comprova a
 integração interna e a serialização; a entrega a um servidor Graylog externo não
 foi exercitada.
+
+## Resultado da regressão após a revisão
+
+Com todas as migrations `0001`–`0038` aplicadas a um banco PostgreSQL 16
+recém-criado, `pytest -q -m integration backend/tests` terminou com **857 testes
+aprovados, 2146 desmarcados e 5 avisos de depreciação**, em 179,87 s. Os testes de
+backup usaram `pg_dump` e `pg_restore` do mesmo container PostgreSQL 16, acessados
+por invólucros locais para o banco descartável; nenhum banco existente foi usado.
+
+As verificações adicionais de contrato, contexto, gerador, configuração, auditoria
+e Graylog sem integração somaram **283 testes aprovados**. O caso dirigido de
+persistência no estado final executou **23 testes**, incluindo revalidação do tipo
+de referência. O teste dirigido de planos, concorrência, limpeza e conteúdo bruto
+executou **5 testes**. O lint Ruff e `git diff --check` passaram.
+
+A primeira tentativa da suíte integral após o ajuste inicial teve três falhas:
+uma expectativa de inventário de tabelas, corrigida, e dois testes sem ferramentas
+PostgreSQL nativas para a porta do banco descartável. Os dois passaram após usar as
+ferramentas PostgreSQL 16; a execução integral citada acima passou depois de todas
+as correções. Os avisos são de depreciação de Starlette, não falhas de teste.
