@@ -46,6 +46,7 @@ ERROR_CODES = REJECTIONS | {
     "ai_context_invalid",
     "ai_context_unavailable",
     "request_validation_error",
+    "ai_assistance_invalid_contract",
     "ai_assistance_disabled",
     "ai_assistance_generation_disabled",
     "ai_assistance_not_found",

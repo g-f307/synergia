@@ -414,7 +414,17 @@ def test_ai_assistance_rate_baseline_rejects_missing_index(migration_database):
 
 
 @pytest.mark.parametrize(
-    "guard", ["index", "shape", "dataset", "nonunique", "immutable", "outbox"]
+    "guard",
+    [
+        "index",
+        "shape",
+        "dataset",
+        "nonunique",
+        "immutable",
+        "outbox",
+        "wrong_terminal_key",
+        "wrong_terminal_dataset",
+    ],
 )
 def test_ai_observability_baseline_requires_operational_guards(
     migration_database, guard
@@ -428,6 +438,21 @@ def test_ai_observability_baseline_requires_operational_guards(
             connection.execute(
                 "CREATE INDEX ai_maintenance_terminal_once "
                 "ON synergia.data_operation_events (correlation_id)"
+            )
+        elif guard in {"wrong_terminal_key", "wrong_terminal_dataset"}:
+            connection.execute("DROP INDEX synergia.ai_maintenance_terminal_once")
+            column = "id" if guard == "wrong_terminal_key" else "correlation_id"
+            datasets = (
+                "'ai_assistance_results','ai_assistance_reservations'"
+                if guard == "wrong_terminal_key"
+                else "'quarantine'"
+            )
+            connection.execute(
+                sql.SQL(
+                    "CREATE UNIQUE INDEX ai_maintenance_terminal_once "
+                    "ON synergia.data_operation_events ({}) WHERE dataset IN ({}) "
+                    "AND outcome IN ('succeeded','failed')"
+                ).format(sql.Identifier(column), sql.SQL(datasets))
             )
         elif guard in {"immutable", "outbox"}:
             trigger = (

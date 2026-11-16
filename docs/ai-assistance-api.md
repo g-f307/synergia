@@ -5,7 +5,8 @@ estão documentadas em [ai-assistance-web.md](ai-assistance-web.md).
 
 A assistência exige `SYNERGIA_AI_ASSISTANCE_ENABLED=true` e as configurações de
 runtime e retenção descritas em `ai-assistance-persistence.md` e no contrato
-operacional. O banco deve estar migrado até `0039` e o segredo compartilhado do
+operacional. O banco deve estar migrado até `0040` (inclui a auditoria das
+manutenções) e o segredo compartilhado do
 limitador deve estar em `RATE_LIMIT_KEY_SECRET` (ou `AUTH_JWT_SIGNING_KEY`), com
 pelo menos 32 bytes. A opção desligada responde `ai_assistance_disabled`.
 

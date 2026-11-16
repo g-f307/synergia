@@ -142,6 +142,29 @@ def test_admission_denials_do_not_pollute_availability(
     assert sum(sample("requests_total", result=result) for result in RESULTS) == before
 
 
+@pytest.mark.parametrize(
+    "body",
+    [b'{"prompt":"synthetic"}', b" " * 1024 + b"{}"],
+    ids=["nonempty_contract", "oversized_contract"],
+)
+def test_contract_denials_keep_their_validation_code(client, body):
+    http, ctx, provider = client
+    code = "ai_assistance_invalid_contract"
+    before = sample("request_denials_total", code=code)
+    internal = sample("request_denials_total", code="internal_error")
+    requests = sum(sample("requests_total", result=result) for result in RESULTS)
+    response = http.post(
+        f"/executions/{ctx.subject.execution_id}/ai-assistance", content=body
+    )
+    assert response.status_code == 422 and response.json()["error"]["code"] == code
+    assert sample("request_denials_total", code=code) == before + 1
+    assert sample("request_denials_total", code="internal_error") == internal
+    assert (
+        sum(sample("requests_total", result=result) for result in RESULTS) == requests
+    )
+    assert provider.calls == 0
+
+
 def test_disabled_and_suspended_are_not_runtime_outages(client, monkeypatch):
     monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "false")
     before = sample("requests_total", result="unavailable")

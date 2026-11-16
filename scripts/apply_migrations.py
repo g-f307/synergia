@@ -86,13 +86,22 @@ def object_exists(
             EXISTS (SELECT 1 FROM pg_index i
                 WHERE i.indexrelid=to_regclass('synergia.ai_maintenance_event_once')
                   AND i.indisunique AND i.indisvalid
-                  AND pg_get_indexdef(i.indexrelid) LIKE '%(correlation_id, outcome)%'
+                  AND i.indrelid=to_regclass('synergia.data_operation_events')
+                  AND i.indnkeyatts=2
+                  AND pg_get_indexdef(i.indexrelid,1,true)='correlation_id'
+                  AND pg_get_indexdef(i.indexrelid,2,true)='outcome'
                   AND pg_get_expr(i.indpred,i.indrelid) LIKE '%ai_assistance_results%'
                   AND pg_get_expr(i.indpred,i.indrelid)
                       LIKE '%ai_assistance_reservations%')
             AND EXISTS (SELECT 1 FROM pg_index i
                 WHERE i.indexrelid=to_regclass('synergia.ai_maintenance_terminal_once')
                   AND i.indisunique AND i.indisvalid
+                  AND i.indrelid=to_regclass('synergia.data_operation_events')
+                  AND i.indnkeyatts=1
+                  AND pg_get_indexdef(i.indexrelid,1,true)='correlation_id'
+                  AND pg_get_expr(i.indpred,i.indrelid) LIKE '%ai_assistance_results%'
+                  AND pg_get_expr(i.indpred,i.indrelid)
+                      LIKE '%ai_assistance_reservations%'
                   AND pg_get_expr(i.indpred,i.indrelid) LIKE '%succeeded%'
                   AND pg_get_expr(i.indpred,i.indrelid) LIKE '%failed%')
             AND to_regclass('synergia.ai_maintenance_time') IS NOT NULL
