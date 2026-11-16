@@ -18,6 +18,7 @@ from app.ai_assistance_limits import AssistanceLimits
 from app.ai_assistance_provider import LocalAiModelProvider
 from app.ai_assistance_repository import PostgresAiAssistanceRepository
 from app.ai_assistance_service import AiAssistanceService
+from app.ai_assistance_telemetry import record_security
 from app.authorization import AuthorizationRepo, CurrentActor
 from app.errors import ApiError, ErrorResponse
 
@@ -120,6 +121,13 @@ def _call(operation, actor, execution_id, audit, request, permission):
     except ApiError as exc:
         if exc.status_code == 403 or getattr(exc, "audit_denial", False):
             try:
+                if exc.status_code == 404 and hasattr(audit, "execution_organization"):
+                    organization = audit.execution_organization(str(execution_id))
+                    if organization is not None and not all(
+                        actor.allows(required, organization)
+                        for required in ("execution.read", permission)
+                    ):
+                        record_security("scope_violation")
                 audit.audit_denial(actor, permission, request)
             except Exception:
                 raise ApiError(

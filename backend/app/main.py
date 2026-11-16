@@ -9,6 +9,7 @@ from app.ai_assistance_config import AiAssistanceConfig
 from app.ai_assistance_contract import install_contract_openapi
 from app.ai_assistance_health import router as ai_assistance_health_router
 from app.ai_assistance_routes import router as ai_assistance_execution_router
+from app.ai_assistance_telemetry import initialize as initialize_assistance_telemetry
 from app.ai_quality import router as ai_quality_router
 from app.approvals import router as approvals_router
 from app.audit import router as audit_router
@@ -34,6 +35,7 @@ from app.users import router as users_router
 def create_app() -> FastAPI:
     AiAssistanceConfig.from_environment(os.environ)
     configure_logging()
+    initialize_assistance_telemetry()
     application = FastAPI(
         title="SYNERGIA API",
         version="0.13.0",

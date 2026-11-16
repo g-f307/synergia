@@ -69,6 +69,12 @@ um campo existente.
 
 ## Migrations PostgreSQL
 
+A `0040_add_ai_assistance_observability.sql` acrescenta dois datasets fechados e
+guardas para manutenção de IA em `data_operation_events`. O rollback preserva o
+histórico imutável e a aceitação dos valores de dataset; remove índices/guardas
+específicos. O [contrato de telemetria](ai-assistance-observability.md) descreve
+essa compatibilidade e a evolução dos labels experimentais anteriores.
+
 Arquivos seguem `NNNN_descricao_em_snake_case.sql` e são executados em ordem
 lexicográfica. O próximo arquivo usa um número maior que o último publicado.
 

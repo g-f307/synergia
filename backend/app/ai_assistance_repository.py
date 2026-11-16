@@ -9,7 +9,6 @@ from datetime import timedelta
 from uuid import UUID, uuid4
 
 import psycopg
-from prometheus_client import Counter
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import ValidationError
@@ -17,14 +16,7 @@ from pydantic import ValidationError
 from app.ai_assistance_contract import PRODUCT_NOTICE, AiAssistanceResponse
 from app.ai_assistance_fallback import FAILED, INSUFFICIENT, MISSING, NOTICE, TRUNCATED
 from app.ai_assistance_generator import validate_language
-from app.observability.metrics import REGISTRY
-
-EVENTS = Counter(
-    "synergia_ai_assistance_persistence_total",
-    "Assistance persistence operations.",
-    ["operation", "outcome"],
-    registry=REGISTRY,
-)
+from app.ai_assistance_telemetry import persistence
 
 
 class AssistancePersistenceError(Exception):
@@ -197,6 +189,7 @@ class PostgresAiAssistanceRepository:
         self.database_url = database_url
         self.retention_days = retention_days
 
+    @persistence("reserve")
     def reserve(
         self,
         key: AssistanceKey,
@@ -271,12 +264,11 @@ class PostgresAiAssistanceRepository:
                 ),
             ).fetchone()
             if row is None:
-                EVENTS.labels("reserve", "conflict").inc()
                 raise AssistancePersistenceError("conflict_or_not_found")
             _event(connection, row, actor_id, correlation_id, "requested")
-        EVENTS.labels("reserve", "success").inc()
         return row["id"]
 
+    @persistence("abandon")
     def abandon(self, key, assistance_id, actor_id, correlation_id, rejection_code):
         """Release a failed reservation and audit only its safe error code."""
         allowed = {
@@ -301,6 +293,7 @@ class PostgresAiAssistanceRepository:
                 row["rejection_code"] = rejection_code
                 _event(connection, row, actor_id, correlation_id, "rejected")
 
+    @persistence("finish")
     def finish(
         self,
         key: AssistanceKey,
@@ -369,7 +362,6 @@ class PostgresAiAssistanceRepository:
                 correlation_id,
                 "rejected" if result.state == "rejected" else "completed",
             )
-        EVENTS.labels("finish", "success").inc()
         return result
 
     def complete(
@@ -388,6 +380,7 @@ class PostgresAiAssistanceRepository:
             key, assistance_id, actor_id, correlation_id, response, **options
         )
 
+    @persistence("find")
     def find(
         self,
         key: AssistanceKey,
@@ -425,11 +418,10 @@ class PostgresAiAssistanceRepository:
             else:
                 _event(connection, row, actor_id, correlation_id, "reused")
         if result is None:
-            EVENTS.labels("find", "integrity_error").inc()
             raise AssistancePersistenceError("integrity_error") from None
-        EVENTS.labels("find", "success").inc()
         return result
 
+    @persistence("get")
     def get(
         self,
         organization_id: UUID,
@@ -459,11 +451,10 @@ class PostgresAiAssistanceRepository:
             else:
                 _event(connection, row, actor_id, correlation_id, "read")
         if result is None:
-            EVENTS.labels("get", "integrity_error").inc()
             raise AssistancePersistenceError("integrity_error") from None
-        EVENTS.labels("get", "success").inc()
         return result
 
+    @persistence("latest")
     def latest(
         self,
         organization_id: UUID,
@@ -494,13 +485,18 @@ class PostgresAiAssistanceRepository:
             else:
                 _event(connection, row, actor_id, correlation_id, "read")
         if result is None:
-            EVENTS.labels("get", "integrity_error").inc()
             raise AssistancePersistenceError("integrity_error") from None
-        EVENTS.labels("get", "success").inc()
         return result
 
+    @persistence("recover_reservations")
     def recover_reservations(
-        self, actor_id: UUID, correlation_id: UUID, *, batch_size=100, dry_run=True
+        self,
+        actor_id: UUID,
+        correlation_id: UUID,
+        *,
+        batch_size=100,
+        dry_run=True,
+        _maintenance_started=None,
     ):
         """Release only expired processing leases; no inference or result deletion."""
         if type(batch_size) is not int or not 1 <= batch_size <= 1000:
@@ -527,14 +523,32 @@ class PostgresAiAssistanceRepository:
             ).fetchall()
             for row in rows:
                 _event(connection, row, actor_id, correlation_id, "expired")
+            if _maintenance_started is not None:
+                from app.ai_assistance_maintenance import terminal_event
+
+                terminal_event(
+                    connection,
+                    "recovery",
+                    actor_id,
+                    correlation_id,
+                    len(rows),
+                    _maintenance_started,
+                )
         return {
             "count": len(rows),
             "oldest": min((r["reservation_until"] for r in rows), default=None),
             "newest": max((r["reservation_until"] for r in rows), default=None),
         }
 
+    @persistence("expire")
     def expire(
-        self, actor_id: UUID, correlation_id: UUID, *, batch_size=100, dry_run=False
+        self,
+        actor_id: UUID,
+        correlation_id: UUID,
+        *,
+        batch_size=100,
+        dry_run=False,
+        _maintenance_started=None,
     ):
         if type(batch_size) is not int or not 1 <= batch_size <= 1000:
             raise ValueError("invalid batch size")
@@ -558,7 +572,17 @@ class PostgresAiAssistanceRepository:
             ).fetchall()
             for row in rows:
                 _event(connection, row, actor_id, correlation_id, "expired")
-        EVENTS.labels("expire", "success").inc(len(rows))
+            if _maintenance_started is not None:
+                from app.ai_assistance_maintenance import terminal_event
+
+                terminal_event(
+                    connection,
+                    "retention",
+                    actor_id,
+                    correlation_id,
+                    len(rows),
+                    _maintenance_started,
+                )
         return {
             "count": len(rows),
             "oldest": min((r["expires_at"] for r in rows), default=None),

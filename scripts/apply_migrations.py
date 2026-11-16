@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0040": ("ai_assistance_observability", "synergia", ""),
     "0039": ("ai_assistance_rate_attempts", "synergia", ""),
     "0038": ("ai_assistance_persistence", "synergia", ""),
     "0037": ("ai_assistance_contract", "synergia", ""),
@@ -78,6 +79,38 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_observability":
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
+            EXISTS (SELECT 1 FROM pg_index i
+                WHERE i.indexrelid=to_regclass('synergia.ai_maintenance_event_once')
+                  AND i.indisunique AND i.indisvalid
+                  AND pg_get_indexdef(i.indexrelid) LIKE '%(correlation_id, outcome)%'
+                  AND pg_get_expr(i.indpred,i.indrelid) LIKE '%ai_assistance_results%'
+                  AND pg_get_expr(i.indpred,i.indrelid)
+                      LIKE '%ai_assistance_reservations%')
+            AND EXISTS (SELECT 1 FROM pg_index i
+                WHERE i.indexrelid=to_regclass('synergia.ai_maintenance_terminal_once')
+                  AND i.indisunique AND i.indisvalid
+                  AND pg_get_expr(i.indpred,i.indrelid) LIKE '%succeeded%'
+                  AND pg_get_expr(i.indpred,i.indrelid) LIKE '%failed%')
+            AND to_regclass('synergia.ai_maintenance_time') IS NOT NULL
+            AND (SELECT count(*) FROM pg_trigger
+                 WHERE tgrelid=to_regclass('synergia.data_operation_events')
+                   AND tgname IN ('data_operation_events_immutable',
+                                  'graylog_source_insert') AND tgenabled <> 'D') = 2
+            AND EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid=to_regclass('synergia.data_operation_events')
+                  AND conname='ai_maintenance_event_shape' AND convalidated)
+            AND EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid=to_regclass('synergia.data_operation_events')
+                  AND conname='data_operation_events_dataset_check'
+                  AND pg_get_constraintdef(oid) LIKE '%ai_assistance_results%'
+                  AND pg_get_constraintdef(oid) LIKE '%ai_assistance_reservations%')"""
+            ).fetchone()
+            is not None
+        )
     if kind == "ai_assistance_rate_attempts":
         return (
             connection.execute(

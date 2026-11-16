@@ -7,6 +7,11 @@ requisições da aplicação não consultam o Graylog. Logs técnicos têm polí
 stream separados. Implantação corporativa é uma decisão futura; não se presume
 que a LG utilize a ferramenta.
 
+A assistência por execução possui [contrato de telemetria próprio](ai-assistance-observability.md)
+com contagem HTTP separada do trabalho interno, labels fechados e observação das
+rotinas finitas pela auditoria persistida (#191, blocos 1/2). Alertas específicos
+e exercício integrado serão acrescentados nos blocos seguintes.
+
 A issue #93 entrega uma base local e reproduzível: logs JSON, sondas HTTP,
 métricas Prometheus, alertas preliminares e painel Grafana. A #94 acrescenta o
 estado de recuperação, runbooks e retenção operacional. A #145 consolida o

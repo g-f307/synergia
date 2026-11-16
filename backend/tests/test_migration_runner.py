@@ -411,3 +411,46 @@ def test_ai_assistance_rate_baseline_rejects_missing_index(migration_database):
     result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
     assert result.returncode != 0
     assert "0039_create_ai_assistance_rate_attempts.sql" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "guard", ["index", "shape", "dataset", "nonunique", "immutable", "outbox"]
+)
+def test_ai_observability_baseline_requires_operational_guards(
+    migration_database, guard
+):
+    apply_legacy_schema(migration_database, len(MIGRATIONS))
+    with psycopg.connect("", dbname=migration_database) as connection:
+        if guard == "index":
+            connection.execute("DROP INDEX synergia.ai_maintenance_terminal_once")
+        elif guard == "nonunique":
+            connection.execute("DROP INDEX synergia.ai_maintenance_terminal_once")
+            connection.execute(
+                "CREATE INDEX ai_maintenance_terminal_once "
+                "ON synergia.data_operation_events (correlation_id)"
+            )
+        elif guard in {"immutable", "outbox"}:
+            trigger = (
+                "data_operation_events_immutable"
+                if guard == "immutable"
+                else "graylog_source_insert"
+            )
+            connection.execute(
+                sql.SQL(
+                    "ALTER TABLE synergia.data_operation_events DISABLE TRIGGER {}"
+                ).format(sql.Identifier(trigger))
+            )
+        elif guard == "shape":
+            connection.execute(
+                "ALTER TABLE synergia.data_operation_events "
+                "DROP CONSTRAINT ai_maintenance_event_shape"
+            )
+        else:
+            connection.execute(
+                "ALTER TABLE synergia.data_operation_events "
+                "DROP CONSTRAINT data_operation_events_dataset_check"
+            )
+    result = run_migrations(migration_database, MIGRATIONS[-1].name, check=False)
+    assert result.returncode != 0
+    assert "0040_add_ai_assistance_observability.sql" in result.stderr
+    assert migration_count(migration_database) == 0

@@ -21,6 +21,7 @@ from prometheus_client import (
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from psycopg.rows import dict_row
 
+from app.ai_assistance_metrics import AiAssistanceCollector
 from app.graylog_metrics import GraylogCollector
 from app.observability.telemetry import safe_log
 
@@ -161,6 +162,7 @@ _SAFE_RATE_OPERATIONS = frozenset(
         "report_generate",
         "report_export",
         "decision",
+        "ai_assistance_generate",
     }
 )
 _SAFE_RATE_DIMENSIONS = frozenset(
@@ -169,8 +171,8 @@ _SAFE_RATE_DIMENSIONS = frozenset(
 
 
 def _bounded(value: Any, allowed: frozenset[str]) -> str:
-    normalized = str(value or "unknown").removeprefix("report.").removeprefix(
-        "notification."
+    normalized = (
+        str(value or "unknown").removeprefix("report.").removeprefix("notification.")
     )
     return normalized if normalized in allowed else "other"
 
@@ -178,7 +180,11 @@ def _bounded(value: Any, allowed: frozenset[str]) -> str:
 def observe_http_request(
     method: str, route: str, status_code: int, duration_seconds: float
 ) -> None:
-    safe_method = method if method in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"} else "OTHER"
+    safe_method = (
+        method
+        if method in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+        else "OTHER"
+    )
     safe_route = route if route.startswith("/") and len(route) <= 120 else "unmatched"
     status_class = f"{status_code // 100}xx" if 100 <= status_code <= 599 else "unknown"
     HTTP_REQUESTS.labels(safe_method, safe_route, status_class).inc()
@@ -392,6 +398,9 @@ class PostgresOperationalCollector:
                     FROM operations
                     LEFT JOIN synergia.data_operation_events event
                       ON event.operation = operations.operation
+                     AND event.dataset NOT IN (
+                         'ai_assistance_results', 'ai_assistance_reservations'
+                     )
                     GROUP BY operations.operation
                     """
                 ).fetchall()
@@ -460,8 +469,12 @@ class PostgresOperationalCollector:
             labels=["journey", "statistic"],
         )
         for row in durations:
-            duration_metric.add_metric([row["journey"], "average"], float(row["average"]))
-            duration_metric.add_metric([row["journey"], "maximum"], float(row["maximum"]))
+            duration_metric.add_metric(
+                [row["journey"], "average"], float(row["average"])
+            )
+            duration_metric.add_metric(
+                [row["journey"], "maximum"], float(row["maximum"])
+            )
         yield duration_metric
 
         row_metric = CounterMetricFamily(
@@ -469,7 +482,12 @@ class PostgresOperationalCollector:
             "Persisted import row volume by outcome.",
             labels=["outcome"],
         )
-        for key in ("rows_read", "valid_records", "rejected_records", "normalized_records"):
+        for key in (
+            "rows_read",
+            "valid_records",
+            "rejected_records",
+            "normalized_records",
+        ):
             row_metric.add_metric([key], int(import_rows[key]))
         yield row_metric
 
@@ -499,9 +517,7 @@ class PostgresOperationalCollector:
             labels=["operation"],
         )
         for row in data_operations:
-            recovery_success.add_metric(
-                [row["operation"]], float(row["last_success"])
-            )
+            recovery_success.add_metric([row["operation"]], float(row["last_success"]))
             recovery_failures.add_metric([row["operation"]], row["failures"])
         yield recovery_success
         yield recovery_failures
@@ -509,6 +525,7 @@ class PostgresOperationalCollector:
 
 REGISTRY.register(PostgresOperationalCollector())
 REGISTRY.register(GraylogCollector())
+REGISTRY.register(AiAssistanceCollector())
 
 
 def render_metrics() -> bytes:

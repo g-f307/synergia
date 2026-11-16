@@ -36,6 +36,18 @@ class CorrelationIdMiddleware:
         execution_token = bind_execution_id(None)
         started_at = perf_counter()
         status_code = 500
+        observation = observation_token = None
+        if (
+            scope.get("method") == "POST"
+            and scope.get("path", "").startswith("/executions/")
+            and scope.get("path", "").endswith("/ai-assistance")
+            and scope.get("path", "").count("/") == 3
+        ):
+            from app.ai_assistance_telemetry import RequestObservation, _observation
+
+            observation = RequestObservation()
+            scope["state"]["ai_assistance_observation"] = observation
+            observation_token = _observation.set(observation)
 
         async def send_with_correlation(message: Message) -> None:
             nonlocal status_code
@@ -48,6 +60,13 @@ class CorrelationIdMiddleware:
 
         try:
             await self.app(scope, receive, send_with_correlation)
+        except BaseException as exc:
+            import asyncio
+
+            if observation is not None and isinstance(exc, asyncio.CancelledError):
+                observation.fail("cancelled")
+                status_code = 499
+            raise
         finally:
             route = scope.get("route")
             route_template = getattr(route, "path", "unmatched")
@@ -57,5 +76,9 @@ class CorrelationIdMiddleware:
                 status_code=status_code,
                 duration_seconds=perf_counter() - started_at,
             )
+            if observation is not None:
+                if route_template == "/executions/{execution_id}/ai-assistance":
+                    observation.finish(status_code, perf_counter() - started_at)
+                _observation.reset(observation_token)
             reset_execution_id(execution_token)
             reset_correlation_id(correlation_token)

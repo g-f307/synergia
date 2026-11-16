@@ -43,7 +43,9 @@
       "rejected_count",
       "duration_ms",
       "estimated_memory_bytes",
-      "exception_type"
+      "exception_type",
+      "state",
+      "origin"
     ],
     "prohibited_content": [
       "credentials",

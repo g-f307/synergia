@@ -11,6 +11,7 @@ from uuid import UUID
 from app.ai_assistance_contract import AiAssistanceResponse
 from app.ai_assistance_generator import prepare_prompt
 from app.ai_assistance_repository import AssistanceKey, AssistancePersistenceError
+from app.ai_assistance_telemetry import mark_result
 from app.authorization import ActorContext
 from app.errors import ApiError
 
@@ -105,6 +106,7 @@ class AiAssistanceService:
                 key, actor.user_id, actor.correlation_id, evidence_refs=refs
             )
             if existing is not None:
+                mark_result(existing, reused=True)
                 return existing
             if self.limits is not None:
                 self.limits.consume(actor, key.organization_id)
@@ -120,6 +122,7 @@ class AiAssistanceService:
                     key, actor.user_id, actor.correlation_id, evidence_refs=refs
                 )
                 if existing is not None:
+                    mark_result(existing, reused=True)
                     return existing
                 raise ApiError(
                     409, "ai_assistance_in_progress", "Geração em andamento"
@@ -196,7 +199,7 @@ class AiAssistanceService:
                 ),
                 context={"evidence_refs": refs},
             )
-            return self.repository.finish(
+            saved = self.repository.finish(
                 key,
                 assistance_id,
                 actor.user_id,
@@ -207,6 +210,8 @@ class AiAssistanceService:
                 rejection_code=generated.rejection_code,
                 elapsed_ms=total_ms,
             )
+            mark_result(saved, code=generated.rejection_code)
+            return saved
         except AssistancePersistenceError as exc:
             self._persistence_error(exc)
 

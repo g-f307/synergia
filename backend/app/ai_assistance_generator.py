@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
-from prometheus_client import Counter, Histogram
 from pydantic import AfterValidator, Field, ValidationError
 
 from app.ai_assistance_context import canonical_bytes, serialize_snapshot
@@ -21,7 +20,14 @@ from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_contract import StrictContract, plain_text
 from app.ai_assistance_fallback import deterministic_fallback, required_limitations
 from app.ai_assistance_provider import AiModelProvider, ProviderError
-from app.observability.metrics import REGISTRY
+from app.ai_assistance_telemetry import (
+    GENERATION_DURATION,
+    GENERATIONS,
+    RESPONSE_BYTES,
+    environment,
+    inference,
+    log_event,
+)
 from app.observability.telemetry import safe_log
 
 _ASSETS = Path(__file__).parent / "ai_assistance_assets"
@@ -29,17 +35,6 @@ SYSTEM = (_ASSETS / "system.txt").read_text(encoding="utf-8")
 TEMPLATE = (_ASSETS / "template.txt").read_text(encoding="utf-8")
 SYSTEM_SHA256 = hashlib.sha256(SYSTEM.encode()).hexdigest()
 TEMPLATE_SHA256 = hashlib.sha256(TEMPLATE.encode()).hexdigest()
-OUTCOMES = Counter(
-    "synergia_ai_assistance_generations",
-    "Assistance generation outcomes.",
-    ["origin", "state", "rejection"],
-    registry=REGISTRY,
-)
-DURATION = Histogram(
-    "synergia_ai_assistance_generation_seconds",
-    "Assistance generation duration.",
-    registry=REGISTRY,
-)
 
 
 def _log_unexpected_exception(exc: Exception) -> None:
@@ -265,9 +260,11 @@ class AiAssistanceGenerator:
             state, origin = "insufficient_evidence", "deterministic"
         else:
             try:
-                raw = self.provider.generate(SYSTEM, prompt, request_schema)
+                with inference():
+                    raw = self.provider.generate(SYSTEM, prompt, request_schema)
                 if not isinstance(raw, bytes):
                     raise ProviderError("runtime_invalid_response")
+                RESPONSE_BYTES.labels(environment()).observe(len(raw))
                 response_hash = hashlib.sha256(raw).hexdigest()
                 output = _decode(raw, context)
                 summary, findings = (
@@ -307,8 +304,21 @@ class AiAssistanceGenerator:
                     "runtime_unavailable",
                 )
         elapsed = max(0, int((time.monotonic() - start) * 1000))
-        OUTCOMES.labels(origin, state, rejection or "none").inc()
-        DURATION.observe(elapsed / 1000)
+        outcome = {
+            "ready": "generated",
+            "insufficient_evidence": "insufficient",
+            "rejected": "rejected",
+        }.get(state, "timeout" if rejection == "runtime_timeout" else "unavailable")
+        GENERATIONS.labels(environment(), origin, outcome, rejection or "none").inc()
+        GENERATION_DURATION.labels(environment()).observe(elapsed / 1000)
+        log_event(
+            "ai.assistance.generator.finished",
+            result=outcome,
+            state=state,
+            origin=origin,
+            code=rejection or "none",
+            duration=elapsed / 1000,
+        )
         return GenerationResult(
             state,
             origin,

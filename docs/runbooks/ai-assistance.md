@@ -1,7 +1,8 @@
 # Assistência de IA — suspensão e recuperação
 
-Entrega incremental da #191. Este checkpoint cobre controles de operação;
-métricas, alertas, painel e exercício Graylog serão entregues nos próximos blocos.
+Entrega incremental da #191. Os blocos 1/2 cobrem controles de operação e
+[telemetria](../ai-assistance-observability.md); alertas, painel e exercício Graylog
+serão entregues nos próximos blocos.
 A ativação operacional continua condicionada à validação final da #192.
 
 ## Escolher o controle
@@ -123,6 +124,15 @@ transação; o histórico não é removido. A finalização por um UUID de reser
 recuperada é recusada. O comando mostra apenas quantidade e intervalo; erros
 usam o código `ai_assistance_recovery_failed`, sem DSN ou conteúdo.
 
+Com a migration 0040, execuções efetivas também registram início e resultado do
+lote em `data_operation_events`, com a mesma correlação. O sucesso é atômico com
+as exclusões; prévias não gravam eventos de manutenção. Conferir os contadores
+persistidos `synergia_ai_assistance_recovery_runs_total` e
+`synergia_ai_assistance_retention_runs_total`, os timestamps de sucesso e
+`synergia_ai_assistance_collection_success`. Valor zero do coletor significa
+medição indisponível, não operação saudável. Nenhum desses comandos requer
+iniciar ou chamar um modelo.
+
 ## Distinguir falhas e reabilitar
 
 - Contexto/elegibilidade: verificar lifecycle terminal e permissões da execução.
@@ -137,4 +147,4 @@ Para reabilitar, confirmar configuração/pin, recursos disponíveis, ausência 
 workers anteriores e reservas presas, auditoria funcional e autorização da janela.
 Restaurar `GENERATION_ENABLED=true` e recriar as instâncias. Conferir sonda,
 readiness e um caso sintético autorizado. Os próximos blocos acrescentam critérios
-por métricas/alertas; este checkpoint não declara a #191 ou #192 concluída.
+por alertas; este checkpoint não declara a #191 ou #192 concluída.

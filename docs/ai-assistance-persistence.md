@@ -4,6 +4,11 @@ A migration `0038` cria `ai_assistances` e o histórico imutável
 `ai_assistance_events`. Cada resultado pertence à organização e à execução;
 consultas da aplicação devem verificar a permissão e reconstruir o conjunto de
 referências autorizadas antes de chamar o repositório. Não há rota nesta entrega.
+
+A migration incremental `0040` acrescenta os registros de execução dos workers
+na auditoria existente de operações de dados. O [contrato de observabilidade](ai-assistance-observability.md)
+descreve contagens, sucesso atômico, falhas, heartbeat e rollback que preserva o
+histórico. Para executar os CLIs atualizados, aplicar essa migration previamente.
 O repositório valida novamente o contrato e as referências em leitura, e registra
 falha de integridade sem devolver o resultado inválido.
 Na finalização, `elapsed_ms` deve coincidir com `provenance.timings.total_ms`;
