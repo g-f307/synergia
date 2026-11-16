@@ -22,6 +22,7 @@ corporativa definitiva e SLOs permanecem como portões externos.
 | `GET /health/ready` | público | `200 ready` ou `503 not_ready`; exige PostgreSQL e armazenamento |
 | `GET /health` | público | estado completo; e-mail é dependência opcional e pode degradar |
 | `GET /metrics` | Bearer técnico | exposição Prometheus; `401` sem credencial e `503` sem configuração segura |
+| `GET /operations/ai-assistance/health` | Mesmo Bearer técnico | estado informativo da IA, sem inferência nem efeito em readiness; [runbook](runbooks/ai-assistance.md) |
 
 As sondas retornam apenas componente, estado, criticidade, duração e código de
 motivo. Nunca retornam DSN, caminho, exceção ou conteúdo operacional. Configure

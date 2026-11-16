@@ -20,6 +20,11 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.13.0` acrescenta a sonda técnica autenticada
+`GET /operations/ai-assistance/health`, independente da readiness, e a suspensão
+apenas da geração da assistência. O contrato de resultado `1.0.0` permanece
+inalterado; veja [ai-assistance-api.md](ai-assistance-api.md).
+
 A API 0.10.0 acrescenta consulta e exportação sanitizada de auditoria, sem
 alterar `GET /history`. Filtros, limites, formatos e erros estão em
 [audit-export.md](audit-export.md); campos e emissores estão no
@@ -33,6 +38,7 @@ alterar `GET /history`. Filtros, limites, formatos e erros estão em
 | `GET /health/ready` | confirma PostgreSQL, schema e armazenamento; falha fechada | `200`/`503` |
 | `GET /health` | apresenta estado sanitizado de dependências críticas e opcionais | `200`/`503` |
 | `GET /metrics` | métricas Prometheus com credencial técnica dedicada | `200` |
+| `GET /operations/ai-assistance/health` | sonda informativa do runtime, com a credencial técnica de observabilidade; sem inferência | `200`/`401`/`503` |
 | `POST /auth/login` | cria sessão e emite access/refresh pelo adaptador configurado; hoje só o local (desenvolvimento, teste e homologação temporária); `503 identity_adapter_unavailable` quando desabilitado e `503 auth_configuration_invalid` com configuração inválida; contrato corporativo em [corporate-identity-contract.md](corporate-identity-contract.md) | `200` |
 | `GET /me` | consulta identidade e preferências próprias | `200` |
 | `PATCH /me` | atualiza perfil, notificações e aparência próprias com versão otimista | `200` |

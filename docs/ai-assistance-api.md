@@ -9,6 +9,16 @@ operacional. O banco deve estar migrado até `0039` e o segredo compartilhado do
 limitador deve estar em `RATE_LIMIT_KEY_SECRET` (ou `AUTH_JWT_SIGNING_KEY`), com
 pelo menos 32 bytes. A opção desligada responde `ai_assistance_disabled`.
 
+Na API `0.13.0`, `SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED=false` suspende
+somente o POST (`503 ai_assistance_generation_disabled`), mantendo a flag geral
+ligada. A leitura possui serviço separado, sem provider nem limitador de geração;
+runtime, modelo/digest e segredo do limitador não são necessários nesse modo.
+Valores de configuração presentes continuam sujeitos à validação de segurança.
+A capability mantém leitura autorizada e retorna `generate=false`. A flag geral
+desligada mantém seu comportamento anterior, bloqueando ambas as operações.
+O runbook de [degradação e recuperação](runbooks/ai-assistance.md) descreve os dois
+controles e a sonda técnica autenticada, independente da readiness.
+
 `POST /executions/{execution_id}/ai-assistance` aceita corpo ausente ou `{}`.
 Exige `execution.read` e `ai.assistance.generate` na organização da execução.
 O contexto é montado no servidor; o cliente não fornece fatos ou configurações do
@@ -43,6 +53,7 @@ com o correlation ID, sem identificadores ou conteúdo do contexto nos logs.
 | 429 | `rate_limit_exceeded` | Limite por ator ou organização; `Retry-After` informa a espera |
 | 500 | `ai_assistance_integrity_error` | Registro persistido inválido |
 | 503 | `ai_assistance_disabled` | Recurso desligado |
+| 503 | `ai_assistance_generation_disabled` | Somente geração suspensa; leitura preservada |
 | 503 | `ai_assistance_runtime_unavailable` | Dependência ou runtime indisponível |
 | 504 | `ai_assistance_timeout` | Prazo excedido |
 

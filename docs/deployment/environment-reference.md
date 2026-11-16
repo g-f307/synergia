@@ -67,9 +67,10 @@ A ativação operacional depende das entregas #186–#192.
 | Variável | Aplicação | Modelo / formato | Regra por perfil e exemplo seguro |
 | --- | --- | --- | --- |
 | `SYNERGIA_AI_ASSISTANCE_ENABLED` | Compose / backend | false | Opt-in explícito; somente true/false. |
-| `SYNERGIA_AI_ASSISTANCE_ENDPOINT` | Compose / backend | vazio | Quando ligado, origem HTTP de loopback ou serviço permitido; sem credenciais, path, query ou fragmento. |
+| `SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED` | Compose / backend | true | Kill switch de geração; false com ENABLED=true preserva leitura autorizada. Alterar configuração e recriar o backend. |
+| `SYNERGIA_AI_ASSISTANCE_ENDPOINT` | Compose / backend | vazio | Obrigatório para geração ligada; origem HTTP de loopback ou serviço permitido; sem credenciais, path, query ou fragmento. |
 | `SYNERGIA_AI_ASSISTANCE_ALLOWED_SERVICE` | Compose / backend | vazio | Nome exato de um serviço em rede controlada; sem curingas. |
-| `SYNERGIA_AI_ASSISTANCE_MODEL` | Compose / backend | vazio | Identificador fixo obrigatório quando ligado; nunca enviado ao browser pela capacidade. |
+| `SYNERGIA_AI_ASSISTANCE_MODEL` | Compose / backend | vazio | Identificador fixo obrigatório para geração ligada; nunca enviado ao browser pela capacidade. |
 | `SYNERGIA_AI_ASSISTANCE_DIGEST` | Compose / backend | vazio | sha256: mais 64 hex; obrigatório com modelo, a conferir no runtime. |
 | `SYNERGIA_AI_ASSISTANCE_TIMEOUT_SECONDS` | Compose / backend | 30 | Fixo, orçamento total em segundos. |
 | `SYNERGIA_AI_ASSISTANCE_CONTEXT_MAX_BYTES` | Compose / backend | 8192 | Fixo, contexto JSON UTF-8 serializado. |

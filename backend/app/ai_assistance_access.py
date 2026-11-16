@@ -70,9 +70,9 @@ def assistance_capability(actor: CurrentActor) -> AiAssistanceCapability:
     generate = shared_scope(actor, "ai.assistance.generate")
     if not read and not generate:
         raise ApiError(403, "access_denied", "Acao nao autorizada")
-    enabled = AiAssistanceConfig.from_environment(os.environ).enabled
+    config = AiAssistanceConfig.from_environment(os.environ)
     return AiAssistanceCapability(
-        enabled=enabled,
-        read=enabled and read,
-        generate=enabled and generate,
+        enabled=config.enabled,
+        read=config.enabled and read,
+        generate=config.enabled and config.generation_enabled and generate,
     )

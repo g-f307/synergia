@@ -16,7 +16,7 @@ PUBLIC = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
-TECHNICAL = {("GET", "/metrics")}
+TECHNICAL = {("GET", "/metrics"), ("GET", "/operations/ai-assistance/health")}
 ROW = re.compile(r"^\| `(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)` \|")
 
 

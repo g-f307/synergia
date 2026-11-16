@@ -89,7 +89,11 @@ def test_real_context_through_http(setup, database):
     from fastapi.testclient import TestClient
 
     from app.ai_assistance_config import AiAssistanceConfig
-    from app.ai_assistance_routes import enabled_config, get_assistance_service
+    from app.ai_assistance_routes import (
+        enabled_config,
+        get_assistance_service,
+        get_read_service,
+    )
     from app.authorization import get_actor_context, get_authorization_repository
     from app.main import create_app
 
@@ -99,6 +103,7 @@ def test_real_context_through_http(setup, database):
     app.dependency_overrides[enabled_config] = lambda: AiAssistanceConfig(enabled=True)
     app.dependency_overrides[get_actor_context] = lambda: actor
     app.dependency_overrides[get_assistance_service] = lambda: service
+    app.dependency_overrides[get_read_service] = lambda: service
     app.dependency_overrides[get_authorization_repository] = lambda: type(
         "Audit", (), {"audit_denial": lambda *args: None}
     )()
@@ -162,6 +167,49 @@ def test_real_context_through_http(setup, database):
                 ).fetchone()[0]
                 == before
             )
+
+
+def test_suspended_http_reads_real_persistence_without_provider(
+    setup, database, monkeypatch
+):
+    from fastapi.testclient import TestClient
+
+    import app.ai_assistance_routes as routes
+    from app.authorization import get_actor_context, get_authorization_repository
+    from app.main import create_app
+
+    provider = Fake(b"never")
+    service, actor, ctx = fixture_service(setup, database, provider)
+    service.contexts = ExecutionContextBuilder(PostgresContextReader(database))
+    saved = service.generate(actor, ctx.subject.execution_id)
+    monkeypatch.setenv("DATABASE_URL", database)
+    monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "true")
+    monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED", "false")
+    for name in ("ENDPOINT", "MODEL", "DIGEST"):
+        monkeypatch.delenv("SYNERGIA_AI_ASSISTANCE_" + name, raising=False)
+    monkeypatch.delenv("RATE_LIMIT_KEY_SECRET", raising=False)
+    monkeypatch.delenv("AUTH_JWT_SIGNING_KEY", raising=False)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("read-only route initialized a generation dependency")
+
+    monkeypatch.setattr(routes, "LocalAiModelProvider", forbidden)
+    monkeypatch.setattr(routes, "AssistanceLimits", forbidden)
+    app = create_app()
+    app.dependency_overrides[get_actor_context] = lambda: actor
+    app.dependency_overrides[get_authorization_repository] = lambda: type(
+        "Audit", (), {"audit_denial": lambda *args: None}
+    )()
+    path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
+    with TestClient(app) as http:
+        assert http.post(path).status_code == 503
+        assert http.get(path + "/latest").json() == saved.model_dump(mode="json")
+        assert http.get("/me/ai-assistance-capability").json() == {
+            "enabled": True,
+            "read": True,
+            "generate": False,
+        }
+    assert provider.calls == 0
 
 
 def test_sliding_window_records_correlated_rejection(setup, database, caplog):
@@ -265,7 +313,11 @@ def test_http_rate_limit_and_correlated_audit(setup, database):
     from fastapi.testclient import TestClient
 
     from app.ai_assistance_config import AiAssistanceConfig
-    from app.ai_assistance_routes import enabled_config, get_assistance_service
+    from app.ai_assistance_routes import (
+        enabled_config,
+        get_assistance_service,
+        get_read_service,
+    )
     from app.authorization import get_actor_context, get_authorization_repository
     from app.main import create_app
 
@@ -276,6 +328,7 @@ def test_http_rate_limit_and_correlated_audit(setup, database):
     app.dependency_overrides[enabled_config] = lambda: AiAssistanceConfig(enabled=True)
     app.dependency_overrides[get_actor_context] = lambda: actor
     app.dependency_overrides[get_assistance_service] = lambda: service
+    app.dependency_overrides[get_read_service] = lambda: service
     app.dependency_overrides[get_authorization_repository] = lambda: None
     with TestClient(app) as http:
         response = http.post(
@@ -295,7 +348,11 @@ def test_http_corrupt_persisted_result(setup, database):
     from fastapi.testclient import TestClient
 
     from app.ai_assistance_config import AiAssistanceConfig
-    from app.ai_assistance_routes import enabled_config, get_assistance_service
+    from app.ai_assistance_routes import (
+        enabled_config,
+        get_assistance_service,
+        get_read_service,
+    )
     from app.authorization import get_actor_context, get_authorization_repository
     from app.main import create_app
 
@@ -304,6 +361,7 @@ def test_http_corrupt_persisted_result(setup, database):
     app.dependency_overrides[enabled_config] = lambda: AiAssistanceConfig(enabled=True)
     app.dependency_overrides[get_actor_context] = lambda: actor
     app.dependency_overrides[get_assistance_service] = lambda: service
+    app.dependency_overrides[get_read_service] = lambda: service
     app.dependency_overrides[get_authorization_repository] = lambda: None
     path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
     with TestClient(app) as http:
@@ -324,7 +382,11 @@ def test_http_concurrent_generation_returns_conflict(setup, database):
     from fastapi.testclient import TestClient
 
     from app.ai_assistance_config import AiAssistanceConfig
-    from app.ai_assistance_routes import enabled_config, get_assistance_service
+    from app.ai_assistance_routes import (
+        enabled_config,
+        get_assistance_service,
+        get_read_service,
+    )
     from app.authorization import get_actor_context, get_authorization_repository
     from app.main import create_app
 
@@ -343,6 +405,7 @@ def test_http_concurrent_generation_returns_conflict(setup, database):
     app.dependency_overrides[enabled_config] = lambda: AiAssistanceConfig(enabled=True)
     app.dependency_overrides[get_actor_context] = lambda: actor
     app.dependency_overrides[get_assistance_service] = lambda: service
+    app.dependency_overrides[get_read_service] = lambda: service
     app.dependency_overrides[get_authorization_repository] = lambda: None
     path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
     with TestClient(app) as http, ThreadPoolExecutor(max_workers=2) as executor:

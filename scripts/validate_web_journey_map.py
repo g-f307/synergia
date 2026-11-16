@@ -41,6 +41,7 @@ TECHNICAL = {
     ("GET", "/health/live"),
     ("GET", "/health/ready"),
     ("GET", "/metrics"),
+    ("GET", "/operations/ai-assistance/health"),
 }
 EXPOSURES = {"full", "partial", "technical", "planned", "deferred"}
 MATRIX_ROW = re.compile(
@@ -81,13 +82,8 @@ def _matrix_contracts() -> dict[tuple[str, str], tuple[str, str]]:
 
 def _current_routes() -> set[str]:
     source = APP_ROUTES.read_text(encoding="utf-8")
-    paths = {
-        match.group("path")
-        for match in ANGULAR_PATH.finditer(source)
-    }
-    redirects = {
-        match.group("path") for match in ANGULAR_REDIRECT.finditer(source)
-    }
+    paths = {match.group("path") for match in ANGULAR_PATH.finditer(source)}
+    redirects = {match.group("path") for match in ANGULAR_REDIRECT.finditer(source)}
     paths.difference_update(redirects)
     return {f"/{path}" for path in paths - {"", "**"}}
 
@@ -347,8 +343,7 @@ def main() -> int:
         for endpoint in route.get("endpoints", [])
     }
     operations.update(
-        (item["method"], item["path"])
-        for item in document["supporting_operations"]
+        (item["method"], item["path"]) for item in document["supporting_operations"]
     )
     print(
         f"OK: {active} rotas ativas/planejadas, {deferred} adiadas e "

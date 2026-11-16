@@ -74,7 +74,7 @@ def create_test_app():
     from app.ai_assistance_generator import AiAssistanceGenerator
     from app.ai_assistance_limits import AssistanceLimits
     from app.ai_assistance_repository import PostgresAiAssistanceRepository
-    from app.ai_assistance_routes import get_assistance_service
+    from app.ai_assistance_routes import get_assistance_service, get_read_service
     from app.ai_assistance_service import AiAssistanceService
     from app.main import create_app
 
@@ -87,6 +87,7 @@ def create_test_app():
         AssistanceLimits(database, os.environ["AUTH_JWT_SIGNING_KEY"]),
     )
     application.dependency_overrides[get_assistance_service] = lambda: service
+    application.dependency_overrides[get_read_service] = lambda: service
     return application
 
 

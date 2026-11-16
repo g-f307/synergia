@@ -144,7 +144,8 @@ export class ExecutionAssistanceComponent implements OnChanges, OnDestroy {
       && (result.state === 'ready' || (result.provenance.origin === 'deterministic' && !result.findings.length && !!result.limitations.length));
   }
   private fail(failure: ApiFailure, reading = false): void {
-    if (failure.code === 'ai_assistance_disabled') this.state.set('hidden');
+    if (failure.code === 'ai_assistance_generation_disabled') this.load();
+    else if (failure.code === 'ai_assistance_disabled') this.state.set('hidden');
     else if (reading && failure.status === 404 && this.capability()?.enabled) this.state.set('empty');
     else if (failure.status === 401) this.state.set('expired');
     else if (failure.status === 403) this.state.set('forbidden');

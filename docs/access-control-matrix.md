@@ -15,7 +15,9 @@ revoga acesso.
 
 `GET /health`, `/health/live` e `/health/ready` são sondas públicas sem dados
 de negócio. `GET /metrics` é uma superfície técnica fora do RBAC de usuários e
-exige a credencial exclusiva `OBSERVABILITY_METRICS_TOKEN`.
+exige a credencial exclusiva `OBSERVABILITY_METRICS_TOKEN`. A sonda informativa
+`GET /operations/ai-assistance/health` usa a mesma credencial técnica, fora do
+RBAC humano; não recebe fatos e não executa inferência.
 
 ## Convenções
 
@@ -81,7 +83,8 @@ entrar no inventário antes do merge.
 ## Inventário das rotas privadas atuais
 
 Todas as operações OpenAPI atuais, exceto as três sondas públicas, login,
-refresh e `GET /metrics`, são privadas por RBAC. Métricas usam credencial
+refresh, `GET /metrics` e `GET /operations/ai-assistance/health`, são privadas por
+RBAC. Métricas e a sonda operacional de IA usam credencial
 técnica própria. `/docs`, `/redoc` e `/openapi.json` são rotas técnicas do
 FastAPI e não aparecem em `paths` do OpenAPI. Em produção, sua publicação
 também dependerá da política de rede da TI.

@@ -150,3 +150,25 @@ def test_capability_disjoint_scopes_are_denied():
 def test_capability_requires_authentication():
     with TestClient(create_app()) as client:
         assert client.get("/me/ai-assistance-capability").status_code == 401
+
+
+def test_generation_switch_preserves_read_capability(monkeypatch):
+    monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "true")
+    monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED", "false")
+    application = create_app()
+    application.dependency_overrides[get_actor_context] = lambda: actor(
+        {
+            name: frozenset({ORG})
+            for name in (
+                "execution.read",
+                "ai.assistance.read",
+                "ai.assistance.generate",
+            )
+        }
+    )
+    with TestClient(application) as client:
+        assert client.get("/me/ai-assistance-capability").json() == {
+            "enabled": True,
+            "read": True,
+            "generate": False,
+        }

@@ -23,6 +23,7 @@ class AiAssistanceConfig:
     max_concurrency: int = 1
     retention_days: int = 30
     follow_redirects: bool = False
+    generation_enabled: bool = True
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str]) -> AiAssistanceConfig:
@@ -35,6 +36,9 @@ class AiAssistanceConfig:
         flag = value("ENABLED", "false")
         if flag not in {"true", "false"}:
             raise ValueError(f"{PREFIX}ENABLED must be true or false")
+        generation = value("GENERATION_ENABLED", "true")
+        if generation not in {"true", "false"}:
+            raise ValueError(f"{PREFIX}GENERATION_ENABLED must be true or false")
         for key, fixed in (
             ("TIMEOUT_SECONDS", "30"),
             ("CONTEXT_MAX_BYTES", "8192"),
@@ -95,7 +99,11 @@ class AiAssistanceConfig:
             raise ValueError(f"{PREFIX}MODEL must be a fixed model identifier")
         if digest and not re.fullmatch(r"sha256:[a-f0-9]{64}", digest):
             raise ValueError(f"{PREFIX}DIGEST must be a sha256 digest")
-        if flag == "true" and not all((endpoint, model, digest)):
+        if (
+            flag == "true"
+            and generation == "true"
+            and not all((endpoint, model, digest))
+        ):
             raise ValueError(
                 f"{PREFIX}ENDPOINT, MODEL and DIGEST are required when enabled"
             )
@@ -107,4 +115,5 @@ class AiAssistanceConfig:
             model=model,
             digest=digest,
             retention_days=int(retention),
+            generation_enabled=generation == "true",
         )

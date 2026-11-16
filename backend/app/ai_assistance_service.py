@@ -78,6 +78,12 @@ class AiAssistanceService:
         return result
 
     def generate(self, actor: ActorContext, execution_id: UUID):
+        if self.generator is None:
+            raise ApiError(
+                503,
+                "ai_assistance_generation_disabled",
+                "Geração temporariamente suspensa",
+            )
         started = time.monotonic()
         context = self._context(actor, execution_id, "generate")
         context_ms = int((time.monotonic() - started) * 1000)

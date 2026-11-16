@@ -37,8 +37,33 @@ def enabled_config():
     return config
 
 
-def get_assistance_service(
+def generation_config(
     config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+):
+    if not config.generation_enabled:
+        raise ApiError(
+            503, "ai_assistance_generation_disabled", "Geração temporariamente suspensa"
+        )
+    return config
+
+
+def get_read_service(
+    config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+):
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        raise ApiError(
+            503, "ai_assistance_runtime_unavailable", "Assistência indisponível"
+        )
+    return AiAssistanceService(
+        ExecutionContextBuilder(PostgresContextReader(database_url)),
+        None,
+        PostgresAiAssistanceRepository(database_url, config.retention_days),
+    )
+
+
+def get_assistance_service(
+    config: Annotated[AiAssistanceConfig, Depends(generation_config)],
 ):
     database_url = os.getenv("DATABASE_URL", "")
     secret = os.getenv("RATE_LIMIT_KEY_SECRET") or os.getenv("AUTH_JWT_SIGNING_KEY", "")
@@ -126,7 +151,7 @@ def _call(operation, actor, execution_id, audit, request, permission):
 async def generate_assistance(
     execution_id: UUID,
     request: Request,
-    config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+    config: Annotated[AiAssistanceConfig, Depends(generation_config)],
     actor: CurrentActor,
     audit: AuthorizationRepo,
     service: Annotated[AiAssistanceService, Depends(get_assistance_service)],
@@ -160,7 +185,7 @@ def latest_assistance(
     config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
     actor: CurrentActor,
     audit: AuthorizationRepo,
-    service: Annotated[AiAssistanceService, Depends(get_assistance_service)],
+    service: Annotated[AiAssistanceService, Depends(get_read_service)],
 ):
     return _call(
         service.latest, actor, execution_id, audit, request, "ai.assistance.read"

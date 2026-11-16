@@ -33,12 +33,17 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 _LOCK = threading.Lock()
 TIMEOUT_SECONDS = 30
+PROBE_TIMEOUT_SECONDS = 3
 
 
-def _worker(connection, config, allowed_service, system, prompt, schema):
+def _worker(connection, config, allowed_service, system, prompt, schema, probe=False):
     try:
         provider = LocalAiModelProvider(config, allowed_service=allowed_service)
-        result = provider._generate(system, prompt, schema)
+        if probe:
+            provider._probe(time.monotonic() + PROBE_TIMEOUT_SECONDS)
+            result = b""
+        else:
+            result = provider._generate(system, prompt, schema)
         connection.send(("ok", result))
     except ProviderError as exc:
         connection.send(("error", exc.code))
@@ -56,6 +61,9 @@ class LocalAiModelProvider:
         checked = AiAssistanceConfig.from_environment(
             {
                 "SYNERGIA_AI_ASSISTANCE_ENABLED": "true" if config.enabled else "false",
+                "SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED": (
+                    "true" if config.generation_enabled else "false"
+                ),
                 "SYNERGIA_AI_ASSISTANCE_ENDPOINT": config.endpoint,
                 "SYNERGIA_AI_ASSISTANCE_MODEL": config.model,
                 "SYNERGIA_AI_ASSISTANCE_DIGEST": config.digest,
@@ -63,7 +71,7 @@ class LocalAiModelProvider:
                 "SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS": str(config.retention_days),
             }
         )
-        if not checked.enabled or config != checked:
+        if not checked.enabled or not checked.generation_enabled or config != checked:
             raise ValueError("invalid assistance runtime configuration")
         self.endpoint, self.model, self.digest = (
             checked.endpoint,
@@ -123,8 +131,8 @@ class LocalAiModelProvider:
         except (ValueError, UnicodeError, AttributeError, TypeError, KeyError):
             raise ProviderError("runtime_unavailable") from None
 
-    def _generate(self, system: str, prompt: str, schema: dict) -> bytes:
-        deadline = time.monotonic() + TIMEOUT_SECONDS
+    def _probe(self, deadline: float) -> None:
+        """Check only version and installed pin; never load or invoke a model."""
         try:
             version = json.loads(self._request("/api/version", deadline))
             if version.get("version") != "0.40.15":
@@ -132,6 +140,10 @@ class LocalAiModelProvider:
         except (ValueError, UnicodeError, AttributeError, TypeError):
             raise ProviderError("runtime_unavailable") from None
         self._verify_pin("/api/tags", deadline)
+
+    def _generate(self, system: str, prompt: str, schema: dict) -> bytes:
+        deadline = time.monotonic() + TIMEOUT_SECONDS
+        self._probe(deadline)
         raw = self._request(
             "/api/chat",
             deadline,
@@ -168,6 +180,12 @@ class LocalAiModelProvider:
             raise ProviderError("runtime_invalid_response") from None
 
     def generate(self, system: str, prompt: str, schema: dict) -> bytes:
+        return self._run(system, prompt, schema)
+
+    def probe(self) -> None:
+        self._run("", "", {}, probe=True)
+
+    def _run(self, system: str, prompt: str, schema: dict, *, probe=False) -> bytes:
         if not _LOCK.acquire(blocking=False):
             raise ProviderError("runtime_busy")
         process = None
@@ -180,7 +198,15 @@ class LocalAiModelProvider:
             receive, send = ctx.Pipe(duplex=False)
             process = ctx.Process(
                 target=_worker,
-                args=(send, self.config, self.allowed_service, system, prompt, schema),
+                args=(
+                    send,
+                    self.config,
+                    self.allowed_service,
+                    system,
+                    prompt,
+                    schema,
+                    probe,
+                ),
                 daemon=True,
             )
             process.start()
@@ -188,7 +214,8 @@ class LocalAiModelProvider:
             send = None
             # Reserve time for process termination and result assembly inside the
             # configured 30-second end-to-end envelope.
-            budget = max(0.001, min(TIMEOUT_SECONDS - 1, self.timeout_seconds - 1))
+            timeout = PROBE_TIMEOUT_SECONDS if probe else self.timeout_seconds
+            budget = max(0.001, min(TIMEOUT_SECONDS - 1, timeout - 1))
             remaining = max(0.0, budget - (time.monotonic() - started))
             if not receive.poll(remaining):
                 raise ProviderError("runtime_timeout")

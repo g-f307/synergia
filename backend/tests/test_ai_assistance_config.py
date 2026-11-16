@@ -53,6 +53,7 @@ def test_enabled_requires_configuration(key):
     "key,value",
     [
         ("ENABLED", "yes"),
+        ("GENERATION_ENABLED", "yes"),
         ("ENABLED", "CHANGE_ME"),
         ("MODEL", "placeholder"),
         ("MODEL", "model name"),
@@ -141,3 +142,18 @@ def test_retention_required_for_enabled_non_development(selected):
         AiAssistanceConfig.from_environment(environment)
     environment["SYNERGIA_AI_ASSISTANCE_RETENTION_DAYS"] = "14"
     assert AiAssistanceConfig.from_environment(environment).retention_days == 14
+
+
+def test_read_only_without_runtime_config():
+    config = AiAssistanceConfig.from_environment(
+        {
+            PREFIX + "ENABLED": "true",
+            PREFIX + "GENERATION_ENABLED": "false",
+        }
+    )
+    assert config.enabled and not config.generation_enabled
+    assert not config.endpoint and not config.model and not config.digest
+    with pytest.raises(ValueError):
+        from app.ai_assistance_provider import LocalAiModelProvider
+
+        LocalAiModelProvider(config)

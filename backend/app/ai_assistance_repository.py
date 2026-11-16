@@ -499,6 +499,40 @@ class PostgresAiAssistanceRepository:
         EVENTS.labels("get", "success").inc()
         return result
 
+    def recover_reservations(
+        self, actor_id: UUID, correlation_id: UUID, *, batch_size=100, dry_run=True
+    ):
+        """Release only expired processing leases; no inference or result deletion."""
+        if type(batch_size) is not int or not 1 <= batch_size <= 1000:
+            raise ValueError("invalid batch size")
+        with psycopg.connect(self.database_url, row_factory=dict_row) as connection:
+            _validate_actor(connection, actor_id)
+            if dry_run:
+                return connection.execute(
+                    """SELECT count(*) AS count, min(reservation_until) AS oldest,
+                       max(reservation_until) AS newest FROM (SELECT reservation_until
+                       FROM synergia.ai_assistances
+                       WHERE state='processing'
+                         AND reservation_until <= clock_timestamp()
+                       ORDER BY reservation_until,id LIMIT %s) AS expired""",
+                    (batch_size,),
+                ).fetchone()
+            rows = connection.execute(
+                """DELETE FROM synergia.ai_assistances WHERE id IN
+                (SELECT id FROM synergia.ai_assistances
+                 WHERE state='processing' AND reservation_until <= clock_timestamp()
+                 ORDER BY reservation_until,id LIMIT %s FOR UPDATE SKIP LOCKED)
+                RETURNING *""",
+                (batch_size,),
+            ).fetchall()
+            for row in rows:
+                _event(connection, row, actor_id, correlation_id, "expired")
+        return {
+            "count": len(rows),
+            "oldest": min((r["reservation_until"] for r in rows), default=None),
+            "newest": max((r["reservation_until"] for r in rows), default=None),
+        }
+
     def expire(
         self, actor_id: UUID, correlation_id: UUID, *, batch_size=100, dry_run=False
     ):

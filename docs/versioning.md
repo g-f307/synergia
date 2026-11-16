@@ -45,6 +45,12 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.13.0` acrescenta a sonda operacional autenticada da assistência (#191).
+O novo código `ai_assistance_generation_disabled` representa o kill switch de
+geração. A flag geral e o resultado `1.0.0` preservam o comportamento/estrutura;
+a capability existente representa suspensão com `generate=false` e leitura
+conforme permissão.
+
 A versão da API fica em `backend/app/main.py` e aparece em `info.version` de
 `/openapi.json`. A documentação humana complementar fica em
 [api-contracts.md](api-contracts.md).

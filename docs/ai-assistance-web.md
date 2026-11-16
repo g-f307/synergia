@@ -19,6 +19,7 @@ chamada: a descoberta global de capability não substitui autorização da execu
 | Recurso desligado ou sem permissões | Card ausente |
 | Execução ativa ou lifecycle desconhecido | Explicação, sem consulta/geração |
 | Somente leitura | Consulta o resultado atual, sem botão de geração |
+| Geração suspensa por configuração | Mantém leitura e resultado; capability remove o botão. Se o POST retornar suspensão após o clique, consulta novamente a capability e o resultado |
 | Somente geração | Não chama o endpoint de leitura; permite geração explícita |
 | Sem resultado atual (GET 404) | Explicação e botão, se autorizado |
 | Resultado atual | Exibe conteúdo, origem e data; não oferece regeneração |
