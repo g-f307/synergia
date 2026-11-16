@@ -20,6 +20,9 @@ O runbook de [degradação e recuperação](runbooks/ai-assistance.md) descreve 
 controles e a sonda técnica autenticada, independente da readiness.
 
 `POST /executions/{execution_id}/ai-assistance` aceita corpo ausente ou `{}`.
+Na admissão, a leitura é limitada a 1 KiB e três segundos, inclusive sem
+Content-Length; excesso ou stream lento retorna o mesmo 422
+`ai_assistance_invalid_contract`, sem geração ou consumo do restante do corpo.
 Exige `execution.read` e `ai.assistance.generate` na organização da execução.
 O contexto é montado no servidor; o cliente não fornece fatos ou configurações do
 modelo. Resultados equivalentes são reutilizados. Saídas rejeitadas após a chamada

@@ -24,6 +24,8 @@ from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(tags=["ai-assistance"])
 ASSISTANCE_TIMEOUT_SECONDS = 30
+BODY_MAX_BYTES = 1024
+BODY_TIMEOUT_SECONDS = 3
 
 
 def enabled_config():
@@ -88,7 +90,19 @@ def get_assistance_service(
 
 
 async def empty_body(request: Request):
-    raw = await request.body()
+    raw = bytearray()
+    try:
+        async with asyncio.timeout(BODY_TIMEOUT_SECONDS):
+            async for chunk in request.stream():
+                if len(raw) + len(chunk) > BODY_MAX_BYTES:
+                    raise ApiError(
+                        422, "ai_assistance_invalid_contract", "Contrato inválido"
+                    )
+                raw.extend(chunk)
+    except TimeoutError:
+        raise ApiError(
+            422, "ai_assistance_invalid_contract", "Contrato inválido"
+        ) from None
     if not raw:
         return
     try:

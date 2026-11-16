@@ -14,9 +14,7 @@ from scripts import validate_threat_model  # noqa: E402
 
 
 def _changed_register(tmp_path: Path, change) -> Path:
-    document = json.loads(
-        validate_threat_model.REGISTER.read_text(encoding="utf-8")
-    )
+    document = json.loads(validate_threat_model.REGISTER.read_text(encoding="utf-8"))
     change(document)
     target = tmp_path / "security-risk-register.json"
     target.write_text(json.dumps(document), encoding="utf-8")
@@ -26,9 +24,9 @@ def _changed_register(tmp_path: Path, change) -> Path:
 def test_threat_model_matches_openapi_access_matrix_and_evidence() -> None:
     document = validate_threat_model.validate()
 
-    assert document["version"] == "1.3.0"
-    assert len(document["journeys"]) == 7
-    assert len(document["risks"]) >= 31
+    assert document["version"] == "1.4.0"
+    assert len(document["journeys"]) == 8
+    assert len(document["risks"]) >= 43
 
 
 def test_threat_model_rejects_operation_with_wrong_scope(
@@ -79,9 +77,7 @@ def test_threat_model_rejects_non_applicability_without_reopen_condition(
 ) -> None:
     target = _changed_register(
         tmp_path,
-        lambda document: document["applicability_decisions"][0].pop(
-            "reopen_condition"
-        ),
+        lambda document: document["applicability_decisions"][0].pop("reopen_condition"),
     )
     monkeypatch.setattr(validate_threat_model, "REGISTER", target)
 
@@ -145,4 +141,50 @@ def test_threat_model_rejects_stage_issue_without_related_risk(
     monkeypatch.setattr(validate_threat_model, "REGISTER", target)
 
     with pytest.raises(ValueError, match="Issues da Etapa 5 sem risco relacionado"):
+        validate_threat_model.validate()
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "origin",
+        "boundaries",
+        "preventive_controls",
+        "detective_controls",
+        "tests",
+        "residual_risk",
+    ],
+)
+def test_ai_threat_requires_every_analysis_dimension(tmp_path, monkeypatch, field):
+    target = _changed_register(
+        tmp_path,
+        lambda document: next(r for r in document["risks"] if "ai_threat" in r).pop(
+            field
+        ),
+    )
+    monkeypatch.setattr(validate_threat_model, "REGISTER", target)
+    with pytest.raises(ValueError, match="Risco IA.*sem " + field):
+        validate_threat_model.validate()
+
+
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "boundary", "test"])
+def test_ai_threat_coverage_cannot_be_silently_weakened(
+    tmp_path, monkeypatch, mutation
+):
+    def change(document):
+        risk = next(r for r in document["risks"] if "ai_threat" in r)
+        if mutation == "missing":
+            document["risks"].remove(risk)
+        elif mutation == "duplicate":
+            risk["ai_threat"] = "optional-runtime-outage"
+        elif mutation == "boundary":
+            risk["boundaries"] = ["TB-NONEXISTENT"]
+        else:
+            risk["tests"] = ["backend/tests/test_threat_model.py::test_removed"]
+
+    target = _changed_register(tmp_path, change)
+    monkeypatch.setattr(validate_threat_model, "REGISTER", target)
+    with pytest.raises(
+        ValueError, match="ameaças IA|fronteira inexistente|teste inexistente"
+    ):
         validate_threat_model.validate()

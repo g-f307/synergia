@@ -13,6 +13,10 @@ origens e histórico aprovados; exemplos `.invalid` exigem substituição privad
 - [ ] API pública acessível pelo navegador, CSP e CORS corretos.
 - [ ] Login, refresh e permissão/escopo confirmados com identidade autorizada.
 - [ ] Jornada com massa sintética aprovada, sem mutações de dados reais.
+- [ ] Se assistência habilitada: aceite #192/janela, versão/digest, sonda
+  autenticada sem inferência, leitura e kill switch conferidos; runtime não
+  condiciona readiness. Coleta/painéis, cinco alertas, manutenção e exportação
+  autorizada com recibo Graylog conferidos pelos [runbooks](../runbooks/ai-assistance.md).
 - [ ] Canal e-mail no estado aprovado; desabilitado inicialmente; não inferir envio a partir de saída 0.
 - [ ] Backup recuperável, versão anterior e plano de retorno registrados.
 

@@ -1,0 +1,16 @@
+{
+  "status": "rendered",
+  "graylog": "7.2.2",
+  "grafana": "13.2.1",
+  "panels": 29,
+  "ai_panels": 14,
+  "dashboard_editable": false,
+  "metrics_source": "authenticated_replay_of_synthetic_drill_snapshot_not_live_production",
+  "graylog_source": "actual_indexed_synthetic_events",
+  "screenshots": [
+    "issue-191-graylog-events.png",
+    "issue-191-grafana-assistance.png",
+    "issue-191-grafana-maintenance.png"
+  ],
+  "graylog_fields_verified": "search API against PostgreSQL, captured in operations-validation JSON"
+}

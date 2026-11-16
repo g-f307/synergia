@@ -77,6 +77,13 @@ LAB="$HOME/.local/share/synergia-graylog-lab-178"
 ```
 
 O diretório privado usa permissão `0700`; os arquivos de acesso usam `0600`.
+O journal deste laboratório é limitado a 256 MB, em vez dos 5 GB padrão do
+servidor; isso não define retenção ou capacidade do ambiente corporativo. Essa
+configuração é aplicada na criação do container, não por reinício de um container
+antigo. Preservar volumes e seguir a identidade do laboratório ao recriá-lo.
+OpenSearch usa limites de espaço livre de 1 GB/512 MB/256 MB para low/high/flood
+stage neste ensaio pequeno. Não desativa o controle de disco nem recomenda esses
+valores para produção. Interromper o laboratório antes de esgotar o espaço do host.
 O certificado do input é local, para testes, e não instala uma CA no sistema
 operacional. O coletor confia nesse certificado por arquivo e mantém a
 verificação TLS ativa. O certificado gerado tem validade de 30 dias.
@@ -104,6 +111,12 @@ Somente portas de loopback são publicadas:
 MongoDB e OpenSearch não têm portas publicadas no host. A UI HTTP é restrita ao
 computador local; os eventos usam HTTPS com certificado verificado. Este perfil
 é de laboratório e não é um modelo de implantação corporativa.
+MongoDB/OpenSearch permanecem na rede interna. Graylog/PostgreSQL também entram
+em uma bridge exclusiva de acesso pelo host, com publicações explícitas em
+127.0.0.1: Docker 29 não efetiva essas publicações na rede somente interna.
+Essa segunda bridge permite saída de rede desses dois containers; não representa
+um firewall de egress. Configurar somente destinos locais e dados sintéticos.
+Recursos continuam vinculados ao diretório privado pelos rótulos de propriedade.
 
 ## 4. Executar a validação automática
 

@@ -68,6 +68,41 @@ def test_rejects_nonempty_and_invalid_body(client, body):
     assert "model" not in response.text
 
 
+@pytest.mark.security
+def test_oversized_empty_json_is_rejected_without_generation(client):
+    http, ctx, provider = client
+    path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
+    response = http.post(path, content=b" " * 1024 + b"{}")
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "ai_assistance_invalid_contract"
+    assert provider.calls == 0
+
+
+@pytest.mark.security
+def test_request_stream_stops_at_limit_and_has_a_deadline(monkeypatch):
+    from app.errors import ApiError
+
+    class Oversized:
+        async def stream(self):
+            yield b" " * 1024
+            yield b"{}"
+            pytest.fail("oversized remainder must not be consumed")
+
+    class Slow:
+        async def stream(self):
+            yield b"{"
+            await asyncio.sleep(5)
+            pytest.fail("slow body must be cancelled")
+            yield b"}"
+
+    for request in (Oversized(), Slow()):
+        monkeypatch.setattr(routes, "BODY_TIMEOUT_SECONDS", 0.01)
+        with pytest.raises(ApiError) as exc:
+            asyncio.run(routes.empty_body(request))
+        assert exc.value.status_code == 422
+        assert exc.value.code == "ai_assistance_invalid_contract"
+
+
 def test_disabled_before_authentication(monkeypatch):
     monkeypatch.setenv("SYNERGIA_AI_ASSISTANCE_ENABLED", "false")
     with TestClient(create_app()) as http:

@@ -44,3 +44,24 @@ justificativa no PR.
 - [ ] Dependência ou configuração nova possui origem, versão e risco avaliados.
 - [ ] Risco adiado registra etapa, responsável e condição de retomada.
 - [ ] Correção de vulnerabilidade inclui regressão automatizada quando viável.
+
+## Assistência de IA
+
+- [ ] As doze ameaças R-32–R-43 têm origem, fronteiras, prevenção, detecção,
+  testes nomeados e risco residual atualizados; executar o validador do threat model.
+- [ ] Campos livres persistidos não entram no contexto; saída segue contrato,
+  referências autorizadas e interpolação como texto, sem ferramentas/escrita.
+- [ ] Endpoint fixo, pin e limites permanecem validados; proxy/redirect são
+  recusados também com transporte real de teste.
+- [ ] POST e GET são autorizados no backend por organização; a sonda exige
+  Bearer técnico antes de acessar o runtime. Capability não concede permissão.
+- [ ] Timeout/cancelamento não provocam retry cego; reserva obsoleta não conclui
+  após recuperação. Suspender em todas as instâncias antes da recuperação.
+- [ ] Flags, código e contexto não viram labels de alta cardinalidade; nenhum
+  prompt/contexto/saída vai para log, métrica ou projeção de auditoria.
+- [ ] Readiness e jornadas principais continuam com runtime indisponível;
+  kill switch de geração preserva leitura autorizada e dados de negócio.
+- [ ] Alerta tem runbook específico, disparo/recuperação testados e tratamento
+  de falta de medição; outbox/HTTP aceito não são recibo de indexação Graylog.
+- [ ] Testes com runtime controlado não são apresentados como prova de qualidade
+  de modelo real ou aceite produtivo da #192.

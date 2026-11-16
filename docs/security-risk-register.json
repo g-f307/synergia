@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "method": {
     "likelihood": ["unlikely", "possible", "likely"],
     "impact": ["low", "medium", "high", "critical"],
@@ -12,15 +12,33 @@
     {"id": "TB-03", "from": "fastapi", "to": "postgresql", "protocol": "parameterized PostgreSQL connection"},
     {"id": "TB-04", "from": "fastapi", "to": "controlled-storage", "protocol": "relative keys and private filesystem"},
     {"id": "TB-05", "from": "email-worker", "to": "email-provider", "protocol": "disabled by default; local capture in CI"},
-    {"id": "TB-06", "from": "ci-runner", "to": "test-environment", "protocol": "ephemeral credentials and synthetic data"}
+    {"id": "TB-06", "from": "ci-runner", "to": "test-environment", "protocol": "ephemeral credentials and synthetic data"},
+    {
+      "id": "TB-07",
+      "from": "fastapi",
+      "to": "configured-local-runtime",
+      "protocol": "bounded HTTP to fixed loopback/allowlisted service; no proxy or redirect"
+    },
+    {
+      "id": "TB-08",
+      "from": "untrusted-persisted-fields",
+      "to": "versioned-context-and-model-output",
+      "protocol": "allowlisted projection, opaque references and strict schema validation"
+    },
+    {
+      "id": "TB-09",
+      "from": "postgresql-outbox-and-technical-metrics",
+      "to": "authorized-observability",
+      "protocol": "sanitized audit metadata over verified GELF HTTPS; authenticated metrics and probe"
+    }
   ],
   "applicability_decisions": [
     {
-      "threat_class": "ssrf",
+      "threat_class": "remote-import-ssrf",
       "status": "not-applicable",
-      "rationale": "The current FastAPI application does not fetch user-controlled URLs and has no outbound connector contract.",
+      "rationale": "Remote imports and user-provided webhook destinations are absent. This decision does not cover AI runtime or other configured outbound transports; runtime SSRF is modeled in R-37.",
       "target_stage": 6,
-      "reopen_condition": "Reassess before adding RPA connectors, webhooks, remote imports or any server-side URL retrieval."
+      "reopen_condition": "Reassess before adding remote imports, RPA connectors, webhooks or user-controlled network destinations."
     }
   ],
   "journeys": [
@@ -117,6 +135,61 @@
         {"method": "POST", "path": "/admin/users", "permission": "access.admin", "scope": "global"},
         {"method": "PATCH", "path": "/admin/users/{user_id}", "permission": "access.admin", "scope": "global"},
         {"method": "PUT", "path": "/admin/access/users/{left_id}/roles/{right_id}", "permission": "access.admin", "scope": "global/org"}
+      ]
+    },
+    {
+      "id": "J-08",
+      "name": "ai-assistance",
+      "actors": [
+        "authorized gestor/analista",
+        "untrusted persisted source",
+        "local runtime",
+        "technical operator"
+      ],
+      "assets": [
+        "authorized execution context",
+        "validated result",
+        "processing lease",
+        "immutable audit",
+        "technical telemetry"
+      ],
+      "boundaries": [
+        "TB-01",
+        "TB-02",
+        "TB-03",
+        "TB-07",
+        "TB-08",
+        "TB-09"
+      ],
+      "threats": [
+        "prompt injection",
+        "cross-organization disclosure",
+        "output injection",
+        "SSRF",
+        "resource exhaustion",
+        "false claims",
+        "runtime tampering",
+        "duplicate inference"
+      ],
+      "operations": [
+        {
+          "method": "GET",
+          "path": "/me/ai-assistance-capability",
+          "permission": "execution.read + (ai.assistance.read ou ai.assistance.generate)",
+          "scope": "org"
+        },
+        {
+          "method": "POST",
+          "path": "/executions/{execution_id}/ai-assistance",
+          "permission": "execution.read + ai.assistance.generate",
+          "scope": "org"
+        },
+        {
+          "method": "GET",
+          "path": "/executions/{execution_id}/ai-assistance/latest",
+          "permission": "execution.read + ai.assistance.read",
+          "scope": "org"
+        }
       ]
     }
   ],
@@ -338,6 +411,505 @@
       "controls": ["Local login is ignored in production", "Homologation requires a timezone-aware end date within 90 days and refuses sign-in after it", "Removal is a step of the adapter acceptance runbook"],
       "evidence": ["backend/app/auth/config.py", "backend/app/auth/service.py", "backend/tests/test_corporate_identity_contract.py", "backend/tests/test_auth.py", "docs/runbooks/corporate-identity-activation.md"],
       "owner": "platform", "treatment_issue": 144
+    },
+    {
+      "id": "R-32",
+      "journey": "J-08",
+      "category": "prompt-injection",
+      "threat_class": "prompt-injection",
+      "ai_threat": "indirect-prompt-injection",
+      "threat": "Stored source values, reasons, justifications or names contain instructions.",
+      "origin": "Stored source values, reasons, justifications or names contain instructions.",
+      "boundaries": [
+        "TB-03",
+        "TB-08"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Read-only allowlisted SQL projection excludes free-text fields; bounded closed vocabularies; no tools or business write capability.",
+        "Only empty POST body; versioned context and grounded output validation.",
+        "Closed context/rejection codes, sanitized logs and deterministic fallback."
+      ],
+      "preventive_controls": [
+        "Read-only allowlisted SQL projection excludes free-text fields; bounded closed vocabularies; no tools or business write capability.",
+        "Only empty POST body; versioned context and grounded output validation."
+      ],
+      "detective_controls": [
+        "Closed context/rejection codes, sanitized logs and deterministic fallback."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_security_persistence.py::test_persisted_indirect_injection_never_enters_prompt_or_telemetry",
+        "backend/tests/test_ai_assistance_generator.py::test_prompt_injection_from_database_is_excluded_before_generation"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_context_policy.py",
+        "backend/app/ai_assistance_context_reader.py",
+        "backend/tests/test_ai_assistance_generator.py",
+        "backend/tests/test_ai_assistance_security_persistence.py"
+      ],
+      "residual_risk": "Compromised trusted catalog/config or an allowed structured value can still influence wording; this is not a general solution to prompt injection.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-33",
+      "journey": "J-08",
+      "category": "bola",
+      "threat_class": "bola",
+      "ai_threat": "cross-organization-disclosure",
+      "threat": "Authenticated caller supplies an execution from another organization.",
+      "origin": "Authenticated caller supplies an execution from another organization.",
+      "boundaries": [
+        "TB-02",
+        "TB-03",
+        "TB-08"
+      ],
+      "likelihood": "possible",
+      "impact": "critical",
+      "inherent_severity": "critical",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Intersect execution and assistance scopes in the backend, scoped subject read before details, tenant/context-bound persisted results.",
+        "404 without enumeration; confirmed scope violation signal and authorization audit; critical alert."
+      ],
+      "preventive_controls": [
+        "Intersect execution and assistance scopes in the backend, scoped subject read before details, tenant/context-bound persisted results."
+      ],
+      "detective_controls": [
+        "404 without enumeration; confirmed scope violation signal and authorization audit; critical alert."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_context_persistence.py::test_cross_organization_queries_return_no_details",
+        "backend/tests/test_ai_assistance_telemetry.py::test_confirmed_scope_violation_is_distinct_from_missing_result"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_repository.py",
+        "backend/app/ai_assistance_service.py",
+        "backend/tests/test_ai_assistance_context_persistence.py",
+        "backend/tests/test_ai_assistance_telemetry.py"
+      ],
+      "residual_risk": "Privileged database/identity compromise can bypass application scopes; global grants remain privileged.",
+      "owner": "security",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-34",
+      "journey": "J-08",
+      "category": "disclosure",
+      "threat_class": "disclosure",
+      "ai_threat": "sensitive-data-exposure",
+      "threat": "Context, exception details, model text or high-cardinality identifiers reach observability.",
+      "origin": "Context, exception details, model text or high-cardinality identifiers reach observability.",
+      "boundaries": [
+        "TB-03",
+        "TB-08",
+        "TB-09"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Minimized context excludes names, emails, reasons and original values; log allowlist, closed metric labels, sanitized audit projection.",
+        "Automated canary inspection across prompt, logs, metrics, result, audit and outbox; PostgreSQL/Graylog reconciliation."
+      ],
+      "preventive_controls": [
+        "Minimized context excludes names, emails, reasons and original values; log allowlist, closed metric labels, sanitized audit projection."
+      ],
+      "detective_controls": [
+        "Automated canary inspection across prompt, logs, metrics, result, audit and outbox; PostgreSQL/Graylog reconciliation."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_security_persistence.py::test_persisted_indirect_injection_never_enters_prompt_or_telemetry",
+        "backend/tests/test_ai_assistance_security_persistence.py::test_malicious_output_cannot_reach_result_audit_or_outbox"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_telemetry.py",
+        "backend/app/audit.py",
+        "backend/tests/test_ai_assistance_security_persistence.py"
+      ],
+      "residual_risk": "Authorized structured business facts and approved identifiers still reach the local runtime or restricted audit; host dumps and operator exports need separate custody.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-35",
+      "journey": "J-08",
+      "category": "xss",
+      "threat_class": "xss",
+      "ai_threat": "output-injection",
+      "threat": "Runtime returns HTML, script, URL or command disguised as an explanation.",
+      "origin": "Runtime returns HTML, script, URL or command disguised as an explanation.",
+      "boundaries": [
+        "TB-08",
+        "TB-01"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Strict output/grounding contract rejects invalid content before persistence; Angular interpolation and fixed internal reference navigation, no innerHTML.",
+        "Rejection code and deterministic fallback; Angular DOM tests render adversarial text literally."
+      ],
+      "preventive_controls": [
+        "Strict output/grounding contract rejects invalid content before persistence; Angular interpolation and fixed internal reference navigation, no innerHTML."
+      ],
+      "detective_controls": [
+        "Rejection code and deterministic fallback; Angular DOM tests render adversarial text literally."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_security_persistence.py::test_malicious_output_cannot_reach_result_audit_or_outbox",
+        "backend/tests/test_ai_assistance_contract.py::test_response_rejects_invalid_fields"
+      ],
+      "evidence": [
+        "backend/tests/test_ai_assistance_contract.py",
+        "backend/tests/test_ai_assistance_security_persistence.py",
+        "web/src/app/domains/executions/execution-assistance.component.html",
+        "web/src/app/domains/executions/execution-assistance.component.spec.ts"
+      ],
+      "residual_risk": "Future rich-text rendering or free external links reopen this boundary; validation cannot establish factual truth.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-36",
+      "journey": "J-08",
+      "category": "tampering",
+      "threat_class": "tampering",
+      "ai_threat": "tampered-runtime",
+      "threat": "Configured runtime, weights or an advertised mutable model changes.",
+      "origin": "Configured runtime, weights or an advertised mutable model changes.",
+      "boundaries": [
+        "TB-07"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Pinned version, installed/loaded digest and digest-named inference; verify before and after generation; no tool calls/thinking accepted.",
+        "runtime_pin_mismatch and critical integrity alert; authenticated version/tags probe without inference."
+      ],
+      "preventive_controls": [
+        "Pinned version, installed/loaded digest and digest-named inference; verify before and after generation; no tool calls/thinking accepted."
+      ],
+      "detective_controls": [
+        "runtime_pin_mismatch and critical integrity alert; authenticated version/tags probe without inference."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_provider.py::test_changed_loaded_digest_is_rejected",
+        "backend/tests/test_ai_assistance_provider.py::test_spawned_provider_success_and_single_inference"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_health.py",
+        "backend/app/ai_assistance_provider.py",
+        "backend/tests/test_ai_assistance_provider.py"
+      ],
+      "residual_risk": "Runtime can lie about version/digest if its host is compromised; no cryptographic host attestation is claimed.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-37",
+      "journey": "J-08",
+      "category": "ssrf",
+      "threat_class": "ssrf",
+      "ai_threat": "runtime-ssrf",
+      "threat": "Operator configuration, runtime redirect or proxy tries to send requests outside the approved origin.",
+      "origin": "Operator configuration, runtime redirect or proxy tries to send requests outside the approved origin.",
+      "boundaries": [
+        "TB-07"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Validate HTTP origin without credentials/path/query/fragment; loopback or exact approved service; fixed routes; ProxyHandler empty and redirects refused.",
+        "Closed redirect/unavailable codes, authenticated probe and configuration gate."
+      ],
+      "preventive_controls": [
+        "Validate HTTP origin without credentials/path/query/fragment; loopback or exact approved service; fixed routes; ProxyHandler empty and redirects refused."
+      ],
+      "detective_controls": [
+        "Closed redirect/unavailable codes, authenticated probe and configuration gate."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_config.py::test_unsafe_configuration_rejected_even_disabled",
+        "backend/tests/test_ai_assistance_provider.py::test_redirect_never_contacts_a_second_local_origin",
+        "backend/tests/test_ai_assistance_provider.py::test_environment_proxy_is_never_contacted"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_config.py",
+        "backend/app/ai_assistance_provider.py",
+        "backend/tests/test_ai_assistance_config.py",
+        "backend/tests/test_ai_assistance_provider.py"
+      ],
+      "residual_risk": "Approved service DNS, local listeners, network and configuration are privileged trust dependencies; application allowlisting does not prove DNS/host integrity.",
+      "owner": "security",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-38",
+      "journey": "J-08",
+      "category": "denial-of-service",
+      "threat_class": "denial-of-service",
+      "ai_threat": "concurrent-or-large-response-dos",
+      "threat": "Parallel requests, slow headers/bodies or oversized responses exhaust runtime/backend resources.",
+      "origin": "Parallel requests, slow headers/bodies or oversized responses exhaust runtime/backend resources.",
+      "boundaries": [
+        "TB-02",
+        "TB-07"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "POST body streaming capped at 1 KiB/3 seconds; one provider call per process and one persisted processing reservation globally; spawned-process deadline; 8 KiB response cap, fixed context budget.",
+        "In-flight/latency/size metrics, 409/504, lease backlog and unavailable alerts."
+      ],
+      "preventive_controls": [
+        "POST body streaming capped at 1 KiB/3 seconds; one provider call per process and one persisted processing reservation globally; spawned-process deadline; 8 KiB response cap, fixed context budget."
+      ],
+      "detective_controls": [
+        "In-flight/latency/size metrics, 409/504, lease backlog and unavailable alerts."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_routes.py::test_request_stream_stops_at_limit_and_has_a_deadline",
+        "backend/tests/test_ai_assistance_provider.py::test_slow_drip_body_respects_total_deadline",
+        "backend/tests/test_ai_assistance_provider.py::test_public_provider_releases_lock_after_runtime_failure",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py::test_http_concurrent_generation_returns_conflict"
+      ],
+      "evidence": [
+        "backend/tests/test_ai_assistance_routes.py",
+        "backend/app/ai_assistance_provider.py",
+        "backend/app/ai_assistance_repository.py",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py",
+        "backend/tests/test_ai_assistance_provider.py"
+      ],
+      "residual_risk": "HTTP timeout does not instantly cancel already admitted thread/runtime work; host resource contention remains possible. No HA claim.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-39",
+      "journey": "J-08",
+      "category": "resource-abuse",
+      "threat_class": "resource-abuse",
+      "ai_threat": "unbounded-consumption",
+      "threat": "Authorized users repeatedly request new work or use read/capability as a generation trigger.",
+      "origin": "Authorized users repeatedly request new work or use read/capability as a generation trigger.",
+      "boundaries": [
+        "TB-02",
+        "TB-03",
+        "TB-07"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Explicit POST only; shared ten-in-ten-minute limits for user and organization; persisted context/prompt/pin reuse; bounded maintenance and num_predict.",
+        "Correlated 429 audit, denials, generation counters and provider in-flight."
+      ],
+      "preventive_controls": [
+        "Explicit POST only; shared ten-in-ten-minute limits for user and organization; persisted context/prompt/pin reuse; bounded maintenance and num_predict."
+      ],
+      "detective_controls": [
+        "Correlated 429 audit, denials, generation counters and provider in-flight."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_orchestration_persistence.py::test_http_rate_limit_and_correlated_audit",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py::test_real_persistence_reuse_audit_and_tenant"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_limits.py",
+        "backend/app/ai_assistance_service.py",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py"
+      ],
+      "residual_risk": "Per-user/organization limits are not a daily CPU/energy quota; many authorized tenants and a compromised operator can consume resources.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-40",
+      "journey": "J-08",
+      "category": "misinformation",
+      "threat_class": "misinformation",
+      "ai_threat": "false-claim-as-fact",
+      "threat": "Model produces a confident unsupported explanation and a user treats it as an operational decision.",
+      "origin": "Model produces a confident unsupported explanation and a user treats it as an operational decision.",
+      "boundaries": [
+        "TB-08",
+        "TB-01"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Counts/references/grounding/limitations validated; reject forbidden causal/executable wording; human-check notice; no automatic business changes.",
+        "Fallback/rejection codes and visible origin/limitations; final usefulness/quality gate remains #192."
+      ],
+      "preventive_controls": [
+        "Counts/references/grounding/limitations validated; reject forbidden causal/executable wording; human-check notice; no automatic business changes."
+      ],
+      "detective_controls": [
+        "Fallback/rejection codes and visible origin/limitations; final usefulness/quality gate remains #192."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_security_persistence.py::test_malicious_output_cannot_reach_result_audit_or_outbox",
+        "backend/tests/test_ai_assistance_generator.py::test_forbidden_language_validator"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_generator.py",
+        "backend/tests/test_ai_assistance_generator.py",
+        "backend/tests/test_ai_assistance_security_persistence.py",
+        "web/src/app/domains/executions/execution-assistance.component.html"
+      ],
+      "residual_risk": "Lexical grounding is not a proof of semantic truth, explanation quality or user comprehension. Human review and #192 remain required.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-41",
+      "journey": "J-08",
+      "category": "elevation-of-privilege",
+      "threat_class": "elevation-of-privilege",
+      "ai_threat": "direct-api-permission-bypass",
+      "threat": "Caller bypasses Angular menu and invokes POST, latest or probe directly.",
+      "origin": "Caller bypasses Angular menu and invokes POST, latest or probe directly.",
+      "boundaries": [
+        "TB-02",
+        "TB-03",
+        "TB-09"
+      ],
+      "likelihood": "possible",
+      "impact": "critical",
+      "inherent_severity": "critical",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Session plus independent server-side execution/read/generate scopes; capability is informational; probe uses technical Bearer before network access.",
+        "403/404 authorization audit, confirmed scope signal, authentication errors and security regression."
+      ],
+      "preventive_controls": [
+        "Session plus independent server-side execution/read/generate scopes; capability is informational; probe uses technical Bearer before network access."
+      ],
+      "detective_controls": [
+        "403/404 authorization audit, confirmed scope signal, authentication errors and security regression."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_access.py::test_server_guard_intersects_both_organization_scopes",
+        "backend/tests/test_ai_assistance_health.py::test_probe_requires_technical_auth_before_any_request"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_access.py",
+        "backend/app/ai_assistance_routes.py",
+        "backend/tests/test_ai_assistance_access.py",
+        "backend/tests/test_ai_assistance_health.py"
+      ],
+      "residual_risk": "Stolen valid session/technical token can exercise its legitimate scope until revocation; role visibility does not replace credential custody.",
+      "owner": "security",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-42",
+      "journey": "J-08",
+      "category": "replay",
+      "threat_class": "replay",
+      "ai_threat": "stale-reservation-duplicate-inference",
+      "threat": "Process dies or HTTP times out and a retry races with old work.",
+      "origin": "Process dies or HTTP times out and a retry races with old work.",
+      "boundaries": [
+        "TB-02",
+        "TB-03",
+        "TB-07"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Two-minute leases, unique processing reservation, context/prompt/pin reuse, stale UUID fencing; recover expired only after suspension and old workers ended.",
+        "Stalled/growing-expired alerts, recovered counter, atomic immutable maintenance audit and outbox."
+      ],
+      "preventive_controls": [
+        "Two-minute leases, unique processing reservation, context/prompt/pin reuse, stale UUID fencing; recover expired only after suspension and old workers ended."
+      ],
+      "detective_controls": [
+        "Stalled/growing-expired alerts, recovered counter, atomic immutable maintenance audit and outbox."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_repository_persistence.py::test_explicit_recovery_preserves_results_and_live_reservations",
+        "backend/tests/test_ai_assistance_telemetry.py::test_http_timeout_keeps_worker_gauge_until_finish_without_second_outcome"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_repository.py",
+        "backend/tests/test_ai_assistance_repository_persistence.py",
+        "backend/tests/test_ai_assistance_telemetry.py",
+        "docs/runbooks/ai-assistance-stalled.md"
+      ],
+      "residual_risk": "Lease expiry cannot prove the old remote inference stopped; do not retry blindly or promise exactly-once inference under host failure.",
+      "owner": "backend",
+      "treatment_issue": 191
+    },
+    {
+      "id": "R-43",
+      "journey": "J-08",
+      "category": "availability",
+      "threat_class": "availability",
+      "ai_threat": "optional-runtime-outage",
+      "threat": "Runtime or resources disappear while the core application remains usable.",
+      "origin": "Runtime or resources disappear while the core application remains usable.",
+      "boundaries": [
+        "TB-02",
+        "TB-07",
+        "TB-09"
+      ],
+      "likelihood": "possible",
+      "impact": "high",
+      "inherent_severity": "high",
+      "residual_severity": "medium",
+      "disposition": "mitigated",
+      "controls": [
+        "Optional feature and generation-only kill switch; reads require no provider; readiness depends only on core services; bounded informative probe.",
+        "Six HTTP outcomes, authenticated probe, unavailable alert and documented recovery exercise."
+      ],
+      "preventive_controls": [
+        "Optional feature and generation-only kill switch; reads require no provider; readiness depends only on core services; bounded informative probe."
+      ],
+      "detective_controls": [
+        "Six HTTP outcomes, authenticated probe, unavailable alert and documented recovery exercise."
+      ],
+      "tests": [
+        "backend/tests/test_ai_assistance_health.py::test_runtime_failure_does_not_affect_readiness",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py::test_suspended_http_reads_real_persistence_without_provider"
+      ],
+      "evidence": [
+        "backend/app/ai_assistance_health.py",
+        "backend/tests/test_ai_assistance_health.py",
+        "backend/tests/test_ai_assistance_orchestration_persistence.py",
+        "docs/runbooks/ai-assistance.md"
+      ],
+      "residual_risk": "Shared host/database capacity can still affect the main application; a successful metadata probe does not guarantee inference quality or success.",
+      "owner": "backend",
+      "treatment_issue": 191
     }
   ]
 }

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
@@ -31,6 +32,21 @@ REQUIRED_JOURNEYS = {
     "notification-and-email-delivery",
     "human-approval",
     "identity-administration",
+    "ai-assistance",
+}
+AI_THREATS = {
+    "indirect-prompt-injection",
+    "cross-organization-disclosure",
+    "sensitive-data-exposure",
+    "output-injection",
+    "tampered-runtime",
+    "runtime-ssrf",
+    "concurrent-or-large-response-dos",
+    "unbounded-consumption",
+    "false-claim-as-fact",
+    "direct-api-permission-bypass",
+    "stale-reservation-duplicate-inference",
+    "optional-runtime-outage",
 }
 REQUIRED_TREATMENT_ISSUES = set(range(90, 97))
 REQUIRED_THREAT_CLASSES = {"csrf", "ssrf", "xss"}
@@ -72,21 +88,25 @@ REQUIRED_OPERATIONS = {
         ("PATCH", "/admin/users/{user_id}"),
         ("PUT", "/admin/access/users/{left_id}/roles/{right_id}"),
     },
+    "ai-assistance": {
+        ("GET", "/me/ai-assistance-capability"),
+        ("POST", "/executions/{execution_id}/ai-assistance"),
+        ("GET", "/executions/{execution_id}/ai-assistance/latest"),
+    },
 }
 LIKELIHOODS = {"unlikely", "possible", "likely"}
 SEVERITIES = {"low", "medium", "high", "critical"}
 DISPOSITIONS = {"mitigated", "accepted", "blocked", "transferred"}
 SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 INHERENT_MATRIX = {
-    "unlikely": {
-        "low": "low", "medium": "low", "high": "medium", "critical": "high"
-    },
+    "unlikely": {"low": "low", "medium": "low", "high": "medium", "critical": "high"},
     "possible": {
-        "low": "low", "medium": "medium", "high": "high", "critical": "critical"
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "critical": "critical",
     },
-    "likely": {
-        "low": "low", "medium": "high", "high": "high", "critical": "critical"
-    },
+    "likely": {"low": "low", "medium": "high", "high": "high", "critical": "critical"},
 }
 
 
@@ -95,6 +115,45 @@ def _non_empty_list(item: dict, field: str, subject: str) -> list:
     if not isinstance(value, list) or not value:
         raise ValueError(f"{subject} sem {field}")
     return value
+
+
+def validate_ai_risks(document: dict, boundary_ids: set[str]) -> None:
+    """Require actual test functions and controls for every #191 threat."""
+    journey = next(j for j in document["journeys"] if j["name"] == "ai-assistance")
+    risks = [r for r in document["risks"] if r["journey"] == journey["id"]]
+    threats = [r.get("ai_threat") for r in risks]
+    if set(threats) != AI_THREATS or len(threats) != len(AI_THREATS):
+        raise ValueError("Cobertura de ameaças IA ausente ou duplicada")
+    for risk in risks:
+        subject = f"Risco IA {risk['id']}"
+        for field in ("origin", "residual_risk"):
+            if not isinstance(risk.get(field), str) or not risk[field].strip():
+                raise ValueError(f"{subject} sem {field}")
+        boundaries = set(_non_empty_list(risk, "boundaries", subject))
+        if not boundaries.issubset(boundary_ids & set(journey["boundaries"])):
+            raise ValueError(f"{subject} usa fronteira inexistente na jornada")
+        for field in ("preventive_controls", "detective_controls"):
+            controls = _non_empty_list(risk, field, subject)
+            if any(not isinstance(c, str) or not c.strip() for c in controls):
+                raise ValueError(f"{subject} possui controle vazio")
+        for reference in _non_empty_list(risk, "tests", subject):
+            path, separator, case = reference.partition("::")
+            file = (ROOT / path).resolve()
+            if (
+                not separator
+                or not file.is_relative_to(ROOT)
+                or not file.is_file()
+                or file.suffix != ".py"
+                or not case.startswith("test_")
+            ):
+                raise ValueError(f"{subject} possui referência de teste inválida")
+            functions = {
+                node.name
+                for node in ast.walk(ast.parse(file.read_text(encoding="utf-8")))
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            }
+            if case not in functions:
+                raise ValueError(f"{subject} aponta para teste inexistente: {case}")
 
 
 def validate() -> dict:
@@ -136,14 +195,11 @@ def validate() -> dict:
             raise ValueError(f"{subject} usa fronteira inexistente: {sorted(unknown)}")
         operations = _non_empty_list(journey, "operations", subject)
         operation_keys = {
-            (operation.get("method"), operation.get("path"))
-            for operation in operations
+            (operation.get("method"), operation.get("path")) for operation in operations
         }
         required = REQUIRED_OPERATIONS[journey["name"]]
         if missing := required - operation_keys:
-            raise ValueError(
-                f"{subject} sem operações obrigatórias: {sorted(missing)}"
-            )
+            raise ValueError(f"{subject} sem operações obrigatórias: {sorted(missing)}")
         for operation in operations:
             key = (operation.get("method"), operation.get("path"))
             if key not in openapi:
@@ -226,6 +282,8 @@ def validate() -> dict:
 
     if missing := REQUIRED_THREAT_CLASSES - covered_threat_classes:
         raise ValueError(f"Classes de ameaça obrigatórias ausentes: {sorted(missing)}")
+
+    validate_ai_risks(document, set(boundary_ids))
 
     if missing := REQUIRED_TREATMENT_ISSUES - covered_issues:
         raise ValueError(f"Issues da Etapa 5 sem risco relacionado: {sorted(missing)}")

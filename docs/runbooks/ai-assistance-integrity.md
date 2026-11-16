@@ -6,7 +6,21 @@ confirmada internamente ou rejeição de pin no gerador. Não comprova ataque be
 sucedido: os controles recusaram a operação. Um resultado simplesmente ausente
 (404) ou uma rejeição isolada de conteúdo inválido não são esses sinais.
 
-## Investigar e conter
+
+## Responsável e escalonamento
+
+Segurança conduz o incidente com backend/plataforma; preservar evidências e escopo autorizado.
+
+## Pré-condições
+
+Ambiente e intervalo identificados, acesso autorizado ao painel/logs/auditoria e
+configuração privada sob custódia do operador. Conferir coleta e scrape antes
+de interpretar valores. Ações efetivas exigem janela e identidade técnica
+autorizadas; não compartilhar credenciais nem usar dados reais em sondas.
+
+## Procedimento
+
+### Investigar e conter
 
 1. Suspender novas gerações em todas as instâncias pelo
    [controle comum](ai-assistance.md#escolher-o-controle). Manter leitura sujeita à
@@ -27,7 +41,7 @@ sucedido: os controles recusaram a operação. Um resultado simplesmente ausente
    provam a integridade de um host já comprometido. Uma consulta da sonda isolada
    não incrementa a métrica do gerador: seu status deve ser inspecionado.
 
-## Recuperar
+### Recuperar
 
 Preservar histórico e evidências sanitizadas; investigar causa antes de
 reabilitar. Confirmar configuração/runtime aprovados, teste negativo de acesso
@@ -39,3 +53,17 @@ contador acumulado não precisa zerar. Reiniciar a API não apaga o histórico
 persistido. Suspender a geração não suprime um incidente real: leituras e
 tentativas de acesso continuam relevantes. Flag desligada sem incidente não
 gera alerta. Ausência de coleta não é comprovação de ausência de incidentes.
+
+## Rollback
+
+Não aceitar pin encontrado automaticamente nem alterar JSON/hashes. Manter suspensão, preservar trilha e reverter configuração/aplicação somente por revisão aprovada. Ver o
+[controle comum](ai-assistance.md) e o [fluxo de rollback](../deployment/update-and-rollback.md).
+
+## Validação e evidências
+
+Confirmar as condições de recuperação descritas acima, coleta saudável e ausência
+de nova falha no intervalo. Registrar revisão, horário, código fechado, ação e
+correlação; reconciliar eventos na auditoria e, quando habilitado, na pesquisa
+Graylog. Publicar somente amostras/capturas sanitizadas, sem conteúdo do modelo,
+contexto, configuração privada ou identificadores de negócio. Desaparecimento
+do alerta por suspensão ou falta de medição não comprova a correção.

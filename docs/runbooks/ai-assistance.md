@@ -2,7 +2,8 @@
 
 Entrega incremental da #191. Os blocos 1–3 cobrem controles de operação,
 [telemetria, alertas e painel](../ai-assistance-observability.md).
-O exercício Graylog e a revisão de segurança integrada pertencem ao bloco 4.
+O bloco 4 acrescenta threat model, campanha adversarial e exercício integrado
+com recibos reais no laboratório Graylog. Ver [evidências](../evidence/issue-191-checkpoint-4.md).
 A ativação operacional continua condicionada à validação final da #192.
 
 ## Escolher o controle

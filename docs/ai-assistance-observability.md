@@ -1,8 +1,8 @@
 # Observabilidade da assistência — contrato 1.0.0
 
 Entrega incremental da #191. Os blocos 1–3 cobrem controles, fronteiras,
-rotinas finitas, alertas e painel. Campanha adversarial integrada e exercício
-Graylog pertencem ao bloco 4; a ativação operacional depende da #192.
+rotinas finitas, alertas e painel. O bloco 4 completa a campanha adversarial e
+o exercício Graylog em laboratório sintético; a ativação operacional depende da #192.
 
 ## O que cada contagem significa
 
