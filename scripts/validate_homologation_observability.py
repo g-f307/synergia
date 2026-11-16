@@ -9,6 +9,7 @@ from typing import Any
 CONTRACT = Path("docs/homologation-observability-contract.json")
 ALERTS = Path("observability/prometheus/alerts.yml")
 DASHBOARD = Path("observability/grafana/dashboards/synergia-technical.json")
+DASHBOARD_CASES = Path("observability/prometheus/ai-assistance-dashboard-cases.json")
 
 SENSITIVE_FIELDS = frozenset(
     {
@@ -64,18 +65,28 @@ def validate_contract(root: Path) -> dict[str, Any]:
     return contract
 
 
-def _alert_runbooks(text: str) -> dict[str, str]:
-    """Map each alert to its own runbook annotation."""
+def _alert_blocks(text: str) -> dict[str, str]:
+    """Read the repository's flat alert blocks; promtool validates YAML/PromQL."""
     matches = list(re.finditer(r"^\s*- alert:\s*([A-Za-z0-9_]+)\s*$", text, re.M))
-    mapping: dict[str, str] = {}
+    blocks: dict[str, str] = {}
     for position, match in enumerate(matches):
+        name = match.group(1)
+        if name in blocks:
+            raise ValueError(f"duplicate alert: {name}")
         end = (
             matches[position + 1].start() if position + 1 < len(matches) else len(text)
         )
-        block = text[match.end() : end]
+        blocks[name] = text[match.end() : end]
+    return blocks
+
+
+def _alert_runbooks(text: str) -> dict[str, str]:
+    """Map each alert to its own runbook annotation."""
+    mapping: dict[str, str] = {}
+    for name, block in _alert_blocks(text).items():
         runbook = re.search(r"^\s*runbook:\s*(\S+)\s*$", block, re.M)
         if runbook is not None:
-            mapping[match.group(1)] = runbook.group(1)
+            mapping[name] = runbook.group(1)
     return mapping
 
 
@@ -89,13 +100,13 @@ def _dashboard_panels(document: dict[str, Any]) -> dict[str, str]:
     return panels
 
 
-def validate_alerts(
-    root: Path, contract: dict[str, Any], alerts_text: str
-) -> set[str]:
+def validate_alerts(root: Path, contract: dict[str, Any], alerts_text: str) -> set[str]:
     """Validate existence and exact alert-to-runbook relationships."""
     alert_runbooks = _alert_runbooks(alerts_text)
     alert_names = set(alert_runbooks)
     expected_alerts = {item["name"] for item in contract["alerts"]}
+    if len(expected_alerts) != len(contract["alerts"]):
+        raise ValueError("duplicate alert in observability contract")
     missing_alerts = expected_alerts - alert_names
     if missing_alerts:
         raise ValueError(
@@ -105,10 +116,17 @@ def validate_alerts(
         runbook = root / item["runbook"]
         if not runbook.is_file():
             raise ValueError(f"missing runbook: {item['runbook']}")
-        expected_url_suffix = f"/blob/main/{item['runbook']}"
+        expected_url = "https://github.com/g-f307/synergia/blob/main/" + item["runbook"]
         configured_url = alert_runbooks.get(item["name"], "")
-        if not configured_url.endswith(expected_url_suffix):
+        if configured_url != expected_url:
             raise ValueError(f"alert has no matching runbook URL: {item['name']}")
+        severity = re.search(
+            r"^\s*severity:\s*(\S+)\s*$",
+            _alert_blocks(alerts_text)[item["name"]],
+            re.M,
+        )
+        if severity is None or severity.group(1) != item["severity"]:
+            raise ValueError(f"alert has incorrect severity: {item['name']}")
     return expected_alerts
 
 
@@ -131,6 +149,35 @@ def validate(root: Path) -> dict[str, Any]:
         "validated_runbooks": len({item["runbook"] for item in contract["alerts"]}),
         "dashboard_views": dashboard_views,
     }
+
+
+def export_dashboard_checks(root: Path, destination: Path) -> None:
+    """Generate promtool inputs from the actual queries, using only the stdlib.
+
+    JSON is valid YAML. Cases refer to panel/target, so an edited query is tested
+    rather than a stale duplicate. Generated files belong in a temporary folder.
+    """
+    dashboard = _load_json(root / DASHBOARD)
+    panels = {panel["title"]: panel for panel in dashboard["panels"]}
+    rules = [
+        {
+            "record": f"dashboard_query_{panel['id']}_{target['refId']}",
+            "expr": target["expr"],
+        }
+        for panel in dashboard["panels"]
+        for target in panel.get("targets", [])
+    ]
+    cases = _load_json(root / DASHBOARD_CASES)
+    for test in cases["tests"]:
+        for query in test["promql_expr_test"]:
+            panel = panels[query.pop("panel")]
+            query["expr"] = panel["targets"][query.pop("target")]["expr"]
+    destination.mkdir(parents=True, exist_ok=True)
+    (destination / "dashboard.rules.yml").write_text(
+        json.dumps({"groups": [{"name": "dashboard-queries", "rules": rules}]}),
+        encoding="utf-8",
+    )
+    (destination / "dashboard.test.yml").write_text(json.dumps(cases), encoding="utf-8")
 
 
 def evaluate_recovery_drill(
@@ -157,8 +204,11 @@ def main() -> int:
     parser.add_argument(
         "--root", type=Path, default=Path(__file__).resolve().parents[1]
     )
+    parser.add_argument("--promtool-dashboard-dir", type=Path)
     args = parser.parse_args()
     result = validate(args.root.resolve())
+    if args.promtool_dashboard_dir is not None:
+        export_dashboard_checks(args.root.resolve(), args.promtool_dashboard_dir)
     print(json.dumps({**result, "dashboard_views": sorted(result["dashboard_views"])}))
     return 0
 

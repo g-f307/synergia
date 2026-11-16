@@ -1,8 +1,8 @@
 # Assistência de IA — suspensão e recuperação
 
-Entrega incremental da #191. Os blocos 1/2 cobrem controles de operação e
-[telemetria](../ai-assistance-observability.md); alertas, painel e exercício Graylog
-serão entregues nos próximos blocos.
+Entrega incremental da #191. Os blocos 1–3 cobrem controles de operação,
+[telemetria, alertas e painel](../ai-assistance-observability.md).
+O exercício Graylog e a revisão de segurança integrada pertencem ao bloco 4.
 A ativação operacional continua condicionada à validação final da #192.
 
 ## Escolher o controle
@@ -146,5 +146,20 @@ iniciar ou chamar um modelo.
 Para reabilitar, confirmar configuração/pin, recursos disponíveis, ausência de
 workers anteriores e reservas presas, auditoria funcional e autorização da janela.
 Restaurar `GENERATION_ENABLED=true` e recriar as instâncias. Conferir sonda,
-readiness e um caso sintético autorizado. Os próximos blocos acrescentam critérios
-por alertas; este checkpoint não declara a #191 ou #192 concluída.
+readiness e um caso sintético autorizado. Este checkpoint não declara a #191
+ou #192 concluída.
+
+## Alertas específicos
+
+| Alerta | Severidade | Procedimento |
+| --- | --- | --- |
+| SynergiaAiAssistanceUnavailable | warning | [Indisponibilidade/timeout](ai-assistance-unavailable.md) |
+| SynergiaAiAssistanceStalled | warning | [Trabalho sem conclusão](ai-assistance-stalled.md) |
+| SynergiaAiAssistanceIntegrityViolation | critical | [Integridade/acesso cruzado/pin](ai-assistance-integrity.md) |
+| SynergiaAiAssistanceExpiredReservationsGrowing | warning | [Reservas expiradas](ai-assistance-reservations.md) |
+| SynergiaAiAssistanceRetentionFailures | warning | [Retenção: prévia e lote efetivo](ai-assistance-retention.md) |
+
+No Grafana provisionado, abrir **SYNERGIA Technical Overview** e os painéis
+**AI …**. Conferir ambiente e coleta antes de avaliar valores. Alvos sem scrape,
+coletor indisponível e ausência de tráfego não devem ser tratados como sucesso.
+As regras são locais ao Prometheus; não foi criado canal externo de notificação.

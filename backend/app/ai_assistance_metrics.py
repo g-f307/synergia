@@ -67,7 +67,8 @@ class AiAssistanceCollector:
                     FROM synergia.ai_assistances WHERE state='processing'"""
                 ).fetchone()
                 events = connection.execute(
-                    """SELECT action,state,count(*) AS total
+                    """SELECT action,state,count(*) AS total,
+                    max(extract(epoch FROM occurred_at)) AS stamp
                     FROM synergia.ai_assistance_events
                     WHERE action IN ('expired','completed','rejected','integrity_error')
                     GROUP BY action,state"""
@@ -147,6 +148,19 @@ class AiAssistanceCollector:
             sum(r["total"] for r in events if r["action"] in {"completed", "rejected"}),
         )
         yield completions
+        yield _gauge(
+            "last_completion_timestamp_seconds",
+            "Last durable completed/rejected event; zero if none.",
+            env,
+            max(
+                (
+                    r["stamp"]
+                    for r in events
+                    if r["action"] in {"completed", "rejected"}
+                ),
+                default=0,
+            ),
+        )
         for operation, dataset in (
             ("retention", "ai_assistance_results"),
             ("recovery", "ai_assistance_reservations"),

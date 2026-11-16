@@ -83,6 +83,8 @@ def initialize():
         REQUESTS.labels(env, result)
     for code in ("integrity_error", "scope_violation"):
         SECURITY.labels(env, code)
+    # A zero baseline lets Prometheus observe the first pin mismatch as a rise.
+    GENERATIONS.labels(env, "deterministic", "unavailable", "runtime_pin_mismatch")
     INFLIGHT.labels(env)
 
 

@@ -40,6 +40,48 @@ def rows(database, correlation):
         ).fetchall()
 
 
+def test_completion_clock_excludes_reservations_and_includes_failure(
+    setup, database, monkeypatch
+):
+    from test_ai_assistance_repository_persistence import result
+
+    repo, key, _, actor, correlation = setup
+    metric = "synergia_ai_assistance_last_completion_timestamp_seconds"
+
+    def clock():
+        registry, _ = collect(database, monkeypatch)
+        return registry.get_sample_value(metric, {"environment": "test"})
+
+    initial = clock()
+    aid = repo.reserve(key, actor, correlation)
+    assert clock() == initial
+    repo.abandon(key, aid, actor, correlation, "runtime_timeout")
+    failed = clock()
+    assert failed > initial
+    with psycopg.connect(database) as connection:
+        expected = connection.execute(
+            "SELECT max(extract(epoch FROM occurred_at)) "
+            "FROM synergia.ai_assistance_events "
+            "WHERE action IN ('completed','rejected')"
+        ).fetchone()[0]
+    assert failed == pytest.approx(float(expected), abs=0.000001)
+    # Removing the failed reservation is terminal progress, even without a result.
+    aid = repo.reserve(key, actor, uuid4())
+    assert clock() == failed
+    repo.finish(
+        key,
+        aid,
+        actor,
+        uuid4(),
+        result(key, aid),
+        evidence_refs=frozenset(),
+        response_sha256=None,
+        rejection_code=None,
+        elapsed_ms=0,
+    )
+    assert clock() > failed
+
+
 def test_preview_and_empty_effective_batch(setup, database, monkeypatch):
     repo, _, _, actor, _ = setup
     preview, effective = uuid4(), uuid4()

@@ -17,8 +17,14 @@
     "decision": "No SLO is approved until homologation produces an observed baseline."
   },
   "retention": {
-    "metrics": {"duration_days": 15, "scope": "local_homologation"},
-    "logs": {"status": "pending_external", "temporary_policy": "container_lifecycle"}
+    "metrics": {
+      "duration_days": 15,
+      "scope": "local_homologation"
+    },
+    "logs": {
+      "status": "pending_external",
+      "temporary_policy": "container_lifecycle"
+    }
   },
   "access": {
     "network": "loopback_only",
@@ -57,12 +63,28 @@
     ]
   },
   "correlation": {
-    "fields": ["correlation_id", "execution_id"],
-    "journey": ["request", "inspection", "ingestion", "persistence", "notification"]
+    "fields": [
+      "correlation_id",
+      "execution_id"
+    ],
+    "journey": [
+      "request",
+      "inspection",
+      "ingestion",
+      "persistence",
+      "notification"
+    ]
   },
   "readiness": {
-    "mandatory": ["configuration", "postgresql", "storage"],
-    "degraded_non_blocking": ["email_worker", "data_recovery"]
+    "mandatory": [
+      "configuration",
+      "postgresql",
+      "storage"
+    ],
+    "degraded_non_blocking": [
+      "email_worker",
+      "data_recovery"
+    ]
   },
   "dashboard_views": {
     "business_rejections": {
@@ -76,23 +98,183 @@
     "resource_budget": {
       "panel": "Ingestion estimated memory budget",
       "metric": "synergia_ingestion_memory_budget_bytes"
+    },
+    "ai_control": {
+      "panel": "AI control and collection",
+      "metric": "synergia_ai_assistance_enabled"
+    },
+    "ai_outcomes": {
+      "panel": "AI request outcomes",
+      "metric": "synergia_ai_assistance_requests_total"
+    },
+    "ai_availability": {
+      "panel": "AI availability",
+      "metric": "synergia_ai_assistance_requests_total"
+    },
+    "ai_latency": {
+      "panel": "AI latency p95",
+      "metric": "synergia_ai_assistance_context_seconds_bucket"
+    },
+    "ai_sizes": {
+      "panel": "AI size p95",
+      "metric": "synergia_ai_assistance_context_bytes_bucket"
+    },
+    "ai_origins": {
+      "panel": "AI delivered origins",
+      "metric": "synergia_ai_assistance_response_origins_total"
+    },
+    "ai_reservations": {
+      "panel": "AI reservations and provider work",
+      "metric": "synergia_ai_assistance_pending_reservations"
+    },
+    "ai_progress": {
+      "panel": "AI completion age",
+      "metric": "synergia_ai_assistance_oldest_reservation_age_seconds"
+    },
+    "ai_persistence": {
+      "panel": "AI persistence outcomes",
+      "metric": "synergia_ai_assistance_persistence_total"
+    },
+    "ai_security": {
+      "panel": "AI security signals",
+      "metric": "synergia_ai_assistance_security_rejections_total"
+    },
+    "ai_recovery": {
+      "panel": "AI reservation recovery",
+      "metric": "synergia_ai_assistance_reservations_recovered_total"
+    },
+    "ai_maintenance": {
+      "panel": "AI maintenance failures",
+      "metric": "synergia_ai_assistance_retention_runs_total"
+    },
+    "ai_maintenance_age": {
+      "panel": "AI maintenance success age",
+      "metric": "synergia_ai_assistance_retention_last_success_timestamp_seconds"
+    },
+    "ai_maintenance_unfinished": {
+      "panel": "AI unfinished maintenance",
+      "metric": "synergia_ai_assistance_retention_unfinished_runs"
     }
   },
   "alerts": [
-    {"name": "SynergiaApiUnavailable", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/api-unavailable.md"},
-    {"name": "SynergiaCriticalDependencyUnavailable", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/api-unavailable.md"},
-    {"name": "SynergiaEmailWorkerDegraded", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/report-notification-recovery.md"},
-    {"name": "SynergiaMetricsCollectionFailed", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/database-unavailable.md"},
-    {"name": "SynergiaHttpErrorRateHigh", "severity": "critical", "owner": "backend", "runbook": "docs/runbooks/api-unavailable.md"},
-    {"name": "SynergiaExecutionFailuresDetected", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
-    {"name": "SynergiaImportRejectionRateHigh", "severity": "warning", "owner": "data", "runbook": "docs/runbooks/invalid-file.md"},
-    {"name": "SynergiaQueueStalled", "severity": "warning", "owner": "operations", "runbook": "docs/runbooks/processing-interrupted.md"},
-    {"name": "SynergiaIngestionMemoryBudgetExceeded", "severity": "critical", "owner": "platform", "runbook": "docs/runbooks/ingestion-memory-budget.md"},
-    {"name": "SynergiaRateLimitDenialsHigh", "severity": "warning", "owner": "security", "runbook": "docs/runbooks/abuse-response.md"}
+    {
+      "name": "SynergiaApiUnavailable",
+      "severity": "critical",
+      "owner": "platform",
+      "runbook": "docs/runbooks/api-unavailable.md"
+    },
+    {
+      "name": "SynergiaCriticalDependencyUnavailable",
+      "severity": "critical",
+      "owner": "platform",
+      "runbook": "docs/runbooks/api-unavailable.md"
+    },
+    {
+      "name": "SynergiaEmailWorkerDegraded",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/report-notification-recovery.md"
+    },
+    {
+      "name": "SynergiaMetricsCollectionFailed",
+      "severity": "critical",
+      "owner": "platform",
+      "runbook": "docs/runbooks/database-unavailable.md"
+    },
+    {
+      "name": "SynergiaHttpErrorRateHigh",
+      "severity": "critical",
+      "owner": "backend",
+      "runbook": "docs/runbooks/api-unavailable.md"
+    },
+    {
+      "name": "SynergiaExecutionFailuresDetected",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/processing-interrupted.md"
+    },
+    {
+      "name": "SynergiaImportRejectionRateHigh",
+      "severity": "warning",
+      "owner": "data",
+      "runbook": "docs/runbooks/invalid-file.md"
+    },
+    {
+      "name": "SynergiaQueueStalled",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/processing-interrupted.md"
+    },
+    {
+      "name": "SynergiaIngestionMemoryBudgetExceeded",
+      "severity": "critical",
+      "owner": "platform",
+      "runbook": "docs/runbooks/ingestion-memory-budget.md"
+    },
+    {
+      "name": "SynergiaRateLimitDenialsHigh",
+      "severity": "warning",
+      "owner": "security",
+      "runbook": "docs/runbooks/abuse-response.md"
+    },
+    {
+      "name": "SynergiaAiAssistanceUnavailable",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/ai-assistance-unavailable.md"
+    },
+    {
+      "name": "SynergiaAiAssistanceStalled",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/ai-assistance-stalled.md"
+    },
+    {
+      "name": "SynergiaAiAssistanceIntegrityViolation",
+      "severity": "critical",
+      "owner": "security",
+      "runbook": "docs/runbooks/ai-assistance-integrity.md"
+    },
+    {
+      "name": "SynergiaAiAssistanceExpiredReservationsGrowing",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/ai-assistance-reservations.md"
+    },
+    {
+      "name": "SynergiaAiAssistanceRetentionFailures",
+      "severity": "warning",
+      "owner": "operations",
+      "runbook": "docs/runbooks/ai-assistance-retention.md"
+    }
   ],
   "controlled_drills": [
-    {"scenario": "storage_unavailable", "expected": ["ready", "not_ready", "ready"], "runbook": "docs/runbooks/storage-unavailable.md"},
-    {"scenario": "database_unavailable", "expected": ["ready", "not_ready", "ready"], "runbook": "docs/runbooks/database-unavailable.md"},
-    {"scenario": "email_worker_degraded", "expected": ["healthy", "degraded", "healthy"], "runbook": "docs/runbooks/report-notification-recovery.md"}
+    {
+      "scenario": "storage_unavailable",
+      "expected": [
+        "ready",
+        "not_ready",
+        "ready"
+      ],
+      "runbook": "docs/runbooks/storage-unavailable.md"
+    },
+    {
+      "scenario": "database_unavailable",
+      "expected": [
+        "ready",
+        "not_ready",
+        "ready"
+      ],
+      "runbook": "docs/runbooks/database-unavailable.md"
+    },
+    {
+      "scenario": "email_worker_degraded",
+      "expected": [
+        "healthy",
+        "degraded",
+        "healthy"
+      ],
+      "runbook": "docs/runbooks/report-notification-recovery.md"
+    }
   ]
 }

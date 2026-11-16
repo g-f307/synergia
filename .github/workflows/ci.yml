@@ -227,14 +227,22 @@ jobs:
         run: pytest -q -m integration backend/tests/test_data_operations_persistence.py
       - name: Validar configuração, alertas e recuperação da observabilidade
         run: |
-          python scripts/validate_homologation_observability.py
+          python scripts/validate_homologation_observability.py \
+            --promtool-dashboard-dir /tmp/synergia-dashboard-checks
           docker run --rm --entrypoint promtool \
             -v "$PWD/observability/prometheus:/etc/prometheus" \
             -v "$PWD/observability/secrets.example/metrics-token:/run/secrets/synergia_metrics_token:ro" \
             prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
           docker run --rm --entrypoint promtool \
             -v "$PWD/observability/prometheus:/etc/prometheus" \
-            prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
+            prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml \
+            /etc/prometheus/ai-assistance.test.yml
+          docker run --rm --entrypoint promtool \
+            -v /tmp/synergia-dashboard-checks:/checks:ro \
+            prom/prometheus:v3.14.0 check rules /checks/dashboard.rules.yml
+          docker run --rm --entrypoint promtool \
+            -v /tmp/synergia-dashboard-checks:/checks:ro \
+            prom/prometheus:v3.14.0 test rules /checks/dashboard.test.yml
       - name: Executar testes de persistência
         env:
           DATABASE_URL: postgresql://synergia:synergia-ci-only@localhost:5432/synergia_ci

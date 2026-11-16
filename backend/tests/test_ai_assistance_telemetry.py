@@ -41,6 +41,34 @@ def sample(name, **labels):
     )
 
 
+def test_first_pin_incident_has_an_initialized_zero_baseline(monkeypatch):
+    from prometheus_client import CollectorRegistry, Counter
+
+    from app import ai_assistance_telemetry as telemetry
+
+    registry = CollectorRegistry()
+    generations = Counter(
+        "synergia_ai_assistance_generations",
+        "Isolated pin counter.",
+        ("environment", "origin", "result", "code"),
+        registry=registry,
+    )
+    monkeypatch.setattr(telemetry, "GENERATIONS", generations)
+    labels = {
+        "environment": "test",
+        "origin": "deterministic",
+        "result": "unavailable",
+        "code": "runtime_pin_mismatch",
+    }
+    metric = "synergia_ai_assistance_generations_total"
+    assert registry.get_sample_value(metric, labels) is None
+    telemetry.initialize()
+    assert registry.get_sample_value(metric, labels) == 0
+    generations.labels(**labels).inc()
+    telemetry.initialize()  # A second app creation must never reset the incident.
+    assert registry.get_sample_value(metric, labels) == 1
+
+
 def install(http, ctx, provider):
     service = AiAssistanceService(
         Contexts(ctx), AiAssistanceGenerator(provider), Repository()

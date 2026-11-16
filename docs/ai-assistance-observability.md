@@ -1,8 +1,8 @@
 # Observabilidade da assistência — contrato 1.0.0
 
-Entrega incremental da #191. O bloco 2 instrumenta as fronteiras e as rotinas
-finitas. Regras de alerta/painel e campanha adversarial integrada pertencem aos
-blocos 3/4; a ativação operacional continua dependente da #192.
+Entrega incremental da #191. Os blocos 1–3 cobrem controles, fronteiras,
+rotinas finitas, alertas e painel. Campanha adversarial integrada e exercício
+Graylog pertencem ao bloco 4; a ativação operacional depende da #192.
 
 ## O que cada contagem significa
 
@@ -50,6 +50,7 @@ Prefixo de todas as famílias abaixo: `synergia_ai_assistance_`.
 | `reservations_recovered_total` | Counter persistido | Reservas processing removidas com evento expired, por recuperação explícita/automática ou retenção |
 | `persisted_integrity_errors_total` | Counter persistido | Falhas de integridade registradas na leitura do repositório |
 | `persisted_completions_total` | Counter persistido | Eventos completed/rejected; inclui encerramento por falha do provider, sem confundir com entrega HTTP |
+| `last_completion_timestamp_seconds` | Gauge persistido | Instante da última conclusão completed/rejected; zero se nunca houve, sem contar reserva ou remoção por expiração |
 | `retention_runs_total`, `recovery_runs_total` | Counter persistido | Rotinas efetivas por transição started/succeeded/failed; prévias excluídas |
 | `retention_removed_records_total`, `recovery_removed_records_total` | Counter persistido | Registros removidos por lotes de worker confirmados |
 | `retention_last_started_timestamp_seconds` e equivalentes `recovery_…` | Gauge persistido | Último início confirmado |
@@ -84,6 +85,12 @@ não consumia essas famílias de IA. O contrato HTTP de resultado permanece 1.0.
 Contadores em memória reiniciam com a instância. Contadores persistidos são derivados
 do histórico imutável e sobrevivem ao processo do CLI/API; backup/restauração e a
 política própria de retenção da auditoria continuam aplicáveis.
+Os agregados persistidos são iguais em instâncias que consultam o mesmo banco:
+usar max por ambiente, não sum. Calcular increase por série antes de deduplicar.
+O agrupamento pressupõe um banco compartilhado por ambiente neste deploy;
+implantações com bancos independentes precisam de contrato próprio.
+Regras e painel filtram agregados pela coleta bem-sucedida. Flags/gauge de trabalho
+em memória são por processo; chamadas ao provider podem ser somadas entre instâncias.
 
 ## Logs e incidentes
 
@@ -129,7 +136,7 @@ possível persistir sua falha nele: logs sanitizados, saída não zero do CLI,
 
 As métricas gerais de backup/retencão excluem esses dois datasets. Isso evita
 promover falhas de manutenção de IA ao alerta crítico legado de recuperação de
-dados; os sinais específicos serão usados pelos alertas warning da assistência.
+dados; os sinais específicos alimentam os alertas warning da assistência.
 
 Rollback 0040 remove os índices/guardas novos e **preserva eventos imutáveis** e
 a aceitação dos dois valores de dataset, para manter o histórico consultável.
@@ -138,3 +145,70 @@ não apagar histórico para reverter a instrumentação. Não editar migrations 
 publicadas. Desativação operacional continua sendo feita pelas flags.
 
 Procedimentos: [runbook da assistência](runbooks/ai-assistance.md).
+
+## Alertas e painel
+
+Cinco regras em `observability/prometheus/alerts.yml`, vinculadas exatamente a
+cinco runbooks específicos no contrato de homologação:
+
+| Alerta (prefixo SynergiaAiAssistance) | Condição e recuperação | Severidade |
+| --- | --- | --- |
+| Unavailable | Razão unavailable/timeout sobre os seis resultados HTTP, rate de 5m, >20% por 10m; sai com razão ≤20%, sem tráfego na janela ou suspensão | warning |
+| Stalled | Reservas >0, mais antiga ≥600s e última conclusão há ≥600s, com geração habilitada; sai com conclusão recente, esvaziamento ou suspensão | warning |
+| IntegrityViolation | increase >0 em 5m de integridade/escopo confirmado ou pin divergente no gerador; sai sem incidentes novos na janela | critical |
+| ExpiredReservationsGrowing | delta do gauge em 10m >0, estoque atual >0, por 2m; sai com estoque zero ou fim do crescimento na janela | warning |
+| RetentionFailures | increase de failed ≥3 em 15m; sai quando as falhas deixam a janela, não apenas porque um lote teve sucesso | warning |
+
+O relógio de Stalled já representa os dez minutos; não acrescenta outra espera
+de dez minutos. Conclusão por falha é progresso e continua visível no alerta de
+indisponibilidade. Não há alerta por uma rejeição comum isolada, por não existir
+tráfego ou por flag desligada. Incidentes reais e manutenção continuam relevantes
+mesmo com geração suspensa: essa flag só filtra disponibilidade e paralisação.
+O counter de pin divergente nasce com zero para detectar o primeiro incremento
+após uma coleta inicial; incidentes anteriores ao primeiro scrape não podem ser
+reconstruídos por increase. A sonda não gera inferência nem esse counter.
+
+Counters usam increase/rate por série (com tratamento de reset), gauges usam
+delta. Valores de increase são extrapolados, inclusive a quantidade de falhas de
+retenção: reconciliar números exatos com a auditoria. Não se promete detecção
+de evento não coletado entre scrapes, nem de uma rotina que nunca foi agendada.
+Collection 0/ausente significa medição indisponível; usar os alertas gerais de
+coleta/API/banco e a indicação explícita no painel, não inferir zero falhas.
+
+O dashboard **SYNERGIA Technical Overview** mantém os painéis existentes e
+acrescenta 14: controles/coleta por instância, resultados HTTP, indisponibilidade,
+p95 de durações/tamanhos, origens entregues, reservas/provider, relógio de progresso,
+persistência, segurança, recuperação e estado das manutenções. Cada expressão
+mantém ambiente e distingue counters em memória de agregados compartilhados.
+Sem amostras não há quantil/taxa; **No data** não é substituído por zero.
+Último sucesso/conclusão igual a zero é omitido da curva de idade, com significado
+explicado no painel. O provisionamento existente continua local e somente leitura.
+
+Validações sem credenciais e sem runtime de IA, a partir da raiz:
+
+```bash
+backend/.venv/bin/python scripts/validate_homologation_observability.py \
+  --promtool-dashboard-dir /tmp/synergia-dashboard-checks
+docker run --rm --entrypoint promtool \
+  -v "$PWD/observability/prometheus:/etc/prometheus:ro" \
+  prom/prometheus:v3.14.0 test rules \
+  /etc/prometheus/alerts.test.yml /etc/prometheus/ai-assistance.test.yml
+docker run --rm --entrypoint promtool \
+  -v /tmp/synergia-dashboard-checks:/checks:ro \
+  prom/prometheus:v3.14.0 check rules /checks/dashboard.rules.yml
+docker run --rm --entrypoint promtool \
+  -v /tmp/synergia-dashboard-checks:/checks:ro \
+  prom/prometheus:v3.14.0 test rules /checks/dashboard.test.yml
+```
+
+Os testes novos de disparo, recuperação e ausência de alerta também executam no
+CI junto da suíte anterior. O validador recusa URL de host/repositório incorreto,
+runbook emprestado/ausente, severidade divergente e nomes duplicados; também
+confere as vistas do painel. As consultas reais do dashboard são exportadas para
+validação de sintaxe de todas as expressões e dez verificações semânticas por
+séries sintéticas, sem cópias antigas das consultas. Os casos versionados referem
+painel/target e o exportador usa apenas a biblioteca padrão Python. Promtool
+valida a sintaxe YAML e PromQL, sem exigir Grafana ou modelo em execução.
+
+Referências de semântica usadas: [funções PromQL](https://prometheus.io/docs/prometheus/latest/querying/functions/)
+e [testes de regras com promtool](https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/).

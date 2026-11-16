@@ -1,0 +1,196 @@
+{
+  "evaluation_interval": "1m",
+  "tests": [
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "synergia_ai_assistance_enabled{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_generation_enabled{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_collection_success{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_collection_success{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_pending_reservations{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "3x20"
+        },
+        {
+          "series": "synergia_ai_assistance_pending_reservations{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "3x20"
+        },
+        {
+          "series": "synergia_ai_assistance_expired_reservations{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "2x20"
+        },
+        {
+          "series": "synergia_ai_assistance_expired_reservations{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "2x20"
+        },
+        {
+          "series": "synergia_ai_assistance_generations_in_progress{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_generations_in_progress{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_last_completion_timestamp_seconds{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "0x20"
+        },
+        {
+          "series": "synergia_ai_assistance_oldest_reservation_age_seconds{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "0+60x20"
+        },
+        {
+          "series": "synergia_ai_assistance_retention_last_success_timestamp_seconds{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "0x20"
+        },
+        {
+          "series": "synergia_ai_assistance_requests_total{environment=\"test\",job=\"synergia-api\",instance=\"a\",result=\"unavailable\"}",
+          "values": "0+1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_requests_total{environment=\"test\",job=\"synergia-api\",instance=\"a\",result=\"generated\"}",
+          "values": "0+3x20"
+        },
+        {
+          "series": "synergia_ai_assistance_reservations_recovered_total{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "0+1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_reservations_recovered_total{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "0+1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_retention_runs_total{environment=\"test\",job=\"synergia-api\",instance=\"a\",result=\"failed\"}",
+          "values": "0+1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_retention_runs_total{environment=\"test\",job=\"synergia-api\",instance=\"b\",result=\"failed\"}",
+          "values": "0+1x20"
+        },
+        {
+          "series": "synergia_ai_assistance_retention_unfinished_runs{environment=\"test\",job=\"synergia-api\",instance=\"a\"}",
+          "values": "2x20"
+        },
+        {
+          "series": "synergia_ai_assistance_retention_unfinished_runs{environment=\"test\",job=\"synergia-api\",instance=\"b\"}",
+          "values": "2x20"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 0.25
+            }
+          ],
+          "panel": "AI availability",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 3
+            }
+          ],
+          "panel": "AI reservations and provider work",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 2
+            }
+          ],
+          "panel": "AI reservations and provider work",
+          "target": 1
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 2
+            }
+          ],
+          "panel": "AI reservations and provider work",
+          "target": 2
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 600
+            }
+          ],
+          "panel": "AI completion age",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [],
+          "panel": "AI completion age",
+          "target": 1
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [],
+          "panel": "AI maintenance success age",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 2
+            }
+          ],
+          "panel": "AI unfinished maintenance",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 10
+            }
+          ],
+          "panel": "AI reservation recovery",
+          "target": 0
+        },
+        {
+          "eval_time": "10m",
+          "exp_samples": [
+            {
+              "labels": "{environment=\"test\"}",
+              "value": 10
+            }
+          ],
+          "panel": "AI maintenance failures",
+          "target": 0
+        }
+      ]
+    }
+  ]
+}
