@@ -1,5 +1,8 @@
 # Assistência por execução
 
+A integração Angular no resumo da execução e sua validação com provider controlado
+estão documentadas em [ai-assistance-web.md](ai-assistance-web.md).
+
 A assistência exige `SYNERGIA_AI_ASSISTANCE_ENABLED=true` e as configurações de
 runtime e retenção descritas em `ai-assistance-persistence.md` e no contrato
 operacional. O banco deve estar migrado até `0039` e o segredo compartilhado do
