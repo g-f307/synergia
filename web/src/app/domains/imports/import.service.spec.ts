@@ -47,6 +47,31 @@ describe('ImportService', () => {
     expect(organizationName).toBe('Organization 1');
   });
 
+  it('reads persisted summary and retains response correlation for support', () => {
+    let correlation: string | null | undefined;
+    service.resultSummary('exec/1').subscribe(value => { correlation = value.correlationId; });
+    const request = http.expectOne('http://localhost:8000/imports/exec%2F1/result-summary');
+    expect(request.request.method).toBe('GET');
+    request.flush({ summary_status: 'unavailable', summary: null }, { headers: { 'x-correlation-id': 'corr-summary' } });
+    expect(correlation).toBe('corr-summary');
+  });
+
+  it('pages diagnostics with severity and exports all rows of the same filter', () => {
+    service.issues('exec/1', 3, 'warning').subscribe();
+    const request = http.expectOne(req => req.url.endsWith('/imports/exec%2F1/issues'));
+    expect(request.request.params.get('page')).toBe('3');
+    expect(request.request.params.get('page_size')).toBe('20');
+    expect(request.request.params.get('severity')).toBe('warning');
+    request.flush({});
+    service.issuesCsv('exec/1', 'warning').subscribe();
+    const download = http.expectOne(req => req.url.endsWith('/imports/exec%2F1/issues/export'));
+    expect(download.request.method).toBe('GET');
+    expect(download.request.params.get('severity')).toBe('warning');
+    expect(download.request.params.has('page')).toBeFalse();
+    expect(download.request.responseType).toBe('blob');
+    download.flush(new Blob(['id\r\n1\r\n']));
+  });
+
   it('uses encoded execution identifiers in tracking requests', () => {
     service.get('exec/unsafe').subscribe();
     const request = http.expectOne('http://localhost:8000/imports/exec%2Funsafe');

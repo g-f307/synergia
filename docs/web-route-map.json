@@ -1,5 +1,5 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "issue": 185,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
@@ -12,6 +12,7 @@
     "unavailable"
   ],
   "supporting_operations": [
+    {"method": "GET", "path": "/imports/{execution_id}/pipeline-summary", "permission": "import.read", "scope": "org", "exposure": "technical", "consumer": "platform", "decision": "Contrato legado de artefato preservado para compatibilidade; detalhe Angular usa result-summary desde a #194."},
     {"method": "POST", "path": "/executions/{execution_id}/ai-assistance", "permission": "execution.read + ai.assistance.generate", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/executions/{execution_id}/ai-assistance/latest", "permission": "execution.read + ai.assistance.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/me/ai-assistance-capability", "permission": "execution.read + (ai.assistance.read ou ai.assistance.generate)", "scope": "org", "exposure": "technical", "consumer": "platform", "decision": "Fundacao de capacidade sem exposicao de endpoint/modelo; card de execucao sera integrado na issue #190.", "target": "issue-190", "evidence": ["web/src/app/core/ai-assistance-capability.service.ts"]},
@@ -138,9 +139,11 @@
       "endpoints": [
         {"method": "GET", "path": "/imports/{execution_id}", "permission": "import.read"},
         {"method": "GET", "path": "/imports/{execution_id}/inspections", "permission": "import.read"},
-        {"method": "GET", "path": "/imports/{execution_id}/pipeline-summary", "permission": "import.read"}
+        {"method": "GET", "path": "/imports/{execution_id}/result-summary", "permission": "import.read"},
+        {"method": "GET", "path": "/imports/{execution_id}/issues", "permission": "import.read"},
+        {"method": "GET", "path": "/imports/{execution_id}/issues/export", "permission": "import.read"}
       ],
-      "url_state": ["tab"],
+      "url_state": ["page", "severity"],
       "states": ["loading", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/imports"
     },

@@ -1,24 +1,26 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { ImportDetailComponent } from './import-detail.component';
 import { ImportService } from './import.service';
 
 describe('ImportDetailComponent', () => {
-  const imports = { get: jasmine.createSpy('get'), inspections: jasmine.createSpy('inspections'), summary: jasmine.createSpy('summary') };
+  const imports = { get: jasmine.createSpy('get'), inspections: jasmine.createSpy('inspections'), resultSummary: jasmine.createSpy('resultSummary'), issues: jasmine.createSpy('issues'), issuesCsv: jasmine.createSpy('issuesCsv') };
   beforeEach(async () => {
     imports.get.calls.reset();
     imports.inspections.calls.reset();
-    imports.summary.calls.reset();
+    imports.resultSummary.calls.reset();
     imports.get.and.returnValue(of({ execution_id: 'exec-1', status: 'completed_with_errors', source: 'N-FP', file_name: 'plan.csv', started_at: '2026-09-02T12:00:00Z' }));
     imports.inspections.and.returnValue(of([{ inspection_id: 1, source: 'N-FP', original_file_name: 'plan.csv', size_bytes: 100, decision: 'accepted', reason_code: 'accepted', analyzed_at: '2026-09-02T12:00:00Z', retained_until: null, discarded_at: null }]));
-    imports.summary.and.returnValue(of({ rows_read: 3, valid_records: 2, rejected_records: 1, normalized_records: 2, errors: 1, warnings: 0 }));
+    imports.resultSummary.and.returnValue(of({ execution_id: 'exec-1', execution_status: 'completed_with_errors', summary_status: 'ready', summary: { rows_read: 3, valid_records: 2, rejected_records: 1, normalized_records: 2, errors: 1, warnings: 0 }, issues_total: 1, reason_code: 'summary_persisted', generated_at: '2026-11-17T12:00:00Z' }));
+    imports.issues.and.returnValue(of({ items: [], pagination: { page: 1, page_size: 20, total: 0, pages: 0 }, sort: 'oldest', generated_at: '2026-11-17T12:00:00Z' }));
     await TestBed.configureTestingModule({
       imports: [ImportDetailComponent],
-      providers: [provideRouter([]), { provide: ImportService, useValue: imports }, { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'exec-1' } } } }]
+      providers: [provideRouter([]), { provide: ImportService, useValue: imports }, { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ executionId: 'exec-1' })), queryParamMap: of(convertToParamMap({})), snapshot: { queryParamMap: convertToParamMap({}) } } }, { provide: SessionService, useValue: { hasPermission: () => true } }]
     }).compileComponents();
   });
 
@@ -42,32 +44,21 @@ describe('ImportDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('File accepted');
   });
 
-  it('shows unavailable and forbidden auxiliary responses as a partial result', () => {
-    imports.inspections.and.returnValue(throwError(() => failure('unavailable', 500, 'corr-inspection')));
-    imports.summary.and.returnValue(throwError(() => failure('forbidden', 403, 'corr-summary')));
-    const fixture = TestBed.createComponent(ImportDetailComponent);
-    fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(fixture.componentInstance.inspectionState()).toBe('unavailable');
-    expect(fixture.componentInstance.summaryState()).toBe('forbidden');
-    expect(text).toContain('Resultado parcial');
-    expect(text).toContain('inspeção está temporariamente indisponível');
-    expect(text).toContain('não possui permissão para consultar o resumo');
-    expect(text).toContain('corr-inspection');
-    expect(text).not.toContain('Nenhum registro de inspeção');
+  it('invalidates all protected data when the summary is forbidden', () => {
+    imports.resultSummary.and.returnValue(throwError(() => failure('forbidden', 403, 'corr-summary')));
+    const fixture = TestBed.createComponent(ImportDetailComponent); fixture.detectChanges();
+    expect(fixture.componentInstance.item()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('não possui mais acesso');
+    expect(fixture.nativeElement.querySelector('details input').value).toBe('corr-summary');
+    expect(fixture.nativeElement.querySelector('.inspection-section')).toBeNull();
   });
 
-  it('distinguishes expected missing auxiliary resources from failures', () => {
-    imports.inspections.and.returnValue(throwError(() => failure('not-found', 404)));
-    imports.summary.and.returnValue(throwError(() => failure('not-found', 404)));
-    const fixture = TestBed.createComponent(ImportDetailComponent);
-    fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(fixture.componentInstance.inspectionState()).toBe('missing');
-    expect(fixture.componentInstance.summaryState()).toBe('missing');
-    expect(text).toContain('inspeção ainda não está disponível');
-    expect(text).toContain('resumo ainda não está disponível');
-    expect(text).not.toContain('temporariamente indisponível');
+  it('treats missing scoped resources as inaccessible rather than pending', () => {
+    imports.resultSummary.and.returnValue(throwError(() => failure('not-found', 404)));
+    const fixture = TestBed.createComponent(ImportDetailComponent); fixture.detectChanges();
+    expect(fixture.componentInstance.item()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('não está mais acessível');
+    expect(fixture.nativeElement.textContent).not.toContain('processamento está em andamento');
   });
 
   it('uses one consistent surface with a visible title and internally scrolling content', () => {

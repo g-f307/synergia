@@ -13,6 +13,10 @@ resultado. Falha recorrente ou perda de proveniência é escalada como alta.
 
 ## Procedimento
 
+Para uma importação sem resumo, primeiro siga
+[resumo ou divergências indisponíveis](import-result-unavailable.md): ausência
+de JSON ou HTTP 404 não comprova processamento ativo e não autoriza retomada.
+
 1. Examinar transições, issues do pipeline e correlation ID.
 2. Distinguir rejeição de entrada, falha persistente e interrupção transitória.
 3. Usar a ação autenticada de reprocessamento com chave idempotente.

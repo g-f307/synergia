@@ -1,16 +1,25 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
+import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { TranslationKey } from '../../shared/i18n/i18n.models';
-import { FileInspection, ImportStatus, PipelineSummary } from './import.models';
+import { BadgeComponent, PaginationComponent, ResponsiveTableComponent, StateComponent, UiState } from '../../shared/ui/ui-kit';
+import { FileInspection, ImportIssuePage, ImportIssueSeverity, ImportResultSummary, ImportStatus } from './import.models';
 import { ImportService } from './import.service';
+import { ImportTechnicalDetailsComponent } from './import-technical-details.component';
+import { IMPORT_ISSUE_KEYS } from './import-issue-labels';
 
 const STATUS_KEYS: Record<string, TranslationKey> = {
   completed: 'imports.status.completed', completed_with_errors: 'imports.status.completedWithErrors',
   validation_failed: 'imports.status.validationFailed', failed: 'imports.status.failed',
-  duplicate: 'imports.status.duplicate', processing: 'imports.status.processing', received: 'imports.status.received'
+  duplicate: 'imports.status.duplicate', processing: 'imports.status.processing', received: 'imports.status.received',
+  pending: 'imports.status.received', validating: 'imports.status.processing', normalizing: 'imports.status.processing',
+  consolidating: 'imports.status.processing', applying_rules: 'imports.status.processing', reprocessing: 'imports.status.processing',
+  cancelled: 'imports.status.cancelled'
 };
 const DECISION_KEYS: Record<string, TranslationKey> = {
   accepted: 'imports.decision.accepted', rejected: 'imports.decision.rejected'
@@ -25,115 +34,188 @@ const REASON_KEYS: Record<string, TranslationKey> = {
   embedded_object: 'imports.reason.embeddedObject', external_link: 'imports.reason.externalLink', dangerous_formula: 'imports.reason.dangerousFormula',
   path_traversal: 'imports.reason.pathTraversal', archive_too_many_entries: 'imports.reason.archiveTooManyEntries',
   archive_uncompressed_limit: 'imports.reason.archiveUncompressedLimit', archive_compression_ratio: 'imports.reason.archiveCompressionRatio',
-  archive_path_traversal: 'imports.reason.archivePathTraversal', encrypted_archive: 'imports.reason.encryptedArchive'
+  archive_path_traversal: 'imports.reason.archivePathTraversal', encrypted_archive: 'imports.reason.encryptedArchive',
+  workbook_sheet_limit: 'imports.reason.capacityExceeded', workbook_row_limit: 'imports.reason.capacityExceeded',
+  workbook_column_limit: 'imports.reason.capacityExceeded', workbook_cell_limit: 'imports.reason.capacityExceeded',
+  workbook_dimension_limit: 'imports.reason.capacityExceeded', workbook_memory_limit: 'imports.reason.capacityExceeded',
+  workbook_metadata_limit: 'imports.reason.capacityExceeded', workbook_formula_limit: 'imports.reason.capacityExceeded',
+  ingestion_file_limit: 'imports.reason.capacityExceeded', ingestion_time_limit: 'imports.reason.capacityExceeded',
+  ingestion_issue_limit: 'imports.reason.capacityExceeded', no_authorized_sheet: 'imports.reason.noAuthorizedSheet',
+  unreadable_workbook: 'imports.reason.unreadableWorkbook'
 };
 type AuxiliaryState = 'loading' | 'ready' | 'missing' | 'forbidden' | 'unavailable' | 'error';
 
 @Component({
-  imports: [RouterLink],
-  template: `
-    <section class="import-detail" aria-labelledby="import-detail-title">
-      <header class="detail-toolbar">
-        <a class="back-link" routerLink="/imports/new"><span aria-hidden="true">←</span>{{ i18n.t('imports.newAnother') }}</a>
-        <h1 id="import-detail-title">{{ i18n.t('imports.detailTitle') }}</h1>
-      </header>
-
-      <div class="detail-scroll">
-        @if (loading()) { <p class="state-copy" role="status">{{ i18n.t('imports.detailLoading') }}</p> }
-        @if (failure()) { <section class="failure-state" role="alert"><h2>{{ i18n.t('imports.detailError') }}</h2><p>{{ failure()?.message }}</p>@if(failure()?.correlationId){<p class="technical">{{ i18n.t('imports.correlation') }}: {{ failure()?.correlationId }}</p>}</section> }
-        @if (item(); as current) {
-          <section class="overview" [attr.aria-label]="i18n.t('imports.result')">
-            <div class="status-summary">
-              <div><small>{{ i18n.t('imports.status') }}</small><strong class="status-pill" [attr.data-status]="current.status">{{ statusLabel(current.status) }}</strong></div>
-            </div>
-            <dl class="metadata">
-              <div><dt>{{ i18n.t('imports.execution') }}</dt><dd><a data-testid="related-execution" class="technical metadata-link" [routerLink]="['/executions',current.execution_id]" [queryParams]="{from:'/imports/'+current.execution_id}">{{ current.execution_id }}<span aria-hidden="true">›</span></a></dd></div>
-              <div><dt>{{ i18n.t('imports.source') }}</dt><dd>{{ current.source }}</dd></div>
-              <div><dt>{{ i18n.t('imports.file') }}</dt><dd>{{ current.file_name || i18n.t('common.notAvailable') }}</dd></div>
-              <div><dt>{{ i18n.t('imports.startedAt') }}</dt><dd>{{ i18n.formatDate(current.started_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</dd></div>
-            </dl>
-          </section>
-
-          @if (partial()) { <div class="partial-notice" role="status"><strong>{{ i18n.t('imports.partialTitle') }}</strong><span>{{ i18n.t('imports.partialMessage') }}</span></div> }
-
-          <section class="detail-section summary-section"><header><h2>{{ i18n.t('imports.summaryTitle') }}</h2></header>
-          @switch (summaryState()) {
-            @case ('loading') { <p role="status">{{ i18n.t('imports.summaryLoading') }}</p> }
-            @case ('ready') { @if (summary(); as totals) { <dl class="summary"><div><dt>{{ i18n.t('imports.rowsRead') }}</dt><dd>{{ i18n.formatNumber(totals.rows_read) }}</dd></div><div><dt>{{ i18n.t('imports.validRecords') }}</dt><dd>{{ i18n.formatNumber(totals.valid_records) }}</dd></div><div><dt>{{ i18n.t('imports.rejectedRecords') }}</dt><dd>{{ i18n.formatNumber(totals.rejected_records) }}</dd></div><div><dt>{{ i18n.t('imports.warnings') }}</dt><dd>{{ i18n.formatNumber(totals.warnings) }}</dd></div></dl> } }
-            @case ('missing') { <p>{{ i18n.t('imports.summaryPending') }}</p> }
-            @case ('forbidden') { <p class="error" role="alert">{{ i18n.t('imports.summaryForbidden') }}</p> }
-            @case ('unavailable') { <p class="error" role="alert">{{ i18n.t('imports.summaryUnavailable') }}</p> }
-            @case ('error') { <p class="error" role="alert">{{ i18n.t('imports.summaryError') }}</p> }
-          }
-          @if (summaryFailure()?.correlationId) { <p class="technical">{{ i18n.t('imports.correlation') }}: {{ summaryFailure()?.correlationId }}</p> }
-          </section>
-
-          <section class="detail-section inspection-section"><header><h2>{{ i18n.t('imports.inspectionTitle') }}</h2></header>
-            @switch (inspectionState()) {
-              @case ('loading') { <p role="status">{{ i18n.t('imports.inspectionLoading') }}</p> }
-              @case ('ready') {
-                @if (!inspections().length) { <p class="empty-copy">{{ i18n.t('imports.noInspection') }}</p> }
-                <div class="inspection-list">@for (inspection of inspections(); track inspection.inspection_id) {
-                  <article>
-                    <div><strong>{{ inspection.original_file_name }}</strong><p>{{ reasonLabel(inspection.reason_code) }}</p></div>
-                    <span class="decision-pill" [attr.data-decision]="inspection.decision">{{ decisionLabel(inspection) }}</span>
-                    @if (isQuarantined(inspection)) { <p class="inspection-alert">{{ i18n.t('imports.quarantinedUntil', { date: i18n.formatDate(inspection.retained_until!, { dateStyle: 'medium', timeStyle: 'short' }) }) }}</p> }
-                    @if (inspection.discarded_at) { <p class="inspection-alert">{{ i18n.t('imports.quarantineDiscarded') }}</p> }
-                  </article>
-                }</div>
-              }
-              @case ('missing') { <p class="empty-copy">{{ i18n.t('imports.inspectionPending') }}</p> }
-              @case ('forbidden') { <p class="error" role="alert">{{ i18n.t('imports.inspectionForbidden') }}</p> }
-              @case ('unavailable') { <p class="error" role="alert">{{ i18n.t('imports.inspectionUnavailable') }}</p> }
-              @case ('error') { <p class="error" role="alert">{{ i18n.t('imports.inspectionError') }}</p> }
-            }
-            @if (inspectionFailure()?.correlationId) { <p class="technical correlation">{{ i18n.t('imports.correlation') }}: {{ inspectionFailure()?.correlationId }}</p> }
-          </section>
-
-          <nav class="actions" [attr.aria-label]="i18n.t('imports.newAnother')"><a routerLink="/imports/new">{{ i18n.t('imports.newAnother') }}<span aria-hidden="true">→</span></a></nav>
-        }
-      </div>
-    </section>
-  `,
+  imports: [RouterLink, StateComponent, BadgeComponent, PaginationComponent, ResponsiveTableComponent, ImportTechnicalDetailsComponent],
+  templateUrl: './import-detail.component.html',
   styleUrl: './import-detail.component.css'
 })
 export class ImportDetailComponent implements OnInit {
   readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly imports = inject(ImportService);
+  private readonly session = inject(SessionService);
+  private readonly destroyRef = inject(DestroyRef);
+  private id = '';
+  private contextRequests = new Subscription();
+  private summaryRequest = new Subscription();
+  private inspectionRequest = new Subscription();
+  private issuesRequest = new Subscription();
+  private exportRequest = new Subscription();
+  private issuesSignature = '';
   readonly loading = signal(true);
   readonly item = signal<ImportStatus | null>(null);
   readonly inspections = signal<FileInspection[]>([]);
-  readonly summary = signal<PipelineSummary | null>(null);
+  readonly result = signal<ImportResultSummary | null>(null);
+  readonly summary = computed(() => this.result()?.summary ?? null);
   readonly failure = signal<ApiFailure | null>(null);
   readonly inspectionState = signal<AuxiliaryState>('loading');
   readonly summaryState = signal<AuxiliaryState>('loading');
   readonly inspectionFailure = signal<ApiFailure | null>(null);
   readonly summaryFailure = signal<ApiFailure | null>(null);
-  readonly partial = computed(() => {
-    const incomplete: AuxiliaryState[] = ['missing', 'forbidden', 'unavailable', 'error'];
-    return !!this.item() && (
-      incomplete.includes(this.inspectionState()) || incomplete.includes(this.summaryState())
-    );
-  });
+  readonly issuePage = signal<ImportIssuePage | null>(null);
+  readonly issuesLoading = signal(false);
+  readonly issuesFailure = signal<ApiFailure | null>(null);
+  readonly exportFailure = signal<ApiFailure | null>(null);
+  readonly exporting = signal(false);
+  readonly severity = signal<ImportIssueSeverity | ''>('');
+  readonly requestedPage = signal(1);
+  readonly partial = computed(() => !!this.item() && (
+    !!this.inspectionFailure() || !!this.summaryFailure() || !!this.issuesFailure()
+  ));
+  readonly canImport = computed(() => this.session.hasPermission('import.create'));
+  readonly canOpenExecution = computed(() => this.session.hasPermission('execution.read'));
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('executionId') ?? '';
-    this.imports.get(id).subscribe({
-      next: (item) => { this.item.set(item); this.loading.set(false); this.loadAuxiliary(id); },
-      error: (failure: ApiFailure) => { this.failure.set(failure); this.loading.set(false); }
+    this.destroyRef.onDestroy(() => {
+      this.contextRequests.unsubscribe();
+      this.summaryRequest.unsubscribe();
+      this.inspectionRequest.unsubscribe();
+      this.issuesRequest.unsubscribe();
+      this.exportRequest.unsubscribe();
+    });
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const id = params.get('executionId') ?? '';
+      if (id === this.id) return;
+      this.id = id;
+      this.reset();
+      this.readQuery(this.route.snapshot.queryParamMap);
+      this.loadImport();
+    });
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((query) => {
+      this.readQuery(query);
+      if (this.item()) this.loadIssues();
     });
   }
 
-  private loadAuxiliary(id: string): void {
-    this.imports.inspections(id).subscribe({
+  private reset(): void {
+    this.contextRequests.unsubscribe();
+    this.summaryRequest.unsubscribe();
+    this.inspectionRequest.unsubscribe();
+    this.issuesRequest.unsubscribe();
+    this.exportRequest.unsubscribe();
+    this.contextRequests = new Subscription();
+    this.issuesSignature = '';
+    this.loading.set(true);
+    this.item.set(null); this.failure.set(null);
+    this.result.set(null); this.summaryFailure.set(null); this.summaryState.set('loading');
+    this.inspections.set([]); this.inspectionFailure.set(null); this.inspectionState.set('loading');
+    this.issuePage.set(null); this.issuesFailure.set(null); this.issuesLoading.set(false);
+    this.exportFailure.set(null); this.exporting.set(false);
+  }
+
+  private readQuery(query: ParamMap): void {
+    const value = query.get('severity');
+    this.severity.set(value === 'error' || value === 'warning' ? value : '');
+    const page = Number(query.get('page') ?? 1);
+    this.requestedPage.set(Number.isSafeInteger(page) && page > 0 && page <= 2147483647 ? page : 1);
+  }
+
+  loadImport(): void {
+    if (!this.id || this.item()) return;
+    this.loading.set(true); this.failure.set(null);
+    this.contextRequests.add(this.imports.get(this.id).subscribe({
+      next: (item) => {
+        this.item.set(item); this.loading.set(false);
+        this.loadSummary(); this.loadInspections(); this.loadIssues();
+      },
+      error: (failure: ApiFailure) => { this.failure.set(failure); this.loading.set(false); }
+    }));
+  }
+
+  loadSummary(): void {
+    if (!this.item()) return;
+    this.summaryRequest.unsubscribe();
+    this.summaryState.set('loading'); this.summaryFailure.set(null);
+    this.summaryRequest = this.imports.resultSummary(this.id).subscribe({
+      next: (result) => { this.result.set(result); this.summaryState.set('ready'); },
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.summaryFailure.set(failure); this.summaryState.set(this.auxiliaryState(failure)); }
+    });
+  }
+
+  loadInspections(): void {
+    if (!this.item()) return;
+    this.inspectionRequest.unsubscribe();
+    this.inspectionState.set('loading'); this.inspectionFailure.set(null);
+    this.inspectionRequest = this.imports.inspections(this.id).subscribe({
       next: (items) => { this.inspections.set(items); this.inspectionState.set('ready'); },
-      error: (failure: ApiFailure) => { this.inspectionFailure.set(failure); this.inspectionState.set(this.auxiliaryState(failure)); }
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.inspectionFailure.set(failure); this.inspectionState.set(this.auxiliaryState(failure)); }
     });
-    this.imports.summary(id).subscribe({
-      next: (summary) => { this.summary.set(summary); this.summaryState.set('ready'); },
-      error: (failure: ApiFailure) => { this.summaryFailure.set(failure); this.summaryState.set(this.auxiliaryState(failure)); }
+  }
+
+  refreshResult(): void { this.loadSummary(); this.loadInspections(); this.loadIssues(true); }
+
+  loadIssues(force = false): void {
+    if (!this.item()) return;
+    const signature = JSON.stringify([this.id, this.requestedPage(), this.severity()]);
+    if (signature === this.issuesSignature && !force) return;
+    this.issuesSignature = signature;
+    this.issuesRequest.unsubscribe();
+    this.exportRequest.unsubscribe(); this.exporting.set(false); this.exportFailure.set(null);
+    this.issuePage.set(null); this.issuesFailure.set(null); this.issuesLoading.set(true);
+    this.issuesRequest = this.imports.issues(this.id, this.requestedPage(), this.severity()).subscribe({
+      next: (page) => { this.issuePage.set(page); this.issuesLoading.set(false); },
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.issuesFailure.set(failure); this.issuesLoading.set(false); }
     });
+  }
+
+  filterSeverity(value: string): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { severity: value === 'error' || value === 'warning' ? value : null, page: 1 }, queryParamsHandling: 'merge' });
+  }
+  goToPage(page: number): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { page }, queryParamsHandling: 'merge' });
+  }
+
+  exportCsv(): void {
+    if (this.exporting() || this.issuesLoading() || !this.issuePage()?.pagination.total) return;
+    this.exporting.set(true); this.exportFailure.set(null);
+    this.exportRequest = this.imports.issuesCsv(this.id, this.severity()).subscribe({
+      next: (blob) => {
+        let url: string | null = null;
+        try {
+          url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url; anchor.download = 'import-issues.csv'; anchor.click();
+        } catch {
+          this.exportFailure.set({ kind: 'internal', status: 0, code: 'download_failed', message: '', correlationId: null, fields: [] });
+        } finally {
+          if (url) URL.revokeObjectURL(url);
+          this.exporting.set(false);
+        }
+      },
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.exportFailure.set(failure); this.exporting.set(false); }
+    });
+  }
+
+  private invalidateAccess(failure: ApiFailure): boolean {
+    if (![401, 403, 404].includes(failure.status)) return false;
+    this.reset();
+    this.loading.set(false);
+    const key = failure.status === 401 ? 'imports.sessionRequired'
+      : failure.status === 403 ? 'imports.accessDenied' : 'imports.resourceUnavailable';
+    this.failure.set({ ...failure, message: this.i18n.t(key) });
+    return true;
   }
 
   private auxiliaryState(failure: ApiFailure): AuxiliaryState {
@@ -142,17 +224,25 @@ export class ImportDetailComponent implements OnInit {
     if (failure.kind === 'unavailable') return 'unavailable';
     return 'error';
   }
-
-  statusLabel(status: string): string {
-    return this.i18n.t(STATUS_KEYS[status] ?? 'imports.status.unknown');
+  failureState(failure: ApiFailure): UiState {
+    if (failure.kind === 'forbidden') return 'forbidden';
+    if (failure.kind === 'unavailable') return 'unavailable';
+    if (failure.kind === 'not-found') return 'empty';
+    return 'error';
   }
-  decisionLabel(item: FileInspection): string {
-    return this.i18n.t(DECISION_KEYS[item.decision] ?? 'imports.decision.unknown');
+  failureMessage(section: 'summary' | 'inspection' | 'issues' | 'export', failure: ApiFailure): string {
+    if (failure.kind === 'unauthorized') return this.i18n.t('imports.sessionRequired');
+    const keys: Record<typeof section, Record<string, TranslationKey>> = {
+      summary: { forbidden: 'imports.summaryForbidden', 'not-found': 'imports.summaryNotFound', unavailable: 'imports.summaryUnavailable', error: 'imports.summaryError' },
+      inspection: { forbidden: 'imports.inspectionForbidden', 'not-found': 'imports.inspectionPending', unavailable: 'imports.inspectionUnavailable', error: 'imports.inspectionError' },
+      issues: { forbidden: 'imports.issues.forbidden', 'not-found': 'imports.issues.notFound', unavailable: 'imports.issues.unavailable', error: 'imports.issues.error' },
+      export: { forbidden: 'imports.issues.exportForbidden', 'not-found': 'imports.issues.notFound', unavailable: 'imports.issues.exportUnavailable', error: 'imports.issues.exportError' }
+    };
+    return this.i18n.t(keys[section][failure.kind] ?? keys[section]['error']);
   }
-  reasonLabel(reason: string): string {
-    return this.i18n.t(REASON_KEYS[reason] ?? 'imports.reason.unknown');
-  }
-  isQuarantined(item: FileInspection): boolean {
-    return item.decision === 'rejected' && !!item.retained_until && !item.discarded_at;
-  }
+  issueReason(code: string): string { return this.i18n.t(IMPORT_ISSUE_KEYS[code] ?? 'imports.issueReason.unmapped_issue'); }
+  statusLabel(status: string): string { return this.i18n.t(STATUS_KEYS[status] ?? 'imports.status.unknown'); }
+  decisionLabel(item: FileInspection): string { return this.i18n.t(DECISION_KEYS[item.decision] ?? 'imports.decision.unknown'); }
+  reasonLabel(reason: string): string { return this.i18n.t(REASON_KEYS[reason] ?? 'imports.reason.unknown'); }
+  isQuarantined(item: FileInspection): boolean { return item.decision === 'rejected' && !!item.retained_until && !item.discarded_at; }
 }

@@ -45,6 +45,17 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.16.0` acrescenta `GET /imports/{execution_id}/result-summary` (#194),
+com contagens persistidas, disponibilidade explícita, total de ocorrências,
+motivos públicos e referência anterior autorizada por `import.read`.
+A mesma versão acrescenta `/imports/{execution_id}/issues` e `issues/export`,
+com paginação/filtro de severidade, projeção sanitizada e CSV somente leitura.
+O vínculo anterior em respostas legadas e 409 fica null quando não autorizado;
+a deduplicação e o vínculo persistido não mudam.
+A rota de artefato `pipeline-summary` preserva seu contrato. Leituras não criam
+diretórios, não reprocessam e não recriam artefatos. Não há nova migration ou
+alteração das transições. Ver [contrato do resultado](import-result-summary.md).
+
 A API `0.15.0` acrescenta o agregado autorizado `GET /executions/summary`,
 o campo `outcome` ao catálogo/detalhe e `execution_summary` aos indicadores
 (#193). Adiciona `outcome` como filtro de catálogo/resumo e os filtros

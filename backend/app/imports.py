@@ -4,13 +4,13 @@ import json
 import logging
 import os
 import time
-from collections.abc import Generator
-from contextlib import suppress
+from collections.abc import Generator, Iterator
+from contextlib import AbstractContextManager, ExitStack, contextmanager, suppress
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Annotated, Protocol
+from typing import Annotated, Literal, Protocol
 from uuid import UUID, uuid4
 
 import psycopg
@@ -20,10 +20,12 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel
@@ -35,13 +37,15 @@ from app.authorization import (
     require_permission,
 )
 from app.business_rules import RULE_CATALOG
-from app.errors import ErrorResponse
+from app.errors import ApiError, ErrorResponse
 from app.execution import (
     PIPELINE_VERSION,
     ExecutionState,
     import_fingerprint,
     validate_transition,
 )
+from app.import_issues import ImportIssuePage, open_import_issue_csv, read_import_issues
+from app.import_result_summary import ImportResultSummary, read_import_result_summary
 from app.ingestion_budget import LIMIT_GUIDANCE, IngestionLimitError, max_files
 from app.observability.metrics import observe_ingestion
 from app.observability.telemetry import (
@@ -227,6 +231,22 @@ class ImportRepository(Protocol):
     ) -> None: ...
 
     def get(self, execution_id: str) -> dict | None: ...
+
+    def result_summary(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None
+    ) -> ImportResultSummary | None: ...
+
+    def issues(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None,
+        severity: Literal["error", "warning"] | None, page: int, page_size: int,
+        sort: Literal["oldest", "newest"],
+    ) -> ImportIssuePage | None: ...
+
+    def issue_csv(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None,
+        severity: Literal["error", "warning"] | None,
+        sort: Literal["oldest", "newest"],
+    ) -> AbstractContextManager[Iterator[str] | None]: ...
 
 
 class PostgresImportRepository:
@@ -792,6 +812,37 @@ class PostgresImportRepository:
                 (execution_id,),
             ).fetchone()
 
+    def result_summary(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None
+    ) -> ImportResultSummary | None:
+        with self._connect() as connection:
+            return read_import_result_summary(
+                connection, execution_id, organization_scopes=organization_scopes
+            )
+
+    def issues(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None,
+        severity: Literal["error", "warning"] | None, page: int, page_size: int,
+        sort: Literal["oldest", "newest"],
+    ) -> ImportIssuePage | None:
+        with self._connect() as connection:
+            return read_import_issues(
+                connection, execution_id, organization_scopes=organization_scopes,
+                severity=severity, page=page, page_size=page_size, sort=sort,
+            )
+
+    @contextmanager
+    def issue_csv(
+        self, execution_id: str, *, organization_scopes: frozenset[UUID] | None,
+        severity: Literal["error", "warning"] | None,
+        sort: Literal["oldest", "newest"],
+    ) -> Iterator[Iterator[str] | None]:
+        with self._connect() as connection, open_import_issue_csv(
+            connection, execution_id, organization_scopes=organization_scopes,
+            severity=severity, sort=sort,
+        ) as chunks:
+            yield chunks
+
 
 def get_repository() -> Generator[ImportRepository, None, None]:
     database_url = os.getenv("DATABASE_URL")
@@ -800,14 +851,15 @@ def get_repository() -> Generator[ImportRepository, None, None]:
     yield PostgresImportRepository(database_url)
 
 
-def storage_root() -> Path:
+def storage_root(*, create: bool = True) -> Path:
     configured = os.getenv("IMPORT_STORAGE_DIR")
     root = (
         Path(configured)
         if configured
         else Path(__file__).resolve().parents[2] / "data" / "imports"
     )
-    root.mkdir(parents=True, exist_ok=True)
+    if create:
+        root.mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -988,6 +1040,19 @@ def _inspection_http_status(reason_code: str) -> int:
     }:
         return status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
     return status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def _visible_previous_import(
+    previous_id: str | None, actor: ActorContext, authorization: AuthorizationRepo,
+) -> str | None:
+    if previous_id is None or not actor.scopes_for("import.read"):
+        return None
+    organization_id = authorization.execution_organization(previous_id)
+    return (
+        previous_id
+        if organization_id is not None and actor.allows("import.read", organization_id)
+        else None
+    )
 
 
 @router.post(
@@ -1216,7 +1281,9 @@ async def upload_import(
                         "code": "duplicate_file",
                         "message": "Arquivo já importado",
                         "execution_id": execution_id,
-                        "duplicate_of_execution_id": duplicate_of,
+                        "duplicate_of_execution_id": _visible_previous_import(
+                            duplicate_of, actor, authorization_repository
+                        ),
                     },
                 )
             if source_file_id is None:
@@ -1254,7 +1321,9 @@ async def upload_import(
                     "code": "duplicate_file",
                     "message": "Arquivos já processados nestas versões",
                     "execution_id": execution_id,
-                    "duplicate_of_execution_id": duplicate_of,
+                    "duplicate_of_execution_id": _visible_previous_import(
+                        duplicate_of, actor, authorization_repository
+                    ),
                 },
             )
         try:
@@ -1406,10 +1475,13 @@ async def get_upload_policy(
     response_model=ImportStatus,
     summary="Consultar o estado de uma importação",
     responses={404: {"model": ErrorResponse, "description": "Execução não encontrada"}},
-    dependencies=[Depends(require_execution_permission("import.read"))],
 )
 def get_import(
     execution_id: str,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("import.read"))
+    ],
+    authorization_repository: AuthorizationRepo,
     repository: ImportRepository = Depends(get_repository),
 ) -> ImportStatus:
     result = repository.get(execution_id)
@@ -1417,6 +1489,10 @@ def get_import(
         raise HTTPException(
             status_code=404, detail="Execução de importação não encontrada"
         )
+    result = dict(result)
+    result["duplicate_of_execution_id"] = _visible_previous_import(
+        result.get("duplicate_of_execution_id"), actor, authorization_repository
+    )
     return ImportStatus.model_validate(result)
 
 
@@ -1440,6 +1516,145 @@ def get_file_inspections(
 
 
 @router.get(
+    "/{execution_id}/result-summary",
+    response_model=ImportResultSummary,
+    summary="Consultar o resultado persistido da importação",
+    description=(
+        "Contagens do PostgreSQL, independentes do arquivo pipeline-summary.json. "
+        "Ausência de contagens é null, não zero. processing indica somente um "
+        "estado ativo conhecido. Resumo terminal ausente é unavailable; "
+        "duplicidade sem processamento e recusa de segurança são not_applicable. "
+        "Não reprocessa, repara nem cria arquivos. Exige somente import.read "
+        "no escopo da execução e da eventual referência anterior."
+    ),
+    responses={
+        code: {"model": ErrorResponse}
+        for code in (401, 403, 404, 422, 503)
+    },
+)
+def get_import_result_summary(
+    execution_id: str,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("import.read"))
+    ],
+    repository: ImportRepository = Depends(get_repository),
+) -> ImportResultSummary:
+    try:
+        result = repository.result_summary(
+            execution_id, organization_scopes=actor.scope_filter("import.read")
+        )
+    except psycopg.OperationalError as exc:
+        safe_log(
+            logging.WARNING, "import.result_summary.unavailable",
+            execution_id=execution_id, error_code="import_result_unavailable",
+            exception_type=type(exc).__name__, outcome="failure",
+        )
+        raise ApiError(
+            503, "import_result_unavailable", "Resultado temporariamente indisponível"
+        ) from None
+    if result is None:
+        raise ApiError(404, "resource_not_found", "Recurso não encontrado")
+    return result
+
+
+def _issues_unavailable(execution_id: str, exc: psycopg.OperationalError) -> ApiError:
+    safe_log(
+        logging.WARNING, "import.issues.unavailable", execution_id=execution_id,
+        error_code="import_issues_unavailable", exception_type=type(exc).__name__,
+        outcome="failure",
+    )
+    return ApiError(
+        503, "import_issues_unavailable", "Divergências temporariamente indisponíveis"
+    )
+
+
+@router.get(
+    "/{execution_id}/issues", response_model=ImportIssuePage,
+    summary="Consultar divergências sanitizadas da importação",
+    description=(
+        "Somente import.read no escopo da execução. Paginação e filtro de "
+        "severidade sobre pipeline_issues, sem valores, details ou nomes privados. "
+        "Localização desconhecida ou fora do catálogo público retorna null. "
+        "Total corresponde ao filtro; issues_total do result-summary é o total geral."
+    ),
+    responses={code: {"model": ErrorResponse} for code in (401, 403, 404, 422, 503)},
+)
+def get_import_issues(
+    execution_id: str,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("import.read"))
+    ],
+    repository: ImportRepository = Depends(get_repository),
+    severity: Literal["error", "warning"] | None = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    sort: Literal["oldest", "newest"] = "oldest",
+) -> ImportIssuePage:
+    try:
+        result = repository.issues(
+            execution_id, organization_scopes=actor.scope_filter("import.read"),
+            severity=severity, page=page, page_size=page_size, sort=sort,
+        )
+    except psycopg.OperationalError as exc:
+        raise _issues_unavailable(execution_id, exc) from None
+    if result is None:
+        raise ApiError(404, "resource_not_found", "Recurso não encontrado")
+    return result
+
+
+def _import_issue_csv(
+    execution_id: str,
+    actor: Annotated[
+        ActorContext, Depends(require_execution_permission("import.read"))
+    ],
+    repository: ImportRepository = Depends(get_repository),
+    severity: Literal["error", "warning"] | None = None,
+    sort: Literal["oldest", "newest"] = "oldest",
+) -> Generator[Iterator[str], None, None]:
+    # Request-scoped dependency closes cursor and connection after streaming,
+    # including disconnection. Only pre-header preparation becomes an HTTP error.
+    with ExitStack() as stack:
+        try:
+            chunks = stack.enter_context(repository.issue_csv(
+                execution_id, organization_scopes=actor.scope_filter("import.read"),
+                severity=severity, sort=sort,
+            ))
+        except psycopg.OperationalError as exc:
+            raise _issues_unavailable(execution_id, exc) from None
+        if chunks is None:
+            raise ApiError(404, "resource_not_found", "Recurso não encontrado")
+        yield chunks
+
+
+@router.get(
+    "/{execution_id}/issues/export", response_class=StreamingResponse,
+    summary="Exportar divergências sanitizadas da importação em CSV",
+    description=(
+        "Exporta todas as ocorrências do filtro de severidade, na ordem solicitada. "
+        "Exige somente import.read. Mesma projeção segura da tabela, proteção "
+        "contra fórmulas, UTF-8 com BOM e leitura em lotes de 500. Não exporta "
+        "arquivo-fonte nem cria artefato; snapshot somente leitura."
+    ),
+    responses={
+        200: {"content": {
+            "text/csv": {"schema": {"type": "string", "format": "binary"}}
+        }},
+        **{code: {"model": ErrorResponse} for code in (401, 403, 404, 422, 503)},
+    },
+)
+def export_import_issues(
+    chunks: Annotated[Iterator[str], Depends(_import_issue_csv, scope="request")],
+) -> StreamingResponse:
+    return StreamingResponse(
+        chunks, media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="import-issues.csv"',
+            "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
     "/{execution_id}/validation-report",
     response_model=ValidationReport,
     summary="Visualizar o relatório de validação da execução",
@@ -1459,7 +1674,7 @@ def get_validation_report(
         )
     source = ImportSource(execution["source"])
     report_path = (
-        storage_root()
+        storage_root(create=False)
         / "accepted"
         / source.name
         / execution_id
@@ -1491,7 +1706,7 @@ def get_normalized_data(
         )
     source = ImportSource(execution["source"])
     normalized_path = (
-        storage_root()
+        storage_root(create=False)
         / "accepted"
         / source.name
         / execution_id
@@ -1523,7 +1738,7 @@ def get_pipeline_summary(
         )
     source = ImportSource(execution["source"])
     summary_path = (
-        storage_root()
+        storage_root(create=False)
         / "accepted"
         / source.name
         / execution_id

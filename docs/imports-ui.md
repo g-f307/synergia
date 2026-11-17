@@ -1,5 +1,9 @@
 # Upload e acompanhamento inicial da ingestão
 
+A API `0.16.0` disponibiliza o [resultado persistido e as divergências da #194](import-result-summary.md).
+O detalhe Angular já usa esse contrato; não depende da presença do JSON no
+storage. Os quatro blocos foram validados localmente; ver o [relatório e roteiro](import-diagnostics-validation.md). CI remota e revisão são acompanhadas no PR.
+
 A jornada web de importação está disponível em `/imports/new` para usuários com
 `import.create`. O formulário informa formatos, limite e inspeção antes do envio,
 faz validações locais de conveniência e envia `multipart/form-data` para
@@ -20,21 +24,44 @@ exigem uma nova compilação da aplicação web.
 
 Durante o envio, a tela distingue transferência e inspeção/processamento. Não há
 reenvio automático: clique duplo é bloqueado e uma nova tentativa depende de ação
-explícita. Respostas `409` apontam para a execução original sem criar trabalho
-duplicado. Rejeições que já possuem execução permitem consultar o motivo seguro.
+explícita. Respostas `409` não criam trabalho duplicado; só incluem vínculo com
+a execução anterior quando o ator também tem `import.read` sobre ela.
+Rejeições que já possuem execução permitem consultar o motivo seguro.
 
 O acompanhamento inicial fica em `/imports/:executionId`, protegido por
 `import.read`, e reúne estado, inspeção e resumo do pipeline. Códigos estáveis do
 backend são apresentados por traduções `pt-BR` e `en-US`, com fallback seguro.
 Somente o nome base do arquivo aparece na interface; caminhos, stacks, conteúdo e
 detalhes internos não são apresentados. IDs de correlação retornados pela API são
-preservados para suporte.
+preservados em “Detalhes técnicos” recolhíveis, com cópia explícita e seleção
+manual caso a área de transferência não esteja disponível.
+
+O resumo usa `result-summary`: contagens reais (inclusive zero), processamento
+ativo, ausência de contagens em estado terminal, falha de preparação,
+duplicidade e recusa de segurança possuem mensagens distintas. HTTP 401/403/404
+e 503 não são convertidos em processamento pendente. As ações de atualizar e
+tentar novamente fazem somente GETs, sem reenvio, reparo ou reprocessamento.
+
+A tabela de divergências usa `issues`, com severidade, arquivo seguro, aba,
+linha, campo, código e explicação pública traduzida. Localizações ausentes
+aparecem como “Não informado”. Filtro de severidade e página são preservados
+na URL; mudar severidade volta à primeira página. A lista tem total filtrado,
+paginação única e rolagem horizontal acessível em telas estreitas. O CSV
+exporta todas as ocorrências do filtro, sem limitar ao número da página.
+
+Resumo, inspeção, divergências e exportação têm estado e erro independentes.
+Falha nas divergências ou no CSV preserva as contagens carregadas. Mudanças de
+execução, filtro e destruição do componente cancelam requisições pertinentes,
+para não aplicar resultados ou downloads de um contexto anterior. Links para
+nova importação e para detalhe de execução respeitam as permissões disponíveis
+na sessão; o servidor continua aplicando a organização em cada recurso.
 
 `WO Status` e `Total Decision` podem concluir como `completed_with_errors` quando
 somente parte das linhas é rejeitada. Esse estado é um resultado consultável, não
 uma indisponibilidade. Em `WO Status`, `LOT PENDING_OQC` permanece negada com
 `contract_blocked` até confirmação da fonte literal da chave. Um segundo envio do
-mesmo conteúdo recebe `duplicate_file` e aponta para a execução original.
+mesmo conteúdo recebe `duplicate_file` e pode apontar para a execução original
+quando esse vínculo também estiver autorizado.
 
 Antes da homologação dessas fontes, aplique as migrations `0031` e `0032` e
 mantenha os limites medidos de `WO Status`: até 64 MiB no arquivo, 640 MiB

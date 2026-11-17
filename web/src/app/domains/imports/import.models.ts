@@ -38,6 +38,41 @@ export interface PipelineSummary {
   warnings: number;
 }
 
+export interface ImportResultSummary {
+  execution_id: string;
+  execution_status: string;
+  summary_status: 'ready' | 'processing' | 'unavailable' | 'not_applicable';
+  summary: PipelineSummary | null;
+  issues_total: number;
+  generated_at: string;
+  reason_code: string;
+  inspection_reason_code: string | null;
+  duplicate_of_execution_id: string | null;
+  /** Response-header metadata, added by the client; absent from the JSON body. */
+  correlationId?: string | null;
+}
+
+export type ImportIssueSeverity = 'error' | 'warning';
+export interface ImportIssue {
+  id: number;
+  severity: ImportIssueSeverity;
+  safe_file_name: string | null;
+  sheet_name: string | null;
+  row_number: number | null;
+  column_name: string | null;
+  code: string;
+  reason: string;
+  scope: 'file' | 'structure' | 'record';
+  occurred_at: string;
+}
+
+export interface ImportIssuePage {
+  items: ImportIssue[];
+  pagination: { page: number; page_size: number; total: number; pages: number };
+  sort: 'oldest' | 'newest';
+  generated_at: string;
+}
+
 export interface UploadPolicy {
   source: ImportSource;
   allowed_extensions: string[];
