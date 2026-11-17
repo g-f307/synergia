@@ -63,7 +63,9 @@ def freeze_metadata() -> dict:
             "follow_redirects": False,
         },
         "assets_sha256": {
-            rel: _sha256_file(ROOT / rel) for rel in FREEZE_FILES if (ROOT / rel).is_file()
+            rel: _sha256_file(ROOT / rel)
+            for rel in FREEZE_FILES
+            if (ROOT / rel).is_file()
         },
     }
 
@@ -291,7 +293,11 @@ def _build_case_payload(spec: dict) -> dict:
                 "code": (
                     "System prompt override"
                     if "instruction_like" in traits
-                    else ("not_matched_no_error" if "negation" in traits else "quantity_mismatch")
+                    else (
+                        "not_matched_no_error"
+                        if "negation" in traits
+                        else "quantity_mismatch"
+                    )
                 ),
                 "occurred_at": _iso(3),
             }
@@ -605,10 +611,21 @@ def verify_corpus(corpus_dir: Path = DEFAULT_OUTPUT) -> dict:
         raise ValueError("Freeze do corpus diverge dos artefatos atuais")
     expected_files = {manifest_path.resolve()}
     for case in cases:
-        for field in ("case_id", "execution_id", "category", "organization_key", "file", "sha256"):
+        for field in (
+            "case_id",
+            "execution_id",
+            "category",
+            "organization_key",
+            "file",
+            "sha256",
+        ):
             if not case.get(field):
                 raise ValueError(f"Campo obrigatório ausente no caso: {field}")
-        if case["case_id"] in seen_ids or case["execution_id"] in seen_execs or case["file"] in seen_files:
+        if (
+            case["case_id"] in seen_ids
+            or case["execution_id"] in seen_execs
+            or case["file"] in seen_files
+        ):
             raise ValueError("Caso duplicado no manifesto")
         seen_ids.add(case["case_id"])
         seen_execs.add(case["execution_id"])
@@ -631,7 +648,9 @@ def verify_corpus(corpus_dir: Path = DEFAULT_OUTPUT) -> dict:
         expected_files.add(case_path)
     if actual_counts != expected_categories:
         raise ValueError(f"Distribuição real diverge do esperado: {actual_counts}")
-    actual_files = {p.resolve() for p in corpus_dir.rglob("*") if p.is_file() or p.is_symlink()}
+    actual_files = {
+        p.resolve() for p in corpus_dir.rglob("*") if p.is_file() or p.is_symlink()
+    }
     if actual_files != expected_files:
         raise ValueError("Arquivos extras ou ausentes no diretório do corpus")
     return manifest

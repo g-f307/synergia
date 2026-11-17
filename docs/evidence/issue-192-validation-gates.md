@@ -46,6 +46,13 @@ de modelo aceitas. Somente 16/27 tentativas aplicáveis produziram estado `ready
 O freeze inicial/final permaneceu idêntico. Nenhum ajuste de prompt, schema,
 pesos ou critério foi realizado durante a rodada.
 
+Após encerrar a campanha, a CI identificou oito erros de formatação porque o
+lint anterior foi chamado fora do diretório `backend`. A formatação mecânica
+foi corrigida e `ruff check app tests ../scripts`, executado de `backend`, passou.
+O manifesto foi regenerado por causa do hash textual do gerador; o relatório
+real acima continua vinculado ao freeze/commit anterior. Não se apresenta esse
+relatório como uma nova campanha do freeze pós-formatação.
+
 O pacote local conserva as rodadas anteriores com falha de pin, a campanha final,
 bytes sintéticos brutos, capturas/Axe, migrations, p95 e drill Graylog com hashes.
 Traces de navegador com credenciais/tokens e arquivos privados do laboratório

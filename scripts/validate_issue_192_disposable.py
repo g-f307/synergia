@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validação segura de migrations, rollback e reconciliação PostgreSQL/Graylog (#192)."""
+"""Valida migrations, rollback e reconciliação PostgreSQL/Graylog (#192)."""
 
 from __future__ import annotations
 
@@ -50,7 +50,9 @@ def validate_disposable_database_url(database_url: str) -> str:
     return dbname
 
 
-def ensure_empty_disposable_database(conn: psycopg.Connection, expected_db: str) -> None:
+def ensure_empty_disposable_database(
+    conn: psycopg.Connection, expected_db: str
+) -> None:
     current_db = conn.execute("SELECT current_database()").fetchone()[0]
     if current_db != expected_db:
         raise ValueError("Recusado: current_database() diverge do nome descartável")
@@ -118,9 +120,7 @@ def reconcile_correlation_sets(
     ]
     gl_counter = Counter(gl_pairs)
 
-    duplicates_in_gl = sorted(
-        pair for pair, count in gl_counter.items() if count > 1
-    )
+    duplicates_in_gl = sorted(pair for pair, count in gl_counter.items() if count > 1)
     missing_in_gl = sorted(set(pg_counter.keys()) - set(gl_counter.keys()))
     extra_in_gl = sorted(set(gl_counter.keys()) - set(pg_counter.keys()))
     matched = (
