@@ -14,6 +14,9 @@ protótipo.
 
 ## Tokens
 
+O token `--syn-link` mantém a cor de marca no tema claro e usa uma cor legível
+no tema escuro para links, navegação ativa e foco sobre superfícies.
+
 `web/src/styles.css` é a fonte dos tokens semânticos. Cores representam fundo,
 superfície, texto, borda, marca, foco, sucesso, informação, alerta, erro,
 parcialidade e indisponibilidade nos temas claro e escuro. Espaçamento segue a

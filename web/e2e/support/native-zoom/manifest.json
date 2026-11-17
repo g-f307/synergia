@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "Synergia synthetic native zoom check",
+  "version": "1.0",
+  "permissions": ["tabs"],
+  "background": { "service_worker": "background.js" }
+}

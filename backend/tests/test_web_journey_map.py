@@ -16,7 +16,7 @@ from scripts import validate_web_journey_map  # noqa: E402
 def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
     document = validate_web_journey_map.validate()
 
-    assert document["version"] == "1.7.0"
+    assert document["version"] == "1.8.0"
     assert document["prototype_ref"] == "prototype-v1.0"
     route_ids = {route["id"] for route in document["routes"]}
     assert "ai-quality" not in route_ids
@@ -34,6 +34,14 @@ def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
     assert admin["issue"] == 106
     assert document["supporting_operations"]
     assert document["planned_capabilities"]
+    for route_id in ("execution-search", "tv-mode"):
+        route = next(item for item in document["routes"] if item["id"] == route_id)
+        assert {
+            "method": "GET",
+            "path": "/executions/summary",
+            "permission": "execution.read",
+        } in route["endpoints"]
+        assert {"outcome", "date_from", "date_to"} <= set(route["url_state"])
 
 
 def _changed_map(tmp_path: Path, change) -> Path:
@@ -159,9 +167,7 @@ def test_web_journey_map_rejects_partial_route_without_gap(
         validate_web_journey_map.validate()
 
 
-def test_web_journey_map_rejects_full_route_with_gap(
-    tmp_path, monkeypatch
-) -> None:
+def test_web_journey_map_rejects_full_route_with_gap(tmp_path, monkeypatch) -> None:
     def add_gap_to_admin(document: dict) -> None:
         admin = next(route for route in document["routes"] if route["id"] == "admin")
         admin["gap"] = "lacuna incompatível com uma rota completa"

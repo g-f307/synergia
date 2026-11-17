@@ -58,14 +58,18 @@ def cleanup_created_executions():
 
 
 def _seed_execution(
-    execution_id: str, sources: list[str], *, status: str = "completed"
+    execution_id: str,
+    sources: list[str],
+    *,
+    status: str = "completed",
+    organization_id: str | None = None,
 ) -> list[int]:
     _CREATED_EXECUTION_IDS.add(execution_id)
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         connection.execute(
-            "INSERT INTO synergia.executions (id, status, source) "
-            "VALUES (%s, %s, %s)",
-            (execution_id, status, sources[0]),
+            "INSERT INTO synergia.executions (id, status, source, organization_id) "
+            "VALUES (%s, %s, %s, %s)",
+            (execution_id, status, sources[0], organization_id),
         )
         ids = []
         for index, source in enumerate(sources, 1):
@@ -343,8 +347,18 @@ def test_f03_interruption_after_workorder_writes_rolls_back_entire_unit(
 def test_f04_committed_unit_is_hidden_until_execution_finishes() -> None:
     """Keep committed units private during the inter-transaction crash window."""
     execution_id = "exec-persistence-f04-crash-window"
+    # Indicators exclude unknown IAM organizations (#193), even for global reads.
+    organization_id = "19300000-0000-4000-8000-000000000004"
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        connection.execute(
+            "INSERT INTO synergia.iam_organizations "
+            "(id,organization_code,display_name) "
+            "VALUES (%s,'syn193-publication','Synthetic publication') "
+            "ON CONFLICT (id) DO NOTHING",
+            (organization_id,),
+        )
     source_file_id = _seed_execution(
-        execution_id, ["N-FP"], status="applying_rules"
+        execution_id, ["N-FP"], status="applying_rules", organization_id=organization_id
     )[0]
     query_repository = PostgresQueryRepository(os.environ["DATABASE_URL"])
     baseline_workorders = query_repository.indicators()["workorders"]["total"]
@@ -391,12 +405,14 @@ def test_f04_committed_unit_is_hidden_until_execution_finishes() -> None:
 
     assert state == "applying_rules"
     assert observed is None
-    assert query_repository.get_lot(
-        "LOT-F04-CRASH-WINDOW", execution_id=execution_id
-    ) is None
-    assert query_repository.get_serial(
-        "SER-F04-CRASH-WINDOW", execution_id=execution_id
-    ) is None
+    assert (
+        query_repository.get_lot("LOT-F04-CRASH-WINDOW", execution_id=execution_id)
+        is None
+    )
+    assert (
+        query_repository.get_serial("SER-F04-CRASH-WINDOW", execution_id=execution_id)
+        is None
+    )
     results, total = query_repository.search_operational(
         entity_type="workorder",
         query="WO-F04-CRASH-WINDOW",
@@ -424,9 +440,10 @@ def test_f04_committed_unit_is_hidden_until_execution_finishes() -> None:
     PostgresImportRepository(os.environ["DATABASE_URL"]).transition_execution(
         execution_id, "completed", "f04_test_publication"
     )
-    assert query_repository.get_workorder(
-        "WO-F04-CRASH-WINDOW", execution_id=execution_id
-    ) is not None
+    assert (
+        query_repository.get_workorder("WO-F04-CRASH-WINDOW", execution_id=execution_id)
+        is not None
+    )
     assert query_repository.get_pending(pending_id) is not None
     assert query_repository.indicators()["workorders"]["total"] == (
         baseline_workorders + 1

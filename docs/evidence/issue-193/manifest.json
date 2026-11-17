@@ -1,0 +1,344 @@
+{
+  "issue": 193,
+  "base_commit": "90d86192c77ad794d3dfea918b14e11015d3d53c",
+  "recorded_at": "2026-11-17T13:35:27.570105+00:00",
+  "code_fingerprint": {
+    "algorithm": "sha256(sorted(path + NUL + sha256(file)))",
+    "files": 443,
+    "sha256": "6418bd7385c530715917655004d7c3dd250989b47d6559c00bf8c0ae8a77927a"
+  },
+  "runner": "Chromium / Playwright 1.63.0 / PostgreSQL 16",
+  "e2e": {
+    "passed": 33,
+    "failed": 0,
+    "capture_tests": 10,
+    "started_at": "2026-11-17T13:32:35.830000+00:00"
+  },
+  "native_zoom": {
+    "zoom": 2.5,
+    "innerWidth": 576,
+    "outerWidth": 1440,
+    "devicePixelRatio": 2.5
+  },
+  "screenshots": [
+    {
+      "file": "reconciliation-sources.png",
+      "scenario": "reconciles 3/2/9 across the real dashboard, catalog, detail and TV, preserving the profile day",
+      "captured_at": "2026-11-17T13:32:44.429Z",
+      "sha256": "fe57d4c9c655549f1cb591296402f0b801814a48878e9e34e8e4af582980347a"
+    },
+    {
+      "file": "issue-193-dashboard-390-light.png",
+      "scenario": "visual, keyboard and accessibility: 390px light",
+      "captured_at": "2026-11-17T13:32:53.073Z",
+      "sha256": "0d161018d5f0078d436ae739f52d94b7a1a4dfe9e8fe8054c10acb737736a2a6"
+    },
+    {
+      "file": "issue-193-executions-390-light.png",
+      "scenario": "visual, keyboard and accessibility: 390px light",
+      "captured_at": "2026-11-17T13:32:53.073Z",
+      "sha256": "3e740e3909326466074b89e8d2900c1368970a30ed3adadfcca391e3c07f459c"
+    },
+    {
+      "file": "issue-193-tv-390-light.png",
+      "scenario": "visual, keyboard and accessibility: 390px light",
+      "captured_at": "2026-11-17T13:32:53.073Z",
+      "sha256": "8ed274f2e81718678649662fcb5c857ab133f0c7a184630a9d3c95387f6a154c"
+    },
+    {
+      "file": "issue-193-sources-390-light.png",
+      "scenario": "visual, keyboard and accessibility: 390px light",
+      "captured_at": "2026-11-17T13:32:53.073Z",
+      "sha256": "9d1d5b2cd81e2f06ea77b2960a00ffc5d0d7174f14093706166e9e4ffb338c56"
+    },
+    {
+      "file": "issue-193-dashboard-390-dark.png",
+      "scenario": "visual, keyboard and accessibility: 390px dark",
+      "captured_at": "2026-11-17T13:32:57.746Z",
+      "sha256": "f7407c24ce22b357d33f4ad11a40f45e4de22126940041a4cf8370dc202108ec"
+    },
+    {
+      "file": "issue-193-executions-390-dark.png",
+      "scenario": "visual, keyboard and accessibility: 390px dark",
+      "captured_at": "2026-11-17T13:32:57.746Z",
+      "sha256": "63fdc292d491b135eee8719b373090fa99f62b0aa570b4d621b559ca783ef20c"
+    },
+    {
+      "file": "issue-193-tv-390-dark.png",
+      "scenario": "visual, keyboard and accessibility: 390px dark",
+      "captured_at": "2026-11-17T13:32:57.746Z",
+      "sha256": "a85ae3c43615c8f419ef9468f6ea6c2c31e04a63c17fb705ed5a590e5193bc10"
+    },
+    {
+      "file": "issue-193-sources-390-dark.png",
+      "scenario": "visual, keyboard and accessibility: 390px dark",
+      "captured_at": "2026-11-17T13:32:57.746Z",
+      "sha256": "804078de25ae188e268d6d6473fa19a18cf1ee9dd5017977f8fad37b7575c229"
+    },
+    {
+      "file": "issue-193-dashboard-768-light.png",
+      "scenario": "visual, keyboard and accessibility: 768px light",
+      "captured_at": "2026-11-17T13:33:02.610Z",
+      "sha256": "c9ed1f4decaa8bb062d4054b3b2fdefa6068a77dbcbfd291f12030dfb96f6b70"
+    },
+    {
+      "file": "issue-193-executions-768-light.png",
+      "scenario": "visual, keyboard and accessibility: 768px light",
+      "captured_at": "2026-11-17T13:33:02.610Z",
+      "sha256": "94000c1bd84149259570b7d9cd28c1573e8e7c133925b2399c31a843a926bac6"
+    },
+    {
+      "file": "issue-193-tv-768-light.png",
+      "scenario": "visual, keyboard and accessibility: 768px light",
+      "captured_at": "2026-11-17T13:33:02.610Z",
+      "sha256": "62954b7f8a79b160054cb52caca7c45badb5b97016e9a180698574467117d8fa"
+    },
+    {
+      "file": "issue-193-sources-768-light.png",
+      "scenario": "visual, keyboard and accessibility: 768px light",
+      "captured_at": "2026-11-17T13:33:02.610Z",
+      "sha256": "dbd1cd56a18ba5ab4bb02d8b79e37c38886241ed88e3c8f2de652d494ff1a84a"
+    },
+    {
+      "file": "issue-193-dashboard-768-dark.png",
+      "scenario": "visual, keyboard and accessibility: 768px dark",
+      "captured_at": "2026-11-17T13:33:07.403Z",
+      "sha256": "66d84843e62407a0e0e93849c0046cade72e6d1659a014a8781680f6c3ff1bea"
+    },
+    {
+      "file": "issue-193-executions-768-dark.png",
+      "scenario": "visual, keyboard and accessibility: 768px dark",
+      "captured_at": "2026-11-17T13:33:07.403Z",
+      "sha256": "9c242e252e277d42a26ed88b33c3dde592c88f6f1ca7ce152b0313ae68da881c"
+    },
+    {
+      "file": "issue-193-tv-768-dark.png",
+      "scenario": "visual, keyboard and accessibility: 768px dark",
+      "captured_at": "2026-11-17T13:33:07.403Z",
+      "sha256": "3ca9926cfe15193724261a5b9e34c59c160342e2535043f9943135a3e4dae38f"
+    },
+    {
+      "file": "issue-193-sources-768-dark.png",
+      "scenario": "visual, keyboard and accessibility: 768px dark",
+      "captured_at": "2026-11-17T13:33:07.403Z",
+      "sha256": "a90606638124c88036471fb5f654303b3e04eaa7df9f6e6627a13c9941646f85"
+    },
+    {
+      "file": "issue-193-dashboard-1440-light.png",
+      "scenario": "visual, keyboard and accessibility: 1440px light",
+      "captured_at": "2026-11-17T13:33:12.435Z",
+      "sha256": "0e9a36cb17d157d195e898976d481c378110e645fde452e6655b20b3594950d8"
+    },
+    {
+      "file": "issue-193-executions-1440-light.png",
+      "scenario": "visual, keyboard and accessibility: 1440px light",
+      "captured_at": "2026-11-17T13:33:12.435Z",
+      "sha256": "88006782ba0e9e48a31aca88167e6adddb16239fbfe83ad17f0359f7e65eef2c"
+    },
+    {
+      "file": "issue-193-tv-1440-light.png",
+      "scenario": "visual, keyboard and accessibility: 1440px light",
+      "captured_at": "2026-11-17T13:33:12.435Z",
+      "sha256": "0f1109a8af36be3fe4b4bf10b4d6dca3865e93078627cc9d94e03871967531e9"
+    },
+    {
+      "file": "issue-193-sources-1440-light.png",
+      "scenario": "visual, keyboard and accessibility: 1440px light",
+      "captured_at": "2026-11-17T13:33:12.435Z",
+      "sha256": "cc6a4393d0044afcbb40552b52f6b9e3f584d76424fce27a3f46a790ee5d731f"
+    },
+    {
+      "file": "issue-193-dashboard-1440-dark.png",
+      "scenario": "visual, keyboard and accessibility: 1440px dark",
+      "captured_at": "2026-11-17T13:33:17.548Z",
+      "sha256": "7eca0178e316e71b67fc4d736e4a7191278d06ce553da5a0056ec6fdfae88b4e"
+    },
+    {
+      "file": "issue-193-executions-1440-dark.png",
+      "scenario": "visual, keyboard and accessibility: 1440px dark",
+      "captured_at": "2026-11-17T13:33:17.548Z",
+      "sha256": "1ec50eb585b0684e7613d248c83e1a96d4d15c597a9fb88c1b4c71c17922ecb8"
+    },
+    {
+      "file": "issue-193-tv-1440-dark.png",
+      "scenario": "visual, keyboard and accessibility: 1440px dark",
+      "captured_at": "2026-11-17T13:33:17.548Z",
+      "sha256": "0358400bbbafea208f30eed57343028f0278446d996272bd5c734b392603314d"
+    },
+    {
+      "file": "issue-193-sources-1440-dark.png",
+      "scenario": "visual, keyboard and accessibility: 1440px dark",
+      "captured_at": "2026-11-17T13:33:17.548Z",
+      "sha256": "20acc9146d388ac5aa74bc8388aec8bb160563e147063e2b68df461f386cb382"
+    },
+    {
+      "file": "issue-193-dashboard-zoom250-light.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "cbea02854904ce8f313f94f14947ebd85ddaf367ac3056b859ae623268d8fa7f"
+    },
+    {
+      "file": "issue-193-executions-zoom250-light.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "3469fc8e4f59b3d1b2104f246fa9c1abcb86277bb752d18aea1957ed9d085885"
+    },
+    {
+      "file": "issue-193-tv-zoom250-light.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "bec683bc766208c4cdae77261b21cc994362b08bbad8c91c489e6277137abc78"
+    },
+    {
+      "file": "issue-193-dashboard-zoom250-dark.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "70b46b35fb1326c717e70e6f9b234d06262b68fc5ee1e69d8ef07bb2588ef2b3"
+    },
+    {
+      "file": "issue-193-executions-zoom250-dark.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "6ba19841e493de6a0c75a7c78fa0bc2f4a2517d38e2439622d965195df42a628"
+    },
+    {
+      "file": "issue-193-tv-zoom250-dark.png",
+      "scenario": "native browser zoom 250% preserves readable, accessible and operable screens",
+      "captured_at": "2026-11-17T13:33:22.916Z",
+      "sha256": "a3c634f60e7f5d6b003264bac391c88b0c56f6478bd472a01c129893ef33abbc"
+    }
+  ],
+  "axe": [
+    {
+      "scenario": "reconciliation-sources",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-sources-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-dashboard-zoom250-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-executions-zoom250-dark",
+      "violations": []
+    },
+    {
+      "scenario": "issue-193-tv-zoom250-dark",
+      "violations": []
+    }
+  ],
+  "implementation_committed_at_capture": false,
+  "runtime_implementation_commit": "287f9f94420c17fb7ee95ceee91d37a27450c4e9",
+  "implementation_commits": [
+    "0a58179ca4098d1d528d802b36c0bcc7ec2ab401",
+    "1ca97c5a59e6dac1f848f34e0fe59ad595639702",
+    "287f9f94420c17fb7ee95ceee91d37a27450c4e9"
+  ]
+}

@@ -24,7 +24,20 @@ from app.authorization import (
 )
 from app.business_rules import RULE_CATALOG
 from app.errors import ApiError, ErrorResponse
-from app.execution import PIPELINE_VERSION, reprocessing_fingerprint
+from app.execution import PIPELINE_VERSION, ExecutionState, reprocessing_fingerprint
+from app.execution_filters import (
+    ExecutionQueryFilters,
+    build_execution_predicate,
+    indicator_execution_filters,
+)
+from app.execution_projection import ExecutionOutcome, legacy_lifecycle_sql, outcome_sql
+from app.execution_summary import (
+    ExecutionOutcomeResponse,
+    ExecutionSummary,
+    read_execution_aggregation,
+    resolve_indicator_period,
+    start_execution_snapshot,
+)
 from app.observability.telemetry import bind_execution_id
 
 router = APIRouter(tags=["queries"])
@@ -95,9 +108,8 @@ class ExecutionCounts(BaseModel):
     warnings: int = 0
 
 
-class ExecutionResponse(BaseModel):
+class ExecutionResponse(ExecutionOutcomeResponse):
     execution_id: str
-    status: str
     source: str | None = None
     attempt: int
     reprocessed_from_execution_id: str | None = None
@@ -110,7 +122,9 @@ class ExecutionResponse(BaseModel):
     rule_catalog_version: str
     state_version: int
     updated_at: datetime | None = None
-    lifecycle: Literal["active", "completed", "partial", "failed"] | None = None
+    lifecycle: Literal["active", "completed", "partial", "failed"] | None = Field(
+        default=None, deprecated=True, description="Legado; usar outcome para métricas."
+    )
     state_history: list[ExecutionStateEvent] = Field(default_factory=list)
     counts: ExecutionCounts = Field(default_factory=ExecutionCounts)
 
@@ -283,6 +297,7 @@ class IndicatorsResponse(BaseModel):
     organizations: list[dict[str, str]]
     filters: dict[str, str | None]
     executions: dict[str, int]
+    execution_summary: ExecutionSummary
     workorders: dict[str, int]
     pending_items: dict[str, int]
     quantities: dict[str, int | None]
@@ -387,6 +402,7 @@ class QueryRepository(Protocol):
         organization_ids: frozenset | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        *, execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict: ...
 
     def indicator_related(
@@ -397,6 +413,7 @@ class QueryRepository(Protocol):
         date_to: date | None,
         page: int,
         page_size: int,
+        *, execution_filters: ExecutionQueryFilters | None = None,
     ) -> tuple[list[dict], int]: ...
 
 
@@ -526,18 +543,13 @@ class PostgresQueryRepository:
     def get_execution(self, execution_id: str) -> dict | None:
         with self._connect() as connection:
             row = connection.execute(
-                """
+                f"""
                 SELECT id AS execution_id, status, source, attempt,
                        reprocessed_from_id AS reprocessed_from_execution_id,
                        actor_type, actor_identifier, started_at, finished_at,
                        failure_reason, pipeline_version, rule_catalog_version,
                        state_version, updated_at,
-                       CASE
-                         WHEN status IN ('completed','duplicate') THEN 'completed'
-                         WHEN status = 'completed_with_errors' THEN 'partial'
-                         WHEN status IN ('failed','validation_failed','cancelled') THEN 'failed'
-                         ELSE 'active'
-                       END AS lifecycle
+                       {legacy_lifecycle_sql('status')} AS lifecycle
                 FROM synergia.executions
                 WHERE id = %s
                 """,
@@ -1115,29 +1127,20 @@ class PostgresQueryRepository:
         organization_ids: frozenset | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        *, execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict:
-        filters: list[str] = []
-        parameters: list[object] = []
-        if organization_ids is not None:
-            filters.append("e.organization_id = ANY(%s)")
-            parameters.append(list(organization_ids))
-        if date_from is not None:
-            filters.append("e.started_at::date >= %s")
-            parameters.append(date_from)
-        if date_to is not None:
-            filters.append("e.started_at::date <= %s")
-            parameters.append(date_to)
-        where = f" WHERE {' AND '.join(filters)}" if filters else ""
-        published_where = (
-            f" WHERE {' AND '.join([*filters, self.PUBLISHED_EXECUTION_FILTER])}"
-        )
-        sql_parameters = tuple(parameters)
         with self._connect() as connection:
-            execution_rows = connection.execute(
-                "SELECT status, count(*) AS total "
-                f"FROM synergia.executions e{where} GROUP BY status",
-                sql_parameters,
-            ).fetchall()
+            start_execution_snapshot(connection)
+            filters = resolve_indicator_period(
+                connection, execution_filters or ExecutionQueryFilters(), date_from, date_to
+            )
+            predicate = build_execution_predicate(filters, organization_scopes=organization_ids)
+            aggregation = read_execution_aggregation(
+                connection, filters, organization_scopes=organization_ids,
+                permission="dashboard.read",
+            )
+            published_where = f" WHERE ({predicate.where}) AND {self.PUBLISHED_EXECUTION_FILTER}"
+            sql_parameters = predicate.parameters
             workorder = connection.execute(
                 f"""
                 SELECT count(*) AS total,
@@ -1163,7 +1166,8 @@ class PostgresQueryRepository:
                 sql_parameters,
             ).fetchall()
         return {
-            "executions": {row["status"]: row["total"] for row in execution_rows},
+            "executions": aggregation.by_status,
+            "execution_summary": aggregation.summary,
             "workorders": {
                 "total": workorder["total"],
                 "partially_released": workorder["partial"],
@@ -1185,23 +1189,12 @@ class PostgresQueryRepository:
         date_to: date | None,
         page: int,
         page_size: int,
+        *, execution_filters: ExecutionQueryFilters | None = None,
     ) -> tuple[list[dict], int]:
-        filters: list[str] = []
-        parameters: list[object] = []
-        if organization_ids is not None:
-            filters.append("e.organization_id = ANY(%s)")
-            parameters.append(list(organization_ids))
-        if date_from is not None:
-            filters.append("e.started_at::date >= %s")
-            parameters.append(date_from)
-        if date_to is not None:
-            filters.append("e.started_at::date <= %s")
-            parameters.append(date_to)
-        where = f" WHERE {' AND '.join(filters)}" if filters else ""
         definitions = {
             "executions": (
                 "synergia.executions e",
-                "e.id AS identifier, e.status, e.started_at AS occurred_at",
+                f"e.id AS identifier, e.status, {outcome_sql('e', 'status')} AS outcome, e.started_at AS occurred_at",
             ),
             "workorders": (
                 "synergia.workorders w JOIN synergia.executions e ON e.id = w.execution_id",
@@ -1213,10 +1206,16 @@ class PostgresQueryRepository:
             ),
         }
         source, columns = definitions[entity]
-        if entity != "executions":
-            filters.append(self.PUBLISHED_EXECUTION_FILTER)
-            where = f" WHERE {' AND '.join(filters)}"
         with self._connect() as connection:
+            start_execution_snapshot(connection)
+            filters = resolve_indicator_period(
+                connection, execution_filters or ExecutionQueryFilters(), date_from, date_to
+            )
+            predicate = build_execution_predicate(filters, organization_scopes=organization_ids)
+            where = f" WHERE ({predicate.where})"
+            if entity != "executions":
+                where += f" AND {self.PUBLISHED_EXECUTION_FILTER}"
+            parameters = predicate.parameters
             total = connection.execute(
                 f"SELECT count(*) AS total FROM {source}{where}", parameters
             ).fetchone()["total"]
@@ -1551,13 +1550,24 @@ def get_indicators(
     authorization_repository: AuthorizationRepo,
     repository: QueryRepository = Depends(get_query_repository),
     organization_id: Annotated[UUID | None, Query()] = None,
-    date_from: Annotated[date | None, Query()] = None,
-    date_to: Annotated[date | None, Query()] = None,
+    date_from: Annotated[date | None, Query(deprecated=True)] = None,
+    date_to: Annotated[date | None, Query(deprecated=True)] = None,
+    started_from: datetime | None = None,
+    started_to: datetime | None = None,
+    source: str | None = None,
+    file_type: str | None = None,
+    status: ExecutionState | None = None,
+    outcome: ExecutionOutcome | None = None,
+    lifecycle: Annotated[Literal["active", "completed", "partial", "failed"] | None, Query(deprecated=True)] = None,
+    execution_id: str | None = None,
 ) -> IndicatorsResponse:
-    if date_from is not None and date_to is not None and date_from > date_to:
-        raise ApiError(
-            422, "invalid_period", "date_from deve ser anterior ou igual a date_to"
-        )
+    filters = indicator_execution_filters(
+        organization_id=organization_id, source=source, file_type=file_type,
+        date_from=date_from, date_to=date_to,
+        started_from=started_from, started_to=started_to,
+        status=status.value if status else None, outcome=outcome,
+        lifecycle=lifecycle, execution_id=execution_id,
+    )
     visible = authorization_repository.list_active_organizations(
         actor.scopes_for("dashboard.read")
     )
@@ -1570,14 +1580,16 @@ def get_indicators(
             raise ApiError(
                 403, "organization_access_denied", "Organizacao nao autorizada"
             )
-        organization_scope = frozenset({selected["id"]})
-    else:
-        organization_scope = actor.scope_filter("dashboard.read")
-    indicators = repository.indicators(organization_scope, date_from, date_to)
+    # Keep the permission scope separate from the requested organization filter,
+    # as the catalog/summary do. The shared predicate applies both restrictions.
+    organization_scope = actor.scope_filter("dashboard.read")
+    indicators = repository.indicators(
+        organization_scope, date_from, date_to, execution_filters=filters
+    )
     return IndicatorsResponse.model_validate(
         {
             **indicators,
-            "generated_at": datetime.now(UTC),
+            "generated_at": indicators["execution_summary"].generated_at,
             "source": "synergia.operational",
             "organizations": [
                 {
@@ -1609,8 +1621,16 @@ def get_indicator_related(
     authorization_repository: AuthorizationRepo,
     repository: QueryRepository = Depends(get_query_repository),
     organization_id: Annotated[UUID | None, Query()] = None,
-    date_from: Annotated[date | None, Query()] = None,
-    date_to: Annotated[date | None, Query()] = None,
+    date_from: Annotated[date | None, Query(deprecated=True)] = None,
+    date_to: Annotated[date | None, Query(deprecated=True)] = None,
+    started_from: datetime | None = None,
+    started_to: datetime | None = None,
+    source: str | None = None,
+    file_type: str | None = None,
+    status: ExecutionState | None = None,
+    outcome: ExecutionOutcome | None = None,
+    lifecycle: Annotated[Literal["active", "completed", "partial", "failed"] | None, Query(deprecated=True)] = None,
+    execution_id: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100),
 ) -> IndicatorRelatedPage:
@@ -1633,10 +1653,13 @@ def get_indicator_related(
     if not effective_scopes:
         authorization_repository.audit_denial(actor, entity_permission, request)
         raise ApiError(403, "access_denied", "Acao nao autorizada")
-    if date_from is not None and date_to is not None and date_from > date_to:
-        raise ApiError(
-            422, "invalid_period", "date_from deve ser anterior ou igual a date_to"
-        )
+    filters = indicator_execution_filters(
+        organization_id=organization_id, source=source, file_type=file_type,
+        date_from=date_from, date_to=date_to,
+        started_from=started_from, started_to=started_to,
+        status=status.value if status else None, outcome=outcome,
+        lifecycle=lifecycle, execution_id=execution_id,
+    )
     if organization_id is not None:
         visible = authorization_repository.list_active_organizations(effective_scopes)
         if not any(item["id"] == organization_id for item in visible):
@@ -1647,7 +1670,7 @@ def get_indicator_related(
     else:
         scope = None if None in effective_scopes else frozenset(effective_scopes)
     items, total = repository.indicator_related(
-        entity, scope, date_from, date_to, page, page_size
+        entity, scope, date_from, date_to, page, page_size, execution_filters=filters
     )
     return IndicatorRelatedPage(
         items=items, pagination=_pagination(page, page_size, total), entity=entity

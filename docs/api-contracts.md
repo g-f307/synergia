@@ -20,6 +20,12 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.15.0` acrescenta `GET /executions/summary`, `outcome` ao catálogo/detalhe
+e `execution_summary` a `/indicators` (#193). O campo `lifecycle` e o mapa
+`executions` legado permanecem compatíveis; novas métricas usam o agregado
+canônico. Escopos, limites UTC inclusivos, filtros e compatibilidade temporal
+estão em [Acompanhamento de execuções](execution-monitoring.md#situação-canônica-e-agregado-autorizado-193).
+
 A API `0.14.0` retira da aplicação operacional as rotas experimentais
 `/ai/quality/scenarios` e `/ai/quality/scenarios/{scenario_id}/explanations`
 (#192). As entregas #179 e #183 permanecem registradas como antecedentes

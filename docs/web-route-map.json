@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "issue": 185,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
@@ -86,7 +86,7 @@
       "endpoints": [
         {"method": "GET", "path": "/indicators", "permission": "dashboard.read"}
       ],
-      "url_state": ["organization", "dateFrom", "dateTo"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/dashboard"
     },
@@ -103,7 +103,7 @@
       "endpoints": [
         {"method": "GET", "path": "/indicators/{entity}", "permission": "dashboard.read"}
       ],
-      "url_state": ["organization", "dateFrom", "dateTo", "page"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id", "page"],
       "states": ["loading", "empty", "error", "forbidden", "unavailable"],
       "owner": "domains/dashboard"
     },
@@ -155,14 +155,15 @@
       "permission": "execution.read",
       "scope": "org",
       "evidence": [
-        "web/src/app/domains/tv/tv-monitor.component.ts",
+        "web/src/app/domains/executions/execution-search.component.ts",
         "web/src/app/domains/executions/execution.service.ts"
       ],
       "endpoints": [
-        {"method": "GET", "path": "/executions", "permission": "execution.read"}
+        {"method": "GET", "path": "/executions", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/summary", "permission": "execution.read"}
       ],
-      "url_state": [],
-      "states": ["empty"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id", "page", "sort"],
+      "states": ["loading", "empty", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/executions"
     },
     {
@@ -177,9 +178,10 @@
       "scope": "org",
       "evidence": ["web/src/app/domains/executions/execution.service.ts"],
       "endpoints": [
-        {"method": "GET", "path": "/executions", "permission": "execution.read"}
+        {"method": "GET", "path": "/executions", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/summary", "permission": "execution.read"}
       ],
-      "url_state": [],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id"],
       "states": ["loading", "empty", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/tv"
     },

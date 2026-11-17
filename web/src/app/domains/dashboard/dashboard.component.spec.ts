@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { BehaviorSubject, Subject, map } from 'rxjs';
+import { executionAggregate } from '../../../testing/execution-fixtures';
+import { ExecutionScopeFilters } from '../executions/execution.models';
 
 import { SessionService } from '../../core/session.service';
 import { ApiFailure } from '../../shared/api/api-error';
@@ -12,6 +14,7 @@ import { DashboardService } from './dashboard.service';
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let response: Subject<Indicators>;
+  let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let currentResponse: Subject<Indicators>;
   let requestedFilters: unknown[];
   const profile = signal<{ permissions: Array<{ key: string; organizations: string[] | null }> }>({ permissions: [{ key: 'dashboard.read', organizations: ['org-synthetic'] }] });
@@ -22,16 +25,25 @@ describe('DashboardComponent', () => {
     response = new Subject<Indicators>();
     currentResponse = response;
     requestedFilters = [];
+    params = new BehaviorSubject(convertToParamMap({}));
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: DashboardService, useValue: { getIndicators: (filters: unknown) => { requestedFilters.push(filters); return currentResponse.asObservable(); } } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: params.asObservable() } },
+        { provide: DashboardService, useValue: { getIndicators: (filters: ExecutionScopeFilters) => { requestedFilters.push(filters); return currentResponse.pipe(map(data => ({ ...data, execution_summary: data.execution_summary ? { ...data.execution_summary, filters: { ...data.execution_summary.filters, organization_id: filters.organizationId ?? null, source: filters.source ?? null, file_type: filters.fileType ?? null, date_from: filters.dateFrom ?? null, date_to: filters.dateTo ?? null } } : data.execution_summary }))); } } },
         { provide: SessionService, useValue: { profile } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
+  });
+
+  it('retains a legacy lifecycle when applying another filter without selecting an outcome', () => {
+    params.next(convertToParamMap({ lifecycle: 'completed', date_to: '2026-11-02T03:59:59.999999Z' }));
+    fixture.componentInstance.source.set('OWM');
+    fixture.componentInstance.applyFilters(new Event('submit'));
+    expect(requestedFilters.at(-1)).toEqual(jasmine.objectContaining({ lifecycle: 'completed', dateTo: '2026-11-02T03:59:59.999999Z' }));
   });
 
   it('renders complete persisted aggregates and their origin', () => {
@@ -57,6 +69,51 @@ describe('DashboardComponent', () => {
     expect(new Set(badgeContainers.map((badge) => getComputedStyle(badge).backgroundColor)).size).toBe(1);
     expect(badges.every((badge) => getComputedStyle(badge).filter === 'none')).toBeTrue();
     expect(fixture.nativeElement.querySelector('syn-state')).toBeNull();
+  });
+
+  it('cancels an in-flight response for an invalid URL and does not refresh a wider scope', () => {
+    params.next(convertToParamMap({ date_to: 'invalid' }));
+    response.next(completeIndicators()); fixture.detectChanges();
+    expect(fixture.componentInstance.data()).toBeNull();
+    expect(fixture.componentInstance.state()).toBe('error');
+    expect(fixture.nativeElement.querySelector('details [role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('período válido');
+    fixture.componentInstance.load();
+    expect(requestedFilters.length).toBe(1);
+    params.next(convertToParamMap({}));
+    expect(requestedFilters.length).toBe(2);
+  });
+
+  it('reconciles 3 completed, 2 partial and 9 duplicates without using legacy counts', () => {
+    response.next({ ...completeIndicators(), executions: { completed: 999, duplicate: 999 }, execution_summary: executionAggregate({ completed: 3, partial: 2, skipped_duplicate: 9 }, { scope: { permission: 'dashboard.read', organization_ids: ['org-synthetic'] } }) });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.indicator-value')?.textContent).toBe('14');
+    expect(element.querySelector('.indicator-detail')?.textContent).toContain('Concluídas: 3');
+    const legend = element.querySelector('.status-legend')?.textContent;
+    expect(legend).toContain('Com erros2');
+    expect(legend).toContain('Ignoradas por duplicidade9');
+    expect(element.textContent).not.toContain('999');
+  });
+
+  it('keeps the complete last dataset and its filter context when refresh fails', () => {
+    response.next(completeIndicators()); fixture.detectChanges();
+    currentResponse = new Subject<Indicators>();
+    fixture.componentInstance.source.set('OWM');
+    fixture.componentInstance.applyFilters(new Event('submit'));
+    currentResponse.error(failure('unavailable', 503)); fixture.detectChanges();
+    expect(fixture.componentInstance.state()).toBe('stale');
+    expect(fixture.nativeElement.querySelector('.indicator-value')?.textContent).toBe('3');
+    expect(fixture.componentInstance.data()?.execution_summary.filters.source).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('últimos dados obtidos e seu recorte');
+  });
+
+  it('removes the last dataset when authorization is lost', () => {
+    response.next(completeIndicators()); fixture.detectChanges();
+    currentResponse = new Subject<Indicators>(); fixture.componentInstance.load();
+    currentResponse.error(failure('forbidden', 403)); fixture.detectChanges();
+    expect(fixture.componentInstance.data()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.indicator-value')).toBeNull();
   });
 
   it('renders compact filters and charts from persisted aggregates', () => {
@@ -138,7 +195,7 @@ describe('DashboardComponent', () => {
   });
 
   it('distinguishes an explicit empty result from absent data', () => {
-    response.next({ ...completeIndicators(), executions: {}, workorders: { total: 0, partially_released: 0 }, pending_items: {}, quantities: { planned: 0, produced: 0, received: 0, released: 0 } });
+    response.next({ ...completeIndicators(), executions: {}, execution_summary: executionAggregate(), workorders: { total: 0, partially_released: 0 }, pending_items: {}, quantities: { planned: 0, produced: 0, received: 0, released: 0 } });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum registro no escopo');
@@ -190,7 +247,7 @@ describe('DashboardComponent', () => {
     response.next(completeIndicators());
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[aria-labelledby="dashboard-title"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('label').length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('label').length).toBe(6);
   });
 
   it('routes each dashboard metric to its canonical destination with compatible filters', async () => {
@@ -203,15 +260,15 @@ describe('DashboardComponent', () => {
     response.next(completeIndicators());
     fixture.detectChanges();
 
-    expect(requestedFilters.at(-1)).toEqual({ organizationId: 'org-synthetic', dateFrom: '2026-08-01', dateTo: '2026-08-31' });
+    expect(requestedFilters.at(-1)).toEqual(jasmine.objectContaining({ organizationId: 'org-synthetic', dateFrom: '2026-08-01T04:00:00Z', dateTo: '2026-09-01T03:59:59.999999Z' }));
     const hrefs = [...fixture.nativeElement.querySelectorAll('.metric a')]
       .map((link) => (link as HTMLAnchorElement).getAttribute('href') ?? '');
     expect(hrefs[0]).toContain('/executions');
     expect(hrefs[0]).toContain('organization_id=org-synthetic');
     expect(hrefs[0]).toContain('date_from=2026-08-01');
-    expect(hrefs[0]).toContain('date_to=2026-08-31');
+    expect(hrefs[0]).toContain('date_to=2026-09-01');
     expect(hrefs[1]).toContain('/dashboard/related/workorders');
-    expect(hrefs[1]).toContain('organization=org-synthetic');
+    expect(hrefs[1]).toContain('organization_id=org-synthetic');
     expect(hrefs[2]).toContain('/pending-items');
     expect(hrefs[2]).toContain('status=open');
     expect(hrefs.every((href) => !href.includes('/dashboard/related/executions'))).toBeTrue();
@@ -223,7 +280,7 @@ describe('DashboardComponent', () => {
     fixture.componentInstance.dateTo.set('2026-08-01');
     fixture.componentInstance.applyFilters(new Event('submit'));
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('data inicial');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('período válido');
     expect(requestedFilters.length).toBe(1);
   });
 
@@ -242,7 +299,7 @@ describe('DashboardComponent', () => {
 });
 
 function completeIndicators(): Indicators {
-  return { generated_at: '2026-09-03T12:00:00Z', source: 'synergia.operational', organizations: [{ id: 'org-synthetic', code: 'syn-org', name: 'Organização sintética' }], filters: { organization_id: null, date_from: null, date_to: null }, executions: { completed: 2, failed: 1 }, workorders: { total: 4, partially_released: 1 }, pending_items: { open: 2 }, quantities: { planned: 20, produced: 15, received: 12, released: 10 } };
+  return { generated_at: '2026-09-03T12:00:00Z', source: 'synergia.operational', organizations: [{ id: 'org-synthetic', code: 'syn-org', name: 'Organização sintética' }], filters: { organization_id: null, date_from: null, date_to: null }, executions: { completed: 2, failed: 1 }, execution_summary: executionAggregate({completed:2,failed:1},{scope:{permission:'dashboard.read',organization_ids:['org-synthetic']}}), workorders: { total: 4, partially_released: 1 }, pending_items: { open: 2 }, quantities: { planned: 20, produced: 15, received: 12, released: 10 } };
 }
 
 function failure(kind: ApiFailure['kind'], status: number): ApiFailure {

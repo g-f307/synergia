@@ -7,7 +7,7 @@
     </div>
     <div class="tv-header-status">
       <p aria-live="polite">
-        @if (result()) { {{ i18n.t('tv.updatedAt') }} <time [attr.datetime]="result()!.generated_at">{{ i18n.formatDate(result()!.generated_at,{dateStyle:'short',timeStyle:'short'}) }}</time> }
+        @if (aggregate()) { {{ i18n.t('tv.updatedAt') }} <time [attr.datetime]="aggregate()!.generated_at">{{ i18n.formatDate(aggregate()!.generated_at,{dateStyle:'short',timeStyle:'short'}) }}</time> }
         @else { {{ i18n.t('tv.waitingUpdate') }} }
       </p>
       <time class="tv-clock" [attr.datetime]="now().toISOString()">{{ clockLabel() }}</time>
@@ -26,7 +26,7 @@
       <button type="button" data-panel-target="executions" (click)="selectPanel('executions')" [attr.aria-pressed]="activePanel()==='executions'">{{ i18n.t('tv.executionsPanel') }}</button>
       <button type="button" data-panel-target="sources" (click)="selectPanel('sources')" [attr.aria-pressed]="activePanel()==='sources'">{{ i18n.t('tv.sourcesPanel') }}</button>
     </nav>
-    <p>{{ i18n.t('tv.autoRefresh') }}</p>
+    <div><syn-execution-scope [summary]="aggregate()"/><p>{{ i18n.t('tv.autoRefresh') }}</p></div>
   </div>
 
   <div class="tv-page-progress" aria-hidden="true">
@@ -50,16 +50,15 @@
       <section data-panel="executions" [hidden]="activePanel()!=='executions'" aria-labelledby="tv-executions-heading">
         <h2 id="tv-executions-heading" class="sr-only">{{ i18n.t('tv.executionsPanel') }}</h2>
         <div class="tv-kpis" [attr.aria-label]="i18n.t('tv.summary')">
-          <article class="tv-kpi" data-tone="info"><span>{{ i18n.t('tv.active') }}</span><strong>{{ i18n.formatNumber(counts().active) }}</strong></article>
-          <article class="tv-kpi" data-tone="success"><span>{{ i18n.t('tv.completed') }}</span><strong>{{ i18n.formatNumber(counts().completed) }}</strong></article>
-          <article class="tv-kpi" data-tone="partial"><span>{{ i18n.t('tv.partial') }}</span><strong>{{ i18n.formatNumber(counts().partial) }}</strong></article>
-          <article class="tv-kpi" data-tone="error"><span>{{ i18n.t('tv.failed') }}</span><strong>{{ i18n.formatNumber(counts().failed) }}</strong></article>
+          <article class="tv-kpi" data-tone="info"><span>{{ i18n.t('tv.dataTotal') }}</span><strong>{{ i18n.formatNumber(aggregate()!.total) }}</strong></article>
+          @for (value of outcomes; track value) { <article class="tv-kpi" [attr.data-outcome]="value" [attr.data-tone]="value==='completed'?'success':value==='failed'?'error':value==='partial'?'partial':'info'"><span>{{ label(value) }}</span><strong>{{ i18n.formatNumber(counts()![value]) }}</strong></article> }
         </div>
+        <p class="tv-recent-cut">{{ i18n.t('executions.recentCut',{shown:recent().length,total:aggregate()!.total}) }}</p>
         @if (recent().length) {
-          <div class="tv-table-wrap">
+          <div class="tv-table-wrap" tabindex="0" role="group" [attr.aria-label]="i18n.t('tv.executionsPanel')">
             <table class="tv-execution-table">
               <thead><tr><th>{{ i18n.t('tv.execution') }}</th><th>{{ i18n.t('tv.source') }}</th><th>{{ i18n.t('tv.startedAt') }}</th><th>{{ i18n.t('tv.status') }}</th><th>{{ i18n.t('tv.rowsRead') }}</th></tr></thead>
-              <tbody>@for (item of recent(); track item.execution_id) {<tr><td class="tv-technical">{{ item.execution_id }}</td><td>{{ item.source || i18n.t('common.notAvailable') }}</td><td>{{ i18n.formatDate(item.started_at,{dateStyle:'short',timeStyle:'short'}) }}</td><td><span class="tv-status" [attr.data-state]="item.lifecycle">{{ statusLabel(item) }}</span></td><td>{{ i18n.formatNumber(item.rows_read) }}</td></tr>}</tbody>
+              <tbody>@for (item of recent(); track item.execution_id) {<tr><td class="tv-technical">{{ item.execution_id }}</td><td>{{ item.source || i18n.t('executions.scope.noSource') }}</td><td>{{ i18n.formatDate(item.started_at,{dateStyle:'short',timeStyle:'short'}) }}</td><td><span class="tv-status" [attr.data-state]="item.outcome">{{ statusLabel(item) }}</span></td><td>{{ i18n.formatNumber(item.rows_read) }}</td></tr>}</tbody>
             </table>
           </div>
         } @else { <div class="tv-empty"><h3>{{ i18n.t('tv.emptyTitle') }}</h3><p>{{ i18n.t('tv.emptyMessage') }}</p></div> }
@@ -68,9 +67,9 @@
       <section data-panel="sources" [hidden]="activePanel()!=='sources'" aria-labelledby="tv-sources-heading">
         <div class="tv-panel-heading" data-alignment="start"><div><h2 id="tv-sources-heading">{{ i18n.t('tv.sourcesTitle') }}</h2><p>{{ i18n.t('tv.sourcesDescription') }}</p></div></div>
         @if (sourceSummaries().length) {
-          <div class="tv-source-grid" data-layout="comparison">@for (source of sourceSummaries(); track source.name) {
+          <div class="tv-source-grid" data-layout="comparison" tabindex="0" role="group" [attr.aria-label]="i18n.t('tv.sourcesPanel')">@for (source of sourceSummaries(); track source.name) {
             <article class="tv-source-card" data-density="display" [class.needs-attention]="source.attention>0">
-              <header><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.t('tv.observedExecutions',{count:source.executions}) }}</strong></header>
+              <header><div><span class="tv-source-dot" aria-hidden="true"></span><h3>{{ source.name }}</h3></div><strong>{{ i18n.formatNumber(source.executions) }}<br><small>{{ i18n.t('tv.sourcePeriod') }}</small></strong></header>
               <div class="tv-source-visuals">
                 <div class="tv-volume-figure">
                   <div><span>{{ i18n.t('tv.sourceShare') }}</span><strong>{{ source.executionShare }}%</strong></div>

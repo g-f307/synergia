@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { executionAggregate } from '../src/testing/execution-fixtures';
 
 const operatorEmail = 'operator.e2e@example.invalid';
 const password = process.env.E2E_PASSWORD ?? 'synthetic-e2e-password-63';
@@ -110,9 +111,10 @@ test('opens a scoped, responsive and accessible TV monitor', async ({ page }, te
   await expect(page.locator('.shell')).toBeVisible();
 });
 
-test('keeps the active lifecycle status accessible in the dark theme', async ({ page }) => {
+test('keeps the active outcome accessible in the dark theme', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await login(page);
+  await page.route(/\/executions\/summary(?:\?|$)/, route => route.fulfill({ json: executionAggregate({ active: 1 }) }));
   await page.route(/\/executions\?.*/, async (route) => {
     await route.fulfill({
       status: 200,
@@ -124,6 +126,7 @@ test('keeps the active lifecycle status accessible in the dark theme', async ({ 
           organization_id: 'org-synthetic',
           status: 'validating',
           lifecycle: 'active',
+          outcome: 'active',
           attempt: 1,
           source: 'N-FP',
           file_types: ['xlsx'],

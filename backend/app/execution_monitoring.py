@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.authorization import (
     ActorContext,
@@ -24,6 +24,15 @@ from app.authorization import (
 )
 from app.errors import ApiError, ErrorResponse
 from app.execution import ExecutionState
+from app.execution_filters import ExecutionQueryFilters, build_execution_predicate
+from app.execution_filters import normalize_execution_period as _normalize_period
+from app.execution_projection import ExecutionOutcome, legacy_lifecycle_sql
+from app.execution_summary import (
+    ExecutionOutcomeResponse,
+    ExecutionSummary,
+    read_execution_aggregation,
+    start_execution_snapshot,
+)
 
 router = APIRouter(prefix="/executions", tags=["execution-monitoring"])
 ERRORS = {
@@ -33,27 +42,6 @@ ERRORS = {
 }
 
 
-def _normalize_period(
-    date_from: datetime | None,
-    date_to: datetime | None,
-) -> tuple[datetime | None, datetime | None]:
-    values = (date_from, date_to)
-    if any(value is not None and value.utcoffset() is None for value in values):
-        raise ApiError(
-            422,
-            "timezone_required",
-            "Os limites do período devem incluir o fuso horário",
-        )
-
-    normalized_from = date_from.astimezone(UTC) if date_from else None
-    normalized_to = date_to.astimezone(UTC) if date_to else None
-    if normalized_from and normalized_to and normalized_from > normalized_to:
-        raise ApiError(
-            422, "invalid_period", "O início do período deve anteceder o fim"
-        )
-    return normalized_from, normalized_to
-
-
 class Pagination(BaseModel):
     page: int
     page_size: int
@@ -61,11 +49,12 @@ class Pagination(BaseModel):
     pages: int
 
 
-class ExecutionCatalogItem(BaseModel):
+class ExecutionCatalogItem(ExecutionOutcomeResponse):
     execution_id: str
     organization_id: UUID | None
-    status: str
-    lifecycle: Literal["active", "completed", "partial", "failed"]
+    lifecycle: Literal["active", "completed", "partial", "failed"] = Field(
+        deprecated=True, description="Legado; usar outcome para situações e métricas."
+    )
     attempt: int
     source: str | None
     file_types: list[str]
@@ -216,46 +205,29 @@ class MonitoringRepository:
         page: int,
         page_size: int,
         sort: str,
+        outcome: ExecutionOutcome | None = None,
     ) -> tuple[list[dict], int]:
         if organization_scopes is not None and not organization_scopes:
             return [], 0
-        # Legacy rows without an IAM organization are deliberately excluded:
-        # no actor can be authorized for an unknown scope.
-        clauses: list[str] = ["e.organization_id IS NOT NULL"]
-        params: list[Any] = []
-        if organization_scopes is not None:
-            clauses.append("e.organization_id = ANY(%s)")
-            params.append(list(organization_scopes))
-        if organization_id is not None:
-            clauses.append("e.organization_id = %s")
-            params.append(organization_id)
-        for expression, value in (
-            ("e.status = %s", status),
-            ("e.source = %s", source),
-            ("e.started_at >= %s", date_from),
-            ("e.started_at <= %s", date_to),
-            ("e.id = %s", execution_id),
-        ):
-            if value is not None:
-                clauses.append(expression)
-                params.append(value)
-        if file_type is not None:
-            clauses.append(
-                "EXISTS (SELECT 1 FROM synergia.source_files filtered "
-                "WHERE filtered.execution_id=e.id AND filtered.extension=%s)"
-            )
-            params.append(file_type.lower().lstrip("."))
-        lifecycle_sql = """CASE
-            WHEN e.status IN ('completed', 'duplicate') THEN 'completed'
-            WHEN e.status = 'completed_with_errors' THEN 'partial'
-            WHEN e.status IN ('validation_failed', 'failed', 'cancelled') THEN 'failed'
-            ELSE 'active' END"""
-        if lifecycle is not None:
-            clauses.append(f"({lifecycle_sql}) = %s")
-            params.append(lifecycle)
-        where = " AND ".join(clauses) if clauses else "TRUE"
+        predicate = build_execution_predicate(
+            ExecutionQueryFilters(
+                organization_id=organization_id,
+                status=status,
+                lifecycle=lifecycle,
+                outcome=outcome,
+                source=source,
+                file_type=file_type,
+                date_from=date_from,
+                date_to=date_to,
+                execution_id=execution_id,
+            ),
+            organization_scopes=organization_scopes,
+        )
+        where, params = predicate.where, predicate.parameters
+        lifecycle_sql = legacy_lifecycle_sql("e", "status")
         direction = "DESC" if sort == "newest" else "ASC"
         with self._connect() as connection:
+            start_execution_snapshot(connection)
             total = connection.execute(
                 f"SELECT count(*) AS total FROM synergia.executions e WHERE {where}",
                 params,
@@ -284,6 +256,17 @@ class MonitoringRepository:
                 [*params, page_size, (page - 1) * page_size],
             ).fetchall()
         return [dict(row) for row in rows], total
+
+    def summary(
+        self, filters: ExecutionQueryFilters,
+        *, organization_scopes: frozenset[UUID] | None,
+    ) -> ExecutionSummary:
+        with self._connect() as connection:
+            start_execution_snapshot(connection)
+            return read_execution_aggregation(
+                connection, filters, organization_scopes=organization_scopes,
+                permission="execution.read",
+            ).summary
 
     def divergences(
         self,
@@ -479,38 +462,71 @@ def _page(
     )
 
 
-@router.get(
-    "",
-    response_model=ExecutionCatalogPage,
-    responses=ERRORS,
-    summary="Listar execuções autorizadas",
-)
-def list_executions(
-    repository: Repository,
-    actor: Annotated[ActorContext, Depends(require_permission("execution.read"))],
+def execution_query_filters(
     organization_id: UUID | None = None,
     status: ExecutionState | None = None,
-    lifecycle: Literal["active", "completed", "partial", "failed"] | None = None,
+    lifecycle: Annotated[
+        Literal["active", "completed", "partial", "failed"] | None,
+        Query(deprecated=True, description="Filtro legado; preferir outcome."),
+    ] = None,
+    outcome: ExecutionOutcome | None = None,
     source: str | None = None,
     file_type: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     execution_id: str | None = None,
+) -> ExecutionQueryFilters:
+    return ExecutionQueryFilters(
+        organization_id=organization_id, status=status.value if status else None,
+        lifecycle=lifecycle, outcome=outcome, source=source, file_type=file_type,
+        date_from=date_from, date_to=date_to, execution_id=execution_id,
+    )
+
+
+CatalogFilters = Annotated[ExecutionQueryFilters, Depends(execution_query_filters)]
+
+
+@router.get(
+    "/summary", response_model=ExecutionSummary,
+    responses={401: {"model": ErrorResponse}, **ERRORS},
+    summary="Agregar todas as execuções do recorte autorizado",
+    description=(
+        "Não usa paginação. Total inclui active/completed/partial/skipped_duplicate/"
+        "failed/cancelled/unknown. Datas exigem fuso, são normalizadas em UTC e "
+        "ambos os limites são inclusivos. O escopo deriva somente de execution.read."
+    ),
+)
+def get_execution_summary(
+    actor: Annotated[ActorContext, Depends(require_permission("execution.read"))],
+    repository: Repository,
+    filters: CatalogFilters,
+) -> ExecutionSummary:
+    return repository.summary(filters, organization_scopes=actor.scope_filter("execution.read"))
+
+
+@router.get(
+    "", response_model=ExecutionCatalogPage, responses=ERRORS,
+    summary="Listar execuções autorizadas",
+)
+def list_executions(
+    repository: Repository,
+    actor: Annotated[ActorContext, Depends(require_permission("execution.read"))],
+    filters: CatalogFilters,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     sort: Literal["oldest", "newest"] = "newest",
 ) -> ExecutionCatalogPage:
-    date_from, date_to = _normalize_period(date_from, date_to)
     items, total = repository.catalog(
         organization_scopes=actor.scope_filter("execution.read"),
-        organization_id=organization_id,
-        status=status.value if status else None,
-        lifecycle=lifecycle,
-        source=source,
-        file_type=file_type,
-        date_from=date_from,
-        date_to=date_to,
-        execution_id=execution_id,
+        organization_id=filters.organization_id,
+        status=filters.status,
+        lifecycle=filters.lifecycle,
+        outcome=filters.outcome,
+        source=filters.source,
+        file_type=filters.file_type,
+        date_from=filters.date_from,
+        date_to=filters.date_to,
+        execution_id=filters.execution_id,
         page=page,
         page_size=page_size,
         sort=sort,
