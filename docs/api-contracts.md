@@ -20,6 +20,11 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.14.0` retira da aplicação operacional as rotas experimentais
+`/ai/quality/scenarios` e `/ai/quality/scenarios/{scenario_id}/explanations`
+(#192). As entregas #179 e #183 permanecem registradas como antecedentes
+experimentais em `scripts/`, sem exposição na API ou no bundle web.
+
 A API `0.13.0` acrescenta a sonda técnica autenticada
 `GET /operations/ai-assistance/health`, independente da readiness, e a suspensão
 apenas da geração da assistência. O contrato de resultado `1.0.0` permanece

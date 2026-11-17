@@ -9,14 +9,15 @@ import psycopg
 
 from app.errors import ApiError
 
+MODEL = "qwen3:4b-instruct"
+MODEL_DIGEST = "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0"
+
 
 class ModelAuditRepository:
     def __init__(self, database_url: str):
         self.database_url = database_url
 
     def record(self, actor, operation_id, action, *, duration_ms=None, fallback=False):
-        from app.ai_quality import MODEL, MODEL_DIGEST
-
         if not self.database_url:
             raise ApiError(503, "model_audit_unavailable", "Auditoria indisponivel")
         try:

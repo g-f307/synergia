@@ -12,10 +12,10 @@ from app.rate_limiting import PostgresRateLimiter, RatePolicy, policies_from_env
 pytestmark = [pytest.mark.integration, pytest.mark.real_rate_limit]
 
 
-def test_quality_quota_persists_denial_without_subject_or_prompt() -> None:
+def test_report_quota_persists_denial_without_subject_or_prompt() -> None:
     database_url = os.environ["DATABASE_URL"]
     limiter = PostgresRateLimiter(database_url, "synthetic-rate-limit-" + "z" * 32)
-    policy = policies_from_env()["ai_quality_generate"]
+    policy = policies_from_env()["report_generate"]
     subject = f"synthetic-{uuid4()}"
     correlation = uuid4()
     for _ in range(policy.limit):
@@ -31,11 +31,11 @@ def test_quality_quota_persists_denial_without_subject_or_prompt() -> None:
             (policy.operation, limiter.digest(subject)),
         ).fetchone()
     assert event == (
-        "ai_quality_generate",
+        "report_generate",
         "user",
         limiter.digest(subject),
         correlation,
-        "ai_quality_generate",
+        "report_generate",
     )
 
 

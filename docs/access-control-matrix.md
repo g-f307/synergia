@@ -119,8 +119,6 @@ também dependerá da política de rede da TI.
 | `GET /me/ai-assistance-capability` | `execution.read + (ai.assistance.read ou ai.assistance.generate)` | capacidade sem configuração interna | `org` | gestor, analista |
 | `POST /executions/{execution_id}/ai-assistance` | `execution.read + ai.assistance.generate` | gerar assistência da execução | `org` | gestor, analista |
 | `GET /executions/{execution_id}/ai-assistance/latest` | `execution.read + ai.assistance.read` | consultar assistência da execução | `org` | gestor, analista |
-| `GET /ai/quality/scenarios` | `execution.read` | cenários de qualidade exclusivamente sintéticos | `synthetic` | gestor, analista, operador, consulta |
-| `POST /ai/quality/scenarios/{scenario_id}/explanations` | `execution.read` | explicação assistida sem mutação ou dados operacionais | `synthetic` | gestor, analista, operador, consulta |
 | `GET /executions/{execution_id}` | `execution.read` | execução | `org` | gestor, analista, operador, consulta |
 | `GET /workorders/{workorder_number}` | `business.read` | Workorder | `org` | gestor, analista, operador, consulta |
 | `GET /search` | `business.read` | busca operacional persistida | `org` | gestor, analista, operador, consulta |

@@ -101,7 +101,7 @@ def freeze() -> dict:
         *ROOT.joinpath("scripts").glob("ai*.py"),
         *ROOT.joinpath("scripts/ai_poc_prompts").glob("quality-explanation-*.txt"),
         *ROOT.joinpath("backend/app").rglob("*.py"),
-        *ROOT.joinpath("backend/app/ai_quality_assets").glob("*"),
+        *ROOT.joinpath("scripts/ai_quality_assets").glob("*"),
         *ROOT.joinpath("docs/schemas").glob("ai-quality-*.json"),
         *ROOT.joinpath("data/synthetic/ai-quality-v3").rglob("*"),
         ROOT / "backend/app/business_rules.json",

@@ -8,4 +8,9 @@ describe('application routes', () => {
     expect(route?.canActivate?.length).toBe(2);
     expect(route?.loadComponent).toBeDefined();
   });
+
+  it('does not expose the experimental ai/quality route in the operational router', () => {
+    const route = routes.find((candidate) => candidate.path === 'ai/quality');
+    expect(route).toBeUndefined();
+  });
 });

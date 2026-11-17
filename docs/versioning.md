@@ -45,6 +45,11 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.14.0` remove as rotas experimentais `/ai/quality/scenarios` e
+`/ai/quality/scenarios/{scenario_id}/explanations` da superfície operacional
+(#192), preservando o núcleo de avaliação offline em `scripts/` e mantendo
+inalterado o contrato de resultado `1.0.0` da assistência operacional.
+
 A API `0.13.0` acrescenta a sonda operacional autenticada da assistência (#191).
 O novo código `ai_assistance_generation_disabled` representa o kill switch de
 geração. A flag geral e o resultado `1.0.0` preservam o comportamento/estrutura;
