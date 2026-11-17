@@ -111,7 +111,7 @@ test.describe.serial('integrated operational journey', () => {
     });
     await page.getByRole('button', { name: /aplicar filtros|apply filters/i }).click();
     expect(new URL((await filteredCatalogRequest).url()).searchParams.get('date_from'))
-      .toBe('2026-09-01T12:30:00.000Z');
+      .toBe('2026-09-01T12:30:00Z');
     await expect(page).toHaveURL(new RegExp(`/executions\\?.*execution_id=${executionId}`));
     await page.locator('button.execution-row').filter({ hasText: executionId }).click();
     await expect(page).toHaveURL(new RegExp(`/executions/${executionId}`));
@@ -162,8 +162,9 @@ test.describe.serial('integrated operational journey', () => {
       await page.getByTestId('related-execution').click();
       await expect(page).toHaveURL(new RegExp(`/executions/${execution}`));
       await expect(page.getByText(item.source, { exact: true })).toBeVisible();
-      await expect(page.locator('.persisted-state')).toHaveText('completed_with_errors');
-      await expect(page.locator('.lifecycle-badge')).toContainText(/parcial|partial/i);
+      await expect(page.locator('.persisted-state')).toHaveAttribute('title', 'completed_with_errors');
+      await expect(page.locator('.persisted-state')).toContainText(/processamento com erros|processing with errors/i);
+      await expect(page.locator('.lifecycle-badge')).toContainText(/com erros|with errors/i);
       await expect(page.locator('.summary-highlights article').filter({ hasText: /linhas lidas|rows read/i }).locator('strong')).toHaveText(String(item.rows));
       await expect(page.locator('.summary-highlights article').filter({ hasText: /registros válidos|valid records/i }).locator('strong')).toHaveText(String(item.valid));
       await expect(page.locator('.summary-highlights article').filter({ hasText: /registros rejeitados|rejected records/i }).locator('strong')).toHaveText(String(item.rejected));

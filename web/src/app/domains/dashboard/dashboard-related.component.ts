@@ -5,6 +5,8 @@ import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { PaginationComponent, StateComponent } from '../../shared/ui/ui-kit';
 import { DashboardService } from './dashboard.service';
+import { ExecutionScopeFilters } from '../executions/execution.models';
+import { executionUrlParams, filtersFromParams } from '../executions/execution-presentation';
 
 interface RelatedWorkorder {
   identifier: string;
@@ -35,12 +37,14 @@ interface RelatedWorkorder {
             <div class="context-copy">
               <strong>{{ i18n.t('dashboard.activeContext') }}</strong>
               <div class="context-values">
-                @if (context.organization) {
-                  <span><small>{{ i18n.t('dashboard.organization') }}</small><b class="technical">{{ context.organization }}</b></span>
+                @if (filters.organizationId) {
+                  <span><small>{{ i18n.t('dashboard.organization') }}</small><b class="technical">{{ filters.organizationId }}</b></span>
                 }
-                @if (context.dateFrom || context.dateTo) {
-                  <span><small>{{ i18n.t('dashboard.period') }}</small><b>{{ filterDate(context.dateFrom) }} – {{ filterDate(context.dateTo) }}</b></span>
+                @if (filters.dateFrom || filters.dateTo) {
+                  <span><small>{{ i18n.t('dashboard.period') }}</small><b>{{ filterDate(filters.dateFrom) }} – {{ filterDate(filters.dateTo) }}</b></span>
                 }
+                @if (filters.source) { <span><small>{{ i18n.t('executions.source') }}</small><b>{{ filters.source }}</b></span> }
+                @if (filters.fileType) { <span><small>{{ i18n.t('executions.fileType') }}</small><b>{{ filters.fileType }}</b></span> }
               </div>
             </div>
           </section>
@@ -91,17 +95,17 @@ export class DashboardRelatedComponent implements OnInit {
   readonly pages = signal(0);
   readonly total = signal(0);
   readonly entity = 'workorders' as const;
-  readonly context = {
-    organization: this.route.snapshot.queryParamMap.get('organization'),
-    dateFrom: this.route.snapshot.queryParamMap.get('dateFrom'),
-    dateTo: this.route.snapshot.queryParamMap.get('dateTo')
-  };
+  readonly filters: ExecutionScopeFilters = {};
+  get context(): Record<string, string | null> { return executionUrlParams(this.filters); }
 
-  ngOnInit(): void { this.load(); }
-  hasContext(): boolean { return Boolean(this.context.organization || this.context.dateFrom || this.context.dateTo); }
+  ngOnInit(): void {
+    try { Object.assign(this.filters, filtersFromParams(this.route.snapshot.queryParamMap, this.i18n.timezone())); this.load(); }
+    catch { this.error.set('validation'); this.loading.set(false); }
+  }
+  hasContext(): boolean { return Object.values(this.filters).some(Boolean); }
   currentUrl(): string { return this.router.url; }
-  filterDate(value: string | null): string {
-    return value ? this.i18n.formatDate(`${value}T12:00:00`, { dateStyle: 'short' }) : this.i18n.t('common.notAvailable');
+  filterDate(value: string | undefined): string {
+    return value ? this.i18n.formatDate(value, { dateStyle: 'short' }) : this.i18n.t('common.notAvailable');
   }
   statusKind(status: string): string {
     if (status === 'consolidated' || status === 'validated') return 'success';
@@ -126,9 +130,7 @@ export class DashboardRelatedComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.service.getRelated(this.entity, {
-      organizationId: this.context.organization ?? '',
-      dateFrom: this.context.dateFrom ?? '',
-      dateTo: this.context.dateTo ?? '',
+      ...this.filters,
       page: this.page()
     }).subscribe({
       next: (value) => {

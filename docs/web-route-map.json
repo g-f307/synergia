@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "issue": 185,
   "prototype_ref": "prototype-v1.0",
   "required_states": [
@@ -12,16 +12,6 @@
     "unavailable"
   ],
   "supporting_operations": [
-    {
-      "method": "GET",
-      "path": "/executions/summary",
-      "permission": "execution.read",
-      "scope": "org",
-      "exposure": "deferred",
-      "consumer": "none",
-      "decision": "Agregado canônico disponível no backend; consumidores web serão integrados na próxima etapa da #193.",
-      "target": "issue-193"
-    },
     {"method": "POST", "path": "/executions/{execution_id}/ai-assistance", "permission": "execution.read + ai.assistance.generate", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/executions/{execution_id}/ai-assistance/latest", "permission": "execution.read + ai.assistance.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/me/ai-assistance-capability", "permission": "execution.read + (ai.assistance.read ou ai.assistance.generate)", "scope": "org", "exposure": "technical", "consumer": "platform", "decision": "Fundacao de capacidade sem exposicao de endpoint/modelo; card de execucao sera integrado na issue #190.", "target": "issue-190", "evidence": ["web/src/app/core/ai-assistance-capability.service.ts"]},
@@ -96,7 +86,7 @@
       "endpoints": [
         {"method": "GET", "path": "/indicators", "permission": "dashboard.read"}
       ],
-      "url_state": ["organization", "dateFrom", "dateTo"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id"],
       "states": ["loading", "empty", "partial", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/dashboard"
     },
@@ -113,7 +103,7 @@
       "endpoints": [
         {"method": "GET", "path": "/indicators/{entity}", "permission": "dashboard.read"}
       ],
-      "url_state": ["organization", "dateFrom", "dateTo", "page"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id", "page"],
       "states": ["loading", "empty", "error", "forbidden", "unavailable"],
       "owner": "domains/dashboard"
     },
@@ -165,14 +155,15 @@
       "permission": "execution.read",
       "scope": "org",
       "evidence": [
-        "web/src/app/domains/tv/tv-monitor.component.ts",
+        "web/src/app/domains/executions/execution-search.component.ts",
         "web/src/app/domains/executions/execution.service.ts"
       ],
       "endpoints": [
-        {"method": "GET", "path": "/executions", "permission": "execution.read"}
+        {"method": "GET", "path": "/executions", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/summary", "permission": "execution.read"}
       ],
-      "url_state": [],
-      "states": ["empty"],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id", "page", "sort"],
+      "states": ["loading", "empty", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/executions"
     },
     {
@@ -187,9 +178,10 @@
       "scope": "org",
       "evidence": ["web/src/app/domains/executions/execution.service.ts"],
       "endpoints": [
-        {"method": "GET", "path": "/executions", "permission": "execution.read"}
+        {"method": "GET", "path": "/executions", "permission": "execution.read"},
+        {"method": "GET", "path": "/executions/summary", "permission": "execution.read"}
       ],
-      "url_state": [],
+      "url_state": ["organization_id", "source", "file_type", "date_from", "date_to", "status", "outcome", "lifecycle", "execution_id"],
       "states": ["loading", "empty", "stale", "error", "forbidden", "unavailable"],
       "owner": "domains/tv"
     },

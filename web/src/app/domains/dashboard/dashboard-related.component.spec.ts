@@ -18,7 +18,7 @@ describe('DashboardRelatedComponent', () => {
     const fixture = TestBed.createComponent(DashboardRelatedComponent);
     fixture.detectChanges();
 
-    expect(getRelated).toHaveBeenCalledWith('workorders', { organizationId: 'org-1', dateFrom: '2026-08-01', dateTo: '2026-08-31', page: 1 });
+    expect(getRelated).toHaveBeenCalledWith('workorders', jasmine.objectContaining({ organizationId: 'org-1', dateFrom: '2026-08-01T04:00:00Z', dateTo: '2026-09-01T03:59:59.999999Z', page: 1 }));
     expect(fixture.nativeElement.textContent).toContain('WO-1');
     expect(fixture.nativeElement.textContent).toContain('org-1');
     expect(fixture.nativeElement.textContent).toContain('01/08/2026');
@@ -41,7 +41,7 @@ describe('DashboardRelatedComponent', () => {
     const fixture = TestBed.createComponent(DashboardRelatedComponent);
     fixture.detectChanges();
 
-    expect(getRelated).toHaveBeenCalledWith('workorders', { organizationId: '', dateFrom: '', dateTo: '', page: 2 });
+    expect(getRelated).toHaveBeenCalledWith('workorders', jasmine.objectContaining({ page: 2 }));
     expect(fixture.nativeElement.textContent).toContain('51');
     expect(fixture.nativeElement.querySelector('syn-pagination')).not.toBeNull();
     const page = fixture.nativeElement.querySelector('.workorders-page') as HTMLElement;

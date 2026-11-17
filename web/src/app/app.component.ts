@@ -60,6 +60,20 @@ export class AppComponent {
     while (snapshot.firstChild) snapshot = snapshot.firstChild;
     return snapshot.routeConfig?.path || 'profile';
   }
+  tvQueryParams(): Record<string, string | null> {
+    let tree = this.router.parseUrl(this.router.url);
+    let path = this.router.url.split('?')[0];
+    const from = tree.queryParams['from'];
+    if (path.startsWith('/executions/') && typeof from === 'string' && from.startsWith('/executions?')) {
+      tree = this.router.parseUrl(from); path = '/executions';
+    }
+    if (!['/dashboard', '/executions', '/tv'].includes(path)) return {};
+    const value = (key: string, legacy?: string) => {
+      const selected = tree.queryParams[key] ?? (legacy ? tree.queryParams[legacy] : null);
+      return typeof selected === 'string' ? selected : null;
+    };
+    return { organization_id: value('organization_id', 'organization'), date_from: value('date_from', 'dateFrom'), date_to: value('date_to', 'dateTo'), source: value('source'), file_type: value('file_type'), outcome: value('outcome'), status: value('status'), lifecycle: value('lifecycle'), execution_id: value('execution_id') };
+  }
   toggleMenu(): void { this.menuOpen.update((value) => !value); }
   toggleSidebar(): void {
     this.sidebarCollapsed.update((value) => !value);
