@@ -23,6 +23,7 @@ ALLOWED_PATTERNS = (
     "pg-api-p95.json",
     "e2e-assistance-results/**/*.webm",
     "e2e-assistance-results/**/*.png",
+    "e2e-assistance-results/**/axe-*.json",
     "axe-*.json",
     "*.png",
 )

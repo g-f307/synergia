@@ -52,6 +52,8 @@ def test_package_evidence_excludes_traces_and_allows_safe_e2e_media(tmp_path):
     video.write_bytes(b"webm-bytes")
     screenshot = case_dir / "test-failed-1.png"
     screenshot.write_bytes(b"png-bytes")
+    axe_report = case_dir / "axe-assistance.json"
+    axe_report.write_text('{"violations":[]}', encoding="utf-8")
 
     trace_zip = case_dir / "trace.zip"
     with zipfile.ZipFile(trace_zip, "w") as zf:
@@ -59,10 +61,11 @@ def test_package_evidence_excludes_traces_and_allows_safe_e2e_media(tmp_path):
     (case_dir / "network.har").write_text('{"log":{}}', encoding="utf-8")
 
     result = package_evidence(ev)
-    assert result["file_count"] == 2
+    assert result["file_count"] == 3
     with zipfile.ZipFile(result["zip_path"]) as zf:
         names = set(zf.namelist())
         assert "e2e-assistance-results/assistance-case-1/video.webm" in names
         assert "e2e-assistance-results/assistance-case-1/test-failed-1.png" in names
+        assert "e2e-assistance-results/assistance-case-1/axe-assistance.json" in names
         assert "e2e-assistance-results/assistance-case-1/trace.zip" not in names
         assert "e2e-assistance-results/assistance-case-1/network.har" not in names
