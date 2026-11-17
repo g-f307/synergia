@@ -1,0 +1,74 @@
+{
+  "case_id": "AA-25",
+  "category": "terminal_failure",
+  "organization_key": "org_a",
+  "traits": [
+    "terminal_failure"
+  ],
+  "subject": {
+    "execution_id": "204e65df-210c-541c-b7d3-f6c082be68d2",
+    "organization_id": "0e6d0001-9d9a-59fc-adae-43db14623454",
+    "source": "N-FP",
+    "status": "validation_failed",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-01T10:00:00Z",
+    "finished_at": "2026-11-01T10:05:00Z"
+  },
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 0,
+    "files_rejected": 1,
+    "rows_read": 20,
+    "valid_records": 19,
+    "rejected_records": 1,
+    "normalized_records": 19,
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "classifications": 0,
+    "pending_items": 0,
+    "errors": 1,
+    "warnings": 0
+  },
+  "items": {
+    "divergences": [
+      {
+        "id": "de88936d-9732-5679-a941-40c5fe53b937",
+        "severity": "error",
+        "scope": "file",
+        "code": "invalid_header",
+        "occurred_at": "2026-11-01T10:02:00Z"
+      }
+    ],
+    "pending_items": [],
+    "classifications": [],
+    "evidences": [
+      {
+        "id": "0f9665bc-f48d-5ee5-ad44-5a752d558d69",
+        "extension": "csv",
+        "size_bytes": 256,
+        "sha256": "c6b9b91f79dd8e885ea1cba65d56285d590065af637c2ae42adfe2cb348ea7ea",
+        "available": true
+      }
+    ],
+    "state_history": [
+      {
+        "id": "b5bd89b2-ae44-5ae7-acf5-79c380d38f08",
+        "from_state": "applying_rules",
+        "to_state": "validation_failed",
+        "state_version": 2,
+        "occurred_at": "2026-11-01T10:05:00Z"
+      },
+      {
+        "id": "81eb87de-7053-5a95-a898-735ebb10fa71",
+        "from_state": "pending",
+        "to_state": "validating",
+        "state_version": 1,
+        "occurred_at": "2026-11-01T10:01:00Z"
+      }
+    ]
+  }
+}

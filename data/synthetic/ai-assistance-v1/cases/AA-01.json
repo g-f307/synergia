@@ -1,0 +1,92 @@
+{
+  "case_id": "AA-01",
+  "category": "completed_with_occurrences",
+  "organization_key": "org_a",
+  "traits": [
+    "occurrences",
+    "negation"
+  ],
+  "subject": {
+    "execution_id": "76d9e012-028a-5068-a3d2-6283765d438c",
+    "organization_id": "0e6d0001-9d9a-59fc-adae-43db14623454",
+    "source": "N-FP",
+    "status": "completed",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-01T10:00:00Z",
+    "finished_at": "2026-11-01T10:05:00Z"
+  },
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 1,
+    "files_rejected": 0,
+    "rows_read": 20,
+    "valid_records": 19,
+    "rejected_records": 1,
+    "normalized_records": 19,
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "classifications": 1,
+    "pending_items": 1,
+    "errors": 1,
+    "warnings": 0
+  },
+  "items": {
+    "divergences": [
+      {
+        "id": "1ebfcc7b-41ac-53af-9033-e79794858eff",
+        "severity": "error",
+        "scope": "record",
+        "code": "not_applicable_override",
+        "occurred_at": "2026-11-01T10:03:00Z"
+      }
+    ],
+    "pending_items": [
+      {
+        "id": "7f8884da-3fa5-5d4e-9b63-43deb09d6c36",
+        "rule_id": "oqc_hold",
+        "status": "open",
+        "priority_score": 80,
+        "created_at": "2026-11-01T10:04:00Z"
+      }
+    ],
+    "classifications": [
+      {
+        "id": "ece4f0cb-c45b-56ec-a59d-8010dda514a8",
+        "rule_id": "source_divergence",
+        "state": "active",
+        "data_quality": "partial",
+        "priority_score": 80,
+        "classified_at": "2026-11-01T10:04:00Z"
+      }
+    ],
+    "evidences": [
+      {
+        "id": "ab461713-d6a2-57a9-95e6-a02a11508798",
+        "extension": "csv",
+        "size_bytes": 1024,
+        "sha256": "567b59939f2e6c53ba4e41f3c9488fe7b998b445c7cc0cdc0b3f1f28edd0e257",
+        "available": true
+      }
+    ],
+    "state_history": [
+      {
+        "id": "3c3adfb9-2a50-5d4e-8bb2-f40186922bf1",
+        "from_state": "applying_rules",
+        "to_state": "completed",
+        "state_version": 2,
+        "occurred_at": "2026-11-01T10:05:00Z"
+      },
+      {
+        "id": "ad8d294f-a5e8-583d-a2c8-bca1b09a6f4e",
+        "from_state": "pending",
+        "to_state": "validating",
+        "state_version": 1,
+        "occurred_at": "2026-11-01T10:01:00Z"
+      }
+    ]
+  }
+}

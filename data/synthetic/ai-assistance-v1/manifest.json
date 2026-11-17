@@ -1,0 +1,482 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_version": "1.0.0",
+  "issue": 192,
+  "contains_real_data": false,
+  "synthetic_only": true,
+  "organizations": {
+    "org_a": "0e6d0001-9d9a-59fc-adae-43db14623454",
+    "org_b": "e17dd48b-7be8-5d04-8b86-5fb807e42717"
+  },
+  "categories": {
+    "completed_with_occurrences": 10,
+    "completed_without_occurrences": 5,
+    "completed_with_errors": 5,
+    "terminal_failure": 5,
+    "insufficient_or_truncated": 5
+  },
+  "coverage": {
+    "negations": [
+      "AA-01",
+      "AA-02",
+      "AA-16"
+    ],
+    "instruction_like_text": [
+      "AA-03",
+      "AA-04",
+      "AA-17"
+    ],
+    "control_characters": [
+      "AA-05",
+      "AA-06",
+      "AA-24"
+    ],
+    "missing_references": [
+      "AA-07",
+      "AA-08",
+      "AA-22",
+      "AA-26",
+      "AA-27",
+      "AA-28"
+    ],
+    "high_volume": [
+      "AA-29",
+      "AA-30"
+    ]
+  },
+  "freeze": {
+    "model": "qwen3:4b-instruct",
+    "model_digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+    "runtime_version": "0.40.15",
+    "contract_version": "1.0.0",
+    "context_version": "1.0.0",
+    "sanitized_config": {
+      "timeout_seconds": 30,
+      "context_max_bytes": 8192,
+      "response_max_bytes": 8192,
+      "max_concurrency": 1,
+      "follow_redirects": false
+    },
+    "assets_sha256": {
+      "backend/app/ai_assistance_assets/system.txt": "a9d2013df304a6851e6835c4c1fb15b8d0ed8ccec18340293afe2947558e20bd",
+      "backend/app/ai_assistance_assets/template.txt": "c5bf4cf4423aa0617f934b77928399af6abaf47481f3e22bea5be17c6f59037e",
+      "backend/app/ai_assistance_assets/output.schema.json": "161cd39811ca63ff76e4a431221e38282f25ea8dd2259275cdc8a9531152ccac",
+      "backend/app/ai_assistance_context_policy.py": "db36a7263819bd08158d35c3a14dc15aad4c270cb3c264417b76a42bd122bf8e",
+      "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
+      "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
+      "backend/app/ai_assistance_generator.py": "74c8179e01f26f195e717968471dfdea7a3f68178e655f12312806ab11cf68fc",
+      "backend/app/ai_assistance_provider.py": "c65dfe70b29796e06685c2c31db53a33ce47d875906a84edae9328925dcaf164",
+      "scripts/generate_ai_assistance_corpus.py": "0e76caa88493c575600d5a8c97ae8886a939510342d804f0898fa5f328df50c0",
+      "scripts/run_ai_assistance_campaign.py": "adbaccf5bac9d1131fa4cbfa559e2fd770742e67b4f9787415ab55ed5d8f355c"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "AA-01",
+      "execution_id": "76d9e012-028a-5068-a3d2-6283765d438c",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_a",
+      "source": "N-FP",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "negation"
+      ],
+      "file": "cases/AA-01.json",
+      "sha256": "1213d8b8f083bcd08f7e4a5454924fddea8e2de5cc49b25b8fb9b0c56b960718"
+    },
+    {
+      "case_id": "AA-02",
+      "execution_id": "95751bb1-8e24-50ee-9490-5bdfd3428377",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_b",
+      "source": "OWM",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "negation"
+      ],
+      "file": "cases/AA-02.json",
+      "sha256": "2d942c199c9e31eb8ba58863663624590b9b46442e19131b5d5e768002ce16b8"
+    },
+    {
+      "case_id": "AA-03",
+      "execution_id": "8fd802b2-17c1-5ed6-b039-26622259220a",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_a",
+      "source": "GMES/OQC",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "instruction_like"
+      ],
+      "file": "cases/AA-03.json",
+      "sha256": "1a6fb5ab08d1384724a9a390e4258ed2a5f155b9907920639dfff26a4b3fc57d"
+    },
+    {
+      "case_id": "AA-04",
+      "execution_id": "3498765f-09c1-5a3a-8415-62fd515dee92",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_b",
+      "source": "TMS",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "instruction_like"
+      ],
+      "file": "cases/AA-04.json",
+      "sha256": "9b19724f81892c533ac4894a1a734f00510ff53a9184794c9a83b2c030f1d511"
+    },
+    {
+      "case_id": "AA-05",
+      "execution_id": "9d89584a-eb79-59a7-942c-aba34861de2c",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_a",
+      "source": "WO Status",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "control_chars"
+      ],
+      "file": "cases/AA-05.json",
+      "sha256": "6f0a463d96240df1f1e711f537ae2e9dfbf41bf559d798bad8476064558f4b9d"
+    },
+    {
+      "case_id": "AA-06",
+      "execution_id": "c02ff2ae-8a5c-5ec0-a7bf-06509f382791",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_b",
+      "source": "Total Decision",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "control_chars"
+      ],
+      "file": "cases/AA-06.json",
+      "sha256": "b5a0ed3d2016168d04486ec5ad98941a840c859d1f5e09099a708bc24b387500"
+    },
+    {
+      "case_id": "AA-07",
+      "execution_id": "2c3b698a-1259-50e7-9c7a-b4e4594d2a8b",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_a",
+      "source": "N-FP",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "missing_ref"
+      ],
+      "file": "cases/AA-07.json",
+      "sha256": "7ef25761c0f73acc00c68e4951ad9be953150110a70fc44a3b7ddb4a8387e563"
+    },
+    {
+      "case_id": "AA-08",
+      "execution_id": "43ebb98f-bb47-5c02-8e81-783aa6e65c5c",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_b",
+      "source": "OWM",
+      "status": "completed",
+      "traits": [
+        "occurrences",
+        "missing_ref"
+      ],
+      "file": "cases/AA-08.json",
+      "sha256": "82a2e241d0df9fce20681559bc44c3974c104c0c573dc757568e541059249fac"
+    },
+    {
+      "case_id": "AA-09",
+      "execution_id": "c541719b-6aaf-5f34-8c41-09ae55026736",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_a",
+      "source": "GMES/OQC",
+      "status": "completed",
+      "traits": [
+        "occurrences"
+      ],
+      "file": "cases/AA-09.json",
+      "sha256": "e6f803cc0183a9f0439c315159ca9a0e3df6e39aea17d737f13503d70a2eba08"
+    },
+    {
+      "case_id": "AA-10",
+      "execution_id": "527dcfcb-3900-5968-9a8d-5b06d1a9074c",
+      "category": "completed_with_occurrences",
+      "organization_key": "org_b",
+      "source": "TMS",
+      "status": "completed",
+      "traits": [
+        "occurrences"
+      ],
+      "file": "cases/AA-10.json",
+      "sha256": "63a2f74c92a0b6f1468036fa3c2f3c628f24f1fe36d0319c088d6ee685cbd714"
+    },
+    {
+      "case_id": "AA-11",
+      "execution_id": "843c33b7-db43-5e3a-a8e0-3f5594fe8015",
+      "category": "completed_without_occurrences",
+      "organization_key": "org_a",
+      "source": "WO Status",
+      "status": "completed",
+      "traits": [
+        "clean"
+      ],
+      "file": "cases/AA-11.json",
+      "sha256": "cde8dd44fe931d23436aef680577fbd2ad010a567cc607cbf3a5cc278680cf5e"
+    },
+    {
+      "case_id": "AA-12",
+      "execution_id": "da09065b-7add-5983-abf5-bddca4a59f46",
+      "category": "completed_without_occurrences",
+      "organization_key": "org_b",
+      "source": "Total Decision",
+      "status": "completed",
+      "traits": [
+        "clean"
+      ],
+      "file": "cases/AA-12.json",
+      "sha256": "5d4bebb1b2bdd626880fd48c4ccd1e934f090f00dbaa795d37c1e65e93d5657b"
+    },
+    {
+      "case_id": "AA-13",
+      "execution_id": "31640932-37a9-5e51-94ee-ed884d7933bf",
+      "category": "completed_without_occurrences",
+      "organization_key": "org_a",
+      "source": "N-FP",
+      "status": "completed",
+      "traits": [
+        "clean"
+      ],
+      "file": "cases/AA-13.json",
+      "sha256": "73ca2ba138c6669ceba93d3e6b4a338b5c05bc867d7f39a3eb8ebb8d01b42a94"
+    },
+    {
+      "case_id": "AA-14",
+      "execution_id": "1f752e74-e792-526e-b520-ef11e74ddd59",
+      "category": "completed_without_occurrences",
+      "organization_key": "org_b",
+      "source": "OWM",
+      "status": "completed",
+      "traits": [
+        "clean"
+      ],
+      "file": "cases/AA-14.json",
+      "sha256": "d5b70a0241a441eb6f0c222f598e0ffe8db8edf3801c3f93266d1e3fc54a1988"
+    },
+    {
+      "case_id": "AA-15",
+      "execution_id": "58b61d53-4fbe-51e1-81e8-a73aa4c62bec",
+      "category": "completed_without_occurrences",
+      "organization_key": "org_a",
+      "source": "GMES/OQC",
+      "status": "completed",
+      "traits": [
+        "clean"
+      ],
+      "file": "cases/AA-15.json",
+      "sha256": "0aec1f9814cd238813cac45f5c94cc751c4bcf318c35d5dae122a37314696b0c"
+    },
+    {
+      "case_id": "AA-16",
+      "execution_id": "0c7f1f72-9529-5c26-9047-b425d2298f6f",
+      "category": "completed_with_errors",
+      "organization_key": "org_b",
+      "source": "TMS",
+      "status": "completed_with_errors",
+      "traits": [
+        "partial",
+        "negation"
+      ],
+      "file": "cases/AA-16.json",
+      "sha256": "1e41aea4b9f590027009629f042934cbbc57f54a465a3f91b8981f8389af6af8"
+    },
+    {
+      "case_id": "AA-17",
+      "execution_id": "99846a26-6a96-5004-bf2e-2e6573335d49",
+      "category": "completed_with_errors",
+      "organization_key": "org_a",
+      "source": "WO Status",
+      "status": "completed_with_errors",
+      "traits": [
+        "partial",
+        "instruction_like"
+      ],
+      "file": "cases/AA-17.json",
+      "sha256": "dabb970e132d6e3d57c6be48921be2b8db65b9f06f6c2e184eefa8a016699974"
+    },
+    {
+      "case_id": "AA-18",
+      "execution_id": "4066d695-7bc2-545a-9af1-14133a331e81",
+      "category": "completed_with_errors",
+      "organization_key": "org_b",
+      "source": "Total Decision",
+      "status": "completed_with_errors",
+      "traits": [
+        "partial"
+      ],
+      "file": "cases/AA-18.json",
+      "sha256": "ff1b45810b0f308060db9a7839399af8e34e4d69341f38898b281c82d0a54514"
+    },
+    {
+      "case_id": "AA-19",
+      "execution_id": "09d261ed-35af-53ca-8ff1-fccf18c772da",
+      "category": "completed_with_errors",
+      "organization_key": "org_a",
+      "source": "N-FP",
+      "status": "completed_with_errors",
+      "traits": [
+        "partial"
+      ],
+      "file": "cases/AA-19.json",
+      "sha256": "ac98fcc39cb094a9ce166ef49af5f92b42535102d110bae9d9c180a63a1c0a7c"
+    },
+    {
+      "case_id": "AA-20",
+      "execution_id": "465c6366-17b4-597a-970b-8ee2afbbef88",
+      "category": "completed_with_errors",
+      "organization_key": "org_b",
+      "source": "OWM",
+      "status": "completed_with_errors",
+      "traits": [
+        "partial"
+      ],
+      "file": "cases/AA-20.json",
+      "sha256": "bb14218dd05643f4f31ddea5b4b4041c5deb5624b3eda749c7ee200bd7c91ec9"
+    },
+    {
+      "case_id": "AA-21",
+      "execution_id": "6d819414-e53c-5c69-94c7-c9b4367a93aa",
+      "category": "terminal_failure",
+      "organization_key": "org_a",
+      "source": "GMES/OQC",
+      "status": "failed",
+      "traits": [
+        "terminal_failure"
+      ],
+      "file": "cases/AA-21.json",
+      "sha256": "5b254a9c318bc81245c7666a462605a62f7691bdb924237148f7f3c2a18eca1e"
+    },
+    {
+      "case_id": "AA-22",
+      "execution_id": "0904ab6a-ceb0-5e01-96fb-ee473606e37d",
+      "category": "terminal_failure",
+      "organization_key": "org_b",
+      "source": "TMS",
+      "status": "validation_failed",
+      "traits": [
+        "terminal_failure",
+        "missing_ref"
+      ],
+      "file": "cases/AA-22.json",
+      "sha256": "a5a599c5063af00217d8dd56dc2d033c24a0f82d150cba3885eb614a487aaf2b"
+    },
+    {
+      "case_id": "AA-23",
+      "execution_id": "f4363c96-b756-5cb6-8854-4c41b86ca91c",
+      "category": "terminal_failure",
+      "organization_key": "org_a",
+      "source": "WO Status",
+      "status": "cancelled",
+      "traits": [
+        "terminal_failure"
+      ],
+      "file": "cases/AA-23.json",
+      "sha256": "eeb34079d9d29c72f1edd5b405dae7ef33c15c91723b8f0d1ee163260234ac64"
+    },
+    {
+      "case_id": "AA-24",
+      "execution_id": "f0ece03d-f542-54fc-aec1-12a24f738d60",
+      "category": "terminal_failure",
+      "organization_key": "org_b",
+      "source": "Total Decision",
+      "status": "failed",
+      "traits": [
+        "terminal_failure",
+        "control_chars"
+      ],
+      "file": "cases/AA-24.json",
+      "sha256": "6bee3efc92c50cd7e85b999c65d387ed40190ed7e512a709787f3029af3e2448"
+    },
+    {
+      "case_id": "AA-25",
+      "execution_id": "204e65df-210c-541c-b7d3-f6c082be68d2",
+      "category": "terminal_failure",
+      "organization_key": "org_a",
+      "source": "N-FP",
+      "status": "validation_failed",
+      "traits": [
+        "terminal_failure"
+      ],
+      "file": "cases/AA-25.json",
+      "sha256": "2ed2867ae37fcff796f05f4da67ef42df3c6c7ab39a63a5d0e19ae6b3f369d85"
+    },
+    {
+      "case_id": "AA-26",
+      "execution_id": "bda44a11-3d1b-5a46-ada9-c97a64d7d498",
+      "category": "insufficient_or_truncated",
+      "organization_key": "org_b",
+      "source": "OWM",
+      "status": "completed",
+      "traits": [
+        "insufficient_evidence",
+        "missing_ref"
+      ],
+      "file": "cases/AA-26.json",
+      "sha256": "79047b49744332d6fd4f36e76562fff33019a8081bfddb06e52e1ba50d2927dd"
+    },
+    {
+      "case_id": "AA-27",
+      "execution_id": "34091294-f012-590a-8c9e-03b4fbbef262",
+      "category": "insufficient_or_truncated",
+      "organization_key": "org_a",
+      "source": "GMES/OQC",
+      "status": "completed",
+      "traits": [
+        "insufficient_evidence",
+        "missing_ref"
+      ],
+      "file": "cases/AA-27.json",
+      "sha256": "f467f831b4f123675f2e403685c61d89a95036e3ce09094e98b8646757ce8539"
+    },
+    {
+      "case_id": "AA-28",
+      "execution_id": "ec755ed3-349e-582b-913d-e70d2149e2f6",
+      "category": "insufficient_or_truncated",
+      "organization_key": "org_b",
+      "source": "TMS",
+      "status": "failed",
+      "traits": [
+        "insufficient_evidence",
+        "missing_ref"
+      ],
+      "file": "cases/AA-28.json",
+      "sha256": "4549bac114f91c7358fad68743bd2695bc98aa1799da72b0f45459fb1a63cd2f"
+    },
+    {
+      "case_id": "AA-29",
+      "execution_id": "75907c0c-e147-5eee-8ed3-3abc834e7973",
+      "category": "insufficient_or_truncated",
+      "organization_key": "org_a",
+      "source": "WO Status",
+      "status": "completed",
+      "traits": [
+        "high_volume",
+        "truncated"
+      ],
+      "file": "cases/AA-29.json",
+      "sha256": "c80a178a2442abc2b9c3e38bbb956c34945a038ca82338b411d61794481e28c6"
+    },
+    {
+      "case_id": "AA-30",
+      "execution_id": "cf4894be-c398-5cb8-aaf2-abc78ece0bb7",
+      "category": "insufficient_or_truncated",
+      "organization_key": "org_b",
+      "source": "Total Decision",
+      "status": "completed",
+      "traits": [
+        "high_volume",
+        "truncated"
+      ],
+      "file": "cases/AA-30.json",
+      "sha256": "8745b86a380791f296e994b7a729e9ef89a30daf9b0012691f2c8465a42701d3"
+    }
+  ]
+}

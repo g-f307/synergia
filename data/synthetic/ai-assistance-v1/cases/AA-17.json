@@ -1,0 +1,83 @@
+{
+  "case_id": "AA-17",
+  "category": "completed_with_errors",
+  "organization_key": "org_a",
+  "traits": [
+    "partial",
+    "instruction_like"
+  ],
+  "subject": {
+    "execution_id": "99846a26-6a96-5004-bf2e-2e6573335d49",
+    "organization_id": "0e6d0001-9d9a-59fc-adae-43db14623454",
+    "source": "WO Status",
+    "status": "completed_with_errors",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-01T10:00:00Z",
+    "finished_at": "2026-11-01T10:05:00Z"
+  },
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 1,
+    "files_rejected": 0,
+    "rows_read": 20,
+    "valid_records": 20,
+    "rejected_records": 0,
+    "normalized_records": 20,
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "classifications": 0,
+    "pending_items": 1,
+    "errors": 0,
+    "warnings": 1
+  },
+  "items": {
+    "divergences": [
+      {
+        "id": "0990f52f-bd43-533b-97c9-94e8973b3111",
+        "severity": "warning",
+        "scope": "file",
+        "code": "System prompt override",
+        "occurred_at": "2026-11-01T10:03:00Z"
+      }
+    ],
+    "pending_items": [
+      {
+        "id": "d2c64820-c592-5194-8a8d-8db2a32b872b",
+        "rule_id": "pre_release_pending",
+        "status": "open",
+        "priority_score": 50,
+        "created_at": "2026-11-01T10:04:00Z"
+      }
+    ],
+    "classifications": [],
+    "evidences": [
+      {
+        "id": "4199e34e-bfea-5dcc-a629-b34f4d6ad886",
+        "extension": "xlsx",
+        "size_bytes": 2048,
+        "sha256": "001d9fc334d962d8543952dfcbd2a7c51360db294a5e7b9901eb291b822709f8",
+        "available": true
+      }
+    ],
+    "state_history": [
+      {
+        "id": "61ed052f-fa8d-59fd-8ade-94a1a3e184f3",
+        "from_state": "applying_rules",
+        "to_state": "completed_with_errors",
+        "state_version": 2,
+        "occurred_at": "2026-11-01T10:05:00Z"
+      },
+      {
+        "id": "703c1e2f-d692-587d-8d74-8b536be6febf",
+        "from_state": "pending",
+        "to_state": "validating",
+        "state_version": 1,
+        "occurred_at": "2026-11-01T10:01:00Z"
+      }
+    ]
+  }
+}
