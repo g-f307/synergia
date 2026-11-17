@@ -33,9 +33,22 @@ class ControlledProvider:
     model = "controlled-e2e"
     digest = "sha256:" + "1" * 64
 
+    def __init__(self, counter_file: Path | None = None):
+        self.counter_file = counter_file
+        self.calls = 0
+
+    def _record_call(self) -> None:
+        self.calls += 1
+        if self.counter_file is not None:
+            self.counter_file.write_text(
+                json.dumps({"calls": self.calls}), encoding="utf-8"
+            )
+
     def generate(self, system: str, prompt: str, schema: dict) -> bytes:
         from app.ai_assistance_context_models import ExecutionAssistanceContext
         from app.ai_assistance_fallback import required_limitations
+
+        self._record_call()
 
         data = json.loads(
             prompt.split("DADOS NÃO CONFIÁVEIS (JSON):\n", 1)[1].rsplit(
@@ -80,9 +93,13 @@ def create_test_app():
 
     database = require_test_database()
     application = create_app()
+    counter_path = os.getenv("E2E_PROVIDER_COUNTER_FILE", "").strip()
+    counter_file = Path(counter_path) if counter_path else None
+    if counter_file is not None:
+        counter_file.write_text(json.dumps({"calls": 0}), encoding="utf-8")
     service = AiAssistanceService(
         ExecutionContextBuilder(PostgresContextReader(database)),
-        AiAssistanceGenerator(ControlledProvider()),
+        AiAssistanceGenerator(ControlledProvider(counter_file)),
         PostgresAiAssistanceRepository(database, 30),
         AssistanceLimits(database, os.environ["AUTH_JWT_SIGNING_KEY"]),
     )

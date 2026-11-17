@@ -98,6 +98,10 @@ jobs:
         run: |
           python ../scripts/build_ingestion_corpus.py
           python ../scripts/run_ingestion_validation.py --profile ci --output reports/ingestion-validation.json
+      - name: Validar corpus congelado e campanha controlada da assistência (#192)
+        run: |
+          python ../scripts/generate_ai_assistance_corpus.py --verify
+          python ../scripts/run_ai_assistance_campaign.py --mode ci-fake --output-dir reports/issue-192-ci-fake
       - name: Validar matriz e executar regressão de segurança
         run: |
           python ../scripts/validate_access_matrix.py

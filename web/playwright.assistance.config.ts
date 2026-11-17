@@ -1,8 +1,15 @@
 import { defineConfig } from '@playwright/test';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import base from './playwright.config';
 
 const apiPort = process.env.E2E_AI_API_PORT ?? '8001';
 const webPort = process.env.E2E_AI_WEB_PORT ?? '4201';
+const counterFile =
+  process.env.E2E_PROVIDER_COUNTER_FILE ??
+  join(mkdtempSync(join(tmpdir(), 'synergia-e2e-counter-')), 'counter.json');
+process.env.E2E_PROVIDER_COUNTER_FILE = counterFile;
 const webOrigin = `http://127.0.0.1:${webPort}`;
 const servers = Array.isArray(base.webServer) ? base.webServer : [base.webServer!];
 
@@ -22,6 +29,7 @@ export default defineConfig({
       env: {
         ...servers[0].env,
         E2E_API_PORT: apiPort,
+        E2E_PROVIDER_COUNTER_FILE: counterFile,
         AUTH_ALLOWED_ORIGINS: webOrigin,
         SYNERGIA_AI_ASSISTANCE_ENABLED: 'true',
         SYNERGIA_AI_ASSISTANCE_ENDPOINT: 'http://127.0.0.1:11434',

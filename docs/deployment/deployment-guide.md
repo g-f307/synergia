@@ -172,3 +172,29 @@ nova em todas as instâncias pelo fluxo com histórico, não somente editar env-
 Para incidente, seguir [suspensão e recuperação](../runbooks/ai-assistance.md)
 e [rollback de operação](update-and-rollback.md#assistência-de-ia-suspensão-e-rollback).
 O [threat model](../threat-model.md) registra os doze riscos e limites residuais.
+
+### Validação integrada da assistência (#192)
+
+```bash
+# Verificar corpus congelado e campanha controlada
+python scripts/generate_ai_assistance_corpus.py --verify
+python scripts/run_ai_assistance_campaign.py --mode ci-fake --output-dir .local-evidence/issue-192
+
+# Campanha real com Qwen fixado (exige Ollama local com digest homologado)
+SYNERGIA_AI_ASSISTANCE_ENDPOINT=http://127.0.0.1:11434 \
+  python scripts/run_ai_assistance_campaign.py --mode real --output-dir .local-evidence/issue-192
+
+# Migrations e rollback em banco descartável exclusivo da #192
+python scripts/validate_issue_192_disposable.py \
+  --database-url "postgresql://synergia:...@127.0.0.1:15432/synergia_issue_192_test" \
+  --output .local-evidence/issue-192/migrations-rollback.json
+```
+
+**Onde executar:** host de revisão ou CI com acesso apenas aos recursos descartáveis da #192.
+**Pré-condições:** corpus congelado em `data/synthetic/ai-assistance-v1/`, ambiente `SYNERGIA_ENV=test` para o runner descartável e Ollama local com `qwen3:4b-instruct` fixado apenas para `--mode real`.
+**Entradas:** `data/synthetic/ai-assistance-v1/manifest.json` e URL de banco descartável `synergia_issue_192_<sufixo>`.
+**Efeito:** gera relatórios locais por rodada em `.local-evidence/issue-192/` e valida aplicação/rollback em banco descartável sem alterar o banco de demonstração.
+**Resultado esperado:** saída JSON com `overall_passed: true` e `status: "passed"`, sem erro de freeze, grounding ou ledger.
+**Interpretação de falhas:** saída diferente de zero indica quebra de freeze, runtime indisponível/divergente, falha de portão ou banco não descartável recusado.
+**Próxima ação:** manter `SYNERGIA_AI_ASSISTANCE_ENABLED=false` e inspecionar o relatório preservado da rodada antes de nova execução.
+**Evidência permitida:** relatórios sanitizados, métricas, hashes e status de portões em `.local-evidence/issue-192/` (sem `.env`, segredos ou respostas brutas no Git).

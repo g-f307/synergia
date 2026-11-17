@@ -18,8 +18,9 @@ def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
 
     assert document["version"] == "1.7.0"
     assert document["prototype_ref"] == "prototype-v1.0"
-    assert {route["id"] for route in document["routes"]} >= {
-        "ai-quality",
+    route_ids = {route["id"] for route in document["routes"]}
+    assert "ai-quality" not in route_ids
+    assert route_ids >= {
         "dashboard",
         "import-new",
         "execution-detail",

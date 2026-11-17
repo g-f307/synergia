@@ -10,6 +10,7 @@ from pathlib import Path
 try:
     from ai_knowledge import validate_corpus as verify_knowledge_corpus
     from build_ai_quality_dataset import verify as verify_quality_dataset
+    from generate_ai_assistance_corpus import verify_corpus as verify_assistance_corpus
     from generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
@@ -18,6 +19,9 @@ try:
 except ModuleNotFoundError:
     from scripts.ai_knowledge import validate_corpus as verify_knowledge_corpus
     from scripts.build_ai_quality_dataset import verify as verify_quality_dataset
+    from scripts.generate_ai_assistance_corpus import (
+        verify_corpus as verify_assistance_corpus,
+    )
     from scripts.generate_homologation_fixture import (
         validate_manifest as validate_homologation_manifest,
     )
@@ -107,6 +111,12 @@ def validate_synthetic_data() -> None:
             }
         )
 
+    assistance_dataset = SYNTHETIC_DATA / "ai-assistance-v1"
+    assistance_files = set()
+    if assistance_dataset.exists():
+        verify_assistance_corpus(assistance_dataset)
+        assistance_files = {p for p in assistance_dataset.rglob("*") if p.is_file()}
+
     supported = {".csv", ".json", ".xlsx"}
     files = [
         path
@@ -115,7 +125,12 @@ def validate_synthetic_data() -> None:
     ]
 
     for path in files:
-        if path in quality_files or path in ingestion_files or path in knowledge_files:
+        if (
+            path in quality_files
+            or path in ingestion_files
+            or path in knowledge_files
+            or path in assistance_files
+        ):
             continue
         if path.name == "manifest.json":
             manifest = json.loads(path.read_text(encoding="utf-8"))

@@ -1,0 +1,75 @@
+{
+  "case_id": "AA-15",
+  "category": "completed_without_occurrences",
+  "organization_key": "org_a",
+  "traits": [
+    "clean"
+  ],
+  "subject": {
+    "execution_id": "58b61d53-4fbe-51e1-81e8-a73aa4c62bec",
+    "organization_id": "0e6d0001-9d9a-59fc-adae-43db14623454",
+    "source": "GMES/OQC",
+    "status": "completed",
+    "attempt": 1,
+    "pipeline_version": "1.0.0",
+    "rule_catalog_version": "1.0.0",
+    "started_at": "2026-11-01T10:00:00Z",
+    "finished_at": "2026-11-01T10:05:00Z"
+  },
+  "counts": {
+    "files": 1,
+    "files_received": 1,
+    "files_accepted": 1,
+    "files_rejected": 0,
+    "rows_read": 20,
+    "valid_records": 20,
+    "rejected_records": 0,
+    "normalized_records": 20,
+    "workorders": 4,
+    "lots": 4,
+    "serials": 12,
+    "classifications": 1,
+    "pending_items": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "items": {
+    "divergences": [],
+    "pending_items": [],
+    "classifications": [
+      {
+        "id": "3737415f-d959-5510-86c0-6f3102d91f04",
+        "rule_id": "oqc_pass",
+        "state": "closed",
+        "data_quality": "complete",
+        "priority_score": 10,
+        "classified_at": "2026-11-01T10:04:00Z"
+      }
+    ],
+    "evidences": [
+      {
+        "id": "d640960a-594e-5098-9bb9-2c9ebe0f7825",
+        "extension": "json",
+        "size_bytes": 512,
+        "sha256": "c05f5366d10b0da655e160c49a3e90f953bf1ee42a4c058b135c0505808d2e7e",
+        "available": true
+      }
+    ],
+    "state_history": [
+      {
+        "id": "55573f24-e209-57a2-98df-cea07376f034",
+        "from_state": "applying_rules",
+        "to_state": "completed",
+        "state_version": 2,
+        "occurred_at": "2026-11-01T10:05:00Z"
+      },
+      {
+        "id": "4aa0596b-3f4c-5495-bfaa-28ba6fb3df3a",
+        "from_state": "pending",
+        "to_state": "validating",
+        "state_version": 1,
+        "occurred_at": "2026-11-01T10:01:00Z"
+      }
+    ]
+  }
+}

@@ -217,10 +217,7 @@ def test_integrated_surface_has_no_mutation_tools():
         if path.startswith("/ai/quality")
         for method in route
     }
-    assert operations == {
-        ("get", "/ai/quality/scenarios"),
-        ("post", "/ai/quality/scenarios/{scenario_id}/explanations"),
-    }
+    assert operations == set()
     assert not hasattr(quality, "tools")
 
 

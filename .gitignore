@@ -22,3 +22,4 @@ observability/secrets/
 artifacts/
 Kickoff/
 files/
+.local-evidence/

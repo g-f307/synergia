@@ -10,7 +10,6 @@ from app.ai_assistance_contract import install_contract_openapi
 from app.ai_assistance_health import router as ai_assistance_health_router
 from app.ai_assistance_routes import router as ai_assistance_execution_router
 from app.ai_assistance_telemetry import initialize as initialize_assistance_telemetry
-from app.ai_quality import router as ai_quality_router
 from app.approvals import router as approvals_router
 from app.audit import router as audit_router
 from app.auth.config import configured_allowed_origins
@@ -38,7 +37,7 @@ def create_app() -> FastAPI:
     initialize_assistance_telemetry()
     application = FastAPI(
         title="SYNERGIA API",
-        version="0.13.0",
+        version="0.14.0",
         description=(
             "Contratos estáveis para importação, acompanhamento, consultas, "
             "pendências, relatórios, notificações, reprocessamento, identidade "
@@ -61,7 +60,6 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(auth_router)
-    application.include_router(ai_quality_router)
     application.include_router(ai_assistance_router)
     application.include_router(ai_assistance_execution_router)
     application.include_router(ai_assistance_health_router)

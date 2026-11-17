@@ -3,14 +3,45 @@ import { expect, test, Page, TestInfo } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 let executions: Record<'ready' | 'insufficient' | 'rejected', string>;
 const python = process.env.E2E_PYTHON ?? 'python';
 const api = `http://127.0.0.1:${process.env.E2E_AI_API_PORT ?? '8001'}`;
+const counterFile = process.env.E2E_PROVIDER_COUNTER_FILE;
+if (!counterFile) {
+  throw new Error('E2E_PROVIDER_COUNTER_FILE must be set');
+}
 const buttonName = /gerar análise assistida|generate assisted analysis/i;
+
+async function readProviderCalls(): Promise<number> {
+  const raw = await readFile(counterFile!, 'utf8');
+  const parsed = JSON.parse(raw);
+  if (typeof parsed?.calls !== 'number') {
+    throw new Error(`Invalid provider counter payload in ${counterFile}`);
+  }
+  return parsed.calls;
+}
+
+async function loginAndCaptureBearer(page: Page, email: string): Promise<string> {
+  let bearer = '';
+  const listener = (req: import('@playwright/test').Request) => {
+    const auth = req.headers()['authorization'];
+    if (auth?.startsWith('Bearer ')) {
+      bearer = auth;
+    }
+  };
+  page.on('request', listener);
+  try {
+    await login(page, email);
+    await expect.poll(() => bearer).not.toBe('');
+    return bearer;
+  } finally {
+    page.off('request', listener);
+  }
+}
 
 async function login(page: Page, email = 'manager.e2e@example.invalid') {
   execFileSync(python, ['../scripts/bootstrap_web_e2e.py', '--revoke-email', email]);
@@ -200,5 +231,73 @@ test.describe.serial('execution assistance with real API and controlled provider
     await page.setViewportSize({ width: 390, height: 844 }); await open(page);
     await expect(page.locator('.assistance .findings>li')).toHaveCount(5);
     await screenshotAndAxe(page, info, 'long-mobile');
+  });
+
+  test('completes real import journey, idempotent reuse by provider counter, and org B isolation', async ({ page, request }, info) => {
+    const orgABearer = await loginAndCaptureBearer(page, 'manager.e2e@example.invalid');
+    await page.goto('/imports/new');
+    await page.getByLabel(/fonte|source/i).selectOption('Total Decision');
+    const fileInput = page.locator('#import-file');
+    await expect(fileInput).toHaveAttribute('accept', '.xlsx');
+    await fileInput.setInputFiles('../data/synthetic/total-decision_minimal.xlsx');
+    await page.getByRole('button', { name: /enviar|upload/i }).click();
+    await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+/, { timeout: 30_000 });
+    const importedExecutionId = page.url().split('/').pop()?.split('?')[0] ?? '';
+    expect(importedExecutionId).toMatch(/^[0-9a-f-]{36}$/);
+
+    await expect.poll(async () => {
+      const res = await request.get(`${api}/executions/${importedExecutionId}`, {
+        headers: { Authorization: orgABearer },
+      });
+      if (!res.ok()) return 'pending';
+      const body = await res.json();
+      return body.status;
+    }, { timeout: 30_000 }).toMatch(/^(completed|completed_with_errors|failed|validation_failed)$/);
+
+    await page.getByTestId('related-execution').click();
+    await expect(page).toHaveURL(new RegExp(`/executions/${importedExecutionId}`));
+    await expect(page.locator('.summary-highlights')).toBeVisible();
+    await expect(page.locator('.assistance')).toBeVisible();
+
+    const callsBefore = await readProviderCalls();
+    const generateResponse = page.waitForResponse(res => res.url().endsWith('/ai-assistance') && res.request().method() === 'POST');
+    await page.getByRole('button', { name: buttonName }).click();
+    const generated = await generateResponse;
+    expect(generated.status()).toBe(200);
+    const payload = await generated.json();
+    expect(payload.execution_id).toBe(importedExecutionId);
+    expect(payload.summary).toBeTruthy();
+    expect(payload.provenance).toBeDefined();
+    expect(Array.isArray(payload.limitations)).toBe(true);
+    const callsAfterFirst = await readProviderCalls();
+    expect(callsAfterFirst).toBe(callsBefore + 1);
+
+    await page.reload();
+    await expect(page.locator('.assistance-summary')).toHaveText(payload.summary);
+    const repeatRes = await request.post(`${api}/executions/${importedExecutionId}/ai-assistance`, {
+      headers: { Authorization: orgABearer, 'Content-Type': 'application/json' },
+      data: {},
+    });
+    expect(repeatRes.status()).toBe(200);
+    const repeatPayload = await repeatRes.json();
+    expect(repeatPayload.assistance_id).toBe(payload.assistance_id);
+    expect(repeatPayload.summary).toBe(payload.summary);
+    expect(await readProviderCalls()).toBe(callsAfterFirst);
+    await screenshotAndAxe(page, info, 'real-import-ready');
+
+    const orgBBearer = await loginAndCaptureBearer(page, 'manager-b.e2e@example.invalid');
+    await page.goto(`/executions/${importedExecutionId}`);
+    await expect(page.locator('.assistance-summary')).toHaveCount(0);
+    const orgBGet = await request.get(`${api}/executions/${importedExecutionId}/ai-assistance/latest`, {
+      headers: { Authorization: orgBBearer },
+    });
+    expect(orgBGet.status()).toBe(404);
+    expect(await orgBGet.text()).not.toContain(payload.summary);
+    const orgBPost = await request.post(`${api}/executions/${importedExecutionId}/ai-assistance`, {
+      headers: { Authorization: orgBBearer, 'Content-Type': 'application/json' },
+      data: {},
+    });
+    expect(orgBPost.status()).toBe(404);
+    expect(await orgBPost.text()).not.toContain(importedExecutionId);
   });
 });

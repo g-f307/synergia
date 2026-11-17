@@ -11,6 +11,7 @@ OPERATOR_ID = UUID("63000000-0000-4000-8000-000000000001")
 READER_ID = UUID("63000000-0000-4000-8000-000000000002")
 MANAGER_ID = UUID("63000000-0000-4000-8000-000000000003")
 ADMIN_ID = UUID("63000000-0000-4000-8000-000000000004")
+MANAGER_B_ID = UUID("63000000-0000-4000-8000-000000000005")
 ORGANIZATION_A = UUID("63000000-0000-4000-8000-000000000011")
 ORGANIZATION_B = UUID("63000000-0000-4000-8000-000000000012")
 
@@ -27,6 +28,7 @@ def bootstrap() -> None:
         (READER_ID, "E2E Reader", "en-US", "reader.e2e@example.invalid"),
         (MANAGER_ID, "E2E Manager", "en-US", "manager.e2e@example.invalid"),
         (ADMIN_ID, "E2E Administrator", "pt-BR", "admin.e2e@example.invalid"),
+        (MANAGER_B_ID, "E2E Manager B", "en-US", "manager-b.e2e@example.invalid"),
     )
     with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
         cursor.executemany(
@@ -102,6 +104,17 @@ def bootstrap() -> None:
                 WHERE organization_id IS NOT NULL AND revoked_at IS NULL DO NOTHING
             """,
             (MANAGER_ID, ORGANIZATION_A),
+        )
+        cursor.execute(
+            """
+            INSERT INTO synergia.user_role_assignments
+                (user_id, role_id, organization_id)
+            SELECT %s, id, %s FROM synergia.roles
+            WHERE normalized_key = 'gestor'
+            ON CONFLICT (user_id, role_id, organization_id)
+                WHERE organization_id IS NOT NULL AND revoked_at IS NULL DO NOTHING
+            """,
+            (MANAGER_B_ID, ORGANIZATION_B),
         )
         cursor.execute(
             """
