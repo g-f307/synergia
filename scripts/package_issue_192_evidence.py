@@ -69,8 +69,9 @@ def _collect_allowlisted_files(resolved_dir: Path) -> list[Path]:
         for item in resolved_dir.glob(pattern):
             if item.is_file() and not item.is_symlink():
                 resolved_item = item.resolve()
-                if resolved_item.is_relative_to(resolved_dir) and not _is_excluded_attachment(
-                    resolved_item
+                if (
+                    resolved_item.is_relative_to(resolved_dir)
+                    and not _is_excluded_attachment(resolved_item)
                 ):
                     collected.add(resolved_item)
     return sorted(collected)
