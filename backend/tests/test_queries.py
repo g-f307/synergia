@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import UTC, date, datetime
 from uuid import UUID
 
@@ -9,6 +10,8 @@ from fastapi.testclient import TestClient
 
 from app.authorization import ActorContext, get_actor_context
 from app.execution import reprocessing_fingerprint
+from app.execution_filters import ExecutionQueryFilters
+from app.execution_summary import ExecutionSummary
 from app.main import app
 from app.queries import ReprocessingConflict, get_query_repository
 
@@ -457,10 +460,30 @@ class MemoryQueryRepository:
         self.reprocessing_requests[fingerprint] = deepcopy(result)
         return result
 
-    def indicators(self, organization_ids=None, date_from=None, date_to=None) -> dict:
+    def indicators(
+        self, organization_ids=None, date_from=None, date_to=None,
+        *, execution_filters=None,
+    ) -> dict:
         self.indicator_filters = (organization_ids, date_from, date_to)
+        self.execution_filters = execution_filters
         return {
             "executions": {"completed": 1},
+            "execution_summary": ExecutionSummary.model_validate(
+                {
+                    "generated_at": NOW,
+                    "scope": {
+                        "permission": "dashboard.read",
+                        "organization_ids": (
+                            sorted(organization_ids, key=str)
+                            if organization_ids is not None else None
+                        ),
+                    },
+                    "filters": asdict(execution_filters or ExecutionQueryFilters()),
+                    "total": 1,
+                    "by_outcome": {"completed": 1},
+                    "by_source": [],
+                }
+            ),
             "workorders": {"total": 1, "partially_released": 1},
             "pending_items": {"open": 2, "resolved": 1},
             "quantities": {
@@ -472,7 +495,8 @@ class MemoryQueryRepository:
         }
 
     def indicator_related(
-        self, entity, organization_ids, date_from, date_to, page, page_size
+        self, entity, organization_ids, date_from, date_to, page, page_size,
+        *, execution_filters=None,
     ):
         self.related_filters = (
             entity,
@@ -799,6 +823,41 @@ def test_rejects_invalid_indicator_period(api) -> None:
     response = client.get("/indicators?date_from=2026-09-01&date_to=2026-08-01")
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_period"
+
+
+@pytest.mark.parametrize("entity", ["", "/executions", "/workorders", "/pending-items"])
+@pytest.mark.parametrize(
+    ("query", "code"),
+    [
+        (
+            "date_from=2026-11-01&started_to=2026-11-02T00:00:00Z",
+            "ambiguous_execution_period",
+        ),
+        ("started_from=2026-11-01T08:00:00", "timezone_required"),
+        (
+            "started_from=2026-11-01T08:00:00-04:00&started_to=2026-11-01T11:00:00Z",
+            "invalid_period",
+        ),
+    ],
+)
+def test_rejects_ambiguous_or_invalid_instant_filters(api, entity, query, code):
+    client, _ = api
+    response = client.get(f"/indicators{entity}?{query}")
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == code
+
+
+def test_forwards_normalized_indicator_instants_and_format(api):
+    client, repository = api
+    response = client.get("/indicators", params={
+        "source": "OWM", "file_type": ".CSV",
+        "started_from": "2026-11-01T08:00:00-04:00",
+        "started_to": "2026-11-01T12:00:00Z",
+    })
+    assert response.status_code == 200
+    filters = repository.execution_filters
+    assert filters.source == "OWM" and filters.file_type == "csv"
+    assert filters.date_from == filters.date_to == datetime(2026, 11, 1, 12, tzinfo=UTC)
 
 
 def test_rejects_indicator_organization_outside_scope(api) -> None:

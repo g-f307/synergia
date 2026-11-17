@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     initialize_assistance_telemetry()
     application = FastAPI(
         title="SYNERGIA API",
-        version="0.14.0",
+        version="0.15.0",
         description=(
             "Contratos estáveis para importação, acompanhamento, consultas, "
             "pendências, relatórios, notificações, reprocessamento, identidade "
@@ -66,8 +66,9 @@ def create_app() -> FastAPI:
     application.include_router(audit_router)
     application.include_router(feedback_router)
     application.include_router(imports_router)
-    application.include_router(queries_router)
+    # Register /executions/summary before the dynamic /executions/{execution_id}.
     application.include_router(monitoring_router)
+    application.include_router(queries_router)
     application.include_router(users_router)
     application.include_router(access_control_router)
     application.include_router(profile_router)

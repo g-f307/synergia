@@ -12,6 +12,16 @@
     "unavailable"
   ],
   "supporting_operations": [
+    {
+      "method": "GET",
+      "path": "/executions/summary",
+      "permission": "execution.read",
+      "scope": "org",
+      "exposure": "deferred",
+      "consumer": "none",
+      "decision": "Agregado canônico disponível no backend; consumidores web serão integrados na próxima etapa da #193.",
+      "target": "issue-193"
+    },
     {"method": "POST", "path": "/executions/{execution_id}/ai-assistance", "permission": "execution.read + ai.assistance.generate", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/executions/{execution_id}/ai-assistance/latest", "permission": "execution.read + ai.assistance.read", "scope": "org", "exposure": "deferred", "consumer": "none", "decision": "A API e o cliente tipado estao disponiveis; o card de assistencia ainda nao esta integrado ao detalhe da execucao.", "target": "issue-190"},
     {"method": "GET", "path": "/me/ai-assistance-capability", "permission": "execution.read + (ai.assistance.read ou ai.assistance.generate)", "scope": "org", "exposure": "technical", "consumer": "platform", "decision": "Fundacao de capacidade sem exposicao de endpoint/modelo; card de execucao sera integrado na issue #190.", "target": "issue-190", "evidence": ["web/src/app/core/ai-assistance-capability.service.ts"]},

@@ -45,6 +45,16 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.15.0` acrescenta o agregado autorizado `GET /executions/summary`,
+o campo `outcome` ao catálogo/detalhe e `execution_summary` aos indicadores
+(#193). Adiciona `outcome` como filtro de catálogo/resumo e os filtros
+`status`, `outcome`, `lifecycle`, `execution_id`, `source`, `file_type`,
+`started_from` e `started_to` ao painel e suas consultas relacionadas.
+`status`, `lifecycle`, o mapa `executions` e os parâmetros legados de data
+permanecem disponíveis. `lifecycle` é depreciado para apresentação e métricas,
+sem mudança de enum ou semântica. Não há alteração de schema, catálogo RBAC,
+pipeline ou transições persistidas. Ver [contrato](execution-monitoring.md#situação-canônica-e-agregado-autorizado-193).
+
 A API `0.14.0` remove as rotas experimentais `/ai/quality/scenarios` e
 `/ai/quality/scenarios/{scenario_id}/explanations` da superfície operacional
 (#192), preservando o núcleo de avaliação offline em `scripts/` e mantendo
