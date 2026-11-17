@@ -6,13 +6,18 @@ import hashlib
 import json
 import math
 import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import psycopg
 import pytest
 from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
+from psycopg import sql
+from psycopg.conninfo import make_conninfo
 from psycopg.rows import dict_row
 from test_ai_assistance_e2e_gates import (
     DIGEST,
@@ -27,7 +32,40 @@ from app.ai_assistance_fallback import required_limitations
 from app.authorization import ActorContext
 from app.main import create_app
 
-pytestmark = [pytest.mark.integration]
+pytestmark = [pytest.mark.integration, pytest.mark.real_authorization]
+
+
+@pytest.fixture
+def integration_database(monkeypatch):
+    """Own the entire database so audit/notification outboxes cannot leak."""
+    parent_url = os.environ["DATABASE_URL"]
+    name = "synergia_issue_192_test_" + uuid4().hex
+    database_url = make_conninfo(parent_url, dbname=name)
+    with psycopg.connect(parent_url, autocommit=True) as admin:
+        admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    try:
+        monkeypatch.setenv("DATABASE_URL", database_url)
+        monkeypatch.setenv("SYNERGIA_ENV", "test")
+        monkeypatch.setenv("SYNERGIA_LOCAL_AUTH_ENABLED", "true")
+        monkeypatch.setenv("AUTH_REFRESH_COOKIE_SECURE", "false")
+        subprocess.run(
+            [
+                sys.executable,
+                str(
+                    Path(__file__).resolve().parents[2]
+                    / "scripts/apply_migrations.py"
+                ),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        yield database_url
+    finally:
+        with psycopg.connect(parent_url, autocommit=True) as admin:
+            admin.execute(
+                sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name))
+            )
 
 BUSINESS_TABLES = (
     "workorders",
@@ -147,8 +185,10 @@ def _seed_self_contained_tenants(database_url: str, password: str) -> dict[str, 
     }
 
 
-def test_real_postgres_integration_isolation_degradation_and_p95(monkeypatch):
-    database_url = os.environ["DATABASE_URL"]
+def test_real_postgres_integration_isolation_degradation_and_p95(
+    monkeypatch, integration_database
+):
+    database_url = integration_database
     password = "synthetic-int-192-password-long"
     seeded = _seed_self_contained_tenants(database_url, password)
     exec_a = seeded["exec_a"]

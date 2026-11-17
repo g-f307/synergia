@@ -32,6 +32,15 @@ falham na `main`, inclusive com Python 3.12. A regressão nova de documentação
 foi corrigida e os 42 testes documentais passaram. A causa das falhas de baseline
 não foi atribuída a uma versão de Python sem comprovação.
 
+A CI revelou duas falhas encadeadas no teste integrado novo: autenticação local
+não explicitada e notificações deixadas para a suíte seguinte. O teste agora
+habilita a autenticação sintética explicitamente e cria um banco próprio com
+nome aleatório `synergia_issue_192_test_*`, aplica as migrations canônicas e
+remove somente esse banco no teardown. A conexão de teste precisa de permissão
+CREATEDB; nunca usar credenciais ou instância de produção. A sequência IA +
+persistência de e-mail passou com 5/5 testes, inclusive com autenticação local
+desabilitada no ambiente externo. Nenhum outbox de outra suíte é limpo ou ignorado.
+
 As campanhas Qwen são preservadas por rodada, inclusive falhas. A tentativa
 inicial encontrou `runtime_pin_mismatch` antes de inferir; ela não conta como
 aprovação de modelo. O ensaio seguinte utiliza runtime isolado e manifesto
