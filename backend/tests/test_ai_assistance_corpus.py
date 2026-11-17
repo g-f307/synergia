@@ -14,7 +14,7 @@ if str(ROOT / "scripts") not in sys.path:
 
 
 def test_frozen_corpus_manifest_categories_and_hashes():
-    from generate_ai_assistance_corpus import verify_corpus
+    from generate_ai_assistance_corpus import FREEZE_FILES, verify_corpus
 
     manifest_path = CORPUS_DIR / "manifest.json"
     assert manifest_path.exists()
@@ -63,6 +63,15 @@ def test_frozen_corpus_manifest_categories_and_hashes():
     ):
         assert coverage[key]
         assert set(coverage[key]).issubset(case_ids)
+
+    assets_sha256 = manifest["freeze"]["assets_sha256"]
+    assert set(FREEZE_FILES).issubset(assets_sha256.keys())
+    for required_asset in (
+        "backend/app/ai_assistance_context.py",
+        "backend/app/ai_assistance_context_models.py",
+        "backend/app/ai_assistance_fallback.py",
+    ):
+        assert required_asset in assets_sha256
 
     verify_corpus(CORPUS_DIR)
 
@@ -125,3 +134,35 @@ def test_verify_corpus_rejects_tampering_and_path_escapes(tmp_path):
     case0.write_text(case0.read_text(encoding="utf-8") + " ", encoding="utf-8")
     with pytest.raises(ValueError, match="Hash divergente"):
         verify_corpus(corpus)
+
+
+def test_verify_corpus_detects_context_and_fallback_tampering(tmp_path, monkeypatch):
+    import shutil
+
+    import generate_ai_assistance_corpus as corpus_mod
+    import pytest
+
+    fake_root = tmp_path / "repo"
+    for rel in corpus_mod.FREEZE_FILES:
+        src = ROOT / rel
+        dst = fake_root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+    monkeypatch.setattr(corpus_mod, "ROOT", fake_root)
+    corpus = tmp_path / "corpus"
+    corpus_mod.generate_corpus(corpus)
+    corpus_mod.verify_corpus(corpus)
+
+    for rel in (
+        "backend/app/ai_assistance_context.py",
+        "backend/app/ai_assistance_context_models.py",
+        "backend/app/ai_assistance_fallback.py",
+    ):
+        target = fake_root / rel
+        original = target.read_text(encoding="utf-8")
+        target.write_text(original + "\n# tampered\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="Freeze do corpus diverge"):
+            corpus_mod.verify_corpus(corpus)
+        target.write_text(original, encoding="utf-8")
+        corpus_mod.verify_corpus(corpus)

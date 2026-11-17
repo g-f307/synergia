@@ -61,12 +61,15 @@
       "backend/app/ai_assistance_assets/system.txt": "a9d2013df304a6851e6835c4c1fb15b8d0ed8ccec18340293afe2947558e20bd",
       "backend/app/ai_assistance_assets/template.txt": "c5bf4cf4423aa0617f934b77928399af6abaf47481f3e22bea5be17c6f59037e",
       "backend/app/ai_assistance_assets/output.schema.json": "161cd39811ca63ff76e4a431221e38282f25ea8dd2259275cdc8a9531152ccac",
+      "backend/app/ai_assistance_context.py": "b913c3a0fa31a6cdf31cc97934cb1c4915e86cf33fb5afe3a541223fb2c24435",
+      "backend/app/ai_assistance_context_models.py": "e74bed20aa509095f765586281ee6a00bb7cdbe1b5ae21c18ba41989e8663bed",
       "backend/app/ai_assistance_context_policy.py": "db36a7263819bd08158d35c3a14dc15aad4c270cb3c264417b76a42bd122bf8e",
       "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
       "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
+      "backend/app/ai_assistance_fallback.py": "6d52171f1bb3824b1acbc14692da1648db2a588b0d63ed1309291c15d7c34eb5",
       "backend/app/ai_assistance_generator.py": "74c8179e01f26f195e717968471dfdea7a3f68178e655f12312806ab11cf68fc",
       "backend/app/ai_assistance_provider.py": "c65dfe70b29796e06685c2c31db53a33ce47d875906a84edae9328925dcaf164",
-      "scripts/generate_ai_assistance_corpus.py": "36709686d820aa6fd5f89fc20d0c064981ea94a49c28bf61da639a9f5b29ff5a",
+      "scripts/generate_ai_assistance_corpus.py": "19ab6434c733118c038578089385b721d288ba0aa268145a450c5e56e2c042e6",
       "scripts/run_ai_assistance_campaign.py": "adbaccf5bac9d1131fa4cbfa559e2fd770742e67b4f9787415ab55ed5d8f355c"
     }
   },
