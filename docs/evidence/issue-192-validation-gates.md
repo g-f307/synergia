@@ -25,6 +25,7 @@
 | Artefatos de produção | Bundle real (53 arquivos), imagem backend e imagem web sem marcadores experimentais | Imagens exclusivas de revisão; aplicação existente não foi substituída |
 | Auditoria | Exercício operacional existente executado novamente: 20 eventos reconciliados na pesquisa real do Graylog | Runtime HTTP sintético; não é correlação de cada caso da campanha Qwen |
 | Observabilidade | promtool aprovou alertas de IA e regras de dashboard (42 regras) | Não substitui validação em infraestrutura corporativa |
+| Campanha Qwen real | 30 casos: 16 ready, 8 rejected, 3 unavailable/timeouts, 3 insufficient_evidence; 27 chamadas | Portões `inference_completed` e `no_unavailable_on_sufficient` reprovados; não aprovar ativação |
 
 Os três testes de reprodutibilidade XLSX que falharam na suíte ampla também
 falham na `main`, inclusive com Python 3.12. A regressão nova de documentação
@@ -36,12 +37,27 @@ inicial encontrou `runtime_pin_mismatch` antes de inferir; ela não conta como
 aprovação de modelo. O ensaio seguinte utiliza runtime isolado e manifesto
 original com o digest congelado, sem alterar pesos, prompt ou critérios.
 
+Resultado final: [relatório sanitizado por caso](issue-192-real-campaign.json).
+As oito rejeições foram contidas: três `invalid_json`, quatro `invalid_schema` e
+uma `ungrounded_summary`. Os três casos indisponíveis registraram
+`runtime_timeout`. Os validadores de referência, grounding da **resposta entregue**
+e limites passaram em 30/30; isso inclui os fallbacks, não significa 30 respostas
+de modelo aceitas. Somente 16/27 tentativas aplicáveis produziram estado `ready`.
+O freeze inicial/final permaneceu idêntico. Nenhum ajuste de prompt, schema,
+pesos ou critério foi realizado durante a rodada.
+
+O pacote local conserva as rodadas anteriores com falha de pin, a campanha final,
+bytes sintéticos brutos, capturas/Axe, migrations, p95 e drill Graylog com hashes.
+Traces de navegador com credenciais/tokens e arquivos privados do laboratório
+foram excluídos; respostas brutas e o zip não são versionados.
+
 ## Portão de conclusão e pendências
 
 **Integração ainda não declarada concluída.** A feature continua desligada por
 padrão. Este registro não autoriza ativação produtiva nem encerramento da milestone.
 
-- Consolidar o resultado final da campanha real, incluindo rejeições e timeouts.
+- Resolver e revalidar os portões reprovados em nova rodada congelada; a presente
+  campanha está encerrada e seus resultados não devem ser sobrescritos.
 - Completar medição sem inferência das etapas de contexto e persistência de geração.
 - Executar navegação integrada por cada tipo de referência disponível, não somente DIV.
 - Comprovar no navegador flag e indisponibilidade reais no servidor, sem interceptação.
