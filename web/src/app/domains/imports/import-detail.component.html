@@ -1,0 +1,151 @@
+<section class="import-detail" aria-labelledby="import-detail-title">
+  <header class="detail-toolbar">
+    @if (canImport()) { <a class="back-link" routerLink="/imports/new"><span aria-hidden="true">←</span>{{ i18n.t('imports.newAnother') }}</a> }
+    <h1 id="import-detail-title">{{ i18n.t('imports.detailTitle') }}</h1>
+  </header>
+  <div class="detail-scroll">
+    @if (loading()) { <syn-state state="loading" [title]="i18n.t('imports.detailLoading')" message="" /> }
+    @if (failure(); as error) {
+      <syn-state [state]="failureState(error)" [title]="i18n.t('imports.detailError')" [message]="error.message">
+        <button type="button" class="secondary" (click)="loadImport()">{{ i18n.t('imports.retry') }}</button>
+        <syn-import-technical-details [code]="error.code" [status]="error.status" [correlationId]="error.correlationId" />
+      </syn-state>
+    }
+    @if (item(); as current) {
+      <section class="overview" [attr.aria-label]="i18n.t('imports.result')">
+        <div class="status-summary"><div><small>{{ i18n.t('imports.status') }}</small><strong class="status-pill" [attr.data-status]="result()?.execution_status || current.status">{{ statusLabel(result()?.execution_status || current.status) }}</strong></div></div>
+        <dl class="metadata">
+          <div><dt>{{ i18n.t('imports.execution') }}</dt><dd>
+            @if (canOpenExecution()) { <a data-testid="related-execution" class="technical metadata-link" [routerLink]="['/executions',current.execution_id]" [queryParams]="{from:'/imports/'+current.execution_id}">{{ current.execution_id }}<span aria-hidden="true">›</span></a> }
+            @else { <span class="technical">{{ current.execution_id }}</span> }
+          </dd></div>
+          <div><dt>{{ i18n.t('imports.source') }}</dt><dd>{{ current.source }}</dd></div>
+          <div><dt>{{ i18n.t('imports.file') }}</dt><dd>{{ current.file_name || i18n.t('common.notAvailable') }}</dd></div>
+          <div><dt>{{ i18n.t('imports.startedAt') }}</dt><dd>{{ i18n.formatDate(current.started_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</dd></div>
+        </dl>
+      </section>
+      @if (partial()) { <div class="partial-notice" role="status"><strong>{{ i18n.t('imports.partialTitle') }}</strong><span>{{ i18n.t('imports.partialMessage') }}</span></div> }
+
+      <section class="detail-section summary-section" aria-labelledby="import-summary-title">
+        <header><h2 id="import-summary-title">{{ i18n.t('imports.summaryTitle') }}</h2></header>
+        @if (summaryState() === 'loading') { <p role="status">{{ i18n.t('imports.summaryLoading') }}</p> }
+        @if (summaryFailure(); as error) {
+          <syn-state [state]="failureState(error)" [title]="i18n.t('imports.summaryError')" [message]="failureMessage('summary',error)">
+            <button type="button" class="secondary" (click)="loadSummary()">{{ i18n.t('imports.retry') }}</button>
+            <syn-import-technical-details [code]="error.code" [status]="error.status" [correlationId]="error.correlationId" />
+          </syn-state>
+        }
+        @if (summaryState() === 'ready') { @if (result(); as result) {
+          @switch (result.summary_status) {
+            @case ('ready') { @if (summary(); as totals) {
+              <dl class="summary" data-testid="import-counts">
+                <div><dt>{{ i18n.t('imports.rowsRead') }}</dt><dd>{{ i18n.formatNumber(totals.rows_read) }}</dd></div>
+                <div><dt>{{ i18n.t('imports.validRecords') }}</dt><dd>{{ i18n.formatNumber(totals.valid_records) }}</dd></div>
+                <div><dt>{{ i18n.t('imports.rejectedRecords') }}</dt><dd>{{ i18n.formatNumber(totals.rejected_records) }}</dd></div>
+                <div><dt>{{ i18n.t('imports.normalizedRecords') }}</dt><dd>{{ i18n.formatNumber(totals.normalized_records) }}</dd></div>
+                <div><dt>{{ i18n.t('imports.errors') }}</dt><dd>{{ i18n.formatNumber(totals.errors) }}</dd></div>
+                <div><dt>{{ i18n.t('imports.warnings') }}</dt><dd>{{ i18n.formatNumber(totals.warnings) }}</dd></div>
+              </dl>
+            } }
+            @case ('processing') {
+              <syn-state state="loading" [title]="i18n.t('imports.status.processing')" [message]="i18n.t('imports.summaryPending')">
+                <button type="button" class="secondary" (click)="refreshResult()">{{ i18n.t('imports.refreshResult') }}</button>
+              </syn-state>
+            }
+            @case ('unavailable') {
+              <syn-state state="unavailable" [title]="i18n.t('imports.resultUnavailable')" [message]="i18n.t(result.reason_code === 'preparation_error' ? 'imports.preparationFailed' : 'imports.resultSupport')">
+                <button type="button" class="secondary" (click)="refreshResult()">{{ i18n.t('imports.refreshResult') }}</button>
+                <syn-import-technical-details [code]="result.reason_code" [correlationId]="result.correlationId || null" />
+              </syn-state>
+            }
+            @case ('not_applicable') {
+              @if (result.reason_code === 'duplicate') {
+                <syn-state state="empty" [title]="i18n.t('imports.state.duplicate.title')" [message]="i18n.t('imports.state.duplicate.message')">
+                  @if (result.duplicate_of_execution_id; as previous) { <a class="previous-import" [routerLink]="['/imports',previous]">{{ i18n.t('imports.previousImport') }}</a> }
+                </syn-state>
+              } @else {
+                <syn-state state="error" [title]="i18n.t('imports.state.rejected.title')" [message]="reasonLabel(result.inspection_reason_code || '')" />
+              }
+            }
+          }
+        } }
+      </section>
+
+      <section class="detail-section issues-section" aria-labelledby="import-issues-title">
+        <header class="issues-heading"><h2 id="import-issues-title">{{ i18n.t('imports.issues.title') }}</h2>
+          <div class="issue-controls">
+            <button type="button" class="secondary" (click)="loadIssues(true)" [disabled]="issuesLoading()">{{ i18n.t('imports.issues.refresh') }}</button>
+            <div class="severity-filter"><label for="import-severity">{{ i18n.t('imports.issues.severity') }}</label>
+              <select id="import-severity" [value]="severity()" (change)="filterSeverity($any($event.target).value)">
+                <option value="">{{ i18n.t('imports.issues.all') }}</option>
+                <option value="error">{{ i18n.t('imports.issues.errorSeverity') }}</option>
+                <option value="warning">{{ i18n.t('imports.issues.warningSeverity') }}</option>
+              </select>
+            </div>
+            <button type="button" class="secondary" (click)="exportCsv()" [disabled]="exporting() || issuesLoading() || !issuePage()?.pagination?.total" [attr.aria-busy]="exporting()">{{ i18n.t(exporting() ? 'imports.issues.exporting' : 'imports.issues.export') }}</button>
+          </div>
+        </header>
+        @if (issuesLoading()) { <p role="status">{{ i18n.t('imports.issues.loading') }}</p> }
+        @if (issuesFailure(); as error) {
+          <syn-state [state]="failureState(error)" [title]="i18n.t('imports.issues.error')" [message]="failureMessage('issues',error)">
+            <button type="button" class="secondary" (click)="loadIssues(true)">{{ i18n.t('imports.retry') }}</button>
+            <syn-import-technical-details [code]="error.code" [status]="error.status" [correlationId]="error.correlationId" />
+          </syn-state>
+        }
+        @if (issuePage(); as page) {
+          <p class="issue-total" role="status">{{ i18n.t('imports.issues.count', {count:i18n.formatNumber(page.pagination.total)}) }}@if(result(); as result){ · {{ i18n.t('imports.issues.overallCount', {count:i18n.formatNumber(result.issues_total)}) }} }</p>
+          @if (page.items.length) {
+            <syn-responsive-table>
+              <table class="issues-table" [attr.aria-label]="i18n.t('imports.issues.title')">
+                <thead><tr>
+                  <th scope="col">{{ i18n.t('imports.issues.severity') }}</th><th scope="col">{{ i18n.t('imports.file') }}</th>
+                  <th scope="col">{{ i18n.t('imports.issues.sheet') }}</th><th scope="col">{{ i18n.t('imports.issues.row') }}</th>
+                  <th scope="col">{{ i18n.t('imports.issues.column') }}</th><th scope="col">{{ i18n.t('imports.issues.code') }}</th><th scope="col">{{ i18n.t('imports.issues.reason') }}</th>
+                </tr></thead>
+                <tbody>@for (issue of page.items; track issue.id) {
+                  <tr>
+                    <td><syn-badge [tone]="issue.severity === 'error' ? 'error' : 'partial'">{{ i18n.t(issue.severity === 'error' ? 'imports.issues.errorSeverity' : 'imports.issues.warningSeverity') }}</syn-badge></td>
+                    <td>{{ issue.safe_file_name || i18n.t('common.notAvailable') }}</td><td>{{ issue.sheet_name || i18n.t('common.notAvailable') }}</td>
+                    <td>{{ issue.row_number === null ? i18n.t('common.notAvailable') : i18n.formatNumber(issue.row_number) }}</td>
+                    <td>{{ issue.column_name || i18n.t('common.notAvailable') }}</td><td class="technical">{{ issue.code }}</td><td>{{ issueReason(issue.code) }}</td>
+                  </tr>
+                }</tbody>
+              </table>
+            </syn-responsive-table>
+          } @else {
+            <p class="empty-copy">{{ i18n.t(page.pagination.total ? 'imports.issues.emptyPage' : result()?.summary_status === 'processing' ? 'imports.issues.emptyProcessing' : 'imports.issues.empty') }}</p>
+            @if (page.pagination.total) { <button type="button" class="secondary" (click)="goToPage(1)">{{ i18n.t('imports.issues.firstPage') }}</button> }
+          }
+          @if (page.pagination.pages > 1) { <syn-pagination [page]="page.pagination.page" [pages]="page.pagination.pages" (pageChange)="goToPage($event)" /> }
+        }
+        @if (exportFailure(); as error) {
+          <syn-state [state]="failureState(error)" [title]="i18n.t('imports.issues.exportError')" [message]="failureMessage('export',error)">
+            <syn-import-technical-details [code]="error.code" [status]="error.status" [correlationId]="error.correlationId" />
+          </syn-state>
+        }
+      </section>
+
+      <section class="detail-section inspection-section" aria-labelledby="import-inspection-title">
+        <header><h2 id="import-inspection-title">{{ i18n.t('imports.inspectionTitle') }}</h2></header>
+        @if (inspectionState() === 'loading') { <p role="status">{{ i18n.t('imports.inspectionLoading') }}</p> }
+        @if (inspectionFailure(); as error) {
+          <syn-state [state]="failureState(error)" [title]="i18n.t('imports.inspectionError')" [message]="failureMessage('inspection',error)">
+            <button type="button" class="secondary" (click)="loadInspections()">{{ i18n.t('imports.retry') }}</button>
+            <syn-import-technical-details [code]="error.code" [status]="error.status" [correlationId]="error.correlationId" />
+          </syn-state>
+        }
+        @if (inspectionState() === 'ready') {
+          @if (!inspections().length) { <p class="empty-copy">{{ i18n.t('imports.noInspection') }}</p> }
+          <div class="inspection-list">@for (inspection of inspections(); track inspection.inspection_id) {
+            <article><div><strong>{{ inspection.original_file_name }}</strong><p>{{ reasonLabel(inspection.reason_code) }}</p></div>
+              <span class="decision-pill" [attr.data-decision]="inspection.decision">{{ decisionLabel(inspection) }}</span>
+              @if (isQuarantined(inspection)) { <p class="inspection-alert">{{ i18n.t('imports.quarantinedUntil', { date: i18n.formatDate(inspection.retained_until!, { dateStyle: 'medium', timeStyle: 'short' }) }) }}</p> }
+              @if (inspection.discarded_at) { <p class="inspection-alert">{{ i18n.t('imports.quarantineDiscarded') }}</p> }
+            </article>
+          }</div>
+        }
+      </section>
+      @if (canImport()) { <nav class="actions" [attr.aria-label]="i18n.t('imports.newAnother')"><a routerLink="/imports/new">{{ i18n.t('imports.newAnother') }}<span aria-hidden="true">→</span></a></nav> }
+    }
+  </div>
+</section>

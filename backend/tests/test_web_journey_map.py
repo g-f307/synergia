@@ -16,7 +16,7 @@ from scripts import validate_web_journey_map  # noqa: E402
 def test_web_journey_map_matches_openapi_access_and_prototype() -> None:
     document = validate_web_journey_map.validate()
 
-    assert document["version"] == "1.8.0"
+    assert document["version"] == "1.9.0"
     assert document["prototype_ref"] == "prototype-v1.0"
     route_ids = {route["id"] for route in document["routes"]}
     assert "ai-quality" not in route_ids

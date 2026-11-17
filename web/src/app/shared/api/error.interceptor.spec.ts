@@ -57,6 +57,28 @@ describe('apiErrorInterceptor', () => {
     expect(failure?.message).not.toContain('Arquivo');
   });
 
+  for (const status of [401, 403, 404, 503]) {
+    it(`decodes bounded JSON download errors without leaking messages (HTTP ${status})`, async () => {
+      const received = new Promise<ApiFailure>(resolve => http.get('/download', { responseType: 'blob' }).subscribe({ error: resolve }));
+      controller.expectOne('/download').flush(
+        new Blob([JSON.stringify({ error: { code: 'import_issues_unavailable', message: '/private password=synthetic', details: { storage_path: '/private' } } })], { type: 'application/json' }),
+        { status, statusText: 'Synthetic', headers: { 'x-correlation-id': 'corr-download' } }
+      );
+      const failure = await received;
+      expect(failure.status).toBe(status); expect(failure.code).toBe('import_issues_unavailable');
+      expect(failure.correlationId).toBe('corr-download');
+      expect(failure.message).not.toContain('private'); expect(failure.details).toEqual({});
+    });
+  }
+
+  it('falls back safely for a malformed JSON download error', async () => {
+    const received = new Promise<ApiFailure>(resolve => http.get('/download', { responseType: 'blob' }).subscribe({ error: resolve }));
+    controller.expectOne('/download').flush(new Blob(['not json /private'], { type: 'application/json' }), { status: 503, statusText: 'Synthetic' });
+    const failure = await received;
+    expect(failure.kind).toBe('unavailable'); expect(failure.code).toBe('unexpected_error');
+    expect(failure.message).not.toContain('private');
+  });
+
   it('preserves safe retry guidance for rate limiting', () => {
     let failure: ApiFailure | undefined;
     http.post('/reports', {}).subscribe({ error: (error: ApiFailure) => { failure = error; } });

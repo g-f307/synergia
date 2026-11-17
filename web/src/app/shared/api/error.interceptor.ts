@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, from, mergeMap, of, throwError } from 'rxjs';
 
 import { I18nService } from '../i18n/i18n.service';
 import { ApiErrorKind, ApiFailure } from './api-error';
@@ -9,7 +9,7 @@ const kinds: Record<number, ApiErrorKind> = { 401: 'unauthorized', 403: 'forbidd
 
 export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
   const i18n = inject(I18nService);
-  return next(request).pipe(catchError((error: HttpErrorResponse) => {
+  const failureFor = (error: HttpErrorResponse): ApiFailure => {
     const body = typeof error.error === 'object' && error.error ? error.error : {};
     const status = error.status;
     const rawDetails = typeof body.error?.details === 'object' && body.error.details ? body.error.details : {};
@@ -27,6 +27,21 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) => {
       fields: Array.isArray(body.error?.fields) ? body.error.fields : [],
       details
     };
-    return throwError(() => failure);
+    return failure;
+  };
+  return next(request).pipe(catchError((error: HttpErrorResponse) => {
+    // Download requests receive even JSON errors as Blob. Read only bounded JSON
+    // errors, retaining the same safe message and structured-details allowlist.
+    if (error.error instanceof Blob && error.error.size <= 65536 && /(?:application\/json|\+json)/i.test(error.error.type)) {
+      return from(error.error.text()).pipe(
+        catchError(() => of('')),
+        mergeMap((text) => {
+          let body: unknown = {};
+          try { body = JSON.parse(text); } catch { /* malformed JSON uses the safe fallback */ }
+          return throwError(() => failureFor(new HttpErrorResponse({ error: body, status: error.status, headers: error.headers })));
+        })
+      );
+    }
+    return throwError(() => failureFor(error));
   }));
 };
