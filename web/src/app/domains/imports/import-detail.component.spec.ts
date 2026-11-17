@@ -44,35 +44,21 @@ describe('ImportDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('File accepted');
   });
 
-  it('shows unavailable and forbidden auxiliary responses as a partial result', () => {
-    imports.inspections.and.returnValue(throwError(() => failure('unavailable', 500, 'corr-inspection')));
+  it('invalidates all protected data when the summary is forbidden', () => {
     imports.resultSummary.and.returnValue(throwError(() => failure('forbidden', 403, 'corr-summary')));
-    const fixture = TestBed.createComponent(ImportDetailComponent);
-    fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(fixture.componentInstance.inspectionState()).toBe('unavailable');
-    expect(fixture.componentInstance.summaryState()).toBe('forbidden');
-    expect(text).toContain('Resultado parcial');
-    expect(text).toContain('inspeção está temporariamente indisponível');
-    expect(text).toContain('não possui permissão para consultar o resumo');
-    expect(fixture.nativeElement.querySelector('input[value]')).toBeNull();
-    expect([...fixture.nativeElement.querySelectorAll('details input')].map((input) => (input as HTMLInputElement).value)).toContain('corr-inspection');
-    expect(fixture.nativeElement.querySelector('details').open).toBeFalse();
-    expect(text).not.toContain('Nenhum registro de inspeção');
+    const fixture = TestBed.createComponent(ImportDetailComponent); fixture.detectChanges();
+    expect(fixture.componentInstance.item()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('não possui mais acesso');
+    expect(fixture.nativeElement.querySelector('details input').value).toBe('corr-summary');
+    expect(fixture.nativeElement.querySelector('.inspection-section')).toBeNull();
   });
 
-  it('distinguishes expected missing auxiliary resources from failures', () => {
-    imports.inspections.and.returnValue(throwError(() => failure('not-found', 404)));
+  it('treats missing scoped resources as inaccessible rather than pending', () => {
     imports.resultSummary.and.returnValue(throwError(() => failure('not-found', 404)));
-    const fixture = TestBed.createComponent(ImportDetailComponent);
-    fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(fixture.componentInstance.inspectionState()).toBe('missing');
-    expect(fixture.componentInstance.summaryState()).toBe('missing');
-    expect(text).toContain('inspeção não foi encontrada');
-    expect(text).toContain('resumo não foi encontrado');
-    expect(text).not.toContain('processamento está em andamento');
-    expect(text).not.toContain('temporariamente indisponível');
+    const fixture = TestBed.createComponent(ImportDetailComponent); fixture.detectChanges();
+    expect(fixture.componentInstance.item()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('não está mais acessível');
+    expect(fixture.nativeElement.textContent).not.toContain('processamento está em andamento');
   });
 
   it('uses one consistent surface with a visible title and internally scrolling content', () => {

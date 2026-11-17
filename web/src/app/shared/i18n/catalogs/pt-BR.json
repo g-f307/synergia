@@ -1094,5 +1094,7 @@
   "imports.issueReason.unmapped_issue": "Divergência sem descrição pública disponível; solicite análise ao suporte.",
   "imports.reason.capacityExceeded": "O arquivo excede a capacidade configurada para esta fonte. Reduza o volume de dados ou solicite análise ao suporte.",
   "imports.reason.noAuthorizedSheet": "Nenhuma aba autorizada foi encontrada. Confirme com o suporte as abas previstas para esta fonte.",
-  "imports.reason.unreadableWorkbook": "Não foi possível ler a planilha com segurança. Exporte um novo arquivo a partir da origem."
+  "imports.reason.unreadableWorkbook": "Não foi possível ler a planilha com segurança. Exporte um novo arquivo a partir da origem.",
+  "imports.accessDenied": "Você não possui mais acesso a esta importação.",
+  "imports.resourceUnavailable": "A importação não foi encontrada ou não está mais acessível."
 }

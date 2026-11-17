@@ -159,5 +159,5 @@ ausência de artefato, permissões, falhas parciais e encaminhamento ao suporte.
 A validação inclui backend, PostgreSQL, Angular e navegador com autorização
 real, remoção física do JSON, reconciliação de 55 ocorrências, duas organizações,
 recusa por macro e zoom nativo 250% nos dois temas. A implementação está
-versionada em quatro commits. A integração ainda depende da CI remota e da revisão do PR; resultados locais não representam aprovação
+versionada por responsabilidade, com correção posterior de revogação de acesso. A integração ainda depende da CI remota e da revisão do PR; resultados locais não representam aprovação
 desses portões.

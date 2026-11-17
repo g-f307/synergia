@@ -145,26 +145,29 @@ export class ImportDetailComponent implements OnInit {
   }
 
   loadSummary(): void {
+    if (!this.item()) return;
     this.summaryRequest.unsubscribe();
     this.summaryState.set('loading'); this.summaryFailure.set(null);
     this.summaryRequest = this.imports.resultSummary(this.id).subscribe({
       next: (result) => { this.result.set(result); this.summaryState.set('ready'); },
-      error: (failure: ApiFailure) => { this.summaryFailure.set(failure); this.summaryState.set(this.auxiliaryState(failure)); }
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.summaryFailure.set(failure); this.summaryState.set(this.auxiliaryState(failure)); }
     });
   }
 
   loadInspections(): void {
+    if (!this.item()) return;
     this.inspectionRequest.unsubscribe();
     this.inspectionState.set('loading'); this.inspectionFailure.set(null);
     this.inspectionRequest = this.imports.inspections(this.id).subscribe({
       next: (items) => { this.inspections.set(items); this.inspectionState.set('ready'); },
-      error: (failure: ApiFailure) => { this.inspectionFailure.set(failure); this.inspectionState.set(this.auxiliaryState(failure)); }
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.inspectionFailure.set(failure); this.inspectionState.set(this.auxiliaryState(failure)); }
     });
   }
 
   refreshResult(): void { this.loadSummary(); this.loadInspections(); this.loadIssues(true); }
 
   loadIssues(force = false): void {
+    if (!this.item()) return;
     const signature = JSON.stringify([this.id, this.requestedPage(), this.severity()]);
     if (signature === this.issuesSignature && !force) return;
     this.issuesSignature = signature;
@@ -173,7 +176,7 @@ export class ImportDetailComponent implements OnInit {
     this.issuePage.set(null); this.issuesFailure.set(null); this.issuesLoading.set(true);
     this.issuesRequest = this.imports.issues(this.id, this.requestedPage(), this.severity()).subscribe({
       next: (page) => { this.issuePage.set(page); this.issuesLoading.set(false); },
-      error: (failure: ApiFailure) => { this.issuesFailure.set(failure); this.issuesLoading.set(false); }
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.issuesFailure.set(failure); this.issuesLoading.set(false); }
     });
   }
 
@@ -201,8 +204,18 @@ export class ImportDetailComponent implements OnInit {
           this.exporting.set(false);
         }
       },
-      error: (failure: ApiFailure) => { this.exportFailure.set(failure); this.exporting.set(false); }
+      error: (failure: ApiFailure) => { if (this.invalidateAccess(failure)) return; this.exportFailure.set(failure); this.exporting.set(false); }
     });
+  }
+
+  private invalidateAccess(failure: ApiFailure): boolean {
+    if (![401, 403, 404].includes(failure.status)) return false;
+    this.reset();
+    this.loading.set(false);
+    const key = failure.status === 401 ? 'imports.sessionRequired'
+      : failure.status === 403 ? 'imports.accessDenied' : 'imports.resourceUnavailable';
+    this.failure.set({ ...failure, message: this.i18n.t(key) });
+    return true;
   }
 
   private auxiliaryState(failure: ApiFailure): AuxiliaryState {

@@ -37,6 +37,51 @@ describe('Import detail availability, issues and request lifecycle', () => {
   function create() { const fixture = TestBed.createComponent(ImportDetailComponent); fixture.detectChanges(); return fixture; }
   function setQuery(values: Record<string, string>) { const map = convertToParamMap(values); route.snapshot.queryParamMap = map; query.next(map); }
 
+  for (const [kind, status] of [['unauthorized', 401], ['forbidden', 403], ['not-found', 404]] as const) {
+    for (const section of ['resultSummary', 'inspections', 'issues', 'issuesCsv'] as const) {
+      it(`clears loaded diagnostics after ${status} from ${section}`, () => {
+        const fixture = create();
+        expect(fixture.nativeElement.querySelector('.issues-table')).not.toBeNull();
+        imports[section].and.returnValue(throwError(() => failure(kind, status)));
+        const component = fixture.componentInstance;
+        if (section === 'resultSummary') component.loadSummary();
+        if (section === 'inspections') component.loadInspections();
+        if (section === 'issues') component.loadIssues(true);
+        if (section === 'issuesCsv') component.exportCsv();
+        fixture.detectChanges();
+        expect(component.item()).toBeNull(); expect(component.result()).toBeNull();
+        expect(component.inspections()).toEqual([]); expect(component.issuePage()).toBeNull();
+        expect(fixture.nativeElement.querySelector('.issues-table')).toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-testid="import-counts"]')).toBeNull();
+        expect(component.failure()?.status).toBe(status);
+      });
+    }
+  }
+
+  it('cancels every pending section and export before they can repopulate revoked data', () => {
+    const fixture = create(); const component = fixture.componentInstance;
+    const summary = new Subject<ImportResultSummary>();
+    const inspection = new Subject<never[]>(); const issues = new Subject<ImportIssuePage>();
+    const download = new Subject<Blob>();
+    imports.resultSummary.and.returnValue(summary); imports.inspections.and.returnValue(inspection);
+    imports.issuesCsv.and.returnValue(download);
+    component.loadSummary(); component.loadInspections(); component.exportCsv();
+    imports.issues.and.returnValue(issues); component.loadIssues(true);
+    // loadIssues cancels the earlier export. Start one while the page is loaded.
+    issues.next(page()); component.exportCsv();
+    summary.error(failure('forbidden', 403));
+    expect(inspection.observed).toBeFalse(); expect(issues.observed).toBeFalse();
+    expect(download.observed).toBeFalse();
+    inspection.next([]); issues.next(page()); download.next(new Blob(['stale']));
+    component.refreshResult(); setQuery({ page: '2' }); fixture.detectChanges();
+    expect(component.item()).toBeNull(); expect(component.issuePage()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.issues-table')).toBeNull();
+    imports.resultSummary.and.returnValue(of(result())); imports.inspections.and.returnValue(of([]));
+    imports.issues.and.returnValue(of(page()));
+    component.loadImport(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.issues-table')).not.toBeNull();
+  });
+
   it('requires only import.read and uses public explanations instead of raw reasons', () => {
     const fixture = create();
     expect(fixture.nativeElement.querySelector('.issues-table')).not.toBeNull();

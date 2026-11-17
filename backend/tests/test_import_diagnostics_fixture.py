@@ -33,7 +33,7 @@ def test_fixture_rejects_non_test_database(monkeypatch, database):
 def test_fixture_rejects_non_disposable_storage(monkeypatch):
     monkeypatch.setenv("SYNERGIA_ENV", "test")
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/synergia_194_test")
-    monkeypatch.setenv("IMPORT_STORAGE_DIR", str(ROOT / "data/imports"))
+    monkeypatch.setenv("IMPORT_STORAGE_DIR", "/var/lib/synergia-imports")
     with pytest.raises(ValueError, match="storage must be"):
         fixture.configuration()
 

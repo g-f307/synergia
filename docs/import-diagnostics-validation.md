@@ -1,7 +1,6 @@
 # Validação do diagnóstico de importações — #194
 
-Implementação concluída e validada localmente nos quatro blocos, versionada em
-quatro commits na branch `fix/194-imports-resultados-divergencias`. Os resultados
+Implementação concluída e validada localmente nos quatro blocos, versionada na branch `fix/194-imports-resultados-divergencias`. Os resultados
 abaixo são locais; a integração depende da CI remota e da revisão do PR.
 Não houve nova migration nem mudança nas regras de ingestão, deduplicação ou retenção.
 
@@ -143,3 +142,20 @@ credenciais, arquivos reais ou conteúdo de células ao manifesto. `docs/files/`
 permanece ignorado. A exportação interrompida após headers exige descartar o
 arquivo incompleto; localizações fora do catálogo público continuam “Não
 informado”. A entrega não reconstrói dados ou artefatos perdidos.
+
+## Revisão posterior — perda de autorização
+
+Após o review de `ef10044`, o cliente passou a invalidar o contexto inteiro
+quando resumo, inspeção, divergências ou CSV recebem 401 definitivo, 403 ou 404.
+Metadados, contagens, inspeções e tabela são limpos; requisições pendentes são
+canceladas e loaders de seção não podem repovoar um contexto invalidado.
+A recuperação exige uma nova consulta autorizada da importação. Falhas temporárias
+continuam com recuperação por seção e preservação do resultado disponível.
+
+A regressão cobre as três recusas nas quatro operações após dados carregados,
+cancelamento concorrente, respostas atrasadas e recuperação explícita. A suíte
+Angular desta revisão aprovou **471 testes**. Os **9 testes das guardas de
+fixtures** também passaram; o caminho recusado usa `/var/lib`, para não depender
+de o checkout estar fora de `/tmp`. Os resultados anteriores de PostgreSQL,
+E2E e capturas permanecem associados ao commit original do manifesto; não foram
+reapresentados como uma nova execução após esta correção.

@@ -1094,5 +1094,7 @@
   "imports.issueReason.unmapped_issue": "No public description available for this issue; contact support for analysis.",
   "imports.reason.capacityExceeded": "The file exceeds the configured capacity for this source. Reduce the data volume or contact support.",
   "imports.reason.noAuthorizedSheet": "No authorized worksheet was found. Confirm the expected worksheets for this source with support.",
-  "imports.reason.unreadableWorkbook": "The workbook could not be read safely. Export a new file from the source."
+  "imports.reason.unreadableWorkbook": "The workbook could not be read safely. Export a new file from the source.",
+  "imports.accessDenied": "You no longer have access to this import.",
+  "imports.resourceUnavailable": "The import was not found or is no longer accessible."
 }
