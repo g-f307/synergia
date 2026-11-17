@@ -18,11 +18,14 @@ from app.ai_assistance_limits import AssistanceLimits
 from app.ai_assistance_provider import LocalAiModelProvider
 from app.ai_assistance_repository import PostgresAiAssistanceRepository
 from app.ai_assistance_service import AiAssistanceService
+from app.ai_assistance_telemetry import record_security
 from app.authorization import AuthorizationRepo, CurrentActor
 from app.errors import ApiError, ErrorResponse
 
 router = APIRouter(tags=["ai-assistance"])
 ASSISTANCE_TIMEOUT_SECONDS = 30
+BODY_MAX_BYTES = 1024
+BODY_TIMEOUT_SECONDS = 3
 
 
 def enabled_config():
@@ -37,8 +40,33 @@ def enabled_config():
     return config
 
 
-def get_assistance_service(
+def generation_config(
     config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+):
+    if not config.generation_enabled:
+        raise ApiError(
+            503, "ai_assistance_generation_disabled", "Geração temporariamente suspensa"
+        )
+    return config
+
+
+def get_read_service(
+    config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+):
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        raise ApiError(
+            503, "ai_assistance_runtime_unavailable", "Assistência indisponível"
+        )
+    return AiAssistanceService(
+        ExecutionContextBuilder(PostgresContextReader(database_url)),
+        None,
+        PostgresAiAssistanceRepository(database_url, config.retention_days),
+    )
+
+
+def get_assistance_service(
+    config: Annotated[AiAssistanceConfig, Depends(generation_config)],
 ):
     database_url = os.getenv("DATABASE_URL", "")
     secret = os.getenv("RATE_LIMIT_KEY_SECRET") or os.getenv("AUTH_JWT_SIGNING_KEY", "")
@@ -62,7 +90,19 @@ def get_assistance_service(
 
 
 async def empty_body(request: Request):
-    raw = await request.body()
+    raw = bytearray()
+    try:
+        async with asyncio.timeout(BODY_TIMEOUT_SECONDS):
+            async for chunk in request.stream():
+                if len(raw) + len(chunk) > BODY_MAX_BYTES:
+                    raise ApiError(
+                        422, "ai_assistance_invalid_contract", "Contrato inválido"
+                    )
+                raw.extend(chunk)
+    except TimeoutError:
+        raise ApiError(
+            422, "ai_assistance_invalid_contract", "Contrato inválido"
+        ) from None
     if not raw:
         return
     try:
@@ -95,6 +135,13 @@ def _call(operation, actor, execution_id, audit, request, permission):
     except ApiError as exc:
         if exc.status_code == 403 or getattr(exc, "audit_denial", False):
             try:
+                if exc.status_code == 404 and hasattr(audit, "execution_organization"):
+                    organization = audit.execution_organization(str(execution_id))
+                    if organization is not None and not all(
+                        actor.allows(required, organization)
+                        for required in ("execution.read", permission)
+                    ):
+                        record_security("scope_violation")
                 audit.audit_denial(actor, permission, request)
             except Exception:
                 raise ApiError(
@@ -126,7 +173,7 @@ def _call(operation, actor, execution_id, audit, request, permission):
 async def generate_assistance(
     execution_id: UUID,
     request: Request,
-    config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
+    config: Annotated[AiAssistanceConfig, Depends(generation_config)],
     actor: CurrentActor,
     audit: AuthorizationRepo,
     service: Annotated[AiAssistanceService, Depends(get_assistance_service)],
@@ -160,7 +207,7 @@ def latest_assistance(
     config: Annotated[AiAssistanceConfig, Depends(enabled_config)],
     actor: CurrentActor,
     audit: AuthorizationRepo,
-    service: Annotated[AiAssistanceService, Depends(get_assistance_service)],
+    service: Annotated[AiAssistanceService, Depends(get_read_service)],
 ):
     return _call(
         service.latest, actor, execution_id, audit, request, "ai.assistance.read"

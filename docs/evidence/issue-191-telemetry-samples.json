@@ -1,0 +1,139 @@
+{
+  "synthetic_only": true,
+  "provider": "controlled_fake_no_network",
+  "http_status": 200,
+  "logs": [
+    {
+      "timestamp": "2026-11-16T04:53:55.557779+00:00",
+      "level": "info",
+      "service": "synergia-api",
+      "event": "ai.assistance.context.finished",
+      "component": "ai_assistance",
+      "outcome": "success",
+      "error_code": "none",
+      "state": "none",
+      "origin": "none",
+      "duration_ms": 0.88,
+      "correlation_id": "00000000-0000-4000-8000-000000000191"
+    },
+    {
+      "timestamp": "2026-11-16T04:53:55.590574+00:00",
+      "level": "info",
+      "service": "synergia-api",
+      "event": "ai.assistance.generator.finished",
+      "component": "ai_assistance",
+      "outcome": "generated",
+      "error_code": "none",
+      "state": "ready",
+      "origin": "model",
+      "duration_ms": 3.0,
+      "correlation_id": "00000000-0000-4000-8000-000000000191"
+    },
+    {
+      "timestamp": "2026-11-16T04:53:55.592705+00:00",
+      "level": "info",
+      "service": "synergia-api",
+      "event": "ai.assistance.request.finished",
+      "component": "ai_assistance",
+      "outcome": "generated",
+      "error_code": "none",
+      "state": "ready",
+      "origin": "model",
+      "duration_ms": 23.854,
+      "correlation_id": "00000000-0000-4000-8000-000000000191"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "generated"
+      },
+      "value": 1.0
+    },
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "reused"
+      },
+      "value": 0.0
+    },
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "insufficient"
+      },
+      "value": 0.0
+    },
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "rejected"
+      },
+      "value": 0.0
+    },
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "unavailable"
+      },
+      "value": 0.0
+    },
+    {
+      "name": "synergia_ai_assistance_requests_total",
+      "labels": {
+        "environment": "test",
+        "result": "timeout"
+      },
+      "value": 0.0
+    },
+    {
+      "name": "synergia_ai_assistance_response_origins_total",
+      "labels": {
+        "environment": "test",
+        "origin": "model"
+      },
+      "value": 1.0
+    },
+    {
+      "name": "synergia_ai_assistance_context_seconds_count",
+      "labels": {
+        "environment": "test"
+      },
+      "value": 1.0
+    },
+    {
+      "name": "synergia_ai_assistance_inference_seconds_count",
+      "labels": {
+        "environment": "test"
+      },
+      "value": 1.0
+    },
+    {
+      "name": "synergia_ai_assistance_response_bytes_sum",
+      "labels": {
+        "environment": "test"
+      },
+      "value": 447.0
+    },
+    {
+      "name": "synergia_ai_assistance_total_seconds_count",
+      "labels": {
+        "environment": "test"
+      },
+      "value": 1.0
+    },
+    {
+      "name": "synergia_ai_assistance_generations_in_progress",
+      "labels": {
+        "environment": "test"
+      },
+      "value": 0.0
+    }
+  ]
+}

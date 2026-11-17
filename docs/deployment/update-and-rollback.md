@@ -1,5 +1,32 @@
 # Atualização, rollback e recuperação
 
+## Assistência de IA: suspensão e rollback
+
+Em incidente restrito à assistência, a primeira contenção é
+`SYNERGIA_AI_ASSISTANCE_ENABLED=true` com
+`SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED=false`, aplicada em todas as instâncias
+pelo fluxo de atualização com histórico. Mantém leitura autorizada de resultados
+válidos e não remove dados de negócio. Editar env-file ou rodar verify não altera
+processos já iniciados. Em desenvolvimento sem ledger, seguir o procedimento
+Compose local do [runbook](../runbooks/ai-assistance.md).
+
+Não confundir esse controle com desfazer transações já enviadas ao runtime:
+trabalho admitido pode terminar. Confirmar workers encerrados antes de recuperar
+reservas expiradas, sempre com prévia e lote limitado. Não forçar retries nem
+editar leases/JSON/hashes para contornar exclusão ou validação.
+
+Reverter aplicação continua sujeito à compatibilidade de schema e à revisão
+anterior comprovada, pelo procedimento abaixo. Não executar rollback SQL da
+assistência para desligá-la: 0038 removeria sua persistência. O rollback 0040
+preserva histórico imutável e valores de dataset; remove guardas/índices novos,
+não restaura literalmente o CHECK anterior. A rotina de manutenção nova depende
+de 0040: não a operar com schema incompatível, nem editar migration publicada.
+
+Para reabilitar: causa corrigida, configuração/pin aprovados, readiness e sonda
+saudáveis, coleta/auditoria funcionais, sem workers obsoletos e caso sintético
+autorizado. Desaparecimento de alerta por suspensão ou falta de dados não é prova
+de recuperação. A #192 continua como validação final antes da ativação.
+
 Use o mesmo projeto `synergia`, configuração externa e histórico da instalação.
 Prepare uma janela autorizada, preserve a versão anterior e confirme backup
 recuperável antes de qualquer SQL. Produção permanece condicionada aos portões

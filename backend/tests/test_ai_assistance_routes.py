@@ -11,7 +11,11 @@ from test_ai_assistance_service import Contexts, Repository, make_actor
 import app.ai_assistance_routes as routes
 from app.ai_assistance_config import AiAssistanceConfig
 from app.ai_assistance_generator import AiAssistanceGenerator
-from app.ai_assistance_routes import enabled_config, get_assistance_service
+from app.ai_assistance_routes import (
+    enabled_config,
+    get_assistance_service,
+    get_read_service,
+)
 from app.ai_assistance_service import AiAssistanceService
 from app.authorization import get_actor_context, get_authorization_repository
 from app.main import create_app
@@ -30,6 +34,7 @@ def client():
         ctx, "ai.assistance.generate", "ai.assistance.read"
     )
     app.dependency_overrides[get_assistance_service] = lambda: service
+    app.dependency_overrides[get_read_service] = lambda: service
     app.dependency_overrides[get_authorization_repository] = lambda: type(
         "Audit", (), {"audit_denial": lambda *args: None}
     )()
@@ -61,6 +66,41 @@ def test_rejects_nonempty_and_invalid_body(client, body):
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "ai_assistance_invalid_contract"
     assert "model" not in response.text
+
+
+@pytest.mark.security
+def test_oversized_empty_json_is_rejected_without_generation(client):
+    http, ctx, provider = client
+    path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
+    response = http.post(path, content=b" " * 1024 + b"{}")
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "ai_assistance_invalid_contract"
+    assert provider.calls == 0
+
+
+@pytest.mark.security
+def test_request_stream_stops_at_limit_and_has_a_deadline(monkeypatch):
+    from app.errors import ApiError
+
+    class Oversized:
+        async def stream(self):
+            yield b" " * 1024
+            yield b"{}"
+            pytest.fail("oversized remainder must not be consumed")
+
+    class Slow:
+        async def stream(self):
+            yield b"{"
+            await asyncio.sleep(5)
+            pytest.fail("slow body must be cancelled")
+            yield b"}"
+
+    for request in (Oversized(), Slow()):
+        monkeypatch.setattr(routes, "BODY_TIMEOUT_SECONDS", 0.01)
+        with pytest.raises(ApiError) as exc:
+            asyncio.run(routes.empty_body(request))
+        assert exc.value.status_code == 422
+        assert exc.value.code == "ai_assistance_invalid_contract"
 
 
 def test_disabled_before_authentication(monkeypatch):
@@ -156,6 +196,7 @@ def test_rejected_output_fallback_over_http(client):
         ctx, "ai.assistance.generate"
     )
     http.app.dependency_overrides[get_assistance_service] = lambda: service
+    http.app.dependency_overrides[get_read_service] = lambda: service
     response = http.post(f"/executions/{ctx.subject.execution_id}/ai-assistance")
     assert response.status_code == 200 and response.json()["state"] == "rejected"
     assert "private_raw" not in response.text and provider.calls == 1
@@ -174,6 +215,7 @@ def test_provider_unavailable_over_http(client):
         ctx, "ai.assistance.generate"
     )
     http.app.dependency_overrides[get_assistance_service] = lambda: service
+    http.app.dependency_overrides[get_read_service] = lambda: service
     response = http.post(f"/executions/{ctx.subject.execution_id}/ai-assistance")
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "ai_assistance_runtime_unavailable"
@@ -234,6 +276,36 @@ def test_get_disabled(monkeypatch):
     assert response.json()["error"]["code"] == "ai_assistance_disabled"
 
 
+def test_generation_kill_switch_keeps_existing_result(client):
+    http, ctx, provider = client
+    path = f"/executions/{ctx.subject.execution_id}/ai-assistance"
+    original = http.post(path).json()
+    http.app.dependency_overrides[enabled_config] = lambda: AiAssistanceConfig(
+        enabled=True, generation_enabled=False
+    )
+    denied = http.post(path)
+    assert denied.status_code == 503
+    assert denied.json()["error"]["code"] == "ai_assistance_generation_disabled"
+    assert http.get(path + "/latest").json() == original
+    assert provider.calls == 0
+
+
+def test_read_service_does_not_construct_runtime_or_limiter(monkeypatch):
+    def forbidden(*args, **kwargs):
+        pytest.fail("reading must not initialize provider or generation limits")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://synthetic.invalid/test")
+    monkeypatch.setattr(routes, "LocalAiModelProvider", forbidden)
+    monkeypatch.setattr(routes, "AssistanceLimits", forbidden)
+    service = routes.get_read_service(AiAssistanceConfig(enabled=True))
+    assert service.generator is None and service.limits is None
+    from app.errors import ApiError
+
+    with pytest.raises(ApiError) as error:
+        service.generate(None, uuid4())
+    assert error.value.code == "ai_assistance_generation_disabled"
+
+
 def test_structured_logs_include_correlation_without_raw_error(
     client, monkeypatch, caplog
 ):
@@ -265,6 +337,7 @@ def test_structured_logs_include_correlation_without_raw_error(
             ctx, "ai.assistance.generate"
         )
         http.app.dependency_overrides[get_assistance_service] = lambda: service
+        http.app.dependency_overrides[get_read_service] = lambda: service
         response = http.post(
             f"/executions/{ctx.subject.execution_id}/ai-assistance",
             headers={"X-Correlation-ID": correlation},

@@ -357,7 +357,7 @@ def test_database_failure_is_sanitized_and_metrics_have_only_bounded_labels(capl
     for collector in (CONTEXTS, CONTEXT_BYTES, TRUNCATIONS):
         for metric in collector.collect():
             for sample in metric.samples:
-                assert set(sample.labels) <= {"sufficiency", "section", "le"}
+                assert set(sample.labels) <= {"environment", "result", "code", "le"}
 
 
 @pytest.mark.parametrize("section", SECTIONS)

@@ -19,7 +19,7 @@ PUBLIC = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
 }
-TECHNICAL = {("GET", "/metrics")}
+TECHNICAL = {("GET", "/metrics"), ("GET", "/operations/ai-assistance/health")}
 ROLES = ("admin", "gestor", "analista", "operador", "consulta")
 ROW = re.compile(r"^`(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/[^`]*)`$")
 
@@ -166,9 +166,7 @@ def main() -> int:
     report = render_report(cases)
     if args.check:
         current = (
-            args.output.read_text(encoding="utf-8")
-            if args.output.is_file()
-            else None
+            args.output.read_text(encoding="utf-8") if args.output.is_file() else None
         )
         if current != report:
             print(f"Relatório desatualizado: {args.output}")

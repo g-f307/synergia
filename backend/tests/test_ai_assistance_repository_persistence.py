@@ -223,6 +223,137 @@ def test_abandoned_reservation_recovered_and_old_token_cannot_finish(setup, data
         )
 
 
+def test_explicit_recovery_preserves_results_and_live_reservations(setup, database):
+    from dataclasses import replace
+
+    repo, key, _, actor, correlation = setup
+    old = repo.reserve(key, actor, correlation)
+    live_key = replace(key, prompt_sha256="c" * 64)
+    live = repo.reserve(live_key, actor, correlation)
+    finished_key = replace(key, prompt_sha256="d" * 64)
+    finished = repo.reserve(finished_key, actor, correlation)
+    repo.finish(
+        finished_key,
+        finished,
+        actor,
+        correlation,
+        result(finished_key, finished),
+        evidence_refs=frozenset(),
+        response_sha256=None,
+        rejection_code=None,
+        elapsed_ms=0,
+    )
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            "UPDATE synergia.ai_assistances "
+            "SET reservation_until=clock_timestamp()-interval '1 second' WHERE id=%s",
+            (old,),
+        )
+    assert repo.recover_reservations(actor, correlation)["count"] == 1
+    assert (
+        repo.recover_reservations(actor, correlation, batch_size=1, dry_run=False)[
+            "count"
+        ]
+        == 1
+    )
+    assert repo.recover_reservations(actor, correlation, dry_run=False)["count"] == 0
+    with psycopg.connect(database) as connection:
+        assert {
+            row[0]
+            for row in connection.execute(
+                "SELECT id FROM synergia.ai_assistances WHERE id=ANY(%s)",
+                ([old, live, finished],),
+            )
+        } == {live, finished}
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM synergia.ai_assistance_events "
+                "WHERE assistance_id=%s AND action='expired'",
+                (old,),
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM synergia.graylog_deliveries "
+                "WHERE source_snapshot->>'resource_id'=%s "
+                "AND source_snapshot->>'action'='ai.assistance.expired'",
+                (str(old),),
+            ).fetchone()[0]
+            == 1
+        )
+    with pytest.raises(AssistancePersistenceError, match="reservation_missing"):
+        repo.finish(
+            key,
+            old,
+            actor,
+            correlation,
+            result(key, old),
+            evidence_refs=frozenset(),
+            response_sha256=None,
+            rejection_code=None,
+            elapsed_ms=0,
+        )
+    assert repo.reserve(key, actor, correlation) != old
+
+
+def test_recovery_skips_locked_and_refuses_missing_actor(setup, database):
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            "UPDATE synergia.ai_assistances "
+            "SET reservation_until=clock_timestamp()-interval '1 second' WHERE id=%s",
+            (aid,),
+        )
+    with pytest.raises(AssistancePersistenceError, match="actor_not_found"):
+        repo.recover_reservations(uuid4(), correlation, dry_run=False)
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            "SELECT id FROM synergia.ai_assistances WHERE id=%s FOR UPDATE", (aid,)
+        )
+        assert (
+            repo.recover_reservations(actor, correlation, dry_run=False)["count"] == 0
+        )
+    assert repo.recover_reservations(actor, correlation, dry_run=False)["count"] == 1
+
+
+def test_recovery_cli_defaults_to_preview(setup, database):
+    import json
+    import subprocess
+    import sys
+
+    repo, key, _, actor, correlation = setup
+    aid = repo.reserve(key, actor, correlation)
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            "UPDATE synergia.ai_assistances "
+            "SET reservation_until=clock_timestamp()-interval '1 second' WHERE id=%s",
+            (aid,),
+        )
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "backend"), "DATABASE_URL": database}
+    command = [
+        sys.executable,
+        str(ROOT / "scripts/recover_ai_assistance.py"),
+        "--actor-id",
+        str(actor),
+        "--batch-size",
+        "1",
+    ]
+    preview = subprocess.run(
+        command, env=env, capture_output=True, text=True, check=True
+    )
+    assert set(json.loads(preview.stdout)) == {"count", "oldest", "newest"}
+    assert json.loads(preview.stdout)["count"] == 1
+    assert str(aid) not in preview.stdout
+    assert repo.recover_reservations(actor, correlation)["count"] == 1
+    applied = subprocess.run(
+        [*command, "--apply"], env=env, capture_output=True, text=True, check=True
+    )
+    assert json.loads(applied.stdout)["count"] == 1
+    assert repo.recover_reservations(actor, correlation)["count"] == 0
+
+
 def test_failed_finish_rolls_back_result_and_event(setup, database):
     repo, key, _, actor, correlation = setup
     aid = repo.reserve(key, actor, correlation)
@@ -433,10 +564,10 @@ def test_rollback_migration_is_reversible(database):
     with psycopg.connect(database) as c:
         c.execute(
             (
-                ROOT / "database/rollbacks"
+                ROOT
+                / "database/rollbacks"
                 / "0039_create_ai_assistance_rate_attempts.down.sql"
-            )
-            .read_text(),
+            ).read_text(),
             prepare=False,
         )
         c.execute(rollback.read_text(), prepare=False)
@@ -453,8 +584,9 @@ def test_rollback_migration_is_reversible(database):
         forward = ROOT / "database/migrations/0038_create_ai_assistance_persistence.sql"
         c.execute(forward.read_text(), prepare=False)
         c.execute(
-            (ROOT / "database/migrations/0039_create_ai_assistance_rate_attempts.sql")
-            .read_text(),
+            (
+                ROOT / "database/migrations/0039_create_ai_assistance_rate_attempts.sql"
+            ).read_text(),
             prepare=False,
         )
         assert (

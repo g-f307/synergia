@@ -1,0 +1,722 @@
+# Synthetic series only. No external services, credentials or inference.
+rule_files:
+- alerts.yml
+evaluation_interval: 1m
+tests:
+- name: 'availability: waits full 10m then recovers on healthy traffic'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+3x12 36x18
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+  - eval_time: 12m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+  - eval_time: 16m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: timeout also contributes, denials never dilute the ratio'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="timeout"}
+    values: 0+2x30
+  - series: synergia_ai_assistance_request_denials_total{job="synergia-api",instance="a",environment="test",code="rate_limit_exceeded"}
+    values: 0+10000x30
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+- name: 'availability: exactly 20 percent is not above threshold'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+2x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+8x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: no traffic has no ratio'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: disabling generation clears an existing alert'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+3x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x12 0x18
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+  - eval_time: 13m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: suspended replica excluded before environment aggregation'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+9x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="b",environment="test",result="unavailable"}
+    values: 0+100x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="b",environment="test",result="generated"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="b",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: high healthy volume in another instance dilutes real ratio'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+3x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="b",environment="test",result="unavailable"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="b",environment="test",result="generated"}
+    values: 0+1000x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'availability: environments isolated'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: 0+3x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="production",result="unavailable"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="production",result="generated"}
+    values: 0+1000x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="production"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+- name: 'availability: counter reset without errors is not outage'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: 0+7x10 0+7x20
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+- name: 'stalled: never concluded, full 10m lease age, then completed'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0x10 660x20
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 9m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance has old reservations and no conclusion for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+- name: 'stalled: recent conclusion delays alert even with an old reservation'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0x5 300x25
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 14m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 15m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance has old reservations and no conclusion for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+- name: 'stalled: empty backlog clears alert'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x10 0x20
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance has old reservations and no conclusion for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+- name: 'stalled: new work after idle gets its own 10m grace'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0x15 0+60x15
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 16m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 25m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 26m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance has old reservations and no conclusion for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+- name: 'stalled: suspension clears but does not claim recovery'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x10 0x20
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance has old reservations and no conclusion for 10 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+- name: 'stalled: failed collection never supplies healthy zeros'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+- name: 'stalled: recent progress on another valid replica wins'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="a",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_oldest_reservation_age_seconds{job="synergia-api",instance="b",environment="test"}
+    values: 0+60x30
+  - series: synergia_ai_assistance_last_completion_timestamp_seconds{job="synergia-api",instance="b",environment="test"}
+    values: 0x5 900x25
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+- name: 'integrity: live scope incident fires, flag off does not hide it'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_security_rejections_total{job="synergia-api",instance="a",environment="test",code="scope_violation"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 2m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: critical
+      exp_annotations:
+        summary: AI assistance detected an integrity or confirmed scope violation
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+  - eval_time: 8m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'integrity: POST integrity error is critical'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_security_rejections_total{job="synergia-api",instance="a",environment="test",code="integrity_error"}
+    values: 0x2 1x28
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: critical
+      exp_annotations:
+        summary: AI assistance detected an integrity or confirmed scope violation
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+  - eval_time: 8m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'integrity: durable GET incident not masked by zero-valued live channel'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_security_rejections_total{job="synergia-api",instance="a",environment="test",code="integrity_error"}
+    values: '0x30'
+  - series: synergia_ai_assistance_persisted_integrity_errors_total{job="synergia-api",instance="a",environment="test"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: critical
+      exp_annotations:
+        summary: AI assistance detected an integrity or confirmed scope violation
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+  - eval_time: 8m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'integrity: first initialized pin mismatch fires'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_security_rejections_total{job="synergia-api",instance="a",environment="test",code="scope_violation"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generations_total{job="synergia-api",instance="a",environment="test",origin="deterministic",result="unavailable",code="runtime_pin_mismatch"}
+    values: 0x2 1x28
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: critical
+      exp_annotations:
+        summary: AI assistance detected an integrity or confirmed scope violation
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+  - eval_time: 8m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'integrity: duplicate persisted instances produce one environment alert'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_persisted_integrity_errors_total{job="synergia-api",instance="a",environment="test"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_persisted_integrity_errors_total{job="synergia-api",instance="b",environment="test"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: critical
+      exp_annotations:
+        summary: AI assistance detected an integrity or confirmed scope violation
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+- name: 'integrity: rejected content, static old incident and reset do not trigger'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_generations_total{job="synergia-api",instance="a",environment="test",origin="deterministic",result="rejected",code="invalid_schema"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_security_rejections_total{job="synergia-api",instance="a",environment="test",code="scope_violation"}
+    values: 10x10 0x20
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+  - eval_time: 11m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'integrity: failed persisted collection excluded'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_persisted_integrity_errors_total{job="synergia-api",instance="a",environment="test"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+- name: 'expired: growth sustained 2m then cleanup immediately clears'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 0+1x5 0x25
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 2m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: Expired AI assistance reservations are growing
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-reservations.md
+  - eval_time: 6m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+- name: 'expired: static or decreasing backlog does not imply growth'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 20x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="b",environment="test"}
+    values: 30-1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+- name: 'expired: growing leases still matter while generation is suspended'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: Expired AI assistance reservations are growing
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-reservations.md
+- name: 'expired: unavailable collector hides its stale measurement'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="a",environment="test"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+- name: 'retention: three recent failures fire and age out despite lifetime count'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: 0x1 1x1 2x1 3x24
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+  - eval_time: 6m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance retention failed repeatedly in 15 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-retention.md
+  - eval_time: 21m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+- name: 'retention: two failures are not three, duplicate collectors not summed'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: 0x1 1x1 2x26
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="b",environment="test",result="failed"}
+    values: 0x1 1x1 2x26
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="b",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+- name: 'retention: success does not erase three still recent failures'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: 0x1 1x1 2x1 3x24
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="succeeded"}
+    values: 0x7 1x23
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  alert_rule_test:
+  - eval_time: 8m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance retention failed repeatedly in 15 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-retention.md
+  - eval_time: 21m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+- name: 'retention: recurring failures remain relevant with generation disabled'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts:
+    - exp_labels:
+        environment: test
+        severity: warning
+      exp_annotations:
+        summary: AI assistance retention failed repeatedly in 15 minutes
+        runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-retention.md
+- name: 'retention: collector failure is missing measurement, not evidence of failures'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+- name: 'all: no samples must not fabricate an alert'
+  interval: 1m
+  input_series: []
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []
+- name: 'all: flags off, successful empty maintenance and content rejection are benign'
+  interval: 1m
+  input_series:
+  - series: synergia_ai_assistance_enabled{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_generation_enabled{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="unavailable"}
+    values: '0x30'
+  - series: synergia_ai_assistance_requests_total{job="synergia-api",instance="a",environment="test",result="generated"}
+    values: '0x30'
+  - series: synergia_ai_assistance_collection_success{job="synergia-api",instance="a",environment="test"}
+    values: 1x30
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="failed"}
+    values: '0x30'
+  - series: synergia_ai_assistance_retention_runs_total{job="synergia-api",instance="a",environment="test",result="succeeded"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_request_denials_total{job="synergia-api",instance="a",environment="test",code="ai_assistance_disabled"}
+    values: 0+1x30
+  - series: synergia_ai_assistance_generations_total{job="synergia-api",instance="a",environment="test",origin="deterministic",result="rejected",code="invalid_schema"}
+    values: 0x2 1x28
+  - series: synergia_ai_assistance_pending_reservations{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  - series: synergia_ai_assistance_expired_reservations{job="synergia-api",instance="a",environment="test"}
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceUnavailable
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceStalled
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceIntegrityViolation
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceExpiredReservationsGrowing
+    exp_alerts: []
+  - eval_time: 20m
+    alertname: SynergiaAiAssistanceRetentionFailures
+    exp_alerts: []

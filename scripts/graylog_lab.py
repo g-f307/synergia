@@ -162,6 +162,7 @@ class Laboratory:
                     "GRAYLOG_MONGODB_URI=mongodb://" + PREFIX + "-mongo:27017/graylog",
                     "GRAYLOG_ELASTICSEARCH_HOSTS=http://" + PREFIX + "-opensearch:9200",
                     "GRAYLOG_SERVER_JAVA_OPTS=-Xms512m -Xmx512m",
+                    "GRAYLOG_MESSAGE_JOURNAL_MAX_SIZE=256mb",
                     "GRAYLOG_TELEMETRY_ENABLED=false",
                 ]
             ),
@@ -180,7 +181,7 @@ class Laboratory:
 
     def ensure_resource(self, kind, name):
         if self.owned(kind, name) is None:
-            options = ["--internal"] if kind == "network" else []
+            options = ["--internal"] if kind == "network" and name == PREFIX else []
             self.command(
                 kind,
                 "create",
@@ -223,6 +224,9 @@ class Laboratory:
                 )
                 self.command("pull", image)
         self.ensure_resource("network", PREFIX)
+        # Docker 29 does not wire published ports on an internal-only network.
+        # Only the services accessed from loopback join this second bridge.
+        self.ensure_resource("network", PREFIX + "-host")
         for role in IMAGES:
             self.ensure_resource("volume", PREFIX + "-" + role)
         # Only this lab's certificate directory is changed, inside an ephemeral
@@ -269,6 +273,12 @@ class Laboratory:
                 "DISABLE_SECURITY_PLUGIN=true",
                 "-e",
                 "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g",
+                "-e",
+                "cluster.routing.allocation.disk.watermark.low=1gb",
+                "-e",
+                "cluster.routing.allocation.disk.watermark.high=512mb",
+                "-e",
+                "cluster.routing.allocation.disk.watermark.flood_stage=256mb",
                 "-v",
                 PREFIX + "-opensearch:/usr/share/opensearch/data",
             ],
@@ -277,6 +287,8 @@ class Laboratory:
         self.ensure_container(
             PREFIX + "-postgres",
             [
+                "--network",
+                PREFIX + "-host",
                 "--env-file",
                 str(self.workspace / "postgres.env"),
                 "-p",
@@ -289,6 +301,8 @@ class Laboratory:
         self.ensure_container(
             PREFIX + "-graylog",
             [
+                "--network",
+                PREFIX + "-host",
                 "--memory",
                 "2g",
                 "--env-file",

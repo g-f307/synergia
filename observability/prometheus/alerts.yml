@@ -1,4 +1,94 @@
 groups:
+  - name: synergia-ai-assistance
+    rules:
+      # Admission denials and suspended instances never enter this ratio.
+      - alert: SynergiaAiAssistanceUnavailable
+        expr: |
+          (
+            sum by(environment) (
+              rate(synergia_ai_assistance_requests_total{result=~"unavailable|timeout"}[5m])
+              and on(job,instance,environment) (synergia_ai_assistance_generation_enabled == 1)
+            )
+            /
+            sum by(environment) (
+              rate(synergia_ai_assistance_requests_total[5m])
+              and on(job,instance,environment) (synergia_ai_assistance_generation_enabled == 1)
+            )
+          ) > 0.20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI assistance unavailability exceeds 20 percent for 10 minutes
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-unavailable.md
+
+      # Timestamp + lease age already encode the ten-minute wait: no extra for.
+      # Database aggregates are replicated by API instances; never sum them.
+      - alert: SynergiaAiAssistanceStalled
+        expr: |
+          (max by(environment) (
+            synergia_ai_assistance_pending_reservations
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) > 0)
+          and on(environment) (max by(environment) (
+            synergia_ai_assistance_oldest_reservation_age_seconds
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) >= 600)
+          and on(environment) (time() - max by(environment) (
+            synergia_ai_assistance_last_completion_timestamp_seconds
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) >= 600)
+          and on(environment) (max by(environment) (synergia_ai_assistance_generation_enabled) == 1)
+        labels:
+          severity: warning
+        annotations:
+          summary: AI assistance has old reservations and no conclusion for 10 minutes
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-stalled.md
+
+      - alert: SynergiaAiAssistanceIntegrityViolation
+        expr: |
+          (sum by(environment) (
+            increase(synergia_ai_assistance_security_rejections_total{code=~"integrity_error|scope_violation"}[5m])
+          ) > 0)
+          or on(environment) (max by(environment) (
+            increase(synergia_ai_assistance_persisted_integrity_errors_total[5m])
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) > 0)
+          or on(environment) (sum by(environment) (
+            increase(synergia_ai_assistance_generations_total{code="runtime_pin_mismatch"}[5m])
+          ) > 0)
+        labels:
+          severity: critical
+        annotations:
+          summary: AI assistance detected an integrity or confirmed scope violation
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-integrity.md
+
+      - alert: SynergiaAiAssistanceExpiredReservationsGrowing
+        expr: |
+          max by(environment) (
+            (delta(synergia_ai_assistance_expired_reservations[10m]) > 0)
+            and (synergia_ai_assistance_expired_reservations > 0)
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Expired AI assistance reservations are growing
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-reservations.md
+
+      - alert: SynergiaAiAssistanceRetentionFailures
+        expr: |
+          max by(environment) (
+            increase(synergia_ai_assistance_retention_runs_total{result="failed"}[15m])
+            and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)
+          ) >= 3
+        labels:
+          severity: warning
+        annotations:
+          summary: AI assistance retention failed repeatedly in 15 minutes
+          runbook: https://github.com/g-f307/synergia/blob/main/docs/runbooks/ai-assistance-retention.md
+
   - name: synergia-availability
     rules:
       - alert: SynergiaApiUnavailable

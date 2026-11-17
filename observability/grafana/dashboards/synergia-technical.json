@@ -155,6 +155,160 @@
       "targets": [{"expr": "synergia_ingestion_estimated_memory_bytes / clamp_min(synergia_ingestion_memory_budget_bytes, 1)", "legendFormat": "estimated / configured", "refId": "A"}],
       "title": "Ingestion estimated memory budget",
       "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 39},
+      "id": 16,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "synergia_ai_assistance_enabled", "legendFormat": "enabled {{environment}} {{instance}}", "refId": "A"}, {"expr": "synergia_ai_assistance_generation_enabled", "legendFormat": "generation {{environment}} {{instance}}", "refId": "B"}, {"expr": "synergia_ai_assistance_collection_success", "legendFormat": "collection {{environment}} {{instance}}", "refId": "C"}],
+      "title": "AI control and collection",
+      "type": "timeseries",
+      "description": "Per instance: general flag, generation admission and persisted collection success. Collection 0 or No data is not health; compare instances during a rollout."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 39},
+      "id": 17,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by(environment,result) (rate(synergia_ai_assistance_requests_total[5m]))", "legendFormat": "{{environment}} {{result}}", "refId": "A"}],
+      "title": "AI request outcomes",
+      "type": "timeseries",
+      "description": "POST outcomes exactly once; GET and admission denials are excluded. Reused is not an inference. Rates reset safely per instance."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 39},
+      "id": 18,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by(environment) (rate(synergia_ai_assistance_requests_total{result=~\"unavailable|timeout\"}[5m]) and on(job,instance,environment) (synergia_ai_assistance_generation_enabled == 1)) / sum by(environment) (rate(synergia_ai_assistance_requests_total[5m]) and on(job,instance,environment) (synergia_ai_assistance_generation_enabled == 1))", "legendFormat": "unavailable / admitted {{environment}}", "refId": "A"}],
+      "title": "AI availability",
+      "type": "timeseries",
+      "description": "Unavailability ratio used by the alert: >20% for 10m. Zero traffic is undefined, not 100% availability. Suspended instances excluded before aggregation."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 46},
+      "id": 19,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by(environment,le) (rate(synergia_ai_assistance_context_seconds_bucket[5m])))", "legendFormat": "context {{environment}}", "refId": "A"}, {"expr": "histogram_quantile(0.95, sum by(environment,le) (rate(synergia_ai_assistance_inference_seconds_bucket[5m])))", "legendFormat": "inference {{environment}}", "refId": "B"}, {"expr": "histogram_quantile(0.95, sum by(environment,le) (rate(synergia_ai_assistance_total_seconds_bucket[5m])))", "legendFormat": "total {{environment}}", "refId": "C"}],
+      "title": "AI latency p95",
+      "type": "timeseries",
+      "description": "Histogram p95: context includes reads/failures, provider includes pin/transport, total is POST HTTP. Separate populations; no traffic means no quantile."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 46},
+      "id": 20,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by(environment,le) (rate(synergia_ai_assistance_context_bytes_bucket[5m])))", "legendFormat": "context {{environment}}", "refId": "A"}, {"expr": "histogram_quantile(0.95, sum by(environment,le) (rate(synergia_ai_assistance_response_bytes_bucket[5m])))", "legendFormat": "response {{environment}}", "refId": "B"}],
+      "title": "AI size p95",
+      "type": "timeseries",
+      "description": "Context snapshot UTF-8 and model content before JSON validation. No synthetic zero response on transport failure; overflow can yield +Inf."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 46},
+      "id": 21,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by(environment,origin) (rate(synergia_ai_assistance_response_origins_total[5m]))", "legendFormat": "{{environment}} {{origin}}", "refId": "A"}],
+      "title": "AI delivered origins",
+      "type": "timeseries",
+      "description": "Origin of successful POST deliveries only. Deterministic includes fallback. Do not add internal generation counters to HTTP outcomes."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 53},
+      "id": 22,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "max by(environment) (synergia_ai_assistance_pending_reservations and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "processing leases {{environment}}", "refId": "A"}, {"expr": "max by(environment) (synergia_ai_assistance_expired_reservations and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "expired leases {{environment}}", "refId": "B"}, {"expr": "sum by(environment) (synergia_ai_assistance_generations_in_progress)", "legendFormat": "provider calls {{environment}}", "refId": "C"}],
+      "title": "AI reservations and provider work",
+      "type": "timeseries",
+      "description": "Database lease counts are deduplicated (max) among successful collectors. In-flight provider calls summed across instances; may survive HTTP timeout. These are different populations, not a queue."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 53},
+      "id": 23,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "max by(environment) (synergia_ai_assistance_oldest_reservation_age_seconds and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "oldest lease {{environment}}", "refId": "A"}, {"expr": "time() - (max by(environment) (synergia_ai_assistance_last_completion_timestamp_seconds and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)) > 0)", "legendFormat": "since last conclusion {{environment}}", "refId": "B"}],
+      "title": "AI completion age",
+      "type": "timeseries",
+      "description": "Oldest processing lease and age since last completed/rejected event. No recorded conclusion is No data; stalled alert treats timestamp zero as none. Both clocks must reach 600s."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 53},
+      "id": 24,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by(environment,result,code) (increase(synergia_ai_assistance_persistence_total[15m]))", "legendFormat": "{{environment}} {{result}} {{code}}", "refId": "A"}],
+      "title": "AI persistence outcomes",
+      "type": "timeseries",
+      "description": "Repository transitions in the last 15m, by closed operation/result code. Not HTTP totals. Errors can identify a database failure behind unavailable."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 60},
+      "id": 25,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by(environment,code) (increase(synergia_ai_assistance_security_rejections_total[5m]))", "legendFormat": "live {{environment}} {{code}}", "refId": "A"}, {"expr": "max by(environment) (increase(synergia_ai_assistance_persisted_integrity_errors_total[5m]) and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "durable integrity {{environment}}", "refId": "B"}, {"expr": "sum by(environment) (increase(synergia_ai_assistance_generations_total{code=\"runtime_pin_mismatch\"}[5m]))", "legendFormat": "pin {{environment}}", "refId": "C"}],
+      "title": "AI security signals",
+      "type": "timeseries",
+      "description": "Five-minute detected events: live integrity/scope, durable integrity (including GET), and pin mismatch. The same incident can appear in two channels: do not sum channels as distinct incidents."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 60},
+      "id": 26,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "max by(environment) (increase(synergia_ai_assistance_reservations_recovered_total[15m]) and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "released {{environment}}", "refId": "A"}],
+      "title": "AI reservation recovery",
+      "type": "timeseries",
+      "description": "Committed expired-lease releases in 15m, deduplicated across API replicas. Expired gauge delta measures growth, not a counter of releases."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 60},
+      "id": 27,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "max by(environment) (increase(synergia_ai_assistance_retention_runs_total{result=\"failed\"}[15m]) and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "retention {{environment}}", "refId": "A"}, {"expr": "max by(environment) (increase(synergia_ai_assistance_recovery_runs_total{result=\"failed\"}[15m]) and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "recovery {{environment}}", "refId": "B"}],
+      "title": "AI maintenance failures",
+      "type": "timeseries",
+      "description": "Effective failed retention/recovery batches in 15m from immutable audit; dry-runs excluded. Retention alert threshold >=3; estimates are extrapolated, confirm exact events in audit."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 67},
+      "id": 28,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "time() - (max by(environment) (synergia_ai_assistance_retention_last_success_timestamp_seconds and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)) > 0)", "legendFormat": "retention {{environment}}", "refId": "A"}, {"expr": "time() - (max by(environment) (synergia_ai_assistance_recovery_last_success_timestamp_seconds and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1)) > 0)", "legendFormat": "recovery {{environment}}", "refId": "B"}],
+      "title": "AI maintenance success age",
+      "type": "timeseries",
+      "description": "Age since last committed effective success, including empty batches. Never succeeded is No data (timestamp 0); inspect raw timestamps/audit. Not an approved scheduling SLO."
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "synergia-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "noValue": "No data"}, "overrides": []},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 67},
+      "id": 29,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "max by(environment) (synergia_ai_assistance_retention_unfinished_runs and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "retention {{environment}}", "refId": "A"}, {"expr": "max by(environment) (synergia_ai_assistance_recovery_unfinished_runs and on(job,instance,environment) (synergia_ai_assistance_collection_success == 1))", "legendFormat": "recovery {{environment}}", "refId": "B"}],
+      "title": "AI unfinished maintenance",
+      "type": "timeseries",
+      "description": "Durable starts without terminal event. May include historical interrupted runs; not a count of active workers. Database values deduplicated, unavailable collectors excluded."
     }
   ],
   "refresh": "15s",
@@ -166,5 +320,5 @@
   "timezone": "browser",
   "title": "SYNERGIA Technical Overview",
   "uid": "synergia-technical-overview",
-  "version": 1
+  "version": 2
 }

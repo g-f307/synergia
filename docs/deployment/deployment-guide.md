@@ -131,3 +131,44 @@ python3 scripts/deploy.py verify --project synergia --env-file /caminho/privado/
 Verify usa a configuração congelada no histórico; mudanças posteriores no
 env-file não reconfiguram containers. Para aplicar configuração nova, faça uma
 atualização pela automação. Desenvolvimento local segue o [roteiro local](../getting-started.md).
+
+## 6. Operação opcional da assistência de IA
+
+Ativar somente após a validação final da #192 e autorização do ambiente. O
+runtime não é dependência obrigatória da aplicação. A configuração é privada,
+conforme a [referência](environment-reference.md); não baixar pesos ou substituir
+pin automaticamente durante deploy, precheck ou healthcheck.
+
+- Fixar versão do runtime e nome/digest aprovados. O provider chama o alias
+  `sha256-` seguido dos 64 hex do digest; ele deve existir no runtime e anunciar
+  esse digest instalado/carregado. A sonda confere o anúncio, sem atestar o host.
+- Usar loopback quando backend/runtime estão no mesmo host, ou serviço exato
+  permitido em rede controlada. `127.0.0.1` dentro do backend em container é o
+  próprio container. Não abrir o runtime à rede de usuários, habilitar
+  redirect/proxy ou enviar destinos vindos do POST.
+- Preservar contexto/resposta de 8 KiB, prazo de 30 segundos, uma chamada por
+  processo e uma reserva processing global no banco compartilhado. O limite é
+  dez novas tentativas por usuário e organização em dez minutos; reuso não
+  infere. Isso não equivale a cota diária ou reserva de CPU/RAM/GPU. Dimensionar
+  host/modelo junto das jornadas principais; a #191 não homologa throughput,
+  hardware ou qualidade do modelo.
+- Aplicar migrations pelo runner da automação, incluindo 0040 para auditoria
+  das manutenções. Planejar retenção explícita em homologação/produção e rotina
+  finita por identidade técnica existente: [prévia e lote efetivo](../runbooks/ai-assistance-retention.md).
+- Provisionar os ativos existentes de Prometheus/Grafana e exportação Graylog
+  autorizada. Token de métricas/sonda é técnico e privado, sem acesso do browser.
+  Não é repassado pelo Compose base: mounts/overlays necessários exigem fluxo
+  operacional aprovado, sem edição manual que desvie do ledger.
+- Acompanhar flags/coleta, latência, rejeições, in-flight, reservas e manutenção
+  nos [painéis e cinco alertas](../ai-assistance-observability.md#alertas-e-painel).
+  Sincronizar relógios de banco/Prometheus. Ausência de amostra não é saúde;
+  regras locais não criam canal externo de notificação.
+
+Usar a [sonda informativa](../runbooks/ai-assistance.md#sonda-informativa) sem
+dados reais; `/health/ready` continua baseado nos serviços essenciais. Conferir
+leitura autorizada e caso sintético na janela aprovada. Implantar configuração
+nova em todas as instâncias pelo fluxo com histórico, não somente editar env-file.
+
+Para incidente, seguir [suspensão e recuperação](../runbooks/ai-assistance.md)
+e [rollback de operação](update-and-rollback.md#assistência-de-ia-suspensão-e-rollback).
+O [threat model](../threat-model.md) registra os doze riscos e limites residuais.

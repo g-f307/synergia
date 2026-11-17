@@ -46,6 +46,8 @@ SAFE_FIELDS = frozenset(
         "source",
         "stack_trace",
         "status_code",
+        "state",
+        "origin",
         "timestamp",
     }
 )

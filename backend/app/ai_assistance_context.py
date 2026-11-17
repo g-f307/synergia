@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import psycopg
-from prometheus_client import Counter, Histogram
 from pydantic import ValidationError
 
 from app.ai_assistance_context_models import (
@@ -32,28 +31,16 @@ from app.ai_assistance_context_policy import (
 from app.ai_assistance_context_reader import ContextReader
 from app.ai_assistance_contract import serialize_context
 from app.ai_assistance_errors import assistance_error
+from app.ai_assistance_telemetry import (
+    CONTEXT_BYTES,
+    CONTEXTS,
+    TRUNCATIONS,
+    context_timing,
+    environment,
+)
 from app.authorization import ActorContext
 from app.errors import ApiError
-from app.observability.metrics import REGISTRY
 
-CONTEXTS = Counter(
-    "synergia_ai_assistance_contexts",
-    "Completed internal context builds.",
-    ["sufficiency"],
-    registry=REGISTRY,
-)
-CONTEXT_BYTES = Histogram(
-    "synergia_ai_assistance_context_bytes",
-    "Serialized context size in UTF-8 bytes.",
-    buckets=(1024, 2048, 4096, 6144, 8192),
-    registry=REGISTRY,
-)
-TRUNCATIONS = Counter(
-    "synergia_ai_assistance_context_truncations",
-    "Truncated context collections.",
-    ["section"],
-    registry=REGISTRY,
-)
 PREFIXES = dict(zip(SECTIONS, ("DIV", "PEN", "CLA", "EVI", "HIS"), strict=True))
 
 
@@ -155,6 +142,7 @@ class ExecutionContextBuilder:
                 organization if actor.allows("execution.read", organization) else None
             )
 
+    @context_timing
     def build(
         self,
         actor: ActorContext,
@@ -238,8 +226,8 @@ class ExecutionContextBuilder:
         digest = hashlib.sha256(canonical_bytes(context)).hexdigest()
         context = context.model_copy(update={"context_sha256": digest})
         serialized = serialize_snapshot(context)
-        CONTEXTS.labels(context.sufficiency).inc()
-        CONTEXT_BYTES.observe(len(serialized))
+        CONTEXTS.labels(environment(), context.sufficiency).inc()
+        CONTEXT_BYTES.labels(environment()).observe(len(serialized))
         for section in context.truncated_sections:
-            TRUNCATIONS.labels(section).inc()
+            TRUNCATIONS.labels(environment(), "truncated_" + section).inc()
         return context

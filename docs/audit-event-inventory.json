@@ -167,7 +167,8 @@
         "data.retention"
       ],
       "emitters": [
-        "backend/app/data_operations.py"
+        "backend/app/data_operations.py",
+        "backend/app/ai_assistance_maintenance.py"
       ]
     },
     {

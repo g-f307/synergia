@@ -2,15 +2,15 @@
 
 ## Estado e finalidade
 
-Este documento representa a arquitetura entregue até a Etapa 4 e é a baseline
-de segurança da Etapa 5. Ele orienta as issues #90 a #96 sem declarar como
+Este documento preserva a baseline da Etapa 5 e incorpora a assistência de IA
+da Etapa 6 (#187–#191), registro 1.4.0. Ele orienta as issues #90 a #96 sem declarar como
 prontos controles que ainda dependem de implementação ou decisão corporativa.
 O registro canônico e validável está em
 [`security-risk-register.json`](security-risk-register.json).
 
 O escopo cobre Angular, FastAPI, PostgreSQL, armazenamento controlado, worker de
-e-mail e CI. Conectores automáticos, RPA, identidade corporativa, SMTP
-corporativo e infraestrutura definitiva não são componentes disponíveis.
+e-mail, runtime local opcional, projeção de auditoria Graylog e CI. Conectores
+automáticos/RPA e infraestrutura corporativa definitiva não estão homologados.
 
 ## Método de classificação
 
@@ -91,6 +91,10 @@ flowchart LR
     C[CI] -->|TB-06 ambiente descartável| W
     C -->|TB-06| A
     C -->|TB-06| P
+    A -->|TB-07 origem HTTP fixa| L[Runtime local opcional]
+    P -->|TB-08 projeção minimizada| A
+    A -->|TB-08 saída não confiável validada| W
+    P -->|TB-09 outbox e GELF HTTPS| G[Graylog autorizado]
 ```
 
 `TB-01` e `TB-02` recebem conteúdo não confiável. O navegador pode ser
@@ -98,6 +102,10 @@ modificado pelo usuário; guards, campos ocultos e menus não concedem seguranç
 `TB-03` e `TB-04` só podem ser atravessadas pelo backend. `TB-05` permanece
 fechada em produção enquanto custódia de segredos, destinatários e operação não
 forem homologados. `TB-06` não utiliza dados nem credenciais corporativas.
+`TB-07` depende de configuração/rede privilegiadas; a política permite loopback
+ou um serviço explicitamente aprovado, não acesso livre a DNS. `TB-08` separa
+campos persistidos não confiáveis do contexto/saída permitidos. `TB-09` exporta
+somente metadados aprovados; métricas e sonda exigem credencial técnica.
 
 ## Jornadas críticas
 
@@ -110,6 +118,7 @@ forem homologados. `TB-06` não utiliza dados nem credenciais corporativas.
 | J-05 notificação e e-mail | destinatário, worker | preferência, mensagem, entrega | TB-01, TB-02, TB-03, TB-05 | destinatário incorreto, duplicidade e segredo |
 | J-06 aprovação humana | solicitante, gestor, auditor | política, justificativa, decisão | TB-01 a TB-03 | elevação, quebra de segregação e repúdio |
 | J-07 administração de identidade | admin, usuário alvo | ciclo de vida, papel e escopo | TB-01 a TB-03 | mass assignment e elevação vertical |
+| J-08 assistência de IA | gestor/analista autorizados, runtime, operador técnico | contexto, resultado, reserva e auditoria | TB-01–03, TB-07–09 | injection, escopo, SSRF, consumo, integridade e degradação |
 
 Os métodos, caminhos, permissões e escopos mínimos dessas jornadas são
 conferidos automaticamente contra OpenAPI e `access-control-matrix.md`. O gate
@@ -118,10 +127,12 @@ obrigatória. O frontend não é considerado fonte de autorização.
 
 ### Aplicabilidade de SSRF
 
-SSRF foi analisado e é **não aplicável à superfície atual**: o FastAPI não busca
-URLs fornecidas pelo usuário e não existe contrato de webhook, importação remota
-ou conector de saída. A decisão deve ser reaberta na Etapa 6, antes da inclusão
-de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
+SSRF é aplicável ao transporte do runtime configurado: **R-37**. A decisão antiga
+de não aplicabilidade global foi retirada. Somente a superfície ainda inexistente
+de importação por URL/webhook permanece não aplicável e tem condição de retomada.
+O usuário não fornece endpoint ou prompt pelo POST. O transporte usa origem fixa,
+rotas fixas, sem proxy/redirect. Configuração, DNS do serviço aprovado e o host
+continuam privilegiados; o código não comprova sua integridade.
 
 ## Registro de riscos
 
@@ -158,6 +169,18 @@ de conectores RPA, webhooks ou qualquer recuperação de URL no servidor.
 | R-29 | J-07 | claims ou grupos forjados, vencidos ou mal mapeados concedendo acesso | crítico | médio | mitigado | identity | #144 |
 | R-30 | J-07 | acesso residual após desligamento no diretório corporativo | alto | alto | bloqueado | identity | #144 |
 | R-31 | J-01 | login local temporário que permanece após o aceite do adaptador | alto | baixo | mitigado | platform | #144 |
+| R-32 | J-08 | prompt injection indireta em campos persistidos | alto | médio | mitigado | backend | #191 |
+| R-33 | J-08 | vazamento entre organizações | crítico | médio | mitigado | security | #191 |
+| R-34 | J-08 | conteúdo ou dados sensíveis em telemetria/auditoria | alto | médio | mitigado | backend | #191 |
+| R-35 | J-08 | output injection no Angular | alto | médio | mitigado | backend | #191 |
+| R-36 | J-08 | modelo/runtime adulterado | alto | médio | mitigado | backend | #191 |
+| R-37 | J-08 | destino indevido, proxy ou redirecionamento | alto | médio | mitigado | security | #191 |
+| R-38 | J-08 | concorrência e resposta grande/lenta | alto | médio | mitigado | backend | #191 |
+| R-39 | J-08 | consumo ilimitado | alto | médio | mitigado | backend | #191 |
+| R-40 | J-08 | resposta falsa apresentada como fato | alto | médio | mitigado | backend | #191 |
+| R-41 | J-08 | acesso direto à API sem permissão | crítico | médio | mitigado | security | #191 |
+| R-42 | J-08 | reserva presa e inferência repetida | alto | médio | mitigado | backend | #191 |
+| R-43 | J-08 | runtime indisponível afetando a aplicação | alto | médio | mitigado | backend | #191 |
 
 Detalhes de ameaça, controles e evidências são mantidos no registro JSON. Um
 controle só reduz a severidade residual quando sua evidência existe no
@@ -208,3 +231,35 @@ O aceite final da Etapa 5 e a entrada na Etapa 6 exigem que essas revisões
 fiquem registradas no PR. Alterações futuras
 em jornada, fronteira, permissão, dado sensível ou componente devem atualizar o
 registro e executar `python scripts/validate_threat_model.py`.
+
+## Assistência de IA: controles e limites da #191
+
+Cada risco R-32–R-43 no registro canônico declara origem, fronteiras, controles
+preventivos/detectivos, testes nomeados existentes e risco residual. O validador
+exige as doze ameaças, resolve funções de teste por AST e mantém os portões
+corporativos anteriores. Não concede aceite de risco ou autorização de produção.
+
+O modelo não possui ferramentas nem ação de escrita. Recebe projeção minimizada,
+limitada e versionada; nomes, razões e valores livres não são enviados. Contrato
+estrito de saída, referências autorizadas, fallback determinístico, interpolação
+Angular e limites de transporte são controles independentes da obediência do
+modelo. Testes com fontes persistidas maliciosas verificam o caminho até resultado,
+auditoria/outbox e telemetria; servidores locais adversariais verificam transporte.
+
+Esses controles não provam verdade semântica, qualidade da explicação ou segurança
+de um host comprometido. O pin é o anunciado pelo runtime. A filtragem de texto
+não resolve toda prompt injection. Há limite por usuário/organização em janela,
+mas não uma cota diária de CPU/energia. Lease expirado não comprova que a inferência
+remota acabou; recuperação exige suspensão e encerramento dos workers antigos.
+Readiness não consulta o modelo, porém recursos do host/banco continuam compartilhados.
+
+Os resultados destes testes usam runtime controlado, sem avaliar um modelo real
+ou substituir o aceite de utilidade/qualidade da #192. Reabrir o modelo de ameaças
+antes de adicionar RAG com texto livre, ferramentas, escrita, links externos,
+runtime remoto ou mudanças na topologia/isolamento.
+
+Procedimentos e evidências: [operação](runbooks/ai-assistance.md),
+[telemetria](ai-assistance-observability.md). Referências de desenho:
+[OWASP prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/),
+[OWASP output handling](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)
+e [prevenção em LLMs](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html).

@@ -5,11 +5,25 @@ estão documentadas em [ai-assistance-web.md](ai-assistance-web.md).
 
 A assistência exige `SYNERGIA_AI_ASSISTANCE_ENABLED=true` e as configurações de
 runtime e retenção descritas em `ai-assistance-persistence.md` e no contrato
-operacional. O banco deve estar migrado até `0039` e o segredo compartilhado do
+operacional. O banco deve estar migrado até `0040` (inclui a auditoria das
+manutenções) e o segredo compartilhado do
 limitador deve estar em `RATE_LIMIT_KEY_SECRET` (ou `AUTH_JWT_SIGNING_KEY`), com
 pelo menos 32 bytes. A opção desligada responde `ai_assistance_disabled`.
 
+Na API `0.13.0`, `SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED=false` suspende
+somente o POST (`503 ai_assistance_generation_disabled`), mantendo a flag geral
+ligada. A leitura possui serviço separado, sem provider nem limitador de geração;
+runtime, modelo/digest e segredo do limitador não são necessários nesse modo.
+Valores de configuração presentes continuam sujeitos à validação de segurança.
+A capability mantém leitura autorizada e retorna `generate=false`. A flag geral
+desligada mantém seu comportamento anterior, bloqueando ambas as operações.
+O runbook de [degradação e recuperação](runbooks/ai-assistance.md) descreve os dois
+controles e a sonda técnica autenticada, independente da readiness.
+
 `POST /executions/{execution_id}/ai-assistance` aceita corpo ausente ou `{}`.
+Na admissão, a leitura é limitada a 1 KiB e três segundos, inclusive sem
+Content-Length; excesso ou stream lento retorna o mesmo 422
+`ai_assistance_invalid_contract`, sem geração ou consumo do restante do corpo.
 Exige `execution.read` e `ai.assistance.generate` na organização da execução.
 O contexto é montado no servidor; o cliente não fornece fatos ou configurações do
 modelo. Resultados equivalentes são reutilizados. Saídas rejeitadas após a chamada
@@ -43,6 +57,7 @@ com o correlation ID, sem identificadores ou conteúdo do contexto nos logs.
 | 429 | `rate_limit_exceeded` | Limite por ator ou organização; `Retry-After` informa a espera |
 | 500 | `ai_assistance_integrity_error` | Registro persistido inválido |
 | 503 | `ai_assistance_disabled` | Recurso desligado |
+| 503 | `ai_assistance_generation_disabled` | Somente geração suspensa; leitura preservada |
 | 503 | `ai_assistance_runtime_unavailable` | Dependência ou runtime indisponível |
 | 504 | `ai_assistance_timeout` | Prazo excedido |
 

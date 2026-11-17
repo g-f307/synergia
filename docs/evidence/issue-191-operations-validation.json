@@ -1,0 +1,195 @@
+{
+  "status": "validated_ai191_real_graylog",
+  "evidence_id": "14a46779-3f73-4319-bb31-84f4c5bac6d4",
+  "started_at": "2026-11-16T05:50:57.951463+00:00",
+  "finished_at": "2026-11-16T05:51:06.475296+00:00",
+  "graylog_version": "7.2.2+94adc86",
+  "runtime": "synthetic_http_no_model",
+  "real_authentication": true,
+  "dependency_overrides": false,
+  "phases": [
+    {
+      "phase": "baseline",
+      "probe": "healthy",
+      "post_status": 200,
+      "read_status": 200,
+      "ready_status": 200,
+      "core_status": 200
+    },
+    {
+      "phase": "failure",
+      "probe": "unavailable",
+      "post_status": 503,
+      "read_status": 200,
+      "ready_status": 200,
+      "core_status": 200
+    },
+    {
+      "phase": "suspension",
+      "probe": "suspended",
+      "post_status": 503,
+      "read_status": 200,
+      "ready_status": 200,
+      "core_status": 200
+    },
+    {
+      "phase": "recovery",
+      "probe": "healthy",
+      "post_status": 200,
+      "read_status": 200,
+      "ready_status": 200,
+      "core_status": 200
+    }
+  ],
+  "inferences": 3,
+  "reuse_without_inference": true,
+  "cross_org_status": 404,
+  "malicious_output": "rejected_without_raw_content",
+  "recovered_reservations": 1,
+  "retained_results": 3,
+  "retention_empty_batch_succeeded": true,
+  "confirmed_receipts": [
+    {
+      "event_id": "6356e724e42de9723494a37a38f4431158a9e7ddbd7c59cd5e54dcddd7d035cd",
+      "message": "ai.assistance.completed",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "374b1910-4526-4d81-b633-31edfb0c04b0"
+    },
+    {
+      "event_id": "ed48356806e3cbaed729b185010280e936745e9fce861d948c9ef3aef809669f",
+      "message": "data.retention",
+      "origin": "data_operation_events",
+      "outcome": "started",
+      "correlation_id": "6cdbba1a-43fe-46b9-bc14-8e09bc15fcb8"
+    },
+    {
+      "event_id": "54c11e3b2dbb735975d139f3c1db69507beca9e6bba26e71fb7d89f54b91dac8",
+      "message": "ai.assistance.read",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "dfab7d24-cb1d-4510-93f7-ec05c1da5ed8"
+    },
+    {
+      "event_id": "4501883dd905164f5b2b88062becfa2fc8772548c28281c856644359f1a2f0ff",
+      "message": "ai.assistance.read",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "32b51c5e-9cda-42b7-97f4-61a69f059110"
+    },
+    {
+      "event_id": "e1e0cfa4327030d900e081cfd1c2e533dbac15b047edbac7438177b30cd4cd81",
+      "message": "ai.assistance.requested",
+      "origin": "ai_assistance_events",
+      "outcome": "started",
+      "correlation_id": "400a243c-b82b-471a-882f-6b851507288d"
+    },
+    {
+      "event_id": "1af105c50d2e26a16d9e04060e6f5f5d158865bc8d18c553c7486bd80d2064c7",
+      "message": "ai.assistance.read",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "528c61b9-e323-49e8-9f4f-cd658b7ecd1f"
+    },
+    {
+      "event_id": "f79837c41eae09939331d479ba268f31d4c7ee55c7a97bb15c9846ba7c3a473c",
+      "message": "ai.assistance.reused",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "8d5744b5-7f95-4903-9807-733c3416c3e4"
+    },
+    {
+      "event_id": "76c622760054f4fa2087655ab2eab1d4309fbb238422dce2e7c41c190d2a8795",
+      "message": "ai.assistance.requested",
+      "origin": "ai_assistance_events",
+      "outcome": "started",
+      "correlation_id": "81d4b8e8-11f8-4677-8e9e-fabee1f0b0ca"
+    },
+    {
+      "event_id": "ce20ebddb85a79bcd0420caf2c30491126ae79d9b4606de1c7a1105a27ae5d77",
+      "message": "ai.assistance.rejected",
+      "origin": "ai_assistance_events",
+      "outcome": "failure",
+      "correlation_id": "81d4b8e8-11f8-4677-8e9e-fabee1f0b0ca"
+    },
+    {
+      "event_id": "aa2e2d59c20fef9b2bb0b627deef75a47e7fd88bf9d814daecb24182c5b06002",
+      "message": "data.retention",
+      "origin": "data_operation_events",
+      "outcome": "success",
+      "correlation_id": "6cdbba1a-43fe-46b9-bc14-8e09bc15fcb8"
+    },
+    {
+      "event_id": "2c68a1bb822cc34e9ef1d0936fa6fc4c0ae61d4996761fa51f2c16382583eaee",
+      "message": "ai.assistance.read",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "dacda022-c7b5-4c68-90cc-700b616b8b4a"
+    },
+    {
+      "event_id": "3a0043819e227c9e9d7d85c32ad41eb999680e834c6842286576417a9f42a635",
+      "message": "ai.assistance.requested",
+      "origin": "ai_assistance_events",
+      "outcome": "started",
+      "correlation_id": "374b1910-4526-4d81-b633-31edfb0c04b0"
+    },
+    {
+      "event_id": "680fc6565e7296650b4971c4669e2cde025e7da60b27a932fc61f8d397dcee63",
+      "message": "ai.assistance.read",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "6817d2bb-3155-4470-a2a0-586365d62223"
+    },
+    {
+      "event_id": "440a65a8945469f6162fdd6a0fc0fad4326bf653b1d127ddd607365d738ae2bb",
+      "message": "ai.assistance.requested",
+      "origin": "ai_assistance_events",
+      "outcome": "started",
+      "correlation_id": "981c839d-3607-4e63-b3c4-9ae9b4e18de2"
+    },
+    {
+      "event_id": "5954f2a0ee77597296e2917c88871d47138d880b15d9c160d4479889c553a62e",
+      "message": "ai.assistance.rejected",
+      "origin": "ai_assistance_events",
+      "outcome": "failure",
+      "correlation_id": "981c839d-3607-4e63-b3c4-9ae9b4e18de2"
+    },
+    {
+      "event_id": "c0ec7463cc0de40a2eca06afc458b86b81b6a306c0653eeed774d98f31062745",
+      "message": "ai.assistance.completed",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "400a243c-b82b-471a-882f-6b851507288d"
+    },
+    {
+      "event_id": "70b0a4eb97b9f5addf37b19ee41aa47dcc4b4f7546af828a654930de2555ffcf",
+      "message": "data.retention",
+      "origin": "data_operation_events",
+      "outcome": "success",
+      "correlation_id": "df9d9949-80ca-499e-bf20-8b0a8e9919b3"
+    },
+    {
+      "event_id": "ccea914511d1ee0e2f1e8329f3c91bd2863cdde6d06f85e0ace336ae9bcfbc0d",
+      "message": "ai.assistance.requested",
+      "origin": "ai_assistance_events",
+      "outcome": "started",
+      "correlation_id": "d8a7d57d-88e9-46c6-950a-4a97b412e5cf"
+    },
+    {
+      "event_id": "293bcdaca88a729d7cb2b2e1f132429d97e07b08170b109d2cb07eb32a965893",
+      "message": "ai.assistance.expired",
+      "origin": "ai_assistance_events",
+      "outcome": "success",
+      "correlation_id": "6cdbba1a-43fe-46b9-bc14-8e09bc15fcb8"
+    },
+    {
+      "event_id": "0723ad24f9ddf96fc9684ddff81370c3c968656530a199335bf04c519629859f",
+      "message": "data.retention",
+      "origin": "data_operation_events",
+      "outcome": "started",
+      "correlation_id": "df9d9949-80ca-499e-bf20-8b0a8e9919b3"
+    }
+  ],
+  "repeated_export_processed": 0,
+  "graylog_query": "service:synergia-audit-projector AND (event_id:\"6356e724e42de9723494a37a38f4431158a9e7ddbd7c59cd5e54dcddd7d035cd\" OR event_id:\"ed48356806e3cbaed729b185010280e936745e9fce861d948c9ef3aef809669f\" OR event_id:\"54c11e3b2dbb735975d139f3c1db69507beca9e6bba26e71fb7d89f54b91dac8\" OR event_id:\"4501883dd905164f5b2b88062becfa2fc8772548c28281c856644359f1a2f0ff\" OR event_id:\"e1e0cfa4327030d900e081cfd1c2e533dbac15b047edbac7438177b30cd4cd81\" OR event_id:\"1af105c50d2e26a16d9e04060e6f5f5d158865bc8d18c553c7486bd80d2064c7\" OR event_id:\"f79837c41eae09939331d479ba268f31d4c7ee55c7a97bb15c9846ba7c3a473c\" OR event_id:\"76c622760054f4fa2087655ab2eab1d4309fbb238422dce2e7c41c190d2a8795\" OR event_id:\"ce20ebddb85a79bcd0420caf2c30491126ae79d9b4606de1c7a1105a27ae5d77\" OR event_id:\"aa2e2d59c20fef9b2bb0b627deef75a47e7fd88bf9d814daecb24182c5b06002\" OR event_id:\"2c68a1bb822cc34e9ef1d0936fa6fc4c0ae61d4996761fa51f2c16382583eaee\" OR event_id:\"3a0043819e227c9e9d7d85c32ad41eb999680e834c6842286576417a9f42a635\" OR event_id:\"680fc6565e7296650b4971c4669e2cde025e7da60b27a932fc61f8d397dcee63\" OR event_id:\"440a65a8945469f6162fdd6a0fc0fad4326bf653b1d127ddd607365d738ae2bb\" OR event_id:\"5954f2a0ee77597296e2917c88871d47138d880b15d9c160d4479889c553a62e\" OR event_id:\"c0ec7463cc0de40a2eca06afc458b86b81b6a306c0653eeed774d98f31062745\" OR event_id:\"70b0a4eb97b9f5addf37b19ee41aa47dcc4b4f7546af828a654930de2555ffcf\" OR event_id:\"ccea914511d1ee0e2f1e8329f3c91bd2863cdde6d06f85e0ace336ae9bcfbc0d\" OR event_id:\"293bcdaca88a729d7cb2b2e1f132429d97e07b08170b109d2cb07eb32a965893\" OR event_id:\"0723ad24f9ddf96fc9684ddff81370c3c968656530a199335bf04c519629859f\")"
+}

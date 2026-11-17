@@ -9,10 +9,13 @@ import sys
 from uuid import UUID, uuid4
 
 from app.ai_assistance_config import AiAssistanceConfig
+from app.ai_assistance_maintenance import run_maintenance
 from app.ai_assistance_repository import PostgresAiAssistanceRepository
+from app.observability.telemetry import configure_logging
 
 
 def main() -> None:
+    configure_logging()
     parser = argparse.ArgumentParser()
     parser.add_argument("--actor-id", required=True, type=UUID)
     parser.add_argument("--batch-size", type=int, default=100)
@@ -22,8 +25,13 @@ def main() -> None:
     repo = PostgresAiAssistanceRepository(
         os.environ["DATABASE_URL"], config.retention_days
     )
-    result = repo.expire(
-        args.actor_id, uuid4(), batch_size=args.batch_size, dry_run=args.dry_run
+    result = run_maintenance(
+        repo,
+        "retention",
+        args.actor_id,
+        uuid4(),
+        batch_size=args.batch_size,
+        dry_run=args.dry_run,
     )
     print(json.dumps(result, default=str))
 

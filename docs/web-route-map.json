@@ -47,7 +47,8 @@
     {"method": "GET", "path": "/health", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "platform", "decision": "Sonda agregada destinada à operação, sem jornada de usuário no Angular."},
     {"method": "GET", "path": "/health/live", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "platform", "decision": "Sonda de liveness destinada ao orquestrador, sem jornada de usuário no Angular."},
     {"method": "GET", "path": "/health/ready", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "platform", "decision": "Sonda de readiness destinada ao orquestrador, sem jornada de usuário no Angular."},
-    {"method": "GET", "path": "/metrics", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "prometheus", "decision": "Superfície protegida por credencial técnica exclusiva, sem jornada de usuário no Angular."}
+    {"method": "GET", "path": "/metrics", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "prometheus", "decision": "Superfície protegida por credencial técnica exclusiva, sem jornada de usuário no Angular."},
+    {"method": "GET", "path": "/operations/ai-assistance/health", "permission": "technical", "scope": "technical", "exposure": "technical", "consumer": "none", "decision": "Sonda informativa com Bearer técnico de observabilidade; sem inferência, metadados internos ou efeito na readiness."}
   ],
   "planned_capabilities": [
     {"id": "admin-session-management", "status": "deferred", "target": "future-admin-session-permission", "decision": "Leitura administrativa de sessões não consta da matriz de acesso; não há interface nem listagem de terceiros sem permissão específica."},

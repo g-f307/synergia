@@ -75,6 +75,17 @@ describe('ExecutionAssistanceComponent', () => {
     capability.load.and.returnValue(of({ enabled: true, read: false, generate: true })); render();
     expect(api.latest).not.toHaveBeenCalled(); component.generate(); expect(api.generate).toHaveBeenCalledTimes(1);
   });
+  it('refreshes capability after generation is suspended and keeps the persisted result visible', () => {
+    render();
+    capability.load.and.returnValue(of({ enabled: true, read: true, generate: false }));
+    api.latest.and.returnValue(of(assistanceFixture()));
+    api.generate.and.returnValue(throwError(() => failure(503, 'ai_assistance_generation_disabled')));
+    component.generate(); fixture.detectChanges();
+    expect(component.visible()).toBeTrue(); expect(component.result()).toEqual(assistanceFixture());
+    expect(component.canGenerate()).toBeFalse(); expect(text()).toContain('Fatos disponíveis');
+    expect(capability.load).toHaveBeenCalledTimes(2);
+    component.generate(); expect(api.generate).toHaveBeenCalledTimes(1);
+  });
   it('does not offer forced regeneration when a result exists', () => {
     api.latest.and.returnValue(of(assistanceFixture())); render(); component.generate();
     expect(api.generate).not.toHaveBeenCalled(); expect(fixture.nativeElement.querySelector('button')).toBeNull();

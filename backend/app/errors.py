@@ -125,6 +125,9 @@ def install_error_handlers(app: FastAPI) -> None:
 
 
 def _log_failure(request: Request, status_code: int, error_code: str) -> None:
+    observation = request.scope.get("state", {}).get("ai_assistance_observation")
+    if observation is not None:
+        observation.fail(error_code)
     route = request.scope.get("route")
     safe_log(
         logging.ERROR if status_code >= 500 else logging.WARNING,

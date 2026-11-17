@@ -141,6 +141,88 @@ def test_busy_lock():
         _LOCK.release()
 
 
+@pytest.mark.security
+def test_redirect_never_contacts_a_second_local_origin():
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    received = []
+
+    class Sink(BaseHTTPRequestHandler):
+        def do_GET(self):
+            received.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    sink = ThreadingHTTPServer(("127.0.0.1", 0), Sink)
+
+    class Redirect(Sink):
+        def do_GET(self):
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{sink.server_port}/capture")
+            self.end_headers()
+
+    source = ThreadingHTTPServer(("127.0.0.1", 0), Redirect)
+    for server in (sink, source):
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    from dataclasses import replace
+
+    config = replace(
+        provider().config, endpoint=f"http://127.0.0.1:{source.server_port}"
+    )
+    try:
+        runtime = LocalAiModelProvider(config)
+        for _ in range(2):
+            with pytest.raises(ProviderError, match="runtime_redirect"):
+                runtime.generate("system", "synthetic", {})
+        assert received == []
+    finally:
+        for server in (source, sink):
+            server.shutdown()
+            server.server_close()
+
+
+@pytest.mark.security
+def test_environment_proxy_is_never_contacted(monkeypatch):
+    import threading
+    from dataclasses import replace
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    received = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            received.append((self.server.server_port, self.path))
+            self.send_response(503)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    source = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    proxy = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    for server in (source, proxy):
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    for key in ("HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"):
+        monkeypatch.setenv(key, f"http://127.0.0.1:{proxy.server_port}")
+    for key in ("NO_PROXY", "no_proxy"):
+        monkeypatch.setenv(key, "")
+    config = replace(
+        provider().config, endpoint=f"http://127.0.0.1:{source.server_port}"
+    )
+    try:
+        with pytest.raises(ProviderError, match="runtime_unavailable"):
+            LocalAiModelProvider(config).generate("system", "synthetic", {})
+        assert received == [(source.server_port, "/api/version")]
+    finally:
+        for server in (source, proxy):
+            server.shutdown()
+            server.server_close()
+
+
 def test_changed_loaded_digest_is_rejected():
     p = provider()
     good = json.dumps(
