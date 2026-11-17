@@ -21,10 +21,12 @@ ALLOWED_PATTERNS = (
     "migrations-rollback.json",
     "graylog-reconciliation.json",
     "pg-api-p95.json",
-    "e2e-assistance-results/**/*",
+    "e2e-assistance-results/**/*.webm",
+    "e2e-assistance-results/**/*.png",
     "axe-*.json",
     "*.png",
 )
+EXCLUDED_ATTACHMENT_SUFFIXES = {".zip"}
 
 
 def _is_forbidden(rel: Path) -> bool:
@@ -52,13 +54,24 @@ def _scan_forbidden(resolved_dir: Path, target_zip: Path, tmp_zip: Path) -> None
             )
 
 
+def _is_excluded_attachment(path: Path) -> bool:
+    name = path.name.lower()
+    return (
+        path.suffix.lower() in EXCLUDED_ATTACHMENT_SUFFIXES
+        or name == "trace.zip"
+        or name.startswith("trace.")
+    )
+
+
 def _collect_allowlisted_files(resolved_dir: Path) -> list[Path]:
     collected: set[Path] = set()
     for pattern in ALLOWED_PATTERNS:
         for item in resolved_dir.glob(pattern):
             if item.is_file() and not item.is_symlink():
                 resolved_item = item.resolve()
-                if resolved_item.is_relative_to(resolved_dir):
+                if resolved_item.is_relative_to(resolved_dir) and not _is_excluded_attachment(
+                    resolved_item
+                ):
                     collected.add(resolved_item)
     return sorted(collected)
 

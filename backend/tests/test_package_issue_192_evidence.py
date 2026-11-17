@@ -39,3 +39,30 @@ def test_package_evidence_creates_manifest_and_rejects_secrets(tmp_path):
     with pytest.raises(ValueError, match="proibido"):
         package_evidence(ev, output_zip=out_zip)
     assert not out_zip.exists()
+
+
+def test_package_evidence_excludes_traces_and_allows_safe_e2e_media(tmp_path):
+    from package_issue_192_evidence import package_evidence
+
+    ev = tmp_path / "ev"
+    case_dir = ev / "e2e-assistance-results" / "assistance-case-1"
+    case_dir.mkdir(parents=True)
+
+    video = case_dir / "video.webm"
+    video.write_bytes(b"webm-bytes")
+    screenshot = case_dir / "test-failed-1.png"
+    screenshot.write_bytes(b"png-bytes")
+
+    trace_zip = case_dir / "trace.zip"
+    with zipfile.ZipFile(trace_zip, "w") as zf:
+        zf.writestr("trace.network", '{"Authorization":"Bearer synthetic-token"}')
+    (case_dir / "network.har").write_text('{"log":{}}', encoding="utf-8")
+
+    result = package_evidence(ev)
+    assert result["file_count"] == 2
+    with zipfile.ZipFile(result["zip_path"]) as zf:
+        names = set(zf.namelist())
+        assert "e2e-assistance-results/assistance-case-1/video.webm" in names
+        assert "e2e-assistance-results/assistance-case-1/test-failed-1.png" in names
+        assert "e2e-assistance-results/assistance-case-1/trace.zip" not in names
+        assert "e2e-assistance-results/assistance-case-1/network.har" not in names
