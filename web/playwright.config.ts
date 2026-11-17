@@ -48,7 +48,7 @@ export default defineConfig({
         // its scenarios. Dedicated backend tests still exercise the real limits.
         RATE_LIMIT_LOGIN_LIMIT: '1000',
         RATE_LIMIT_REFRESH_LIMIT: '1000',
-        IMPORT_STORAGE_DIR: '../.test-tmp/e2e-imports',
+        IMPORT_STORAGE_DIR: process.env.IMPORT_STORAGE_DIR ?? '../.test-tmp/e2e-imports',
       },
     },
     {
