@@ -115,6 +115,9 @@ também dependerá da política de rede da TI.
 | `GET /imports/{execution_id}/validation-report` | `artifact.read` | validação | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/normalized-data` | `artifact.read` | dados normalizados | `org` | gestor, analista, operador |
 | `GET /imports/{execution_id}/pipeline-summary` | `import.read` | resumo do pipeline | `org` | gestor, analista, operador |
+| `GET /imports/{execution_id}/result-summary` | `import.read` | resultado persistido da importação | `org` | gestor, analista, operador |
+| `GET /imports/{execution_id}/issues` | `import.read` | divergências sanitizadas da importação | `org` | gestor, analista, operador |
+| `GET /imports/{execution_id}/issues/export` | `import.read` | CSV de divergências sanitizadas da importação | `org` | gestor, analista, operador |
 | `GET /executions` | `execution.read` | catálogo de execuções | `org` | gestor, analista, operador, consulta |
 | `GET /executions/summary` | `execution.read` | agregado de execuções | `org` | gestor, analista, operador, consulta |
 | `GET /me/ai-assistance-capability` | `execution.read + (ai.assistance.read ou ai.assistance.generate)` | capacidade sem configuração interna | `org` | gestor, analista |

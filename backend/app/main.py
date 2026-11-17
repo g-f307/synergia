@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     initialize_assistance_telemetry()
     application = FastAPI(
         title="SYNERGIA API",
-        version="0.15.0",
+        version="0.16.0",
         description=(
             "Contratos estáveis para importação, acompanhamento, consultas, "
             "pendências, relatórios, notificações, reprocessamento, identidade "

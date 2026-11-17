@@ -33,6 +33,7 @@ from app.execution_summary import (
     read_execution_aggregation,
     start_execution_snapshot,
 )
+from app.pipeline_issue_query import pipeline_issue_query
 
 router = APIRouter(prefix="/executions", tags=["execution-monitoring"])
 ERRORS = {
@@ -282,42 +283,14 @@ class MonitoringRepository:
         page_size: int,
         sort: str,
     ) -> tuple[list[dict], int]:
-        clauses = ["pi.execution_id=%s"]
-        params: list[Any] = [execution_id]
-        for expression, value in (
-            ("sf.source=%s", source),
-            ("pi.severity=%s", severity),
-            ("pi.code=%s", code),
-            ("pi.created_at >= %s", date_from),
-            ("pi.created_at <= %s", date_to),
-        ):
-            if value is not None:
-                clauses.append(expression)
-                params.append(value)
-        workorder_expr = "COALESCE(pi.details->>'workorder_number', nr.normalized_values->>'workorder_number')"
-        if workorder is not None:
-            clauses.append(f"{workorder_expr}=%s")
-            params.append(workorder)
-        where = " AND ".join(clauses)
-        direction = "DESC" if sort == "newest" else "ASC"
-        joins = """JOIN synergia.source_files sf ON sf.id=pi.source_file_id
-                   LEFT JOIN synergia.normalized_records nr ON nr.imported_record_id=pi.imported_record_id"""
+        query = pipeline_issue_query(
+            execution_id, projection="execution", organization_scopes=None,
+            source=source, severity=severity, code=code, workorder=workorder,
+            date_from=date_from, date_to=date_to, sort=sort,
+        )
         with self._connect() as connection:
-            total = connection.execute(
-                f"SELECT count(*) AS total FROM synergia.pipeline_issues pi {joins} WHERE {where}",
-                params,
-            ).fetchone()["total"]
-            rows = connection.execute(
-                f"""SELECT pi.id,sf.source,pi.severity,pi.code,pi.scope,
-                           {workorder_expr} AS workorder_number,pi.sheet_name,
-                           pi.row_number,pi.column_name,pi.reason,pi.details,
-                           pi.created_at AS occurred_at
-                    FROM synergia.pipeline_issues pi {joins} WHERE {where}
-                    ORDER BY pi.created_at {direction},pi.id {direction}
-                    LIMIT %s OFFSET %s""",
-                [*params, page_size, (page - 1) * page_size],
-            ).fetchall()
-        return [dict(row) for row in rows], total
+            start_execution_snapshot(connection)
+            return query.page(connection, page=page, page_size=page_size)
 
     def classifications(
         self, execution_id: str, *, page: int, page_size: int, sort: str
