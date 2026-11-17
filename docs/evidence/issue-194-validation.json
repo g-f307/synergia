@@ -1,0 +1,399 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 194,
+  "captured_at": "2026-11-17T18:11:38.012057+00:00",
+  "base_commit": "69591a343bf51b2851f4b6b4ac2752edbcd8227f",
+  "implementation": "Versioned implementation at implementation_commit; source hashes identify the validated files.",
+  "source_sha256": {
+    "backend/app/execution_monitoring.py": "45e92406f6f8e2dc619ec66d5bc34f4e4d51ec7857c6b7f3129ec1357305cb03",
+    "backend/app/import_issues.py": "68f18b688bb8ec359077619f33de2861c3a8c556fb0a6c3000f7c692fb75c857",
+    "backend/app/import_result_summary.py": "d1c81c9da5238af0403d252770d1678d7ef4051853cd39e89393090ee74d2d63",
+    "backend/app/imports.py": "d3f2fcbc1995a3e45b753c21f3ddfe97c20f0e39a2468c8b08dea6acc37f54ba",
+    "backend/app/main.py": "48acd94af64cb09bff432935f8d0f86cb4f91db2addae7bec1e880210b2b92ec",
+    "backend/app/pipeline_issue_query.py": "9b3bf214432d9e0718600d2f61372ce9a85c453153a2ee65cf8f6d3772692230",
+    "backend/tests/test_execution_summary.py": "0dff1c2db2a076e60a020b98e72c6e064558dba14f0ea433ef5f354f8155901f",
+    "backend/tests/test_import_diagnostics_fixture.py": "b95424b9ca894c4c727a5fa4d7036340bce5775139438be55be17de5d4abf1cc",
+    "backend/tests/test_import_issues.py": "7f9e86f1f7077c9498d043fb2fcb27daab913baf558f0f55af974a676ab98711",
+    "backend/tests/test_import_result_summary.py": "71265248a63a68b53ec15c021d1567e7f97ca937c7701ded06685d88be1c290c",
+    "backend/tests/test_import_result_summary_persistence.py": "dc8d198ddc8c5084ddf5f4c94b3bf2fb07b05254cc6d25b96789890b7ca5212e",
+    "backend/tests/test_web_journey_map.py": "0509a31318f38a3ce823d61378727d989ac0dafc9b21d23457a3e812e7d16cbe",
+    "scripts/bootstrap_import_diagnostics_e2e.py": "a182741a9bd31d2e32de16279227a7027e74d2e02e9eeb9a7c33a8a554ca6280",
+    "web/e2e/import-diagnostics-integrated.spec.ts": "6a407c7f64dc6c7a3db1ed68d8c5708fdadce6a846f0e7ae6c928f448f477090",
+    "web/e2e/import-diagnostics.spec.ts": "b5d18e3fc9d7d4418919be129d559bfb6181827beee2bc2954df159a8f63cb99",
+    "web/playwright.config.ts": "4b9c9b40920b74a3e00b93a0087fe83939f7d4f9e034ba6b563d4c7d2bf58623",
+    "web/playwright.import-diagnostics.config.ts": "450f94b71c047035984434782512fc2dd4771cf56a0b1194fe3e43a6a32f8cf4",
+    "web/src/app/domains/imports/import-detail-state.spec.ts": "548de0346fb3a2873f4482a07c8e83311d544912324534b7d46e97f7fb727b66",
+    "web/src/app/domains/imports/import-detail.component.css": "3e7ed21910b1abb5b97364ca78132307c2421cd621426da71e81f1c1fd2aa581",
+    "web/src/app/domains/imports/import-detail.component.html": "ea0fca922d84feeb4fdde71e59468e62e021e3fee9f913c8898512cad81f4e65",
+    "web/src/app/domains/imports/import-detail.component.spec.ts": "5e6cbd1fa12f59cf20b70e23b4031ce2a4a6787cfd0e079ab46f351a4bdb400a",
+    "web/src/app/domains/imports/import-detail.component.ts": "e75cda0cfcbd1a5dca8de7341c6c126e5e17b7f297564668f104ef18d9d41f72",
+    "web/src/app/domains/imports/import-issue-labels.ts": "acdc08763e14ab4326981076138781a538b28fd2de28e3a09166f5a84eb368b9",
+    "web/src/app/domains/imports/import-technical-details.component.spec.ts": "0b0a0a12cc1f3dc44f5af426f2b0d4ea8364a72b9c514d6fc736e5a67b214872",
+    "web/src/app/domains/imports/import-technical-details.component.ts": "49e53eb92b7484c1097eb622ccd6355e66168dac1ee14e4de2e02657090074cc",
+    "web/src/app/domains/imports/import.models.ts": "65f135a171998e7b9722c29e9387a2eb563c7ee6068e832b4d1f8b18d7cea721",
+    "web/src/app/domains/imports/import.service.spec.ts": "ecd5f08e059083df40a8457b453b07c12dc8fa5faad72932da374f3baa6b4be7",
+    "web/src/app/domains/imports/import.service.ts": "530ff5f8f958db33bd151bd5e72c6398c4a768d817e21febc427fcfe5dd40aac",
+    "web/src/app/shared/api/error.interceptor.spec.ts": "1fcfedca65cf8d88122e9c0266d225b0a744a27b36552d3a5f5abc736c3f9a75",
+    "web/src/app/shared/api/error.interceptor.ts": "88cfdd1448a5de68d7cc111846b08f097c5e637117587b03a9fa6b530065da2e",
+    "web/src/app/shared/i18n/catalogs/en-US.json": "9fc6a124d5f60881332550c104226279ac47fa6475c2053cae2ae95cd7915526",
+    "web/src/app/shared/i18n/catalogs/pt-BR.json": "f379ce4f246e54a127dc84d7da8a1adf8b91116b46b80a5b81add0316d2f3a42"
+  },
+  "source_set_sha256": "568505329684040fab66f1e50f75186558dd81f6a30cb106df9fb00ed9cae7a9",
+  "backend_unit": {
+    "pytest_cases_passed": 2371,
+    "subtests_passed": 16,
+    "junit": {
+      "tests": 2387,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 136.4
+    }
+  },
+  "postgresql_integration": {
+    "tests": 951,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": 299.254
+  },
+  "fixture_guards": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": 0.051
+  },
+  "angular": {
+    "full_suite_passed": 458,
+    "final_imports_subset_passed": 50
+  },
+  "playwright": {
+    "stats": {
+      "total": 55,
+      "expected": 55,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "ok": true
+    },
+    "started_at": 1794938791418,
+    "duration_ms": 174232.67200000002,
+    "issue_cases": [
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted counts survive physical artifact removal; pages, CSV and history reconcile",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:41.688Z",
+        "duration_ms": 2998
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real terminal state without artifact or persisted summary never becomes pending",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:45.131Z",
+        "duration_ms": 3093
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real preparation, rejection, duplicate, zero, success and active states remain distinct",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:48.233Z",
+        "duration_ms": 3974
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real IAM permits import.read only, denies other organization and preserves 401/403/404",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:52.215Z",
+        "duration_ms": 2627
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "controlled 503 on the real issues request preserves persisted results and recovers",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:54.850Z",
+        "duration_ms": 1625
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real CSV upload exposes row/field errors and macro upload stays rejected",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:56.484Z",
+        "duration_ms": 2874
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 390px light",
+        "status": "passed",
+        "started_at": "2026-11-17T18:07:59.366Z",
+        "duration_ms": 2258
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 390px dark",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:01.634Z",
+        "duration_ms": 2256
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 768px light",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:03.900Z",
+        "duration_ms": 2185
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 768px dark",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:06.093Z",
+        "duration_ms": 2292
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 1440px light",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:08.393Z",
+        "duration_ms": 2394
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real persisted diagnostics 1440px dark",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:10.795Z",
+        "duration_ms": 2378
+      },
+      {
+        "file": "import-diagnostics-integrated.spec.ts",
+        "title": "real diagnostics at native browser zoom 250% in both themes",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:13.181Z",
+        "duration_ms": 3574
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 390px light (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:16.768Z",
+        "duration_ms": 1391
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 390px dark (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:18.166Z",
+        "duration_ms": 1462
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 768px light (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:19.636Z",
+        "duration_ms": 1433
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 768px dark (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:21.076Z",
+        "duration_ms": 1492
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 1440px light (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:22.576Z",
+        "duration_ms": 1562
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "import diagnostics layout and keyboard 1440px dark (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:24.146Z",
+        "duration_ms": 1593
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "paginates 55 issues, retains URL filters and exports all filtered issues (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:25.746Z",
+        "duration_ms": 977
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "recovers issues independently and keeps correlation in copyable technical details (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:26.730Z",
+        "duration_ms": 662
+      },
+      {
+        "file": "import-diagnostics.spec.ts",
+        "title": "terminal summary absence is unavailable and localized in English (synthetic HTTP)",
+        "status": "passed",
+        "started_at": "2026-11-17T18:08:27.400Z",
+        "duration_ms": 486
+      }
+    ],
+    "transport": {
+      "import-diagnostics-integrated.spec.ts": "real HTTP, real authorization, PostgreSQL 16; controlled 503 fault injection in one case",
+      "import-diagnostics.spec.ts": "synthetic HTTP contracts"
+    }
+  },
+  "read_only_reconciliation": {
+    "before": {
+      "business_sha256": "933c6ced91e1d0f9553596d33feec3f9b6d0a3575edb204ff44ce75b86fbe373",
+      "file_count": 12,
+      "files_sha256": "8f832e9c7c065f26541ca7824a2f11f13a2de11163c77ae08f8b8ee15b82c648"
+    },
+    "after": {
+      "business_sha256": "933c6ced91e1d0f9553596d33feec3f9b6d0a3575edb204ff44ce75b86fbe373",
+      "file_count": 12,
+      "files_sha256": "8f832e9c7c065f26541ca7824a2f11f13a2de11163c77ae08f8b8ee15b82c648"
+    },
+    "occurrences": 55,
+    "errors": 20,
+    "warnings": 35,
+    "csv_filtered": 35
+  },
+  "native_zoom": {
+    "factor": 2.5,
+    "innerWidth": 576,
+    "devicePixelRatio": 2.5
+  },
+  "axe_audits": [
+    {
+      "scenario": "real terminal state without artifact or persisted summary never becomes pending",
+      "name": "axe-issue-194-missing-persisted-summary",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 390px light",
+      "name": "axe-issue-194-real-390-light",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 390px dark",
+      "name": "axe-issue-194-real-390-dark",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 768px light",
+      "name": "axe-issue-194-real-768-light",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 768px dark",
+      "name": "axe-issue-194-real-768-dark",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 1440px light",
+      "name": "axe-issue-194-real-1440-light",
+      "violations": 0
+    },
+    {
+      "scenario": "real persisted diagnostics 1440px dark",
+      "name": "axe-issue-194-real-1440-dark",
+      "violations": 0
+    },
+    {
+      "scenario": "real diagnostics at native browser zoom 250% in both themes",
+      "name": "axe-issue-194-real-zoom250-light",
+      "violations": 0
+    },
+    {
+      "scenario": "real diagnostics at native browser zoom 250% in both themes",
+      "name": "axe-issue-194-real-zoom250-dark",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 390px light (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 390px dark (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 768px light (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 768px dark (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 1440px light (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    },
+    {
+      "scenario": "import diagnostics layout and keyboard 1440px dark (synthetic HTTP)",
+      "name": "axe",
+      "violations": 0
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-1440-light.png",
+      "sha256": "fe5b8d9b157d10bb1bab55c8ce2c954c4e804fa5a54a6c94d51d38d39dc470ff",
+      "captured_at": "2026-11-17T18:08:10.723045+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-zoom250-dark.png",
+      "sha256": "cf1d3ced65b7226dff35a0751edb11ef6ddeac4f2d233be884af466ccc591320",
+      "captured_at": "2026-11-17T18:08:16.349959+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-zoom250-light.png",
+      "sha256": "df89ff448debba6031f49352fb188f418280f6f4f1ae26b11eeea861f5e64464",
+      "captured_at": "2026-11-17T18:08:15.615970+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-768-light.png",
+      "sha256": "91f88df0478634b61d97d67481e78a20d983f178843ecb5fba59f519abae2d67",
+      "captured_at": "2026-11-17T18:08:06.035117+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-768-dark.png",
+      "sha256": "5c81f4df9134ee69b43654d184674a80b8be56cca36b6dba148506808ac43a65",
+      "captured_at": "2026-11-17T18:08:08.319082+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-390-dark.png",
+      "sha256": "819dd7a75f4693eae3aaccdf93abb687314d6aa9923a0c383f1a39eaad3a0767",
+      "captured_at": "2026-11-17T18:08:03.843151+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-missing-persisted-summary.png",
+      "sha256": "b84fe526d40d1b443737ad865255d06324c36a49a7a4fa931b5ff3a5fd50e06f",
+      "captured_at": "2026-11-17T18:07:48.173396+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-1440-dark.png",
+      "sha256": "3896354d8dece0fc596059d074c01ef448901ef6f548a2963eb2d329549481c7",
+      "captured_at": "2026-11-17T18:08:13.108008+00:00"
+    },
+    {
+      "path": "docs/evidence/import-diagnostics-194/issue-194-real-390-light.png",
+      "sha256": "5931507945ee8f4c30fa68d980dbf88ad8a3b17da5faa9c0daa9f2bfcaa6d4a5",
+      "captured_at": "2026-11-17T18:08:01.575186+00:00"
+    }
+  ],
+  "remote_ci": "Tracked in the pull request; these local results do not assert remote CI approval.",
+  "migrations": {
+    "new": 0,
+    "existing_applied": 40
+  },
+  "limitations": [
+    "CSV interruption after response headers requires discarding the incomplete file and repeating GET.",
+    "Public locations outside the trusted catalog remain null.",
+    "Evidence is bound to implementation_commit; the following commit contains documentation and evidence only."
+  ],
+  "implementation_commit": "1e1cefb431852b721e8ca5c335fe8de336dd7e4b"
+}

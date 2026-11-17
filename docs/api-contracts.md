@@ -20,6 +20,15 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.16.0` acrescenta o [resultado persistido da importação](import-result-summary.md)
+em `GET /imports/{execution_id}/result-summary`. Exige `import.read` e distingue
+disponibilidade do resumo de estado da execução e de existência do artefato.
+Inclui também `GET /imports/{execution_id}/issues` e `issues/export`, com
+divergências paginadas/CSV sanitizados sob `import.read` no mesmo escopo.
+As rotas legadas permanecem disponíveis com seus contratos anteriores.
+Diagnóstico operacional: [resumo/divergências indisponíveis](runbooks/import-result-unavailable.md).
+Aceite e roteiro reproduzível: [validação da #194](import-diagnostics-validation.md).
+
 A API `0.15.0` acrescenta `GET /executions/summary`, `outcome` ao catálogo/detalhe
 e `execution_summary` a `/indicators` (#193). O campo `lifecycle` e o mapa
 `executions` legado permanecem compatíveis; novas métricas usam o agregado

@@ -13,6 +13,10 @@ reprocessamento. Corrupção ou acesso indevido é incidente crítico.
 
 ## Procedimento
 
+Quando apenas o JSON do resumo estiver ausente, consulte antes o
+[diagnóstico da importação](import-result-unavailable.md). Contagens persistidas
+continuam consultáveis; não recrie o artefato durante a leitura.
+
 1. Verificar montagem, permissão, espaço e escrita/leitura com a sonda segura.
 2. Não criar manualmente arquivos aceitos nem editar `storage_key`.
 3. Recuperar o volume ou restaurar banco e storage como uma unidade pelo
