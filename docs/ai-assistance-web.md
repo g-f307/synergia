@@ -4,7 +4,9 @@ A interface operacional fica em `/executions/:executionId`, no Resumo, após os
 indicadores principais e antes dos grupos de quantidades. Referência visual:
 o próprio detalhe de execução, seu shell e scroll interno; tokens, `syn-badge`
 e `syn-alert` compartilhados. O alerta da assistência usa `--syn-text` sobre a
-superfície semântica de erro, preservando contraste nos dois temas. A tela experimental `/ai/quality` permanece separada.
+superfície semântica de erro, preservando contraste nos dois temas. A rota
+experimental `/ai/quality` foi retirada da aplicação operacional na #192;
+#179 e #183 permanecem apenas como antecedentes experimentais offline.
 
 ## Permissões e geração
 

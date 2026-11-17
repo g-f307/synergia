@@ -1,6 +1,6 @@
 # ADR 0002 — Assistência informativa no detalhe da execução
 
-Status: aceito para o contrato; integração incremental na milestone 10.
+Status: aceito e integrado (#185–#191); validação integrada e retirada de `/ai/quality` em #192.
 Issue: [#185](https://github.com/g-f307/synergia/issues/185).
 Contrato **1.0.0**, API **0.12.0**, catálogo RBAC **1.6.0**.
 
@@ -15,8 +15,8 @@ extra, incluindo pergunta, prompt, fatos ou modelo, deve produzir 422.
 Não há RAG, embeddings, busca vetorial, memória, agentes, ferramentas, comandos,
 decisão automática ou mutação de negócio. A IA não é dependência de readiness.
 Aviso de produto obrigatório: **“Assistência gerada por IA: pode conter erros.
-A conferência humana das evidências é necessária.”** A interface futura deve
-exibi-lo inclusive em fallback, indicando também a origem determinística.
+A conferência humana das evidências é necessária.”** A interface operacional (`/executions/:executionId`, #190) exibe o aviso
+inclusive em fallback, indicando também a origem determinística.
 
 ## Fronteiras, fluxo e responsabilidades
 
@@ -33,11 +33,13 @@ exibi-lo inclusive em fallback, indicando também a origem determinística.
 6. A interface (#190), revisão de segurança (#191) e integração (#192) precedem
    ativação. A conferência e as decisões de negócio permanecem humanas.
 
-Esta entrega não consulta novos fatos, chama o modelo, persiste resultados ou
-altera a tela de execução. Os guards reutilizam a resolução organizacional
-existente. O OpenAPI publica modelos compartilhados e `x-ai-assistance`, exemplos
-dos quatro estados e matriz HTTP. Rotas de resultados serão publicadas na #189;
-esta fundação não anuncia uma rota de geração ainda inexistente.
+As entregas #186–#191 implementaram contexto, geração, persistência, rotas
+(`POST /executions/{execution_id}/ai-assistance`,
+`GET /executions/{execution_id}/ai-assistance/latest` e
+`GET /operations/ai-assistance/health`), interface em `/executions/:executionId`
+e observabilidade. A #192 retirou `/ai/quality` da aplicação operacional. Os
+guards reutilizam a resolução organizacional existente, e o OpenAPI publica os
+modelos compartilhados, `x-ai-assistance`, exemplos dos quatro estados e matriz HTTP.
 
 ## Resposta, limites e fallback
 
@@ -153,7 +155,7 @@ impedem registrar o baseline; o histórico de migrations permanece vazio.
 | XSS/instruções/refs inventadas | texto simples e validação referencial com contexto | fundamentação #187; renderização/evasões #190/#191 |
 | SSRF/segredos | endpoint local, serviço explícito, redirects não configuráveis | HTTP sem proxy/redirect #187 |
 | exaustão | limites fixos, helpers de bytes e tempos estritos | reserva/streaming #187/#189 |
-| confusão PoC/produção | módulo/flag separados do `/ai/quality` | retirada da superfície sintética #192 |
+| confusão PoC/produção | módulo/flag separados do `/ai/quality` | superfície `/ai/quality` retirada da aplicação operacional (#192); #179/#183 preservados apenas como antecedentes offline em `scripts/` |
 
 Evidências: testes `test_ai_assistance_contract.py`, `test_ai_assistance_config.py`,
 `test_ai_assistance_access.py`, snapshot `fixtures/ai_assistance_openapi_1_0_0.json`,

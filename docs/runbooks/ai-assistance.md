@@ -164,3 +164,19 @@ No Grafana provisionado, abrir **SYNERGIA Technical Overview** e os painéis
 **AI …**. Conferir ambiente e coleta antes de avaliar valores. Alvos sem scrape,
 coletor indisponível e ausência de tráfego não devem ser tratados como sucesso.
 As regras são locais ao Prometheus; não foi criado canal externo de notificação.
+
+## Comandos operacionais rápidos (#192)
+
+```bash
+# Suspender apenas geração mantendo leitura de resultados anteriores
+SYNERGIA_AI_ASSISTANCE_GENERATION_ENABLED=false
+
+# Desligar completamente a assistência preservando rotas determinísticas
+SYNERGIA_AI_ASSISTANCE_ENABLED=false
+
+# Verificar sonda operacional autenticada (independente de /health/ready)
+curl -fsS -H "Authorization: Bearer $OPS_TOKEN" http://127.0.0.1:8000/operations/ai-assistance/health
+
+# Verificar ausência de /ai/quality e assets experimentais nos artefatos construídos
+python scripts/check_experimental_absence_in_artifacts.py --web-dist web/dist/synergia-web/browser
+```
