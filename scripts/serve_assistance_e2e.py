@@ -60,6 +60,26 @@ class ControlledProvider:
         if context.counts.warnings:
             return b"invalid synthetic output"
         refs = sorted(context.evidence_refs())
+        by_prefix: dict[str, list[str]] = {}
+        for ref in refs:
+            by_prefix.setdefault(ref[:3], []).append(ref)
+        findings = [
+            {
+                "title": "Registros disponíveis",
+                "explanation": "Há registros disponíveis para conferência.",
+                "evidence_refs": [prefix_refs[0]],
+            }
+            for prefix in ("DIV", "PEN", "CLA", "EVI", "HIS")
+            if (prefix_refs := by_prefix.get(prefix))
+        ]
+        if not findings and refs:
+            findings = [
+                {
+                    "title": "Registros disponíveis",
+                    "explanation": "Há registros disponíveis para conferência.",
+                    "evidence_refs": refs[:3],
+                }
+            ]
         return json.dumps(
             {
                 "summary": (
@@ -67,13 +87,7 @@ class ControlledProvider:
                     f"{context.counts.warnings} avisos e "
                     f"{context.counts.pending_items} pendências."
                 ),
-                "findings": [
-                    {
-                        "title": "Registros disponíveis",
-                        "explanation": "Há registros disponíveis para conferência.",
-                        "evidence_refs": refs[:3],
-                    }
-                ],
+                "findings": findings,
                 "human_checks": ["Conferência humana das referências disponíveis."],
                 "limitations": required_limitations(context),
             },
@@ -121,11 +135,22 @@ def seed():
                 (execution_id,),
             )
             if name != "insufficient":
+                inspection_id = connection.execute(
+                    """INSERT INTO synergia.file_inspections
+                    (execution_id, source, original_filename, extension,
+                     detected_media_type, size_bytes, content_hash, decision)
+                    VALUES (%s, 'N-FP', 'synthetic.csv', 'csv',
+                            'text/csv', 10, %s, 'accepted') RETURNING id""",
+                    (execution_id, uuid4().hex * 2),
+                ).fetchone()[0]
                 source_id = connection.execute(
                     """INSERT INTO synergia.source_files
-                    (execution_id,file_name,content_hash,source,size_bytes)
-                    VALUES (%s,'synthetic.csv',%s,'N-FP',10) RETURNING id""",
-                    (execution_id, uuid4().hex * 2),
+                    (execution_id, inspection_id, file_name, extension,
+                     detected_media_type, content_hash, source, size_bytes,
+                     storage_key)
+                    VALUES (%s, %s, 'synthetic.csv', 'csv', 'text/csv', %s,
+                            'N-FP', 10, 'synthetic/e2e.csv') RETURNING id""",
+                    (execution_id, inspection_id, uuid4().hex * 2),
                 ).fetchone()[0]
                 connection.execute(
                     """INSERT INTO synergia.pipeline_issues
@@ -138,6 +163,44 @@ def seed():
                         "warning" if name == "rejected" else "error",
                     ),
                 )
+                if name == "ready":
+                    wo_id = connection.execute(
+                        """INSERT INTO synergia.workorders
+                        (workorder_number, execution_id, source_file_id,
+                         processing_status)
+                        VALUES ('WO-E2E-227', %s, %s, 'consolidated') RETURNING id""",
+                        (execution_id, source_id),
+                    ).fetchone()[0]
+                    cla_id = f"cla-e2e-{uuid4().hex[:12]}"
+                    connection.execute(
+                        """INSERT INTO synergia.classifications
+                        (classification_id, execution_id, workorder_id,
+                         source_file_id, rule_id, rule_catalog_version, state,
+                         entity_type, entity_id, justification, data_quality,
+                         priority, priority_score, responsible_area, classified_at)
+                        VALUES (%s, %s, %s, %s, 'oqc_hold', '1.0.0', 'active',
+                                'workorder', 'WO-E2E-227', 'Hold sintético',
+                                'complete', 'high', 80, 'Qualidade', now())""",
+                        (cla_id, execution_id, wo_id, source_id),
+                    )
+                    connection.execute(
+                        """INSERT INTO synergia.pending_items
+                        (workorder_id, execution_id, source_file_id, category,
+                         reason, status, classification_id, rule_id,
+                         rule_catalog_version, priority, priority_score,
+                         responsible_area)
+                        VALUES (%s, %s, %s, 'oqc_hold', 'Pendência sintética',
+                                'open', %s, 'oqc_hold', '1.0.0', 'high', 80,
+                                'Qualidade')""",
+                        (wo_id, execution_id, source_id, cla_id),
+                    )
+                    connection.execute(
+                        """INSERT INTO synergia.execution_state_transitions
+                        (execution_id, from_state, to_state, reason, state_version)
+                        VALUES (%s, 'applying_rules', 'completed',
+                                'Transição sintética E2E', 1)""",
+                        (execution_id,),
+                    )
     print(json.dumps(ids))
 
 

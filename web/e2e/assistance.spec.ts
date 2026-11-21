@@ -127,7 +127,7 @@ test.describe.serial('execution assistance with real API and controlled provider
     const visible = await page.locator('.assistance').textContent();
     for (const secret of ['controlled-e2e', result.provenance.digest, result.provenance.prompt_hash, result.provenance.context_hash, '11434']) expect(visible).not.toContain(secret);
   });
-  test('navigates by keyboard to a reference and preserves URL filters without inventing highlights', async ({ page }, info) => {
+  test('navigates by keyboard to all five reference types, highlights the matched record and preserves URL filters', async ({ page }, info) => {
     await login(page);
     await page.goto(`/executions/${executions.ready}?tab=summary&severity=error&source=N-FP&page=4&from=%2Fexecutions%3Fpage%3D2`);
     const link = page.locator('.assistance .references a').filter({ hasText: /^DIV-/ }).first();
@@ -139,10 +139,24 @@ test.describe.serial('execution assistance with real API and controlled provider
     expect(url.searchParams.get('page')).toBe('1'); expect(url.searchParams.get('severity')).toBe('error');
     expect(url.searchParams.get('source')).toBe('N-FP'); expect(url.searchParams.get('from')).toBe('/executions?page=2');
     await expect(page.locator('.reference-location')).toContainText(reference!);
-    await expect(page.locator('.records article')).toHaveCount(1);
-    await expect(page.locator('.records [aria-selected="true"]')).toHaveCount(0);
+    await expect(page.locator('.records article[data-reference-match="true"]')).toHaveCount(1);
     await page.screenshot({ path: info.outputPath('reference-navigation.png'), fullPage: true });
     await page.goBack(); // browser history must not lose the reference destination
+    for (const [prefix, tabName] of [
+      ['PEN-', 'pending'],
+      ['CLA-', 'classifications'],
+      ['EVI-', 'evidences'],
+      ['HIS-', 'history'],
+    ] as const) {
+      await open(page);
+      const refLink = page.locator('.assistance .references a').filter({ hasText: new RegExp(`^${prefix}`) }).first();
+      await expect(refLink).toBeVisible();
+      const targetRef = await refLink.textContent();
+      await refLink.click();
+      await expect(page).toHaveURL(new RegExp(`tab=${tabName}`));
+      await expect(page.locator('.reference-location')).toContainText(targetRef!);
+      await expect(page.locator('article[data-reference-match="true"]')).toHaveCount(1);
+    }
   });
   test('shows insufficient evidence and deterministic fallback from the real backend', async ({ page }, info) => {
     await login(page);

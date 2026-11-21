@@ -35,10 +35,35 @@ describe('ExecutionDetailComponent',()=>{
   snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'2',severity:'error',source:'OWM',reference:'DIV-example'});
   changes.next(snapshot.queryParamMap);fixture.detectChanges();
   expect(fixture.componentInstance.tab()).toBe('divergences');
-  expect(api.divergences).toHaveBeenCalledWith('exec-1',2,'error','OWM');
+  expect(api.divergences).toHaveBeenCalledWith('exec-1',2,'error','OWM','DIV-example');
   expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('DIV-example');
   snapshot.queryParamMap=convertToParamMap({tab:'history'});changes.next(snapshot.queryParamMap);fixture.detectChanges();
   expect(fixture.componentInstance.tab()).toBe('history');expect(fixture.componentInstance.reference()).toBe('');
+ });
+ it('highlights the matched record on paged and history tabs and reports missing references',()=>{
+  const divRef='DIV-'+'a'.repeat(32);const hisRef='HIS-'+'b'.repeat(32);
+  const execWithRef:Execution={...execution,state_history:[{...execution.state_history[0],ref_id:hisRef}]};
+  api.get.and.returnValue(of(execWithRef));
+  api.divergences.and.returnValue(of({items:[{id:1,ref_id:divRef,source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-1',reason:'bad',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'}));
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const router=TestBed.inject(Router);const navigate=spyOn(router,'navigate').and.resolveTo(true);
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'1',reference:divRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  expect(navigate).toHaveBeenCalledWith([],jasmine.objectContaining({queryParams:{page:2},queryParamsHandling:'merge',replaceUrl:true}));
+  snapshot.queryParamMap=convertToParamMap({tab:'history',reference:hisRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('.history article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  const missingRef='HIS-'+'f'.repeat(32);
+  snapshot.queryParamMap=convertToParamMap({tab:'history',reference:missingRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('.history article[data-reference-match="true"]').length).toBe(0);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('não encontrada');
  });
  it('cancels stale tab requests and prevents them from overwriting the selected tab',()=>{
   const first=new Subject();api.divergences.and.returnValue(first);

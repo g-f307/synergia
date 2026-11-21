@@ -986,6 +986,8 @@
   "assistance.failure": "Não foi possível concluir a consulta",
   "assistance.referenceRestricted": "Acesso à aba restrito",
   "assistance.locateReference": "Referência a localizar nesta aba: {reference}. O identificador é da análise e pode não estar na página atual; nenhum registro foi destacado.",
+  "assistance.referenceLocated": "Referência {reference} localizada e destacada nesta aba.",
+  "assistance.referenceNotFound": "Referência {reference} não encontrada nos registros exibidos nesta aba.",
   "assistance.state.loading": "Carregando análise",
   "assistance.message.loading": "Consultando o resultado existente, sem gerar uma nova análise.",
   "assistance.state.empty": "Sem análise disponível",
