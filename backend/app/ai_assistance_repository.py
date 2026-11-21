@@ -14,7 +14,15 @@ from psycopg.types.json import Jsonb
 from pydantic import ValidationError
 
 from app.ai_assistance_contract import PRODUCT_NOTICE, AiAssistanceResponse
-from app.ai_assistance_fallback import FAILED, INSUFFICIENT, MISSING, NOTICE, TRUNCATED
+from app.ai_assistance_fallback import (
+    FAILED,
+    INSUFFICIENT,
+    MISSING,
+    NOTICE,
+    TRIAGE_EXPLANATION_PATTERN,
+    TRIAGE_TITLE_PATTERN,
+    TRUNCATED,
+)
 from app.ai_assistance_generator import validate_language
 from app.ai_assistance_telemetry import persistence
 
@@ -81,15 +89,23 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
         prefixes = {ref[:3] for ref in selected}
         if len(prefixes) == 1 and next(iter(prefixes)) in titles:
             allowed_titles.add(titles[next(iter(prefixes))])
-        if (
-            finding.title not in allowed_titles
-            or finding.explanation not in explanations
-            or not 1 <= len(selected) <= 3
-            or (
+        title_ok = finding.title in allowed_titles or (
+            len(prefixes) == 1
+            and next(iter(prefixes)) in {"PEN", "DIV", "CLA"}
+            and bool(TRIAGE_TITLE_PATTERN.fullmatch(finding.title))
+        )
+        explanation_ok = (
+            finding.explanation in explanations
+            and not (
                 len(selected) > 1
                 and finding.explanation == "Há um registro disponível para conferência."
             )
-        ):
+        ) or (
+            len(prefixes) == 1
+            and next(iter(prefixes)) in {"PEN", "DIV", "CLA"}
+            and bool(TRIAGE_EXPLANATION_PATTERN.fullmatch(finding.explanation))
+        )
+        if not title_ok or not explanation_ok or not 1 <= len(selected) <= 3:
             raise ValueError("invalid result finding")
         refs.extend(finding.evidence_refs)
     if len(refs) != len(set(refs)):

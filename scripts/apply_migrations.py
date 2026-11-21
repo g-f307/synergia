@@ -11,6 +11,7 @@ MIGRATIONS = ROOT / "database" / "migrations"
 LOCK_ID = 7_347_319_119
 
 BASELINE_PROBES = {
+    "0041": ("ai_assistance_triage_findings", "synergia", ""),
     "0040": ("ai_assistance_observability", "synergia", ""),
     "0039": ("ai_assistance_rate_attempts", "synergia", ""),
     "0038": ("ai_assistance_persistence", "synergia", ""),
@@ -79,6 +80,18 @@ BASELINE_PROBES = {
 def object_exists(
     connection: psycopg.Connection, kind: str, parent: str, name: str
 ) -> bool:
+    if kind == "ai_assistance_triage_findings":
+        return (
+            connection.execute(
+                """SELECT 1 WHERE
+            to_regprocedure('synergia.ai_assistance_result_shape_valid(jsonb)')
+                IS NOT NULL
+            AND pg_get_functiondef(
+                to_regprocedure('synergia.ai_assistance_result_shape_valid(jsonb)')
+            ) LIKE '%triage_title_re%'"""
+            ).fetchone()
+            is not None
+        )
     if kind == "ai_assistance_observability":
         return (
             connection.execute(
