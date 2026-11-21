@@ -64,10 +64,14 @@ persistido mantém o idioma retornado pelo backend, sem tradução que altere fa
 
 Os links preservam filtros e origem de navegação, fixam `page=1` e acrescentam
 `reference` à URL. Divergências/evidências não ganham link quando a sessão não pode
-abrir essas abas. Os identificadores de assistência são opacos: o contrato atual
-não fornece um mapa entre referência e ID nativo do registro. Por isso a aba
-exibe a referência a localizar, sem afirmar que identificou ou destacou um item.
-A mesma indicação funciona ao atualizar a página e no histórico do navegador.
+abrir essas abas. A partir da API `0.17.0` (#227), cada item de `state_history`,
+`divergences`, `classifications`, `pending-items` e `evidences` expõe seu `ref_id`
+determinístico (`DIV-*`, `PEN-*`, `CLA-*`, `EVI-*`, `HIS-*`) e os endpoints
+paginados aceitam o parâmetro opcional `reference` para resolver automaticamente
+a página que contém o registro. A aba destaca o registro correspondente com
+`data-reference-match="true"`, badge técnica e status explícito de localização
+(`assistance.referenceLocated` ou `assistance.referenceNotFound`), preservando
+o comportamento ao atualizar a página e no histórico do navegador.
 
 ## Validação reproduzível
 

@@ -396,3 +396,70 @@ def test_pipeline_persisted_aging_and_container_reach_context(dataset):
         and item.has_container is True
         for item in context.classifications
     )
+
+
+def test_monitoring_and_query_endpoints_expose_ref_ids_and_resolve_reference_page(
+    dataset,
+):
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    from app.execution_monitoring import MonitoringRepository
+    from app.queries import PostgresQueryRepository
+
+    database, organizations, executions = dataset
+    org_id = organizations[0]
+    exec_id = str(executions[0])
+    ctx = ExecutionContextBuilder(PostgresContextReader(database)).build(
+        actor(org_id), UUID(exec_id), generated_at=datetime(2026, 11, 14, tzinfo=UTC)
+    )
+    monitoring = MonitoringRepository(database)
+    queries = PostgresQueryRepository(database)
+
+    execution_detail = queries.get_execution(exec_id)
+    assert execution_detail is not None
+    his_refs = {item["ref_id"] for item in execution_detail["state_history"]}
+    assert {item.ref_id for item in ctx.state_history} <= his_refs
+
+    div_items, _, _ = monitoring.divergences(
+        exec_id,
+        source=None,
+        severity=None,
+        code=None,
+        workorder=None,
+        date_from=None,
+        date_to=None,
+        page=1,
+        page_size=20,
+        sort="oldest",
+    )
+    assert all(item["ref_id"].startswith("DIV-") for item in div_items)
+
+    # Pick a pending item from page 2 (page_size=20) and verify reference
+    # resolution jumps directly from page=1 to page=2.
+    page2_pending, total_pending, _ = monitoring.pending(
+        exec_id, page=2, page_size=20, sort="oldest"
+    )
+    assert total_pending > 20 and page2_pending
+    target_pending_ref = page2_pending[0]["ref_id"]
+    pending_page, _, resolved_page = monitoring.pending(
+        exec_id, page=1, page_size=20, sort="oldest", reference=target_pending_ref
+    )
+    assert resolved_page == 2
+    assert any(item["ref_id"] == target_pending_ref for item in pending_page)
+
+    # Also verify a classification on page 2 resolves from page=1 to page=2
+    # and matches reference_id("classifications", exec_id, classification_id).
+    page2_cla, total_cla, _ = monitoring.classifications(
+        exec_id, page=2, page_size=20, sort="oldest"
+    )
+    assert total_cla > 20 and page2_cla
+    target_cla_ref = reference_id(
+        "classifications", exec_id, page2_cla[0]["classification_id"]
+    )
+    assert page2_cla[0]["ref_id"] == target_cla_ref
+    cla_page, _, cla_resolved_page = monitoring.classifications(
+        exec_id, page=1, page_size=20, sort="oldest", reference=target_cla_ref
+    )
+    assert cla_resolved_page == 2
+    assert any(item["ref_id"] == target_cla_ref for item in cla_page)

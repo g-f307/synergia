@@ -20,6 +20,22 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.17.0` acrescenta o campo aditivo `ref_id` aos itens de `state_history`
+em `GET /executions/{execution_id}` e às coleções paginadas
+`GET /executions/{execution_id}/divergences`, `classifications`, `pending` e
+`evidences`, além do parâmetro opcional de query `reference` nessas quatro
+rotas paginadas (#227). Quando `reference` corresponde a um registro da
+execução na aba consultada (e compatível com os filtros ativos em
+`divergences`), o backend resolve automaticamente a página correspondente e a
+retorna em `pagination.page` com a ordenação solicitada. Referências ausentes,
+fora dos filtros ativos ou com prefixo incompatível com a aba (`DIV-`, `PEN-`,
+`CLA-`, `EVI-`, `HIS-`) não alteram a página solicitada nem retornam erro,
+mantendo a paginação padrão; valores fora do formato aceito pela query retornam
+`422`. O contrato de permissões (`execution.read`, `artifact.read`) e o escopo
+organizacional permanecem inalterados; veja também
+[Acompanhamento de execuções](execution-monitoring.md) e
+[Assistência na interface web](ai-assistance-web.md).
+
 A API `0.16.0` acrescenta o [resultado persistido da importação](import-result-summary.md)
 em `GET /imports/{execution_id}/result-summary`. Exige `import.read` e distingue
 disponibilidade do resumo de estado da execução e de existência do artefato.

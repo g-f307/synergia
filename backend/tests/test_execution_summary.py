@@ -136,7 +136,7 @@ def test_detail_and_catalog_derive_outcome_from_the_persisted_status(status, exp
 
 def test_openapi_declares_outcomes_and_deprecates_only_the_legacy_contract():
     schema = create_app().openapi()
-    assert schema["info"]["version"] == "0.16.0"
+    assert schema["info"]["version"] == "0.17.0"
     assert set(schema["components"]["schemas"]["ExecutionOutcome"]["enum"]) == {
         "active",
         "completed",

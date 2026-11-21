@@ -17,6 +17,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
+from app.ai_assistance_context import reference_id
 from app.authorization import (
     ActorContext,
     require_execution_permission,
@@ -74,8 +75,14 @@ class ExecutionCatalogPage(BaseModel):
     generated_at: datetime
 
 
+REFERENCE_QUERY = Annotated[
+    str | None, Query(pattern=r"^(DIV|PEN|CLA|EVI)-[a-f0-9]{32}$")
+]
+
+
 class Divergence(BaseModel):
     id: int
+    ref_id: str | None = None
     source: str
     severity: Literal["error", "warning"]
     code: str
@@ -97,6 +104,7 @@ class DivergencePage(BaseModel):
 
 class Classification(BaseModel):
     classification_id: str
+    ref_id: str | None = None
     workorder_number: str
     lot_number: str | None = None
     serial_number: str | None = None
@@ -117,6 +125,7 @@ class Classification(BaseModel):
 
 class PendingDetail(BaseModel):
     id: int
+    ref_id: str | None = None
     workorder_number: str
     lot_number: str | None = None
     serial_number: str | None = None
@@ -135,6 +144,7 @@ class PendingDetail(BaseModel):
 
 class Evidence(BaseModel):
     evidence_id: int
+    ref_id: str | None = None
     evidence_type: Literal["source_file"] = "source_file"
     safe_name: str
     media_type: str | None = None
@@ -159,6 +169,30 @@ class EvidencePage(BaseModel):
     items: list[Evidence]
     pagination: Pagination
     sort: str
+
+
+def _resolve_reference_page(
+    native_ids: list[Any],
+    *,
+    section: str,
+    prefix: str,
+    execution_id: str,
+    reference: str | None,
+    page: int,
+    page_size: int,
+) -> int:
+    if not reference or not reference.startswith(prefix + "-"):
+        return page
+    for idx, native_id in enumerate(native_ids):
+        if reference_id(section, execution_id, native_id) == reference:
+            return (idx // page_size) + 1
+    return page
+
+
+def _unpack_page_result(result: tuple, fallback_page: int) -> tuple[list[dict], int, int]:
+    if len(result) == 3:
+        return result[0], result[1], result[2]
+    return result[0], result[1], fallback_page
 
 
 class MonitoringRepository:
@@ -282,7 +316,8 @@ class MonitoringRepository:
         page: int,
         page_size: int,
         sort: str,
-    ) -> tuple[list[dict], int]:
+        reference: str | None = None,
+    ) -> tuple[list[dict], int, int]:
         query = pipeline_issue_query(
             execution_id, projection="execution", organization_scopes=None,
             source=source, severity=severity, code=code, workorder=workorder,
@@ -290,17 +325,62 @@ class MonitoringRepository:
         )
         with self._connect() as connection:
             start_execution_snapshot(connection)
-            return query.page(connection, page=page, page_size=page_size)
+            resolved_page = page
+            if reference and reference.startswith("DIV-"):
+                id_rows = connection.execute(
+                    f"SELECT pi.id {query.relations} WHERE {query.where} "
+                    f"ORDER BY {query.ordering}",
+                    query.parameters,
+                ).fetchall()
+                resolved_page = _resolve_reference_page(
+                    [row["id"] for row in id_rows],
+                    section="divergences",
+                    prefix="DIV",
+                    execution_id=execution_id,
+                    reference=reference,
+                    page=page,
+                    page_size=page_size,
+                )
+            items, total = query.page(connection, page=resolved_page, page_size=page_size)
+        for item in items:
+            item["ref_id"] = reference_id("divergences", execution_id, item["id"])
+        return items, total, resolved_page
 
     def classifications(
-        self, execution_id: str, *, page: int, page_size: int, sort: str
-    ) -> tuple[list[dict], int]:
+        self,
+        execution_id: str,
+        *,
+        page: int,
+        page_size: int,
+        sort: str,
+        reference: str | None = None,
+    ) -> tuple[list[dict], int, int]:
         direction = "DESC" if sort == "newest" else "ASC"
         with self._connect() as connection:
+            start_execution_snapshot(connection)
             total = connection.execute(
                 "SELECT count(*) AS total FROM synergia.classifications WHERE execution_id=%s",
                 (execution_id,),
             ).fetchone()["total"]
+            resolved_page = page
+            if reference and reference.startswith("CLA-"):
+                id_rows = connection.execute(
+                    "SELECT classification_id FROM synergia.classifications "
+                    "WHERE execution_id=%s ORDER BY classified_at "
+                    + direction
+                    + ",classification_id "
+                    + direction,
+                    (execution_id,),
+                ).fetchall()
+                resolved_page = _resolve_reference_page(
+                    [row["classification_id"] for row in id_rows],
+                    section="classifications",
+                    prefix="CLA",
+                    execution_id=execution_id,
+                    reference=reference,
+                    page=page,
+                    page_size=page_size,
+                )
             rows = connection.execute(
                 """SELECT c.classification_id,w.workorder_number,l.lot_number,
                           s.serial_number,c.rule_id,c.rule_catalog_version,c.state,
@@ -316,19 +396,52 @@ class MonitoringRepository:
                 + ",c.classification_id "
                 + direction
                 + " LIMIT %s OFFSET %s",
-                (execution_id, page_size, (page - 1) * page_size),
+                (execution_id, page_size, (resolved_page - 1) * page_size),
             ).fetchall()
-        return [dict(row) for row in rows], total
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["ref_id"] = reference_id(
+                "classifications", execution_id, item["classification_id"]
+            )
+            items.append(item)
+        return items, total, resolved_page
 
     def pending(
-        self, execution_id: str, *, page: int, page_size: int, sort: str
-    ) -> tuple[list[dict], int]:
+        self,
+        execution_id: str,
+        *,
+        page: int,
+        page_size: int,
+        sort: str,
+        reference: str | None = None,
+    ) -> tuple[list[dict], int, int]:
         direction = "DESC" if sort == "newest" else "ASC"
         with self._connect() as connection:
+            start_execution_snapshot(connection)
             total = connection.execute(
                 "SELECT count(*) AS total FROM synergia.pending_items WHERE execution_id=%s",
                 (execution_id,),
             ).fetchone()["total"]
+            resolved_page = page
+            if reference and reference.startswith("PEN-"):
+                id_rows = connection.execute(
+                    "SELECT id FROM synergia.pending_items "
+                    "WHERE execution_id=%s ORDER BY created_at "
+                    + direction
+                    + ",id "
+                    + direction,
+                    (execution_id,),
+                ).fetchall()
+                resolved_page = _resolve_reference_page(
+                    [row["id"] for row in id_rows],
+                    section="pending_items",
+                    prefix="PEN",
+                    execution_id=execution_id,
+                    reference=reference,
+                    page=page,
+                    page_size=page_size,
+                )
             rows = connection.execute(
                 """SELECT p.id,w.workorder_number,l.lot_number,s.serial_number,
                           p.category,p.reason,p.status,p.rule_id,p.rule_catalog_version,
@@ -342,21 +455,52 @@ class MonitoringRepository:
                 + ",p.id "
                 + direction
                 + " LIMIT %s OFFSET %s",
-                (execution_id, page_size, (page - 1) * page_size),
+                (execution_id, page_size, (resolved_page - 1) * page_size),
             ).fetchall()
-        return [dict(row) for row in rows], total
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["ref_id"] = reference_id("pending_items", execution_id, item["id"])
+            items.append(item)
+        return items, total, resolved_page
 
     def evidences(
-        self, execution_id: str, *, page: int, page_size: int, sort: str
-    ) -> tuple[list[dict], int]:
+        self,
+        execution_id: str,
+        *,
+        page: int,
+        page_size: int,
+        sort: str,
+        reference: str | None = None,
+    ) -> tuple[list[dict], int, int]:
         direction = "DESC" if sort == "newest" else "ASC"
         with self._connect() as connection:
+            start_execution_snapshot(connection)
             total = connection.execute(
                 """SELECT count(*) AS total FROM synergia.source_files sf
                    JOIN synergia.file_inspections fi ON fi.id=sf.inspection_id
                    WHERE sf.execution_id=%s AND fi.decision='accepted'""",
                 (execution_id,),
             ).fetchone()["total"]
+            resolved_page = page
+            if reference and reference.startswith("EVI-"):
+                id_rows = connection.execute(
+                    """SELECT sf.id AS evidence_id FROM synergia.source_files sf
+                       JOIN synergia.file_inspections fi ON fi.id=sf.inspection_id
+                       WHERE sf.execution_id=%s AND fi.decision='accepted'
+                       ORDER BY sf.id """
+                    + direction,
+                    (execution_id,),
+                ).fetchall()
+                resolved_page = _resolve_reference_page(
+                    [row["evidence_id"] for row in id_rows],
+                    section="evidences",
+                    prefix="EVI",
+                    execution_id=execution_id,
+                    reference=reference,
+                    page=page,
+                    page_size=page_size,
+                )
             rows = connection.execute(
                 """SELECT sf.id AS evidence_id,sf.extension,sf.detected_media_type AS media_type,
                           sf.size_bytes,sf.content_hash AS sha256,sf.storage_key
@@ -365,7 +509,7 @@ class MonitoringRepository:
                    ORDER BY sf.id """
                 + direction
                 + " LIMIT %s OFFSET %s",
-                (execution_id, page_size, (page - 1) * page_size),
+                (execution_id, page_size, (resolved_page - 1) * page_size),
             ).fetchall()
         root = Path(os.getenv("IMPORT_STORAGE_DIR", "/tmp/synergia-imports")).resolve()
         items = []
@@ -373,12 +517,13 @@ class MonitoringRepository:
             item = dict(row)
             storage_key = item.pop("storage_key", None)
             path = (root / storage_key).resolve() if storage_key else None
+            item["ref_id"] = reference_id("evidences", execution_id, row["evidence_id"])
             item["safe_name"] = f"evidence-{row['evidence_id']}.{row['extension']}"
             item["available"] = bool(
                 path is not None and root in path.parents and path.is_file()
             )
             items.append(item)
-        return items, total
+        return items, total, resolved_page
 
     def evidence_file(self, execution_id: str, evidence_id: int) -> dict | None:
         with self._connect() as connection:
@@ -528,28 +673,33 @@ def list_divergences(
     workorder: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    reference: REFERENCE_QUERY = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> DivergencePage:
     _ensure_execution(repository, execution_id)
     date_from, date_to = _normalize_period(date_from, date_to)
-    items, total = repository.divergences(
-        execution_id,
-        source=source,
-        severity=severity,
-        code=code,
-        workorder=workorder,
-        date_from=date_from,
-        date_to=date_to,
-        page=page,
-        page_size=page_size,
-        sort=sort,
+    items, total, resolved_page = _unpack_page_result(
+        repository.divergences(
+            execution_id,
+            source=source,
+            severity=severity,
+            code=code,
+            workorder=workorder,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            reference=reference,
+        ),
+        page,
     )
     return DivergencePage(
         items=items,
         pagination=Pagination(
-            page=page,
+            page=resolved_page,
             page_size=page_size,
             total=total,
             pages=math.ceil(total / page_size) if total else 0,
@@ -567,15 +717,19 @@ def list_divergences(
 def list_classifications(
     execution_id: str,
     repository: Repository,
+    reference: REFERENCE_QUERY = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=1000)] = 20,
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> ClassificationPage:
     _ensure_execution(repository, execution_id)
-    items, total = repository.classifications(
-        execution_id, page=page, page_size=page_size, sort=sort
+    items, total, resolved_page = _unpack_page_result(
+        repository.classifications(
+            execution_id, page=page, page_size=page_size, sort=sort, reference=reference
+        ),
+        page,
     )
-    return _page(ClassificationPage, items, page, page_size, total, sort)
+    return _page(ClassificationPage, items, resolved_page, page_size, total, sort)
 
 
 @router.get(
@@ -587,15 +741,19 @@ def list_classifications(
 def list_pending(
     execution_id: str,
     repository: Repository,
+    reference: REFERENCE_QUERY = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> PendingPage:
     _ensure_execution(repository, execution_id)
-    items, total = repository.pending(
-        execution_id, page=page, page_size=page_size, sort=sort
+    items, total, resolved_page = _unpack_page_result(
+        repository.pending(
+            execution_id, page=page, page_size=page_size, sort=sort, reference=reference
+        ),
+        page,
     )
-    return _page(PendingPage, items, page, page_size, total, sort)
+    return _page(PendingPage, items, resolved_page, page_size, total, sort)
 
 
 @router.get(
@@ -605,15 +763,19 @@ def list_pending(
 def list_evidences(
     execution_id: str,
     repository: Repository,
+    reference: REFERENCE_QUERY = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     sort: Literal["oldest", "newest"] = "oldest",
 ) -> EvidencePage:
     _ensure_execution(repository, execution_id)
-    items, total = repository.evidences(
-        execution_id, page=page, page_size=page_size, sort=sort
+    items, total, resolved_page = _unpack_page_result(
+        repository.evidences(
+            execution_id, page=page, page_size=page_size, sort=sort, reference=reference
+        ),
+        page,
     )
-    return _page(EvidencePage, items, page, page_size, total, sort)
+    return _page(EvidencePage, items, resolved_page, page_size, total, sort)
 
 
 @router.get(

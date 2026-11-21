@@ -35,10 +35,93 @@ describe('ExecutionDetailComponent',()=>{
   snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'2',severity:'error',source:'OWM',reference:'DIV-example'});
   changes.next(snapshot.queryParamMap);fixture.detectChanges();
   expect(fixture.componentInstance.tab()).toBe('divergences');
-  expect(api.divergences).toHaveBeenCalledWith('exec-1',2,'error','OWM');
+  expect(api.divergences).toHaveBeenCalledWith('exec-1',2,'error','OWM','DIV-example');
   expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('DIV-example');
   snapshot.queryParamMap=convertToParamMap({tab:'history'});changes.next(snapshot.queryParamMap);fixture.detectChanges();
   expect(fixture.componentInstance.tab()).toBe('history');expect(fixture.componentInstance.reference()).toBe('');
+ });
+ it('highlights the matched record on paged and history tabs and reports missing references',()=>{
+  const divRef='DIV-'+'a'.repeat(32);const hisRef='HIS-'+'b'.repeat(32);
+  const execWithRef:Execution={...execution,state_history:[{...execution.state_history[0],ref_id:hisRef}]};
+  api.get.and.returnValue(of(execWithRef));
+  api.divergences.and.returnValue(of({items:[{id:1,ref_id:divRef,source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-1',reason:'bad',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'}));
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const router=TestBed.inject(Router);const navigate=spyOn(router,'navigate').and.resolveTo(true);
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'1',reference:divRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  expect(navigate).toHaveBeenCalledWith([],jasmine.objectContaining({queryParams:{page:2},queryParamsHandling:'merge',replaceUrl:true}));
+  snapshot.queryParamMap=convertToParamMap({tab:'history',reference:hisRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('.history article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  const missingRef='HIS-'+'f'.repeat(32);
+  snapshot.queryParamMap=convertToParamMap({tab:'history',reference:missingRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('.history article[data-reference-match="true"]').length).toBe(0);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('não encontrada');
+ });
+ it('keeps manual pagination on the chosen page without re-resolving the reference when route emits',()=>{
+  const divRef='DIV-'+'a'.repeat(32);
+  api.divergences.and.callFake((_id:string,page:number,_sev:string,_src:string,ref?:string)=>ref
+   ? of({items:[{id:21,ref_id:divRef,source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-21',reason:'page2',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'})
+   : of({items:[{id:1,ref_id:'DIV-'+'1'.repeat(32),source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-1',reason:'page1',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page,page_size:20,total:21,pages:2},sort:'oldest'}));
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  const router=TestBed.inject(Router);
+  spyOn(router,'navigate').and.callFake((_cmds:unknown[],extras?:{queryParams?:Record<string,unknown>})=>{
+   const next:Record<string,string>={};
+   for(const key of snapshot.queryParamMap.keys){const v=snapshot.queryParamMap.get(key);if(v!==null)next[key]=v;}
+   for(const [k,v] of Object.entries(extras?.queryParams??{})){if(v===null||v===undefined)delete next[k];else next[k]=String(v);}
+   snapshot.queryParamMap=convertToParamMap(next);
+   changes.next(snapshot.queryParamMap);
+   return Promise.resolve(true);
+  });
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'1',reference:divRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.componentInstance.pageData()?.pagination.page).toBe(2);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  api.divergences.calls.reset();
+  fixture.componentInstance.loadTab(1);fixture.detectChanges();
+  expect(api.divergences).toHaveBeenCalledWith('exec-1',1,'','');
+  expect(api.divergences.calls.count()).toBe(1);
+  expect(fixture.componentInstance.pageData()?.pagination.page).toBe(1);
+  expect(fixture.componentInstance.reference()).toBe(divRef);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(0);
+ });
+ it('distinguishes loading, failure, matched, and unmatched reference states on paged tabs',()=>{
+  const penRef='PEN-'+'c'.repeat(32);
+  const request=new Subject();
+  api.pending.and.returnValue(request);
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  snapshot.queryParamMap=convertToParamMap({tab:'pending',page:'1',reference:penRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('Referência a localizar nesta aba');
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).not.toContain('não encontrada');
+  request.error(failure('unavailable',503));fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('Não foi possível localizar a referência');
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).not.toContain('não encontrada');
+  expect(fixture.nativeElement.querySelector('.error')?.textContent).toContain('safe');
+  api.pending.and.returnValue(of({items:[{id:21,ref_id:penRef,category:'oqc_hold',reason:'hold',status:'open',priority:'high',priority_score:95,responsible_area:'Qualidade',workorder_number:'WO-21',created_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'}));
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(api.pending).toHaveBeenCalledWith('exec-1',1,penRef);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  const otherRef='PEN-'+'d'.repeat(32);
+  api.pending.and.returnValue(of({items:[{id:1,ref_id:'PEN-'+'1'.repeat(32),category:'oqc_pending',reason:'other',status:'open',priority:'low',priority_score:10,responsible_area:'Qualidade',workorder_number:'WO-1',created_at:'2026-01-01T00:00:00Z'}],pagination:{page:1,page_size:20,total:1,pages:1},sort:'oldest'}));
+  snapshot.queryParamMap=convertToParamMap({tab:'pending',page:'1',reference:otherRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(0);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('não encontrada');
  });
  it('cancels stale tab requests and prevents them from overwriting the selected tab',()=>{
   const first=new Subject();api.divergences.and.returnValue(first);
