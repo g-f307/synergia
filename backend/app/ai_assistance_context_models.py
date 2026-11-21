@@ -12,7 +12,13 @@ from pydantic import (
     model_validator,
 )
 
-from app.ai_assistance_context_policy import ISSUE_CODES, LIFECYCLES, RULE_IDS
+from app.ai_assistance_context_policy import (
+    ISSUE_CODES,
+    LIFECYCLES,
+    RESPONSIBLE_AREAS,
+    RULE_IDS,
+    safe_identifier,
+)
 from app.ai_assistance_contract import StrictContract
 
 CONTEXT_VERSION = "1.0.0"
@@ -103,6 +109,7 @@ class ContextDivergence(ContextModel):
         json_schema_extra={"enum": [*sorted(ISSUE_CODES), None]},
     )
     scope: Literal["file", "structure", "record"]
+    workorder_number: str | None = Field(default=None, max_length=64)
     occurred_at: AwareDatetime
 
     @field_validator("code")
@@ -110,6 +117,13 @@ class ContextDivergence(ContextModel):
     def known_code(cls, value):
         if value is not None and value not in ISSUE_CODES:
             raise ValueError("unknown context issue code")
+        return value
+
+    @field_validator("workorder_number")
+    @classmethod
+    def valid_workorder(cls, value):
+        if value is not None and safe_identifier(value) != value:
+            raise ValueError("invalid context identifier")
         return value
 
 
@@ -121,6 +135,15 @@ class ContextPending(ContextModel):
     )
     status: Literal["open", "resolved", "cancelled"]
     priority_score: int | None = Field(ge=0)
+    workorder_number: str | None = Field(default=None, max_length=64)
+    responsible_area: str | None = Field(
+        default=None,
+        max_length=64,
+        json_schema_extra={"enum": [*sorted(RESPONSIBLE_AREAS), None]},
+    )
+    priority: Literal["critical", "high", "medium", "low"] | None = None
+    age_days: Count | None = None
+    has_container: bool = False
     created_at: AwareDatetime
 
     @field_validator("rule_id")
@@ -128,6 +151,20 @@ class ContextPending(ContextModel):
     def known_rule(cls, value):
         if value is not None and value not in RULE_IDS:
             raise ValueError("unknown context rule")
+        return value
+
+    @field_validator("workorder_number")
+    @classmethod
+    def valid_workorder(cls, value):
+        if value is not None and safe_identifier(value) != value:
+            raise ValueError("invalid context identifier")
+        return value
+
+    @field_validator("responsible_area")
+    @classmethod
+    def known_area(cls, value):
+        if value is not None and value not in RESPONSIBLE_AREAS:
+            raise ValueError("unknown responsible area")
         return value
 
 
@@ -140,12 +177,31 @@ class ContextClassification(ContextModel):
     state: Literal["active", "closed"]
     data_quality: Literal["complete", "partial"]
     priority_score: int = Field(ge=0)
+    workorder_number: str | None = Field(default=None, max_length=64)
+    responsible_area: str | None = Field(
+        default=None,
+        max_length=64,
+        json_schema_extra={"enum": [*sorted(RESPONSIBLE_AREAS), None]},
+    )
+    priority: Literal["critical", "high", "medium", "low"] | None = None
+    age_days: Count | None = None
+    has_container: bool = False
     classified_at: AwareDatetime
 
     @field_validator("rule_id")
     @classmethod
     def known_rule(cls, value):
         return ContextPending.known_rule(value)
+
+    @field_validator("workorder_number")
+    @classmethod
+    def valid_workorder(cls, value):
+        return ContextPending.valid_workorder(value)
+
+    @field_validator("responsible_area")
+    @classmethod
+    def known_area(cls, value):
+        return ContextPending.known_area(value)
 
 
 class ContextEvidence(ContextModel):

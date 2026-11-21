@@ -24,8 +24,11 @@ from app.ai_assistance_context_policy import (
     ISSUE_CODES,
     LIFECYCLES,
     MEDIA_TYPES,
+    PRIORITIES,
+    RESPONSIBLE_AREAS,
     RULE_IDS,
     normalized_text,
+    safe_identifier,
     vocabulary,
 )
 from app.ai_assistance_context_reader import ContextReader
@@ -64,6 +67,12 @@ def serialize_snapshot(context: ExecutionAssistanceContext) -> bytes:
     return serialize_context(context.model_dump(mode="json"))
 
 
+def _safe_age_days(value: object) -> int | None:
+    if type(value) is int and 0 <= value <= 36500:
+        return value
+    return None
+
+
 def _project(section: str, execution: str, row: dict):
     ref = reference_id(section, execution, row["id"])
     if section == "divergences":
@@ -72,6 +81,7 @@ def _project(section: str, execution: str, row: dict):
             severity=row["severity"],
             scope=row["scope"],
             code=vocabulary(row["code"], ISSUE_CODES),
+            workorder_number=safe_identifier(row.get("workorder_number")),
             occurred_at=row["occurred_at"],
         )
     if section == "pending_items":
@@ -80,6 +90,11 @@ def _project(section: str, execution: str, row: dict):
             rule_id=vocabulary(row["rule_id"], RULE_IDS),
             status=row["status"],
             priority_score=row["priority_score"],
+            workorder_number=safe_identifier(row.get("workorder_number")),
+            responsible_area=vocabulary(row.get("responsible_area"), RESPONSIBLE_AREAS),
+            priority=vocabulary(row.get("priority"), PRIORITIES),
+            age_days=_safe_age_days(row.get("age_days")),
+            has_container=bool(row.get("has_container")),
             created_at=row["created_at"],
         )
     if section == "classifications":
@@ -89,6 +104,11 @@ def _project(section: str, execution: str, row: dict):
             state=row["state"],
             data_quality=row["data_quality"],
             priority_score=row["priority_score"],
+            workorder_number=safe_identifier(row.get("workorder_number")),
+            responsible_area=vocabulary(row.get("responsible_area"), RESPONSIBLE_AREAS),
+            priority=vocabulary(row.get("priority"), PRIORITIES),
+            age_days=_safe_age_days(row.get("age_days")),
+            has_container=bool(row.get("has_container")),
             classified_at=row["classified_at"],
         )
     if section == "evidences":

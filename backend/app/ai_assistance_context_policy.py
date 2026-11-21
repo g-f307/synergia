@@ -1,5 +1,6 @@
 """Vocabulary and selection policy 1.0.0; unknown persisted text stays absent."""
 
+import re
 import unicodedata
 
 RULE_IDS = frozenset(
@@ -18,6 +19,17 @@ RULE_IDS = frozenset(
         "source_divergence",
     }
 )
+RESPONSIBLE_AREAS = frozenset(
+    {
+        "Qualidade",
+        "Produção",
+        "Logística",
+        "Suprimentos",
+        "Governança de Dados",
+    }
+)
+PRIORITIES = frozenset({"critical", "high", "medium", "low"})
+IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9._:/-]{1,64}$")
 ISSUE_CODES = frozenset(
     {
         "invalid_header",
@@ -73,3 +85,10 @@ def normalized_text(value: str | None, limit: int = 64) -> str | None:
 def vocabulary(value: str | None, allowed: frozenset[str]) -> str | None:
     normalized = normalized_text(value)
     return normalized if normalized in allowed else None
+
+
+def safe_identifier(value: str | None) -> str | None:
+    normalized = normalized_text(value)
+    if normalized is None or not IDENTIFIER_PATTERN.fullmatch(normalized):
+        return None
+    return normalized

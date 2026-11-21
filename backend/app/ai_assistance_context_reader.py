@@ -33,22 +33,55 @@ SUBJECT_SQL = """SELECT e.id AS execution_id, e.organization_id, e.source, e.sta
 
 COLLECTION_SQL = {
     "divergences": """SELECT t.id, t.severity, t.code, t.scope,
+        COALESCE(
+            t.details->>'workorder_number',
+            nr.normalized_values->>'workorder_number'
+        ) AS workorder_number,
         t.created_at AS occurred_at FROM synergia.pipeline_issues t
         JOIN synergia.executions e ON e.id = t.execution_id
+        LEFT JOIN synergia.normalized_records nr
+          ON nr.imported_record_id = t.imported_record_id
         WHERE t.execution_id = %s AND e.organization_id = %s
         ORDER BY CASE t.severity WHEN 'error' THEN 0 ELSE 1 END,
                  t.created_at, t.id LIMIT 21""",
-    "pending_items": """SELECT t.id, t.rule_id, t.status, t.priority_score, t.created_at
+    "pending_items": """SELECT t.id, t.rule_id, t.status, t.priority_score,
+        w.workorder_number, t.responsible_area, t.priority,
+        CASE
+          WHEN jsonb_typeof(t.evidence->'age_days') = 'number'
+               AND (t.evidence->>'age_days') ~ '^[0-9]{1,6}$'
+          THEN (t.evidence->>'age_days')::integer
+          ELSE NULL
+        END AS age_days,
+        (COALESCE(t.evidence->>'container_number', '') <> ''
+         OR jsonb_typeof(t.evidence->'container_impact') = 'object') AS has_container,
+        t.created_at
         FROM synergia.pending_items t
         JOIN synergia.executions e ON e.id = t.execution_id
+        LEFT JOIN synergia.workorders w
+          ON w.id = t.workorder_id AND w.execution_id = t.execution_id
         WHERE t.execution_id = %s AND e.organization_id = %s
-        ORDER BY t.priority_score DESC NULLS LAST, t.created_at, t.id LIMIT 21""",
+        ORDER BY CASE t.status WHEN 'open' THEN 0 ELSE 1 END,
+                 t.priority_score DESC NULLS LAST, t.created_at, t.id LIMIT 21""",
     "classifications": """SELECT t.classification_id AS id, t.rule_id, t.state,
-        t.data_quality, t.priority_score, t.classified_at
+        t.data_quality, t.priority_score,
+        w.workorder_number, t.responsible_area, t.priority,
+        CASE
+          WHEN jsonb_typeof(t.evidence->'age_days') = 'number'
+               AND (t.evidence->>'age_days') ~ '^[0-9]{1,6}$'
+          THEN (t.evidence->>'age_days')::integer
+          ELSE NULL
+        END AS age_days,
+        (COALESCE(t.evidence->>'container_number', '') <> ''
+         OR jsonb_typeof(t.evidence->'container_impact') = 'object') AS has_container,
+        t.classified_at
         FROM synergia.classifications t
         JOIN synergia.executions e ON e.id = t.execution_id
+        LEFT JOIN synergia.workorders w
+          ON w.id = t.workorder_id AND w.execution_id = t.execution_id
         WHERE t.execution_id = %s AND e.organization_id = %s
-        ORDER BY t.classified_at, t.classification_id COLLATE "C" LIMIT 21""",
+        ORDER BY CASE t.state WHEN 'active' THEN 0 ELSE 1 END,
+                 t.priority_score DESC,
+                 t.classified_at, t.classification_id COLLATE "C" LIMIT 21""",
     "evidences": """SELECT t.id, t.extension, t.size_bytes, t.content_hash AS sha256,
         (fi.decision = 'accepted' AND fi.discarded_at IS NULL
          AND t.storage_key IS NOT NULL) IS TRUE AS available
