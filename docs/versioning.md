@@ -45,6 +45,13 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.17.0` acrescenta o campo aditivo `ref_id` aos itens de
+`GET /executions/{execution_id}` (`state_history`), `/divergences`,
+`/classifications`, `/pending-items` e `/evidences`, além do parâmetro opcional
+`reference` nos quatro endpoints paginados para resolver automaticamente a
+página do registro referenciado pela assistência (#227). Nenhuma migration ou
+quebra de contrato é introduzida.
+
 A API `0.16.0` acrescenta `GET /imports/{execution_id}/result-summary` (#194),
 com contagens persistidas, disponibilidade explícita, total de ocorrências,
 motivos públicos e referência anterior autorizada por `import.read`.
