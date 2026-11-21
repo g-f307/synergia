@@ -65,6 +65,36 @@ describe('ExecutionDetailComponent',()=>{
   expect(fixture.nativeElement.querySelectorAll('.history article[data-reference-match="true"]').length).toBe(0);
   expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('não encontrada');
  });
+ it('keeps manual pagination on the chosen page without re-resolving the reference when route emits',()=>{
+  const divRef='DIV-'+'a'.repeat(32);
+  api.divergences.and.callFake((_id:string,page:number,_sev:string,_src:string,ref?:string)=>ref
+   ? of({items:[{id:21,ref_id:divRef,source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-21',reason:'page2',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'})
+   : of({items:[{id:1,ref_id:'DIV-'+'1'.repeat(32),source:'OWM',severity:'error',code:'invalid_value',scope:'record',workorder_number:'WO-1',reason:'page1',occurred_at:'2026-01-01T00:00:00Z'}],pagination:{page,page_size:20,total:21,pages:2},sort:'oldest'}));
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  const router=TestBed.inject(Router);
+  spyOn(router,'navigate').and.callFake((_cmds:unknown[],extras?:{queryParams?:Record<string,unknown>})=>{
+   const next:Record<string,string>={};
+   for(const key of snapshot.queryParamMap.keys){const v=snapshot.queryParamMap.get(key);if(v!==null)next[key]=v;}
+   for(const [k,v] of Object.entries(extras?.queryParams??{})){if(v===null||v===undefined)delete next[k];else next[k]=String(v);}
+   snapshot.queryParamMap=convertToParamMap(next);
+   changes.next(snapshot.queryParamMap);
+   return Promise.resolve(true);
+  });
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  snapshot.queryParamMap=convertToParamMap({tab:'divergences',page:'1',reference:divRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.componentInstance.pageData()?.pagination.page).toBe(2);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  api.divergences.calls.reset();
+  fixture.componentInstance.loadTab(1);fixture.detectChanges();
+  expect(api.divergences).toHaveBeenCalledWith('exec-1',1,'','');
+  expect(api.divergences.calls.count()).toBe(1);
+  expect(fixture.componentInstance.pageData()?.pagination.page).toBe(1);
+  expect(fixture.componentInstance.reference()).toBe(divRef);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(0);
+ });
  it('cancels stale tab requests and prevents them from overwriting the selected tab',()=>{
   const first=new Subject();api.divergences.and.returnValue(first);
   const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
