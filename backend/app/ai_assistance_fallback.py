@@ -3,12 +3,32 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from app.ai_assistance_context_models import (
     SECTIONS,
     ExecutionAssistanceContext,
 )
 from app.ai_assistance_contract import plain_text
+
+
+def validate_language(value: str) -> str:
+    """Lexical policy check; grounding is enforced separately by the generator."""
+    plain_text(value)
+    normalized = "".join(
+        c
+        for c in unicodedata.normalize("NFKD", value.casefold())
+        if not unicodedata.combining(c)
+    )
+    if re.search(
+        r"\b(select|from|where|join|drop|truncate|create|alter|grant|revoke|"
+        r"union|having|values|sql|causa|causou|causada|causado|"
+        r"devido a|em decorrencia|decidiu|determinou|decisao automatica|"
+        r"sistema decidiu|system decided|caused by|root cause)\b",
+        normalized,
+    ) or re.search(r"[;]|--|/\*|\*/|\$\(|\|\|", value):
+        raise ValueError("prohibited language")
+    return value
 
 NOTICE = "A conferência humana das evidências é necessária."
 TRUNCATED = "O contexto possui seções truncadas."
@@ -88,13 +108,23 @@ TRIAGE_EXPLANATION_PATTERN = re.compile(
 
 
 def _safe_wo_for_text(value: str | None) -> str | None:
-    if not value or "--" in value or "/*" in value or "*/" in value:
+    if not value:
         return None
     try:
-        plain_text(f"na Workorder {value}")
+        validate_language(f"na Workorder {value}")
     except ValueError:
         return None
     return value
+
+
+def _is_valid_text(value: str, *, max_length: int) -> bool:
+    if not value or len(value) > max_length:
+        return False
+    try:
+        validate_language(value)
+    except ValueError:
+        return False
+    return True
 
 
 def _common_non_null(items: list, attr: str):
@@ -280,7 +310,10 @@ def _triage_candidates_for_items(
                 f" com qualidade de dados {quality} {avail} para conferência."
             )
 
-    return titles, explanations
+    return (
+        [t for t in titles if _is_valid_text(t, max_length=120)],
+        [e for e in explanations if _is_valid_text(e, max_length=600)],
+    )
 
 
 def describe_finding_items(
@@ -309,7 +342,10 @@ def describe_finding_items(
         triage_titles, triage_explanations = _triage_candidates_for_items(prefix, items)
         titles.update(triage_titles)
         explanations.update(triage_explanations)
-    return titles, explanations
+    return (
+        {t for t in titles if _is_valid_text(t, max_length=120)},
+        {e for e in explanations if _is_valid_text(e, max_length=600)},
+    )
 
 
 def deterministic_triage_findings(context: ExecutionAssistanceContext) -> list[dict]:

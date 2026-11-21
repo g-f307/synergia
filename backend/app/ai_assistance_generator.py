@@ -8,7 +8,6 @@ import json
 import logging
 import re
 import time
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -25,6 +24,7 @@ from app.ai_assistance_fallback import (
     deterministic_fallback,
     required_limitations,
     valid_summaries,
+    validate_language,
 )
 from app.ai_assistance_provider import AiModelProvider, ProviderError
 from app.ai_assistance_telemetry import (
@@ -55,25 +55,6 @@ def _log_unexpected_exception(exc: Exception) -> None:
         exception_type=exception_type,
         error_code="internal_error",
     )
-
-
-def validate_language(value: str) -> str:
-    """Lexical policy check; grounding is enforced separately below."""
-    plain_text(value)
-    normalized = "".join(
-        c
-        for c in unicodedata.normalize("NFKD", value.casefold())
-        if not unicodedata.combining(c)
-    )
-    if re.search(
-        r"\b(select|from|where|join|drop|truncate|create|alter|grant|revoke|"
-        r"union|having|values|sql|causa|causou|causada|causado|"
-        r"devido a|em decorrencia|decidiu|determinou|decisao automatica|"
-        r"sistema decidiu|system decided|caused by|root cause)\b",
-        normalized,
-    ) or re.search(r"[;]|--|/\*|\*/|\$\(|\|\|", value):
-        raise ValueError("prohibited language")
-    return value
 
 
 SafeText = Annotated[

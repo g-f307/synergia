@@ -416,3 +416,60 @@ def test_prepare_prompt_injects_grounded_enums():
     assert "enum" in finding_props["title"]
     assert "enum" in finding_props["explanation"]
     assert set(finding_props["evidence_refs"]["items"]["enum"]) == ctx.evidence_refs()
+
+
+def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
+    from app.ai_assistance_fallback import deterministic_triage_findings
+    from tests.test_ai_assistance_context import Reader, build
+
+    reader = Reader(1)
+    reader.collections["divergences"][0]["workorder_number"] = "WO-FROM-01"
+    reader.collections["pending_items"][0].update(
+        rule_id="oqc_hold",
+        status="open",
+        priority_score=80,
+        workorder_number="WO-FROM-01",
+        responsible_area="Qualidade",
+        priority="high",
+        age_days=12,
+        has_container=True,
+    )
+    reader.collections["classifications"][0].update(
+        rule_id="oqc_hold",
+        state="active",
+        workorder_number="WO-SELECT-02",
+        responsible_area="Qualidade",
+        priority="high",
+        age_days=12,
+        has_container=True,
+    )
+    ctx = build(reader)
+
+    _, schema, _, _ = prepare_prompt(ctx)
+    finding_props = schema["$defs"]["Finding"]["properties"]
+    for text in (
+        *schema["properties"]["summary"]["enum"],
+        *schema["properties"]["human_checks"]["items"]["enum"],
+        *schema["properties"]["limitations"]["items"]["enum"],
+        *finding_props["title"]["enum"],
+        *finding_props["explanation"]["enum"],
+    ):
+        validate_language(text)
+
+    findings = deterministic_triage_findings(ctx)
+    assert findings
+    assert all("WO-FROM-01" not in f["explanation"] for f in findings)
+    assert all("WO-SELECT-02" not in f["explanation"] for f in findings)
+
+    payload = {
+        "summary": valid(ctx)["summary"],
+        "findings": findings,
+        "human_checks": ["Conferência humana das referências disponíveis."],
+        "limitations": required_limitations(ctx),
+    }
+    result = AiAssistanceGenerator(
+        Fake(json.dumps(payload, ensure_ascii=False).encode())
+    ).generate(ctx)
+    assert result.state == "ready"
+    assert result.origin == "model"
+    assert result.findings == findings
