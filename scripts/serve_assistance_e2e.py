@@ -46,7 +46,10 @@ class ControlledProvider:
 
     def generate(self, system: str, prompt: str, schema: dict) -> bytes:
         from app.ai_assistance_context_models import ExecutionAssistanceContext
-        from app.ai_assistance_fallback import required_limitations
+        from app.ai_assistance_fallback import (
+            prioritized_reference_ids,
+            required_limitations,
+        )
 
         self._record_call()
 
@@ -59,7 +62,7 @@ class ControlledProvider:
         context = ExecutionAssistanceContext.model_validate_json(json.dumps(data))
         if context.counts.warnings:
             return b"invalid synthetic output"
-        refs = sorted(context.evidence_refs())
+        refs = prioritized_reference_ids(context)
         by_prefix: dict[str, list[str]] = {}
         for ref in refs:
             by_prefix.setdefault(ref[:3], []).append(ref)
@@ -183,15 +186,35 @@ def seed():
                                 'complete', 'high', 80, 'Qualidade', now())""",
                         (cla_id, execution_id, wo_id, source_id),
                     )
+                    for idx in range(1, 21):
+                        connection.execute(
+                            """INSERT INTO synergia.pending_items
+                            (workorder_id, execution_id, source_file_id, category,
+                             reason, status, classification_id, rule_id,
+                             rule_catalog_version, priority, priority_score,
+                             responsible_area, created_at)
+                            VALUES (%s, %s, %s, 'oqc_pending', %s,
+                                    'open', %s, 'oqc_pending', '1.0.0', 'low', 10,
+                                    'Qualidade',
+                                    now() - (%s || ' minutes')::interval)""",
+                            (
+                                wo_id,
+                                execution_id,
+                                source_id,
+                                f"Pendência sintética página 1 #{idx}",
+                                cla_id,
+                                str(40 - idx),
+                            ),
+                        )
                     connection.execute(
                         """INSERT INTO synergia.pending_items
                         (workorder_id, execution_id, source_file_id, category,
                          reason, status, classification_id, rule_id,
                          rule_catalog_version, priority, priority_score,
-                         responsible_area)
-                        VALUES (%s, %s, %s, 'oqc_hold', 'Pendência sintética',
-                                'open', %s, 'oqc_hold', '1.0.0', 'high', 80,
-                                'Qualidade')""",
+                         responsible_area, created_at)
+                        VALUES (%s, %s, %s, 'oqc_hold', 'Pendência sintética página 2',
+                                'open', %s, 'oqc_hold', '1.0.0', 'high', 95,
+                                'Qualidade', now())""",
                         (wo_id, execution_id, source_id, cla_id),
                     )
                     connection.execute(

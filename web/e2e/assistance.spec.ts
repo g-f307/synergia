@@ -127,7 +127,25 @@ test.describe.serial('execution assistance with real API and controlled provider
     const visible = await page.locator('.assistance').textContent();
     for (const secret of ['controlled-e2e', result.provenance.digest, result.provenance.prompt_hash, result.provenance.context_hash, '11434']) expect(visible).not.toContain(secret);
   });
-  test('navigates by keyboard to all five reference types, highlights the matched record and preserves URL filters', async ({ page }, info) => {
+  async function verifyHighlightedTab(page: Page, info: TestInfo, name: string, expectedRef: string) {
+    const location = page.locator('.reference-location');
+    await expect(location).toBeVisible();
+    await expect(location).toContainText(expectedRef);
+    await expect(location).toContainText(/localizada e destacada|located and highlighted/i);
+    const matched = page.locator('article[data-reference-match="true"]');
+    await expect(matched).toHaveCount(1);
+    await expect(matched).toBeVisible();
+    await expect(matched.locator('.reference-badge')).toContainText(expectedRef);
+    const results = await new AxeBuilder({ page }).include('.tab-panel').analyze();
+    const reportPath = info.outputPath(`axe-tab-${name}.json`);
+    await writeFile(reportPath, JSON.stringify(results, null, 2));
+    await info.attach(`axe-tab-${name}`, { path: reportPath, contentType: 'application/json' });
+    expect(results.violations).toEqual([]);
+    const scroll = page.locator('.detail-scroll');
+    expect(await scroll.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(await page.locator('.tab-panel').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+  test('navigates by keyboard to all five reference types, resolves page 2+, highlights visibly and passes Axe/overflow', async ({ page }, info) => {
     await login(page);
     await page.goto(`/executions/${executions.ready}?tab=summary&severity=error&source=N-FP&page=4&from=%2Fexecutions%3Fpage%3D2`);
     const link = page.locator('.assistance .references a').filter({ hasText: /^DIV-/ }).first();
@@ -138,15 +156,14 @@ test.describe.serial('execution assistance with real API and controlled provider
     expect(url.searchParams.get('reference')).toBe(reference);
     expect(url.searchParams.get('page')).toBe('1'); expect(url.searchParams.get('severity')).toBe('error');
     expect(url.searchParams.get('source')).toBe('N-FP'); expect(url.searchParams.get('from')).toBe('/executions?page=2');
-    await expect(page.locator('.reference-location')).toContainText(reference!);
-    await expect(page.locator('.records article[data-reference-match="true"]')).toHaveCount(1);
+    await verifyHighlightedTab(page, info, 'divergences', reference!);
     await page.screenshot({ path: info.outputPath('reference-navigation.png'), fullPage: true });
     await page.goBack(); // browser history must not lose the reference destination
-    for (const [prefix, tabName] of [
-      ['PEN-', 'pending'],
-      ['CLA-', 'classifications'],
-      ['EVI-', 'evidences'],
-      ['HIS-', 'history'],
+    for (const [prefix, tabName, expectedPage] of [
+      ['PEN-', 'pending', '2'],
+      ['CLA-', 'classifications', '1'],
+      ['EVI-', 'evidences', '1'],
+      ['HIS-', 'history', null],
     ] as const) {
       await open(page);
       const refLink = page.locator('.assistance .references a').filter({ hasText: new RegExp(`^${prefix}`) }).first();
@@ -154,8 +171,8 @@ test.describe.serial('execution assistance with real API and controlled provider
       const targetRef = await refLink.textContent();
       await refLink.click();
       await expect(page).toHaveURL(new RegExp(`tab=${tabName}`));
-      await expect(page.locator('.reference-location')).toContainText(targetRef!);
-      await expect(page.locator('article[data-reference-match="true"]')).toHaveCount(1);
+      if (expectedPage) await expect(page).toHaveURL(new RegExp(`page=${expectedPage}`));
+      await verifyHighlightedTab(page, info, tabName, targetRef!);
     }
   });
   test('shows insufficient evidence and deterministic fallback from the real backend', async ({ page }, info) => {
@@ -214,6 +231,16 @@ test.describe.serial('execution assistance with real API and controlled provider
       for (const theme of ['light', 'dark']) {
         await page.evaluate(value => { document.documentElement.dataset['theme'] = value; }, theme);
         await screenshotAndAxe(page, info, `zoom-250-${theme}`);
+      }
+      const penLink = page.locator('.assistance .references a').filter({ hasText: /^PEN-/ }).first();
+      await expect(penLink).toBeVisible();
+      const penRef = (await penLink.textContent())!;
+      await penLink.click();
+      await expect(page).toHaveURL(/tab=pending/);
+      await expect(page).toHaveURL(/page=2/);
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate(value => { document.documentElement.dataset['theme'] = value; }, theme);
+        await verifyHighlightedTab(page, info, `pending-page2-zoom-250-${theme}`, penRef);
       }
     } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
   });
