@@ -50,15 +50,28 @@ COLLECTION_SQL = {
           WHEN jsonb_typeof(t.evidence->'age_days') = 'number'
                AND (t.evidence->>'age_days') ~ '^[0-9]{1,6}$'
           THEN (t.evidence->>'age_days')::integer
+          WHEN c.occurred_at IS NOT NULL AND c.classified_at IS NOT NULL
+          THEN GREATEST(
+              ((c.classified_at AT TIME ZONE 'UTC')::date
+               - (c.occurred_at AT TIME ZONE 'UTC')::date),
+              0
+          )
           ELSE NULL
         END AS age_days,
-        (COALESCE(t.evidence->>'container_number', '') <> ''
+        (COALESCE(s.container_number, '') <> ''
+         OR t.rule_id = 'container_impact'
+         OR COALESCE(t.evidence->>'container_number', '') <> ''
          OR jsonb_typeof(t.evidence->'container_impact') = 'object') AS has_container,
         t.created_at
         FROM synergia.pending_items t
         JOIN synergia.executions e ON e.id = t.execution_id
         LEFT JOIN synergia.workorders w
           ON w.id = t.workorder_id AND w.execution_id = t.execution_id
+        LEFT JOIN synergia.classifications c
+          ON c.classification_id = t.classification_id
+         AND c.execution_id = t.execution_id
+        LEFT JOIN synergia.serials s
+          ON s.id = t.serial_id AND s.execution_id = t.execution_id
         WHERE t.execution_id = %s AND e.organization_id = %s
         ORDER BY CASE t.status WHEN 'open' THEN 0 ELSE 1 END,
                  t.priority_score DESC NULLS LAST, t.created_at, t.id LIMIT 21""",
@@ -69,15 +82,25 @@ COLLECTION_SQL = {
           WHEN jsonb_typeof(t.evidence->'age_days') = 'number'
                AND (t.evidence->>'age_days') ~ '^[0-9]{1,6}$'
           THEN (t.evidence->>'age_days')::integer
+          WHEN t.occurred_at IS NOT NULL AND t.classified_at IS NOT NULL
+          THEN GREATEST(
+              ((t.classified_at AT TIME ZONE 'UTC')::date
+               - (t.occurred_at AT TIME ZONE 'UTC')::date),
+              0
+          )
           ELSE NULL
         END AS age_days,
-        (COALESCE(t.evidence->>'container_number', '') <> ''
+        (COALESCE(s.container_number, '') <> ''
+         OR t.rule_id = 'container_impact'
+         OR COALESCE(t.evidence->>'container_number', '') <> ''
          OR jsonb_typeof(t.evidence->'container_impact') = 'object') AS has_container,
         t.classified_at
         FROM synergia.classifications t
         JOIN synergia.executions e ON e.id = t.execution_id
         LEFT JOIN synergia.workorders w
           ON w.id = t.workorder_id AND w.execution_id = t.execution_id
+        LEFT JOIN synergia.serials s
+          ON s.id = t.serial_id AND s.execution_id = t.execution_id
         WHERE t.execution_id = %s AND e.organization_id = %s
         ORDER BY CASE t.state WHEN 'active' THEN 0 ELSE 1 END,
                  t.priority_score DESC,
