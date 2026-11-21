@@ -83,6 +83,7 @@ class OperationalSearchPage(BaseModel):
 
 
 class ExecutionStateEvent(BaseModel):
+    ref_id: str | None = None
     from_state: str | None = None
     to_state: str
     reason: str
@@ -558,12 +559,25 @@ class PostgresQueryRepository:
             if row is None:
                 return None
             result = dict(row)
-            result["state_history"] = connection.execute(
-                """SELECT from_state,to_state,reason,state_version,occurred_at
+            from app.ai_assistance_context import reference_id
+
+            history_rows = connection.execute(
+                """SELECT id,from_state,to_state,reason,state_version,occurred_at
                    FROM synergia.execution_state_transitions WHERE execution_id=%s
                    ORDER BY occurred_at,id""",
                 (execution_id,),
             ).fetchall()
+            result["state_history"] = [
+                {
+                    "ref_id": reference_id("state_history", execution_id, item["id"]),
+                    "from_state": item["from_state"],
+                    "to_state": item["to_state"],
+                    "reason": item["reason"],
+                    "state_version": item["state_version"],
+                    "occurred_at": item["occurred_at"],
+                }
+                for item in history_rows
+            ]
             result["counts"] = connection.execute(
                 """SELECT
                      (SELECT count(*) FROM synergia.file_inspections WHERE execution_id=%s) AS files,
