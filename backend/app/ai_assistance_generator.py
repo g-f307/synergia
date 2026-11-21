@@ -18,7 +18,14 @@ from pydantic import AfterValidator, Field, ValidationError
 from app.ai_assistance_context import canonical_bytes, serialize_snapshot
 from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_contract import StrictContract, plain_text
-from app.ai_assistance_fallback import deterministic_fallback, required_limitations
+from app.ai_assistance_fallback import (
+    HUMAN_CHECK_OPTIONS,
+    context_finding_enums,
+    describe_finding_items,
+    deterministic_fallback,
+    required_limitations,
+    valid_summaries,
+)
 from app.ai_assistance_provider import AiModelProvider, ProviderError
 from app.ai_assistance_telemetry import (
     GENERATION_DURATION,
@@ -144,30 +151,9 @@ def _decode(raw: bytes, context: ExecutionAssistanceContext) -> ModelOutput:
 
     # Controlled declarative grammar makes grounding decidable. A lexical filter
     # alone cannot establish whether an arbitrary natural-language claim is true.
-    counts = context.counts
-    errors = "erro" if counts.errors == 1 else "erros"
-    warnings = "aviso" if counts.warnings == 1 else "avisos"
-    pending = "pendência" if counts.pending_items == 1 else "pendências"
-    summaries = (
-        f"A execução registra {counts.errors} erros, {counts.warnings} avisos e "
-        f"{counts.pending_items} pendências.",
-        f"A execução registra {counts.errors} {errors}, {counts.warnings} {warnings} e "
-        f"{counts.pending_items} {pending}.",
-        f"Foram registrados {counts.errors} {errors}, {counts.warnings} {warnings} e "
-        f"{counts.pending_items} {pending}.",
-        f"Foram registrados {counts.errors} erros, {counts.warnings} avisos e "
-        f"{counts.pending_items} pendências.",
-    )
-    if output.summary not in summaries:
+    if output.summary not in valid_summaries(context):
         raise ProviderError("ungrounded_summary")
     refs = context.evidence_refs()
-    prefixes = {
-        "DIV": "Divergência registrada",
-        "PEN": "Pendência registrada",
-        "CLA": "Classificação registrada",
-        "EVI": "Evidência registrada",
-        "HIS": "Transição registrada",
-    }
     used_refs = set()
     for finding in output.findings:
         selected = finding.evidence_refs
@@ -178,32 +164,14 @@ def _decode(raw: bytes, context: ExecutionAssistanceContext) -> ModelOutput:
         ):
             raise ProviderError("invalid_reference")
         used_refs.update(selected)
-        valid_titles = {"Registros disponíveis", "Registros para conferência"}
-        if len(selected) == 1:
-            valid_titles.add(prefixes[selected[0][:3]])
-        elif len({ref[:3] for ref in selected}) == 1:
-            valid_titles.add(prefixes[selected[0][:3]])
+        valid_titles, valid_explanations = describe_finding_items(context, selected)
         if (
             finding.title not in valid_titles
-            or finding.explanation
-            not in {
-                "Há um registro disponível para conferência.",
-                "Há registros disponíveis para conferência.",
-                "Os registros estão disponíveis para conferência.",
-            }
-            or (
-                len(selected) > 1
-                and finding.explanation == "Há um registro disponível para conferência."
-            )
+            or finding.explanation not in valid_explanations
         ):
             raise ProviderError("ungrounded_finding")
     if any(
-        check
-        not in {
-            "Conferência humana das referências disponíveis.",
-            "Conferência humana das evidências disponíveis.",
-        }
-        for check in output.human_checks
+        check not in HUMAN_CHECK_OPTIONS for check in output.human_checks
     ) or len(set(output.human_checks)) != len(output.human_checks):
         raise ProviderError("ungrounded_checks")
     required = set(required_limitations(context))
@@ -223,6 +191,19 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
     serialize_snapshot(context)
     snapshot = canonical_bytes(context)
     request_schema = copy.deepcopy(SCHEMA)
+    request_schema["properties"]["summary"]["enum"] = list(valid_summaries(context))
+    request_schema["properties"]["human_checks"]["items"]["enum"] = list(
+        HUMAN_CHECK_OPTIONS
+    )
+    all_refs = sorted(context.evidence_refs())
+    if all_refs:
+        allowed_titles, allowed_explanations = context_finding_enums(context)
+        finding_props = request_schema["$defs"]["Finding"]["properties"]
+        finding_props["title"]["enum"] = allowed_titles
+        finding_props["explanation"]["enum"] = allowed_explanations
+        finding_props["evidence_refs"]["items"]["enum"] = all_refs
+    else:
+        request_schema["properties"]["findings"]["maxItems"] = 0
     limitations = required_limitations(context)
     limits_schema = request_schema["properties"]["limitations"]
     limits_schema["items"]["enum"] = limitations
