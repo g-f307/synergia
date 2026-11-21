@@ -138,13 +138,17 @@ def seed():
                 (execution_id,),
             )
             if name != "insufficient":
+                file_hash = uuid4().hex * 2
+                internal_name = f"{uuid4().hex}{uuid4().hex[:16]}.csv"
                 inspection_id = connection.execute(
                     """INSERT INTO synergia.file_inspections
-                    (execution_id, source, original_filename, extension,
-                     detected_media_type, size_bytes, content_hash, decision)
-                    VALUES (%s, 'N-FP', 'synthetic.csv', 'csv',
-                            'text/csv', 10, %s, 'accepted') RETURNING id""",
-                    (execution_id, uuid4().hex * 2),
+                    (execution_id, source, original_file_name, internal_name,
+                     extension, declared_media_type, detected_media_type,
+                     size_bytes, content_hash, decision, reason_code, analyzed_at)
+                    VALUES (%s, 'N-FP', 'synthetic.csv', %s, 'csv',
+                            'text/csv', 'text/csv', 10, %s, 'accepted',
+                            'accepted', now()) RETURNING id""",
+                    (execution_id, internal_name, file_hash),
                 ).fetchone()[0]
                 source_id = connection.execute(
                     """INSERT INTO synergia.source_files
@@ -152,8 +156,13 @@ def seed():
                      detected_media_type, content_hash, source, size_bytes,
                      storage_key)
                     VALUES (%s, %s, 'synthetic.csv', 'csv', 'text/csv', %s,
-                            'N-FP', 10, 'synthetic/e2e.csv') RETURNING id""",
-                    (execution_id, inspection_id, uuid4().hex * 2),
+                            'N-FP', 10, %s) RETURNING id""",
+                    (
+                        execution_id,
+                        inspection_id,
+                        file_hash,
+                        f"synthetic/e2e/{execution_id}.csv",
+                    ),
                 ).fetchone()[0]
                 connection.execute(
                     """INSERT INTO synergia.pipeline_issues
@@ -219,9 +228,10 @@ def seed():
                     )
                     connection.execute(
                         """INSERT INTO synergia.execution_state_transitions
-                        (execution_id, from_state, to_state, reason, state_version)
-                        VALUES (%s, 'applying_rules', 'completed',
-                                'Transição sintética E2E', 1)""",
+                        (execution_id, from_state, to_state, actor_type,
+                         actor_identifier, reason, state_version)
+                        VALUES (%s, 'applying_rules', 'completed', 'system',
+                                'e2e-seed', 'Transição sintética E2E', 1)""",
                         (execution_id,),
                     )
     print(json.dumps(ids))
