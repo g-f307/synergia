@@ -95,6 +95,34 @@ describe('ExecutionDetailComponent',()=>{
   expect(fixture.componentInstance.reference()).toBe(divRef);
   expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(0);
  });
+ it('distinguishes loading, failure, matched, and unmatched reference states on paged tabs',()=>{
+  const penRef='PEN-'+'c'.repeat(32);
+  const request=new Subject();
+  api.pending.and.returnValue(request);
+  const route=TestBed.inject(ActivatedRoute);const changes=new Subject<ReturnType<typeof convertToParamMap>>();
+  Object.assign(route,{queryParamMap:changes});
+  const snapshot=route.snapshot as unknown as {queryParamMap:ReturnType<typeof convertToParamMap>};
+  const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();
+  snapshot.queryParamMap=convertToParamMap({tab:'pending',page:'1',reference:penRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('Referência a localizar nesta aba');
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).not.toContain('não encontrada');
+  request.error(failure('unavailable',503));fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('Não foi possível localizar a referência');
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).not.toContain('não encontrada');
+  expect(fixture.nativeElement.querySelector('.error')?.textContent).toContain('safe');
+  api.pending.and.returnValue(of({items:[{id:21,ref_id:penRef,category:'oqc_hold',reason:'hold',status:'open',priority:'high',priority_score:95,responsible_area:'Qualidade',workorder_number:'WO-21',created_at:'2026-01-01T00:00:00Z'}],pagination:{page:2,page_size:20,total:21,pages:2},sort:'oldest'}));
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(api.pending).toHaveBeenCalledWith('exec-1',1,penRef);
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(1);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('localizada e destacada');
+  const otherRef='PEN-'+'d'.repeat(32);
+  api.pending.and.returnValue(of({items:[{id:1,ref_id:'PEN-'+'1'.repeat(32),category:'oqc_pending',reason:'other',status:'open',priority:'low',priority_score:10,responsible_area:'Qualidade',workorder_number:'WO-1',created_at:'2026-01-01T00:00:00Z'}],pagination:{page:1,page_size:20,total:1,pages:1},sort:'oldest'}));
+  snapshot.queryParamMap=convertToParamMap({tab:'pending',page:'1',reference:otherRef});
+  changes.next(snapshot.queryParamMap);fixture.detectChanges();
+  expect(fixture.nativeElement.querySelectorAll('article[data-reference-match="true"]').length).toBe(0);
+  expect(fixture.nativeElement.querySelector('.reference-location').textContent).toContain('não encontrada');
+ });
  it('cancels stale tab requests and prevents them from overwriting the selected tab',()=>{
   const first=new Subject();api.divergences.and.returnValue(first);
   const fixture=TestBed.createComponent(ExecutionDetailComponent);fixture.detectChanges();

@@ -988,6 +988,7 @@
   "assistance.locateReference": "Referência a localizar nesta aba: {reference}. O identificador é da análise e pode não estar na página atual; nenhum registro foi destacado.",
   "assistance.referenceLocated": "Referência {reference} localizada e destacada nesta aba.",
   "assistance.referenceNotFound": "Referência {reference} não encontrada nos registros exibidos nesta aba.",
+  "assistance.referenceLoadFailed": "Não foi possível localizar a referência {reference} devido a uma falha ao carregar os registros desta aba.",
   "assistance.state.loading": "Carregando análise",
   "assistance.message.loading": "Consultando o resultado existente, sem gerar uma nova análise.",
   "assistance.state.empty": "Sem análise disponível",
