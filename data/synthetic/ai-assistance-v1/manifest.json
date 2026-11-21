@@ -67,7 +67,7 @@
       "backend/app/ai_assistance_context_reader.py": "b231571f36bb1241c552232e18890bff4e6cc5cf7f1160fa4d5a15fb0009b261",
       "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
       "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
-      "backend/app/ai_assistance_fallback.py": "0a13d2423526312ff364688b12d41370a8a0d2539a2bee4e3c6fe170aca0d8da",
+      "backend/app/ai_assistance_fallback.py": "cec7fba1a74fc231f63d0f715fb9975b4f14bc58c4347e478159b224ed4aa20a",
       "backend/app/ai_assistance_generator.py": "5b5abc28642e738b0ea2be03c07300a5ad7c07acfac98ef5fe3b20b2b4ad9275",
       "backend/app/ai_assistance_provider.py": "4603751179ddaeb95da5a34efed681cb78366b6fb5fb95e835db19b0684ed624",
       "scripts/generate_ai_assistance_corpus.py": "b937fae95117d66f00fc638e3339a38b29a9fa4fa79b1ebb97d7fd44e15e2ef0",

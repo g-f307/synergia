@@ -19,9 +19,8 @@ from app.ai_assistance_fallback import (
     INSUFFICIENT,
     MISSING,
     NOTICE,
-    TRIAGE_EXPLANATION_PATTERN,
-    TRIAGE_TITLE_PATTERN,
     TRUNCATED,
+    validate_triage_finding_coherence,
 )
 from app.ai_assistance_generator import validate_language
 from app.ai_assistance_telemetry import persistence
@@ -70,42 +69,12 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
         PRODUCT_NOTICE,
     }:
         raise ValueError("invalid result text")
-    titles = {
-        "DIV": "Divergência registrada",
-        "PEN": "Pendência registrada",
-        "CLA": "Classificação registrada",
-        "EVI": "Evidência registrada",
-        "HIS": "Transição registrada",
-    }
-    explanations = {
-        "Há um registro disponível para conferência.",
-        "Há registros disponíveis para conferência.",
-        "Os registros estão disponíveis para conferência.",
-    }
     refs = []
     for finding in result.findings:
         selected = finding.evidence_refs
-        allowed_titles = {"Registros disponíveis", "Registros para conferência"}
-        prefixes = {ref[:3] for ref in selected}
-        if len(prefixes) == 1 and next(iter(prefixes)) in titles:
-            allowed_titles.add(titles[next(iter(prefixes))])
-        title_ok = finding.title in allowed_titles or (
-            len(prefixes) == 1
-            and next(iter(prefixes)) in {"PEN", "DIV", "CLA"}
-            and bool(TRIAGE_TITLE_PATTERN.fullmatch(finding.title))
-        )
-        explanation_ok = (
-            finding.explanation in explanations
-            and not (
-                len(selected) > 1
-                and finding.explanation == "Há um registro disponível para conferência."
-            )
-        ) or (
-            len(prefixes) == 1
-            and next(iter(prefixes)) in {"PEN", "DIV", "CLA"}
-            and bool(TRIAGE_EXPLANATION_PATTERN.fullmatch(finding.explanation))
-        )
-        if not title_ok or not explanation_ok or not 1 <= len(selected) <= 3:
+        if not validate_triage_finding_coherence(
+            finding.title, finding.explanation, selected
+        ):
             raise ValueError("invalid result finding")
         refs.extend(finding.evidence_refs)
     if len(refs) != len(set(refs)):

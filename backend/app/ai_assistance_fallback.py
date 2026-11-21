@@ -110,6 +110,143 @@ TRIAGE_EXPLANATION_PATTERN = re.compile(
 )
 
 
+_PEN_TITLE_RE = re.compile(
+    rf"^(?:Pendência (?P<status>aberta|registrada): (?P<rule>{_RULE_ALT})"
+    rf"|Pendência (?P<open_area>aberta) em (?P<area>{_AREA_ALT})"
+    rf"(?:: (?P<area_rule>{_RULE_ALT}))?)$"
+)
+_DIV_TITLE_RE = re.compile(
+    rf"^Divergência \((?P<severity>error|warning)\)"
+    rf"(?:: (?P<code>{_CODE_ALT})| em (?P<scope>file|structure|record))$"
+)
+_CLA_TITLE_RE = re.compile(
+    rf"^Classificação (?:(?P<active>ativa)|\((?P<state>active|closed)\)): "
+    rf"(?P<rule>{_RULE_ALT})$"
+)
+
+_PEN_EXPLANATION_RE = re.compile(
+    rf"^(?P<subject>Registro|(?P<count>[23]) registros) de pendência "
+    rf"(?P<status>open|resolved|cancelled)"
+    rf"(?: na regra (?P<rule>{_RULE_ALT}))?"
+    rf"(?: sob responsabilidade de (?P<area>{_AREA_ALT}))?"
+    rf"(?: na Workorder {_WO_TOKEN})?"
+    rf"(?: com aging(?P<max_age> máximo)? de [0-9]{{1,5}} dias)?"
+    rf"(?: e impacto em container)?"
+    rf" (?P<avail>disponível|disponíveis) para conferência\.$"
+)
+_DIV_EXPLANATION_RE = re.compile(
+    rf"^(?P<subject>Divergência|(?P<count>[23]) divergências) de severidade "
+    rf"(?P<severity>error|warning) no escopo (?P<scope>file|structure|record)"
+    rf"(?: com código (?P<code>{_CODE_ALT}))?"
+    rf"(?: na Workorder {_WO_TOKEN})?"
+    rf" (?P<avail>disponível|disponíveis) para conferência\.$"
+)
+_CLA_EXPLANATION_RE = re.compile(
+    rf"^(?P<subject>Classificação|(?P<count>[23]) classificações) "
+    rf"(?P<state>active|closed)"
+    rf"(?: na regra (?P<rule>{_RULE_ALT}))?"
+    rf"(?: sob responsabilidade de (?P<area>{_AREA_ALT}))?"
+    rf"(?: na Workorder {_WO_TOKEN})?"
+    rf"(?: com aging(?P<max_age> máximo)? de [0-9]{{1,5}} dias)?"
+    rf"(?: e impacto em container)?"
+    rf" com qualidade de dados (?:complete|partial)"
+    rf" (?P<avail>disponível|disponíveis) para conferência\.$"
+)
+
+
+def _cardinality_matches(match: re.Match[str], count: int) -> bool:
+    exp_count = int(match.group("count")) if match.group("count") else 1
+    if exp_count != count:
+        return False
+    expected_avail = "disponível" if count == 1 else "disponíveis"
+    if match.group("avail") != expected_avail:
+        return False
+    if "max_age" in match.groupdict() and match.group("max_age") is not None:
+        if count == 1:
+            return False
+    elif "com aging de " in match.group(0) and count > 1:
+        return False
+    return True
+
+
+def validate_triage_finding_coherence(
+    title: str, explanation: str, selected_refs: list[str]
+) -> bool:
+    """Validate prefix, cardinality, and title/explanation coherence without context."""
+    count = len(selected_refs)
+    if not 1 <= count <= 3:
+        return False
+    prefixes = {ref[:3] for ref in selected_refs}
+    single_prefix = next(iter(prefixes)) if len(prefixes) == 1 else None
+
+    legacy_titles = {"Registros disponíveis", "Registros para conferência"}
+    if single_prefix in LEGACY_PREFIX_TITLES:
+        legacy_titles.add(LEGACY_PREFIX_TITLES[single_prefix])
+    title_is_legacy = title in legacy_titles
+    explanation_is_legacy = explanation in LEGACY_EXPLANATIONS and not (
+        count > 1 and explanation == "Há um registro disponível para conferência."
+    )
+    if title_is_legacy and explanation_is_legacy:
+        return True
+    if single_prefix not in {"PEN", "DIV", "CLA"}:
+        return False
+
+    title_re = {"PEN": _PEN_TITLE_RE, "DIV": _DIV_TITLE_RE, "CLA": _CLA_TITLE_RE}[
+        single_prefix
+    ]
+    exp_re = {
+        "PEN": _PEN_EXPLANATION_RE,
+        "DIV": _DIV_EXPLANATION_RE,
+        "CLA": _CLA_EXPLANATION_RE,
+    }[single_prefix]
+
+    title_match = None if title_is_legacy else title_re.fullmatch(title)
+    exp_match = None if explanation_is_legacy else exp_re.fullmatch(explanation)
+    if not title_is_legacy and title_match is None:
+        return False
+    if not explanation_is_legacy and (
+        exp_match is None or not _cardinality_matches(exp_match, count)
+    ):
+        return False
+    if title_match is None or exp_match is None:
+        return True
+
+    if single_prefix == "PEN":
+        if (
+            title_match.group("status") == "aberta"
+            or title_match.group("open_area") == "aberta"
+        ) and exp_match.group("status") != "open":
+            return False
+        title_rule = title_match.group("rule") or title_match.group("area_rule")
+        if title_rule is not None and exp_match.group("rule") != title_rule:
+            return False
+        title_area = title_match.group("area")
+        if title_area is not None and exp_match.group("area") != title_area:
+            return False
+    elif single_prefix == "DIV":
+        if title_match.group("severity") != exp_match.group("severity"):
+            return False
+        if (
+            title_match.group("scope") is not None
+            and title_match.group("scope") != exp_match.group("scope")
+        ):
+            return False
+        if (
+            title_match.group("code") is not None
+            and title_match.group("code") != exp_match.group("code")
+        ):
+            return False
+    else:
+        title_state = (
+            "active" if title_match.group("active") else title_match.group("state")
+        )
+        if title_state != exp_match.group("state"):
+            return False
+        if title_match.group("rule") != exp_match.group("rule"):
+            return False
+    return True
+
+
 def _safe_wo_for_text(value: str | None) -> str | None:
     if not value or _PERSISTENCE_SECRET_PATTERN.search(value):
         return None
