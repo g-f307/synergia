@@ -56,6 +56,76 @@
           "title": "Priority Score",
           "type": "integer"
         },
+        "workorder_number": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workorder Number"
+        },
+        "responsible_area": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "enum": [
+            "Governança de Dados",
+            "Logística",
+            "Produção",
+            "Qualidade",
+            "Suprimentos",
+            null
+          ],
+          "title": "Responsible Area"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "age_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Days"
+        },
+        "has_container": {
+          "default": false,
+          "title": "Has Container",
+          "type": "boolean"
+        },
         "classified_at": {
           "format": "date-time",
           "title": "Classified At",
@@ -229,6 +299,19 @@
           ],
           "title": "Scope",
           "type": "string"
+        },
+        "workorder_number": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workorder Number"
         },
         "occurred_at": {
           "format": "date-time",
@@ -435,6 +518,76 @@
             }
           ],
           "title": "Priority Score"
+        },
+        "workorder_number": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workorder Number"
+        },
+        "responsible_area": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "enum": [
+            "Governança de Dados",
+            "Logística",
+            "Produção",
+            "Qualidade",
+            "Suprimentos",
+            null
+          ],
+          "title": "Responsible Area"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "age_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Days"
+        },
+        "has_container": {
+          "default": false,
+          "title": "Has Container",
+          "type": "boolean"
         },
         "created_at": {
           "format": "date-time",

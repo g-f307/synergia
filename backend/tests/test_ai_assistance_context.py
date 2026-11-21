@@ -370,3 +370,36 @@ def test_duplicate_references_and_wrong_prefix_are_rejected(section):
     payload[section][0]["ref_id"] = "BAD-" + "0" * 32
     with pytest.raises(ValidationError):
         ExecutionAssistanceContext.model_validate_json(json.dumps(payload))
+
+
+def test_enriched_context_projects_and_sanitizes_operational_fields():
+    reader = Reader(1)
+    reader.collections["divergences"][0]["workorder_number"] = "WO-226-01"
+    reader.collections["pending_items"][0].update(
+        workorder_number="WO-226-01",
+        responsible_area="Qualidade",
+        priority="high",
+        age_days=14,
+        has_container=True,
+    )
+    reader.collections["classifications"][0].update(
+        workorder_number="WO-1; DROP TABLE",
+        responsible_area="Area Desconhecida",
+        priority="urgent",
+        age_days=-3,
+        has_container=False,
+    )
+    ctx = build(reader)
+    assert ctx.divergences[0].workorder_number == "WO-226-01"
+    pending = ctx.pending_items[0]
+    assert pending.workorder_number == "WO-226-01"
+    assert pending.responsible_area == "Qualidade"
+    assert pending.priority == "high"
+    assert pending.age_days == 14
+    assert pending.has_container is True
+    cla = ctx.classifications[0]
+    assert cla.workorder_number is None
+    assert cla.responsible_area is None
+    assert cla.priority is None
+    assert cla.age_days is None
+    assert cla.has_container is False

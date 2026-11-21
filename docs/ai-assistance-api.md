@@ -5,8 +5,9 @@ estão documentadas em [ai-assistance-web.md](ai-assistance-web.md).
 
 A assistência exige `SYNERGIA_AI_ASSISTANCE_ENABLED=true` e as configurações de
 runtime e retenção descritas em `ai-assistance-persistence.md` e no contrato
-operacional. O banco deve estar migrado até `0040` (inclui a auditoria das
-manutenções) e o segredo compartilhado do
+operacional. O banco deve estar migrado até `0041` (inclui a auditoria das
+manutenções em `0040` e a validação de achados de triagem fundamentados em
+`0041`) e o segredo compartilhado do
 limitador deve estar em `RATE_LIMIT_KEY_SECRET` (ou `AUTH_JWT_SIGNING_KEY`), com
 pelo menos 32 bytes. A opção desligada responde `ai_assistance_disabled`.
 
@@ -26,8 +27,17 @@ Content-Length; excesso ou stream lento retorna o mesmo 422
 `ai_assistance_invalid_contract`, sem geração ou consumo do restante do corpo.
 Exige `execution.read` e `ai.assistance.generate` na organização da execução.
 O contexto é montado no servidor; o cliente não fornece fatos ou configurações do
-modelo. Resultados equivalentes são reutilizados. Saídas rejeitadas após a chamada
-são substituídas por um resultado determinístico validado e persistido.
+modelo. Na #226, o snapshot de contexto passa a projetar atributos operacionais
+sanitizados (`workorder_number`, `responsible_area`, `priority`, `age_days`
+derivado de `classifications.occurred_at`/`classified_at` e `has_container`
+derivado de `serials.container_number`/`rule_id='container_impact'`), mantendo
+o contrato `1.0.0`, o orçamento de 8 KiB e a estabilidade de `ref_id`. O schema
+enviado ao runtime (`format`) restringe `summary`, `findings` (`title`,
+`explanation`, `evidence_refs`), `human_checks` e `limitations` ao catálogo
+fundamentado do contexto, omitindo da redação qualquer identificador incompatível
+com a política lexical ou com a guarda de persistência do banco. Resultados
+equivalentes são reutilizados. Saídas rejeitadas após a chamada são substituídas
+por um resultado determinístico priorizado e persistido.
 
 `GET /executions/{execution_id}/ai-assistance/latest` exige `execution.read` e
 `ai.assistance.read` na mesma organização. Retorna apenas um resultado cujo hash

@@ -35,6 +35,7 @@ FREEZE_FILES = (
     "backend/app/ai_assistance_context.py",
     "backend/app/ai_assistance_context_models.py",
     "backend/app/ai_assistance_context_policy.py",
+    "backend/app/ai_assistance_context_reader.py",
     "backend/app/ai_assistance_contract.py",
     "backend/app/ai_assistance_config.py",
     "backend/app/ai_assistance_fallback.py",
@@ -236,6 +237,7 @@ def _build_case_payload(spec: dict) -> dict:
                 "severity": "error",
                 "scope": "record",
                 "code": div_code,
+                "workorder_number": f"WO-SYN-{case_id}",
                 "occurred_at": _iso(3),
             }
         )
@@ -245,6 +247,11 @@ def _build_case_payload(spec: dict) -> dict:
                 "rule_id": "oqc_hold",
                 "status": "open",
                 "priority_score": 80,
+                "workorder_number": f"WO-SYN-{case_id}",
+                "responsible_area": "Qualidade",
+                "priority": "high",
+                "age_days": 12,
+                "has_container": spec["organization_key"] == "org_a",
                 "created_at": _iso(4),
             }
         )
@@ -255,6 +262,11 @@ def _build_case_payload(spec: dict) -> dict:
                 "state": "active",
                 "data_quality": "partial",
                 "priority_score": 80,
+                "workorder_number": f"WO-SYN-{case_id}",
+                "responsible_area": "Governança de Dados",
+                "priority": "high",
+                "age_days": 5,
+                "has_container": False,
                 "classified_at": _iso(4),
             }
         )

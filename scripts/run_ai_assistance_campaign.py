@@ -45,6 +45,7 @@ from app.ai_assistance_context_models import ExecutionAssistanceContext  # noqa:
 from app.ai_assistance_contract import AiAssistanceResponse  # noqa: E402
 from app.ai_assistance_fallback import (  # noqa: E402
     deterministic_fallback,
+    deterministic_triage_findings,
     required_limitations,
 )
 from app.ai_assistance_generator import (  # noqa: E402
@@ -79,7 +80,6 @@ class ControlledCampaignProvider:
         )
         data.update(generated_at=datetime.now(UTC).isoformat(), context_sha256="0" * 64)
         context = ExecutionAssistanceContext.model_validate_json(json.dumps(data))
-        refs = sorted(context.evidence_refs())
         return json.dumps(
             {
                 "summary": (
@@ -87,15 +87,7 @@ class ControlledCampaignProvider:
                     f"{context.counts.warnings} avisos e "
                     f"{context.counts.pending_items} pendências."
                 ),
-                "findings": [
-                    {
-                        "title": "Registros disponíveis",
-                        "explanation": "Há registros disponíveis para conferência.",
-                        "evidence_refs": refs[:3],
-                    }
-                ]
-                if refs
-                else [],
+                "findings": deterministic_triage_findings(context),
                 "human_checks": ["Conferência humana das referências disponíveis."],
                 "limitations": required_limitations(context),
             },

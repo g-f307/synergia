@@ -333,3 +333,147 @@ def test_schema_hash_matches_provider_and_varies_with_context_limitations():
         assert result.base_schema_sha256 == SCHEMA_SHA256
         results.append(result)
     assert results[0].schema_sha256 != results[1].schema_sha256
+
+
+def test_grounded_triage_findings_accepted_and_mismatched_attributes_rejected():
+    from app.ai_assistance_fallback import (
+        deterministic_fallback,
+        deterministic_triage_findings,
+    )
+    from tests.test_ai_assistance_context import Reader, build
+
+    reader = Reader(2)
+    reader.collections["pending_items"][0].update(
+        rule_id="oqc_hold",
+        status="open",
+        priority_score=80,
+        workorder_number="WO-226-A",
+        responsible_area="Qualidade",
+        priority="high",
+        age_days=15,
+        has_container=True,
+    )
+    reader.collections["pending_items"][1].update(
+        rule_id="ship_block",
+        status="open",
+        priority_score=40,
+        workorder_number="WO-226-B",
+        responsible_area="Logística",
+        priority="medium",
+        age_days=2,
+        has_container=False,
+    )
+    reader.collections["divergences"][0]["workorder_number"] = "WO-226-A"
+    ctx = build(reader)
+
+    triage_findings = deterministic_triage_findings(ctx)
+    assert triage_findings
+    assert triage_findings[0]["evidence_refs"] == [ctx.pending_items[0].ref_id]
+    assert "Qualidade" in triage_findings[0]["title"]
+    assert "WO-226-A" in triage_findings[0]["explanation"]
+    assert "15 dias" in triage_findings[0]["explanation"]
+    assert "container" in triage_findings[0]["explanation"]
+
+    payload = {
+        "summary": valid(ctx)["summary"],
+        "findings": triage_findings,
+        "human_checks": ["Conferência humana das referências disponíveis."],
+        "limitations": required_limitations(ctx),
+    }
+    accepted = AiAssistanceGenerator(
+        Fake(json.dumps(payload, ensure_ascii=False).encode())
+    ).generate(ctx)
+    assert accepted.state == "ready"
+    assert accepted.origin == "model"
+    assert accepted.findings == triage_findings
+
+    # Swapping attributes from pending_items[0] onto pending_items[1] must fail
+    tampered = json.loads(json.dumps(payload))
+    tampered["findings"] = [
+        {
+            "title": triage_findings[0]["title"],
+            "explanation": triage_findings[0]["explanation"],
+            "evidence_refs": [ctx.pending_items[1].ref_id],
+        }
+    ]
+    rejected = AiAssistanceGenerator(
+        Fake(json.dumps(tampered, ensure_ascii=False).encode())
+    ).generate(ctx)
+    assert rejected.state == "rejected"
+    assert rejected.rejection_code == "ungrounded_finding"
+
+    # Fallback summary must prioritize container/high-aging pending first
+    fb_summary, _ = deterministic_fallback(ctx)
+    assert f"Referências disponíveis: {ctx.pending_items[0].ref_id}" in fb_summary
+
+
+def test_prepare_prompt_injects_grounded_enums():
+    ctx = context()
+    _, schema, _, _ = prepare_prompt(ctx)
+    assert "enum" in schema["properties"]["summary"]
+    assert "enum" in schema["properties"]["human_checks"]["items"]
+    finding_props = schema["$defs"]["Finding"]["properties"]
+    assert "enum" in finding_props["title"]
+    assert "enum" in finding_props["explanation"]
+    assert set(finding_props["evidence_refs"]["items"]["enum"]) == ctx.evidence_refs()
+
+
+def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
+    from app.ai_assistance_fallback import (
+        _PERSISTENCE_SECRET_PATTERN,
+        deterministic_triage_findings,
+    )
+    from tests.test_ai_assistance_context import Reader, build
+
+    for prohibited_wo in ("WO-FROM-01", "WO-SELECT-02", "WO-TOKEN-01", "WO-SECRET-01"):
+        reader = Reader(1)
+        reader.collections["divergences"][0]["workorder_number"] = prohibited_wo
+        reader.collections["pending_items"][0].update(
+            rule_id="oqc_hold",
+            status="open",
+            priority_score=80,
+            workorder_number=prohibited_wo,
+            responsible_area="Qualidade",
+            priority="high",
+            age_days=12,
+            has_container=True,
+        )
+        reader.collections["classifications"][0].update(
+            rule_id="oqc_hold",
+            state="active",
+            workorder_number=prohibited_wo,
+            responsible_area="Qualidade",
+            priority="high",
+            age_days=12,
+            has_container=True,
+        )
+        ctx = build(reader)
+
+        _, schema, _, _ = prepare_prompt(ctx)
+        finding_props = schema["$defs"]["Finding"]["properties"]
+        for text in (
+            *schema["properties"]["summary"]["enum"],
+            *schema["properties"]["human_checks"]["items"]["enum"],
+            *schema["properties"]["limitations"]["items"]["enum"],
+            *finding_props["title"]["enum"],
+            *finding_props["explanation"]["enum"],
+        ):
+            validate_language(text)
+            assert not _PERSISTENCE_SECRET_PATTERN.search(text)
+
+        findings = deterministic_triage_findings(ctx)
+        assert findings
+        assert all(prohibited_wo not in f["explanation"] for f in findings)
+
+        payload = {
+            "summary": valid(ctx)["summary"],
+            "findings": findings,
+            "human_checks": ["Conferência humana das referências disponíveis."],
+            "limitations": required_limitations(ctx),
+        }
+        result = AiAssistanceGenerator(
+            Fake(json.dumps(payload, ensure_ascii=False).encode())
+        ).generate(ctx)
+        assert result.state == "ready"
+        assert result.origin == "model"
+        assert result.findings == findings

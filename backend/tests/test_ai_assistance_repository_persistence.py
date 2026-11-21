@@ -1197,3 +1197,297 @@ def test_rejects_mismatched_finding_type_before_writing(setup, database):
             ).fetchone()[0]
             == "processing"
         )
+
+
+@pytest.mark.parametrize("wo_number", ["WO-226-CTRL", "WO-TOKEN-01", "WO-SECRET-01"])
+def test_triage_generation_persistence_and_readback(setup, wo_number):
+    import json
+    from dataclasses import replace
+
+    from app.ai_assistance_context import ExecutionContextBuilder
+    from app.ai_assistance_fallback import (
+        deterministic_triage_findings,
+        required_limitations,
+    )
+    from app.ai_assistance_generator import AiAssistanceGenerator
+    from app.authorization import ActorContext
+    from tests.test_ai_assistance_context import Reader
+
+    repo, base, _, actor, correlation = setup
+    reader = Reader(1)
+    reader.row["execution_id"] = str(base.execution_id)
+    reader.row["organization_id"] = base.organization_id
+    reader.collections["divergences"][0]["workorder_number"] = wo_number
+    reader.collections["pending_items"][0].update(
+        rule_id="oqc_hold",
+        status="open",
+        priority_score=80,
+        workorder_number=wo_number,
+        responsible_area="Qualidade",
+        priority="high",
+        age_days=14,
+        has_container=True,
+    )
+    ctx_actor = ActorContext(
+        actor,
+        uuid4(),
+        uuid4(),
+        {"execution.read": frozenset({base.organization_id})},
+        correlation,
+    )
+    ctx = ExecutionContextBuilder(reader).build(ctx_actor, base.execution_id)
+    findings = deterministic_triage_findings(ctx)
+
+    class TriageProvider:
+        model = "model:triage"
+        digest = "sha256:" + "e" * 64
+
+        def generate(self, system, prompt, schema):
+            return json.dumps(
+                {
+                    "summary": (
+                        f"A execução registra {ctx.counts.errors} erros, "
+                        f"{ctx.counts.warnings} avisos e "
+                        f"{ctx.counts.pending_items} pendências."
+                    ),
+                    "findings": findings,
+                    "human_checks": [
+                        "Conferência humana das referências disponíveis."
+                    ],
+                    "limitations": required_limitations(ctx),
+                },
+                ensure_ascii=False,
+            ).encode("utf-8")
+
+    generated = AiAssistanceGenerator(TriageProvider()).generate(ctx)
+    assert generated.state == "ready"
+    if wo_number == "WO-226-CTRL":
+        assert any(wo_number in f["explanation"] for f in generated.findings)
+    else:
+        assert all(wo_number not in f["explanation"] for f in generated.findings)
+
+    key = replace(
+        base,
+        context_sha256=ctx.context_sha256,
+        prompt_sha256=generated.prompt_sha256,
+        model_name=generated.model,
+        model_digest=generated.digest,
+    )
+    aid = repo.reserve(key, actor, correlation)
+    refs = ctx.evidence_refs()
+    response = AiAssistanceResponse.model_validate_json(
+        json.dumps(
+            {
+                "assistance_id": str(aid),
+                "execution_id": str(key.execution_id),
+                "state": generated.state,
+                "summary": generated.summary,
+                "findings": generated.findings,
+                "human_checks": generated.human_checks,
+                "limitations": generated.limitations,
+                "provenance": {
+                    "contract_version": key.contract_version,
+                    "model": key.model_name,
+                    "digest": key.model_digest,
+                    "context_hash": key.context_sha256,
+                    "prompt_hash": key.prompt_sha256,
+                    "origin": generated.origin,
+                    "timings": {
+                        "context_ms": 0,
+                        "generation_ms": generated.elapsed_ms,
+                        "total_ms": generated.elapsed_ms,
+                    },
+                },
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        ),
+        context={"evidence_refs": refs},
+    )
+    saved = repo.finish(
+        key,
+        aid,
+        actor,
+        correlation,
+        response,
+        evidence_refs=refs,
+        response_sha256=generated.response_sha256,
+        rejection_code=None,
+        elapsed_ms=generated.elapsed_ms,
+    )
+    loaded = repo.latest(
+        key.organization_id,
+        key.execution_id,
+        ctx.context_sha256,
+        actor,
+        correlation,
+        evidence_refs=refs,
+    )
+    assert loaded is not None
+    assert loaded.assistance_id == saved.assistance_id
+    assert [f.model_dump() for f in loaded.findings] == generated.findings
+
+
+@pytest.mark.parametrize(
+    "title,explanation,refs",
+    [
+        (
+            "Divergência (error): invalid_value",
+            (
+                "Divergência de severidade error no escopo record "
+                "com código invalid_value disponível para conferência."
+            ),
+            ["PEN-" + "1" * 32],
+        ),
+        (
+            "Pendência aberta: oqc_hold",
+            (
+                "3 registros de pendência open na regra oqc_hold "
+                "disponíveis para conferência."
+            ),
+            ["PEN-" + "1" * 32],
+        ),
+        (
+            "Pendência aberta: oqc_hold",
+            (
+                "Registro de pendência cancelled na regra oqc_hold "
+                "disponível para conferência."
+            ),
+            ["PEN-" + "1" * 32],
+        ),
+        (
+            "Divergência (error): invalid_value",
+            (
+                "Divergência de severidade warning no escopo record "
+                "com código invalid_value disponível para conferência."
+            ),
+            ["DIV-" + "1" * 32],
+        ),
+        (
+            "Classificação ativa: oqc_hold",
+            (
+                "Classificação closed na regra oqc_pass com qualidade de dados "
+                "complete disponível para conferência."
+            ),
+            ["CLA-" + "1" * 32],
+        ),
+    ],
+)
+def test_persistence_rejects_incoherent_triage_findings_on_write_and_read(
+    setup, database, title, explanation, refs
+):
+    import json
+    from dataclasses import replace
+
+    repo, base, _, actor, correlation = setup
+    key = replace(base, model_name="model:local", model_digest="sha256:" + "a" * 64)
+    aid = repo.reserve(key, actor, correlation)
+    bad = contract_examples()["ready"]
+    bad.update(assistance_id=str(aid), execution_id=str(key.execution_id))
+    bad["created_at"] = datetime.now(UTC).isoformat()
+    bad["provenance"].update(
+        model=key.model_name,
+        digest=key.model_digest,
+        origin="model",
+        context_hash=key.context_sha256,
+        prompt_hash=key.prompt_sha256,
+    )
+    bad["findings"] = [
+        {"title": title, "explanation": explanation, "evidence_refs": refs}
+    ]
+    value = AiAssistanceResponse.model_validate_json(
+        json.dumps(bad), context={"evidence_refs": set(refs)}
+    )
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.complete(
+            key,
+            aid,
+            actor,
+            correlation,
+            value,
+            evidence_refs=frozenset(refs),
+            response_sha256="b" * 64,
+            rejection_code=None,
+            elapsed_ms=0,
+        )
+
+    # Simulate an incoherent persisted document and verify readback rejects it.
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            """UPDATE synergia.ai_assistances
+            SET state='ready', origin='model', result=%s::jsonb,
+                completed_at=clock_timestamp(), reservation_until=NULL,
+                elapsed_ms=0, response_sha256=%s
+            WHERE id=%s""",
+            (json.dumps(bad), "b" * 64, aid),
+        )
+    with pytest.raises(AssistancePersistenceError, match="integrity_error"):
+        repo.get(
+            key.organization_id,
+            key.execution_id,
+            aid,
+            actor,
+            correlation,
+            evidence_refs=frozenset(refs),
+        )
+
+
+@pytest.mark.parametrize("ref_count", [1, 2, 3])
+def test_persistence_accepts_coherent_triage_findings_for_one_to_three_refs(
+    setup, ref_count
+):
+    import json
+    from dataclasses import replace
+
+    repo, base, _, actor, correlation = setup
+    key = replace(base, model_name="model:local", model_digest="sha256:" + "c" * 64)
+    aid = repo.reserve(key, actor, correlation)
+    refs = [f"PEN-{i:032x}" for i in range(1, ref_count + 1)]
+    explanation = (
+        "Registro de pendência open na regra oqc_hold sob responsabilidade "
+        "de Qualidade com aging de 10 dias disponível para conferência."
+        if ref_count == 1
+        else f"{ref_count} registros de pendência open na regra oqc_hold "
+        "sob responsabilidade de Qualidade com aging máximo de 10 dias "
+        "disponíveis para conferência."
+    )
+    doc = contract_examples()["ready"]
+    doc.update(assistance_id=str(aid), execution_id=str(key.execution_id))
+    doc["created_at"] = datetime.now(UTC).isoformat()
+    doc["provenance"].update(
+        model=key.model_name,
+        digest=key.model_digest,
+        origin="model",
+        context_hash=key.context_sha256,
+        prompt_hash=key.prompt_sha256,
+    )
+    doc["findings"] = [
+        {
+            "title": "Pendência aberta em Qualidade: oqc_hold",
+            "explanation": explanation,
+            "evidence_refs": refs,
+        }
+    ]
+    value = AiAssistanceResponse.model_validate_json(
+        json.dumps(doc), context={"evidence_refs": set(refs)}
+    )
+    saved = repo.finish(
+        key,
+        aid,
+        actor,
+        correlation,
+        value,
+        evidence_refs=frozenset(refs),
+        response_sha256="d" * 64,
+        rejection_code=None,
+        elapsed_ms=0,
+    )
+    loaded = repo.get(
+        key.organization_id,
+        key.execution_id,
+        aid,
+        actor,
+        correlation,
+        evidence_refs=frozenset(refs),
+    )
+    assert loaded.assistance_id == saved.assistance_id
+    assert loaded.findings[0].evidence_refs == refs

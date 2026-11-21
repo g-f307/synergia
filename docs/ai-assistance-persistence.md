@@ -5,6 +5,10 @@ A migration `0038` cria `ai_assistances` e o histórico imutável
 consultas da aplicação devem verificar a permissão e reconstruir o conjunto de
 referências autorizadas antes de chamar o repositório. Não há rota nesta entrega.
 
+A migration incremental `0041` amplia `synergia.ai_assistance_result_shape_valid`
+para aceitar os templates fechados de triagem fundamentados por fatos (#226),
+preservando compatibilidade com todos os resultados legados `1.0.0`.
+
 A migration incremental `0040` acrescenta os registros de execução dos workers
 na auditoria existente de operações de dados. O [contrato de observabilidade](ai-assistance-observability.md)
 descreve contagens, sucesso atômico, falhas, heartbeat e rollback que preserva o

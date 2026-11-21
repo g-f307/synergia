@@ -58,19 +58,20 @@
       "follow_redirects": false
     },
     "assets_sha256": {
-      "backend/app/ai_assistance_assets/system.txt": "a9d2013df304a6851e6835c4c1fb15b8d0ed8ccec18340293afe2947558e20bd",
+      "backend/app/ai_assistance_assets/system.txt": "5da90e6744911a8e7c260e1d3e6b33bb9ce495d1cdea71dae2cd99f5597bfc63",
       "backend/app/ai_assistance_assets/template.txt": "c5bf4cf4423aa0617f934b77928399af6abaf47481f3e22bea5be17c6f59037e",
       "backend/app/ai_assistance_assets/output.schema.json": "161cd39811ca63ff76e4a431221e38282f25ea8dd2259275cdc8a9531152ccac",
-      "backend/app/ai_assistance_context.py": "b913c3a0fa31a6cdf31cc97934cb1c4915e86cf33fb5afe3a541223fb2c24435",
-      "backend/app/ai_assistance_context_models.py": "e74bed20aa509095f765586281ee6a00bb7cdbe1b5ae21c18ba41989e8663bed",
-      "backend/app/ai_assistance_context_policy.py": "db36a7263819bd08158d35c3a14dc15aad4c270cb3c264417b76a42bd122bf8e",
+      "backend/app/ai_assistance_context.py": "efac54cec87116434b9165a2fee5a47c63f2f5b68f72400766d6fe0dfee7d844",
+      "backend/app/ai_assistance_context_models.py": "8c10102cf706b09eb1eaffd7d20a36592c7a6577857034f572a36c4bf8ac5fb1",
+      "backend/app/ai_assistance_context_policy.py": "f972db2245e2a21cd24abad38fae8ea923db85f6790c770753addd8138b1caaf",
+      "backend/app/ai_assistance_context_reader.py": "b231571f36bb1241c552232e18890bff4e6cc5cf7f1160fa4d5a15fb0009b261",
       "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
       "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
-      "backend/app/ai_assistance_fallback.py": "6d52171f1bb3824b1acbc14692da1648db2a588b0d63ed1309291c15d7c34eb5",
-      "backend/app/ai_assistance_generator.py": "74c8179e01f26f195e717968471dfdea7a3f68178e655f12312806ab11cf68fc",
-      "backend/app/ai_assistance_provider.py": "c65dfe70b29796e06685c2c31db53a33ce47d875906a84edae9328925dcaf164",
-      "scripts/generate_ai_assistance_corpus.py": "19ab6434c733118c038578089385b721d288ba0aa268145a450c5e56e2c042e6",
-      "scripts/run_ai_assistance_campaign.py": "adbaccf5bac9d1131fa4cbfa559e2fd770742e67b4f9787415ab55ed5d8f355c"
+      "backend/app/ai_assistance_fallback.py": "cec7fba1a74fc231f63d0f715fb9975b4f14bc58c4347e478159b224ed4aa20a",
+      "backend/app/ai_assistance_generator.py": "5b5abc28642e738b0ea2be03c07300a5ad7c07acfac98ef5fe3b20b2b4ad9275",
+      "backend/app/ai_assistance_provider.py": "4603751179ddaeb95da5a34efed681cb78366b6fb5fb95e835db19b0684ed624",
+      "scripts/generate_ai_assistance_corpus.py": "b937fae95117d66f00fc638e3339a38b29a9fa4fa79b1ebb97d7fd44e15e2ef0",
+      "scripts/run_ai_assistance_campaign.py": "c4a3eb41b57c90143106e1fdcf651dcd182a4237b47e9454baa0625f320ac6e4"
     }
   },
   "cases": [
@@ -86,7 +87,7 @@
         "negation"
       ],
       "file": "cases/AA-01.json",
-      "sha256": "1213d8b8f083bcd08f7e4a5454924fddea8e2de5cc49b25b8fb9b0c56b960718"
+      "sha256": "c031a15ab0c0777e806cd8dcdab1171090f8ac6ce01e945fa1f433526de2ff8a"
     },
     {
       "case_id": "AA-02",
@@ -100,7 +101,7 @@
         "negation"
       ],
       "file": "cases/AA-02.json",
-      "sha256": "2d942c199c9e31eb8ba58863663624590b9b46442e19131b5d5e768002ce16b8"
+      "sha256": "962e4aea024d49cd8a4d45c62069e93c9e137e3c0a2a676f986f3fca9cb8bedd"
     },
     {
       "case_id": "AA-03",
@@ -114,7 +115,7 @@
         "instruction_like"
       ],
       "file": "cases/AA-03.json",
-      "sha256": "1a6fb5ab08d1384724a9a390e4258ed2a5f155b9907920639dfff26a4b3fc57d"
+      "sha256": "b9f4a0d338cc5f950ae15a1a0b99fccddbb02a0e3fa950baebff80e4cfb2b0f6"
     },
     {
       "case_id": "AA-04",
@@ -128,7 +129,7 @@
         "instruction_like"
       ],
       "file": "cases/AA-04.json",
-      "sha256": "9b19724f81892c533ac4894a1a734f00510ff53a9184794c9a83b2c030f1d511"
+      "sha256": "f93835e4696c6d5b120a658c35e6108032cded1c2de94ae51bcbc8c28ad14f4a"
     },
     {
       "case_id": "AA-05",
@@ -142,7 +143,7 @@
         "control_chars"
       ],
       "file": "cases/AA-05.json",
-      "sha256": "6f0a463d96240df1f1e711f537ae2e9dfbf41bf559d798bad8476064558f4b9d"
+      "sha256": "eba709921b0390849aa6571e59112bed19d24b5dcdf2667ec14ba7fddee55cec"
     },
     {
       "case_id": "AA-06",
@@ -156,7 +157,7 @@
         "control_chars"
       ],
       "file": "cases/AA-06.json",
-      "sha256": "b5a0ed3d2016168d04486ec5ad98941a840c859d1f5e09099a708bc24b387500"
+      "sha256": "b90aa067c6ec0e47735b497b01e26699f085bd1fea5ae2fdc7de70e7d9c280d2"
     },
     {
       "case_id": "AA-07",
@@ -170,7 +171,7 @@
         "missing_ref"
       ],
       "file": "cases/AA-07.json",
-      "sha256": "7ef25761c0f73acc00c68e4951ad9be953150110a70fc44a3b7ddb4a8387e563"
+      "sha256": "b45d1f5835c31355bb8b55c87d9b241b2136c3b5c45ed28a5f6eb7bc01f28c8c"
     },
     {
       "case_id": "AA-08",
@@ -184,7 +185,7 @@
         "missing_ref"
       ],
       "file": "cases/AA-08.json",
-      "sha256": "82a2e241d0df9fce20681559bc44c3974c104c0c573dc757568e541059249fac"
+      "sha256": "9bb22e79eee8a7bd34683e06b445e007343287b0f76a5d2f0f2bedbe3261a84a"
     },
     {
       "case_id": "AA-09",
@@ -197,7 +198,7 @@
         "occurrences"
       ],
       "file": "cases/AA-09.json",
-      "sha256": "e6f803cc0183a9f0439c315159ca9a0e3df6e39aea17d737f13503d70a2eba08"
+      "sha256": "09bfe13303eb01495d6e532dc50d18106c6a6662f28053bab7df5f513e312657"
     },
     {
       "case_id": "AA-10",
@@ -210,7 +211,7 @@
         "occurrences"
       ],
       "file": "cases/AA-10.json",
-      "sha256": "63a2f74c92a0b6f1468036fa3c2f3c628f24f1fe36d0319c088d6ee685cbd714"
+      "sha256": "ffc0a049cd7edc51724375a6f126dc50a60edd160518d4802032d2c94215250b"
     },
     {
       "case_id": "AA-11",

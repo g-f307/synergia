@@ -95,6 +95,12 @@ um campo existente.
 
 ## Migrations PostgreSQL
 
+A `0041_expand_ai_assistance_triage_findings.sql` amplia a função
+`synergia.ai_assistance_result_shape_valid(jsonb)` para aceitar achados de
+triagem fundamentados por fatos (regra, código, área responsável, Workorder,
+aging e impacto em container) mantendo 100% de compatibilidade com resultados
+legados `1.0.0` (#226). O rollback `0041` restaura a definição original de `0038`.
+
 A `0040_add_ai_assistance_observability.sql` acrescenta dois datasets fechados e
 guardas para manutenção de IA em `data_operation_events`. O rollback preserva o
 histórico imutável e a aceitação dos valores de dataset; remove índices/guardas

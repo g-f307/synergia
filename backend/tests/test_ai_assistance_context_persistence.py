@@ -318,3 +318,81 @@ def test_stable_hash_and_references_from_database(dataset):
         assert first.divergences[0].ref_id == reference_id(
             "divergences", str(executions[0]), native
         )
+
+
+def test_pipeline_persisted_aging_and_container_reach_context(dataset):
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    from app.persistence import PostgresProcessingRepository
+    from app.processing import process_normalized_records
+
+    database, organizations, _ = dataset
+    org_id = organizations[0]
+    exec_id = str(uuid4())
+    occurred = "2026-10-16T00:00:00Z"
+    classified = "2026-11-14T00:00:00Z"
+
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            """INSERT INTO synergia.executions
+            (id, organization_id, source, status, attempt,
+             pipeline_version, rule_catalog_version, started_at, finished_at)
+            VALUES (%s, %s, 'OWM', 'completed', 1, '1.0.0', '1.0.0', %s, %s)""",
+            (exec_id, org_id, NOW, NOW),
+        )
+        source_file_id = connection.execute(
+            """INSERT INTO synergia.source_files
+            (execution_id, file_name, content_hash, source, size_bytes)
+            VALUES (%s, 'aging.csv', %s, 'OWM', 128) RETURNING id""",
+            (exec_id, "b" * 64),
+        ).fetchone()[0]
+
+    processing = process_normalized_records(
+        [
+            {
+                "source": "OWM",
+                "execution_id": exec_id,
+                "source_file_id": source_file_id,
+                "sheet": "Sheet1",
+                "row": 2,
+                "values": {
+                    "workorder_number": "WO-AGE-29",
+                    "lot_number": "LOT-29",
+                    "serial_number": "SER-29",
+                    "container_number": "CONT-29",
+                    "hold_flag": True,
+                    "oqc_status": "hold",
+                    "reason": "Hold de qualidade",
+                    "event_at": occurred,
+                },
+                "original_values": {"workorder": "WO-AGE-29"},
+                "transformations": [],
+            }
+        ],
+        execution_id=exec_id,
+        classified_at=classified,
+    )
+    persist_summary = PostgresProcessingRepository(database).persist(
+        exec_id, processing
+    )
+    assert persist_summary["confirmed_workorders"] == ["WO-AGE-29"]
+    assert not persist_summary["failed_workorders"]
+
+    context = ExecutionContextBuilder(PostgresContextReader(database)).build(
+        actor(org_id), UUID(exec_id), generated_at=datetime(2026, 11, 14, tzinfo=UTC)
+    )
+    assert context.pending_items
+    assert context.classifications
+    assert any(
+        item.workorder_number == "WO-AGE-29"
+        and item.age_days == 29
+        and item.has_container is True
+        for item in context.pending_items
+    )
+    assert any(
+        item.workorder_number == "WO-AGE-29"
+        and item.age_days == 29
+        and item.has_container is True
+        for item in context.classifications
+    )

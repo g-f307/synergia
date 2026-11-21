@@ -14,7 +14,14 @@ from psycopg.types.json import Jsonb
 from pydantic import ValidationError
 
 from app.ai_assistance_contract import PRODUCT_NOTICE, AiAssistanceResponse
-from app.ai_assistance_fallback import FAILED, INSUFFICIENT, MISSING, NOTICE, TRUNCATED
+from app.ai_assistance_fallback import (
+    FAILED,
+    INSUFFICIENT,
+    MISSING,
+    NOTICE,
+    TRUNCATED,
+    validate_triage_finding_coherence,
+)
 from app.ai_assistance_generator import validate_language
 from app.ai_assistance_telemetry import persistence
 
@@ -62,33 +69,11 @@ def _validate_result_text(result: AiAssistanceResponse) -> None:
         PRODUCT_NOTICE,
     }:
         raise ValueError("invalid result text")
-    titles = {
-        "DIV": "Divergência registrada",
-        "PEN": "Pendência registrada",
-        "CLA": "Classificação registrada",
-        "EVI": "Evidência registrada",
-        "HIS": "Transição registrada",
-    }
-    explanations = {
-        "Há um registro disponível para conferência.",
-        "Há registros disponíveis para conferência.",
-        "Os registros estão disponíveis para conferência.",
-    }
     refs = []
     for finding in result.findings:
         selected = finding.evidence_refs
-        allowed_titles = {"Registros disponíveis", "Registros para conferência"}
-        prefixes = {ref[:3] for ref in selected}
-        if len(prefixes) == 1 and next(iter(prefixes)) in titles:
-            allowed_titles.add(titles[next(iter(prefixes))])
-        if (
-            finding.title not in allowed_titles
-            or finding.explanation not in explanations
-            or not 1 <= len(selected) <= 3
-            or (
-                len(selected) > 1
-                and finding.explanation == "Há um registro disponível para conferência."
-            )
+        if not validate_triage_finding_coherence(
+            finding.title, finding.explanation, selected
         ):
             raise ValueError("invalid result finding")
         refs.extend(finding.evidence_refs)

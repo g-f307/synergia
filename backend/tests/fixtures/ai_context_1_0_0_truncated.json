@@ -35,6 +35,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -42,6 +43,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -49,6 +51,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -56,6 +59,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -63,6 +67,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -70,6 +75,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -77,6 +83,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -84,6 +91,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -91,6 +99,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -98,6 +107,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -105,6 +115,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -112,6 +123,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -119,6 +131,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -126,6 +139,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -133,6 +147,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -140,6 +155,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -147,6 +163,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -154,6 +171,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -161,6 +179,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -168,6 +187,7 @@
       "severity": "error",
       "code": "invalid_value",
       "scope": "record",
+      "workorder_number": null,
       "occurred_at": "2026-11-14T00:00:00.000000Z"
     }
   ],
@@ -177,6 +197,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -184,6 +209,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -191,6 +221,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -198,6 +233,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -205,6 +245,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -212,6 +257,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -219,6 +269,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -226,6 +281,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -233,6 +293,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -240,6 +305,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -247,6 +317,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -254,6 +329,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -261,6 +341,11 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     },
     {
@@ -268,93 +353,15 @@
       "rule_id": "oqc_pending",
       "status": "open",
       "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-44df2555560f681bafb620edcefefb89",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-3e8da211b67f55f06a8e775b046655f4",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-5793fc28e45c1b9e4825fd6176ba67c8",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-66410726c5881d586679b18bd36ef9a8",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-3a41bb661ed1a9040dbee318003174de",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
-      "created_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "PEN-aa9f9f1cd32c240784ea955575e1538a",
-      "rule_id": "oqc_pending",
-      "status": "open",
-      "priority_score": null,
+      "workorder_number": null,
+      "responsible_area": null,
+      "priority": null,
+      "age_days": null,
+      "has_container": false,
       "created_at": "2026-11-14T00:00:00.000000Z"
     }
   ],
-  "classifications": [
-    {
-      "ref_id": "CLA-f40c5c3d18bea87c8757c076e47b803d",
-      "rule_id": "oqc_pending",
-      "state": "active",
-      "data_quality": "partial",
-      "priority_score": 40,
-      "classified_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "CLA-7fdf1016c271839e635268b959eaa4c2",
-      "rule_id": "oqc_pending",
-      "state": "active",
-      "data_quality": "partial",
-      "priority_score": 40,
-      "classified_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "CLA-3b73c0e5259675f0fffd3ed055917e71",
-      "rule_id": "oqc_pending",
-      "state": "active",
-      "data_quality": "partial",
-      "priority_score": 40,
-      "classified_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "CLA-554f66941618cc75f1d248f9bc9b79e1",
-      "rule_id": "oqc_pending",
-      "state": "active",
-      "data_quality": "partial",
-      "priority_score": 40,
-      "classified_at": "2026-11-14T00:00:00.000000Z"
-    },
-    {
-      "ref_id": "CLA-9be7fb4ff49d7f63fcc40026316573c6",
-      "rule_id": "oqc_pending",
-      "state": "active",
-      "data_quality": "partial",
-      "priority_score": 40,
-      "classified_at": "2026-11-14T00:00:00.000000Z"
-    }
-  ],
+  "classifications": [],
   "evidences": [],
   "state_history": [],
   "sufficiency": "sufficient",
@@ -366,5 +373,5 @@
     "state_history"
   ],
   "generated_at": "2026-11-14T00:00:00.000000Z",
-  "context_sha256": "cd310d85ab936446cf1f14113a1bad8abe529d048966955d7ace61de7039a304"
+  "context_sha256": "6d1436f0bdd75cd8d02b4cbde36af23fb1e7001fb56e03410f13654c2dc3af43"
 }
