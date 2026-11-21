@@ -69,6 +69,9 @@ _CODE_ALT = (
     "source_divergence|unknown_column"
 )
 _WO_TOKEN = r"[A-Za-z0-9._:/-]{1,64}"
+_PERSISTENCE_SECRET_PATTERN = re.compile(
+    r"(password|secret|bearer|token|eyJ[A-Za-z0-9_-]{10})", re.IGNORECASE
+)
 
 TRIAGE_TITLE_PATTERN = re.compile(
     rf"^(?:"
@@ -108,7 +111,7 @@ TRIAGE_EXPLANATION_PATTERN = re.compile(
 
 
 def _safe_wo_for_text(value: str | None) -> str | None:
-    if not value:
+    if not value or _PERSISTENCE_SECRET_PATTERN.search(value):
         return None
     try:
         validate_language(f"na Workorder {value}")
@@ -118,7 +121,11 @@ def _safe_wo_for_text(value: str | None) -> str | None:
 
 
 def _is_valid_text(value: str, *, max_length: int) -> bool:
-    if not value or len(value) > max_length:
+    if (
+        not value
+        or len(value) > max_length
+        or _PERSISTENCE_SECRET_PATTERN.search(value)
+    ):
         return False
     try:
         validate_language(value)
