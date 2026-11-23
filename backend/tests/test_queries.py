@@ -40,6 +40,9 @@ class MemoryQueryRepository:
             }
         }
         self.workorder = {
+            "organization_id": ORGANIZATION_ID,
+            "organization_name": "Synthetic IAM organization",
+            "snapshot_id": 1,
             "execution_id": "exec-1",
             "workorder_number": "WO-SYN-001",
             "organization_code": "ORG-001",
@@ -156,12 +159,19 @@ class MemoryQueryRepository:
         page_size,
         sort,
         organization_ids=None,
+        view="history",
+        execution_filters=None,
     ):
         self.search_organization_ids = organization_ids
+        self.search_view = view
+        self.search_execution_filters = execution_filters
         records = {
             "workorder": [
                 {
                     "entity_type": "workorder",
+                    "organization_id": self.workorder["organization_id"],
+                    "organization_name": self.workorder["organization_name"],
+                    "snapshot_id": self.workorder["snapshot_id"],
                     "identifier": self.workorder["workorder_number"],
                     "execution_id": self.workorder["execution_id"],
                     "workorder_number": self.workorder["workorder_number"],
@@ -213,9 +223,24 @@ class MemoryQueryRepository:
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids=None,
+        *,
+        execution_filters=None,
     ) -> dict | None:
         if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
             return None
+        if execution_filters is not None:
+            if execution_filters.organization_id not in (None, ORGANIZATION_ID):
+                return None
+            if (
+                execution_filters.date_from is not None
+                and NOW < execution_filters.date_from
+            ):
+                return None
+            if (
+                execution_filters.date_to is not None
+                and NOW > execution_filters.date_to
+            ):
+                return None
         if workorder_number != self.workorder["workorder_number"]:
             return None
         if execution_id and execution_id != self.workorder["execution_id"]:
@@ -345,15 +370,19 @@ class MemoryQueryRepository:
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids=None,
+        *,
+        execution_filters=None,
     ) -> dict | None:
-        if organization_ids is not None and ORGANIZATION_ID not in organization_ids:
-            return None
-        if workorder_number != "WO-SYN-001":
-            return None
-        if execution_id and execution_id != self.workorder["execution_id"]:
+        workorder = self.get_workorder(
+            workorder_number,
+            execution_id,
+            organization_ids,
+            execution_filters=execution_filters,
+        )
+        if workorder is None:
             return None
         return {
-            "workorder": deepcopy(self.workorder),
+            "workorder": workorder,
             "holds": [
                 {
                     "id": 1,

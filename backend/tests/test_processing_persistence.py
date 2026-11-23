@@ -62,10 +62,19 @@ def _seed_execution(
     sources: list[str],
     *,
     status: str = "completed",
-    organization_id: str | None = None,
+    organization_id: str | None = "19500000-0000-4000-8000-000000000201",
 ) -> list[int]:
     _CREATED_EXECUTION_IDS.add(execution_id)
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        # Published queries require a known IAM organization, including global reads.
+        if organization_id == "19500000-0000-4000-8000-000000000201":
+            connection.execute(
+                "INSERT INTO synergia.iam_organizations "
+                "(id,organization_code,display_name) "
+                "VALUES (%s,'syn195-persistence','Synthetic persistence') "
+                "ON CONFLICT DO NOTHING",
+                (organization_id,),
+            )
         connection.execute(
             "INSERT INTO synergia.executions (id, status, source, organization_id) "
             "VALUES (%s, %s, %s, %s)",

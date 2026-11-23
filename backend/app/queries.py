@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Generator
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID, uuid4
@@ -39,6 +40,7 @@ from app.execution_summary import (
     start_execution_snapshot,
 )
 from app.observability.telemetry import bind_execution_id
+from app.workorder_snapshots import WorkorderView, workorder_snapshot_query
 
 router = APIRouter(tags=["queries"])
 ERROR_RESPONSES = {
@@ -64,6 +66,9 @@ class OperationalSearchItem(BaseModel):
     entity_type: Literal["workorder", "lot", "serial"]
     identifier: str
     execution_id: str
+    organization_id: UUID | None = None
+    organization_name: str | None = None
+    snapshot_id: int | None = Field(default=None, ge=1)
     workorder_number: str
     lot_number: str | None = None
     serial_number: str | None = None
@@ -78,6 +83,7 @@ class OperationalSearchPage(BaseModel):
     sort: Literal["updated_desc", "identifier_asc"]
     entity_type: Literal["workorder", "lot", "serial"]
     query: str
+    view: WorkorderView = "history"
     source: str = "synergia.operational"
     generated_at: datetime
 
@@ -132,6 +138,9 @@ class ExecutionResponse(ExecutionOutcomeResponse):
 
 class WorkorderResponse(BaseModel):
     execution_id: str
+    organization_id: UUID
+    organization_name: str | None = None
+    snapshot_id: int = Field(ge=1)
     workorder_number: str
     organization_code: str | None = None
     processing_status: str
@@ -320,6 +329,8 @@ class QueryRepository(Protocol):
         page_size: int,
         sort: str,
         organization_ids: frozenset | None = None,
+        view: WorkorderView = "history",
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> tuple[list[dict], int]: ...
 
     def get_execution(self, execution_id: str) -> dict | None: ...
@@ -329,6 +340,8 @@ class QueryRepository(Protocol):
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict | None: ...
 
     def get_lot(
@@ -385,6 +398,8 @@ class QueryRepository(Protocol):
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict | None: ...
 
     def request_reprocessing(
@@ -436,16 +451,50 @@ class PostgresQueryRepository:
         page_size: int,
         sort: str,
         organization_ids: frozenset | None = None,
+        view: WorkorderView = "history",
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> tuple[list[dict], int]:
+        if entity_type == "workorder":
+            snapshots = workorder_snapshot_query(
+                organization_scopes=organization_ids,
+                filters=execution_filters,
+                view=view,
+                workorder_number=query,
+            )
+            with self._connect() as connection:
+                rows, total = snapshots.page(
+                    connection,
+                    page=page,
+                    page_size=page_size,
+                    # Legacy internal callers use newest; HTTP validates its enum.
+                    sort="identifier_asc" if sort == "identifier_asc" else "updated_desc",
+                )
+            public_fields = (
+                "snapshot_id",
+                "organization_id",
+                "organization_name",
+                "organization_code",
+                "execution_id",
+                "workorder_number",
+                "processing_status",
+                "updated_at",
+            )
+            return [
+                {
+                    "entity_type": "workorder",
+                    "identifier": row["workorder_number"],
+                    "lot_number": None,
+                    "serial_number": None,
+                    **{key: row[key] for key in public_fields},
+                }
+                for row in rows
+            ], total
+        if view != "history" or (
+            execution_filters is not None
+            and execution_filters != ExecutionQueryFilters()
+        ):
+            raise ValueError("snapshot selection applies only to Workorders")
         definitions = {
-            "workorder": (
-                "synergia.workorders w",
-                "w.workorder_number",
-                "NULL::text",
-                "NULL::text",
-                "w.id",
-                "w.updated_at",
-            ),
             "lot": (
                 "synergia.lots x JOIN synergia.workorders w ON w.id = x.workorder_id",
                 "x.lot_number",
@@ -604,43 +653,42 @@ class PostgresQueryRepository:
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict | None:
-        filters = ["w.workorder_number = %s", self.PUBLISHED_EXECUTION_FILTER]
-        parameters: list[Any] = [workorder_number]
-        if execution_id:
-            filters.append("w.execution_id = %s")
-            parameters.append(execution_id)
-        if organization_ids is not None:
-            filters.append("e.organization_id = ANY(%s)")
-            parameters.append(list(organization_ids))
-        where = " AND ".join(filters)
+        filters = execution_filters or ExecutionQueryFilters()
+        if execution_id is not None:
+            filters = replace(filters, execution_id=execution_id)
+        snapshots = workorder_snapshot_query(
+            organization_scopes=organization_ids,
+            filters=filters,
+            view="current",
+            workorder_number=workorder_number,
+        )
         with self._connect() as connection:
-            row = connection.execute(
-                f"""
-                SELECT w.execution_id, w.workorder_number,
-                       o.organization_code, w.processing_status,
-                       w.planned_quantity, w.produced_quantity,
-                       w.received_quantity, w.released_quantity,
-                       w.pending_quantity, w.retained_quantity,
-                       w.partially_released, w.updated_at, w.id
-                FROM synergia.workorders w
-                JOIN synergia.executions e ON e.id = w.execution_id
-                LEFT JOIN synergia.organizations o ON o.id = w.organization_id
-                WHERE {where}
-                ORDER BY w.updated_at DESC, w.id DESC
-                LIMIT 1
-                """,
-                parameters,
-            ).fetchone()
-            if row is None:
+            rows, total = snapshots.page(
+                connection, page=1, page_size=2, sort="updated_desc"
+            )
+            if total == 0:
                 return None
-            result = dict(row)
+            if total > 1:
+                raise ApiError(
+                    409,
+                    "ambiguous_workorder",
+                    "Informe a organização IAM ou a execução para identificar a Workorder",
+                )
+            row = rows[0]
+            result = {
+                key: value
+                for key, value in row.items()
+                if key not in {"business_organization_id", "source_file_id"}
+            }
             result["lots"] = [
                 item["lot_number"]
                 for item in connection.execute(
                     "SELECT lot_number FROM synergia.lots "
                     "WHERE workorder_id = %s ORDER BY lot_number",
-                    (row["id"],),
+                    (row["snapshot_id"],),
                 ).fetchall()
             ]
             result["serials"] = [
@@ -648,10 +696,9 @@ class PostgresQueryRepository:
                 for item in connection.execute(
                     "SELECT serial_number FROM synergia.serials "
                     "WHERE workorder_id = %s ORDER BY serial_number",
-                    (row["id"],),
+                    (row["snapshot_id"],),
                 ).fetchall()
             ]
-            result.pop("id")
             return result
 
     def get_lot(
@@ -914,8 +961,15 @@ class PostgresQueryRepository:
         workorder_number: str,
         execution_id: str | None = None,
         organization_ids: frozenset | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict | None:
-        workorder = self.get_workorder(workorder_number, execution_id, organization_ids)
+        workorder = self.get_workorder(
+            workorder_number,
+            execution_id,
+            organization_ids,
+            execution_filters=execution_filters,
+        )
         if workorder is None:
             return None
         execution_id = workorder["execution_id"]
@@ -993,6 +1047,7 @@ class PostgresQueryRepository:
             page=1,
             page_size=2_147_483_647,
             sort="oldest",
+            organization_ids=organization_ids,
         )
         return {
             "workorder": workorder,
@@ -1212,7 +1267,8 @@ class PostgresQueryRepository:
             ),
             "workorders": (
                 "synergia.workorders w JOIN synergia.executions e ON e.id = w.execution_id",
-                "w.workorder_number AS identifier, w.processing_status AS status, e.started_at AS occurred_at",
+                "w.workorder_number AS identifier, w.processing_status AS status, e.started_at AS occurred_at, "
+                "w.id AS snapshot_id, w.execution_id, e.organization_id, w.updated_at",
             ),
             "pending-items": (
                 "synergia.pending_items p JOIN synergia.executions e ON e.id = p.execution_id JOIN synergia.workorders w ON w.id = p.workorder_id",
@@ -1278,8 +1334,39 @@ def search_operational(
     page: int = Query(default=1, ge=1, le=1000),
     page_size: int = Query(default=25, ge=1, le=100),
     sort: Literal["updated_desc", "identifier_asc"] = Query(default="updated_desc"),
+    view: WorkorderView = Query(
+        default="history", description="Seleção de versões de Workorder"
+    ),
+    organization_id: UUID | None = Query(
+        default=None,
+        description="Organização IAM solicitada, dentro do escopo autorizado",
+    ),
+    execution_id: str | None = Query(
+        default=None, description="Restringe a Workorder à execução indicada"
+    ),
+    started_from: datetime | None = Query(
+        default=None, description="Início inclusivo da execução, com fuso horário"
+    ),
+    started_to: datetime | None = Query(
+        default=None,
+        description="Fim inclusivo do recorte de início das execuções, com fuso horário",
+    ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> OperationalSearchPage:
+    filters = ExecutionQueryFilters(
+        organization_id=organization_id,
+        execution_id=execution_id,
+        date_from=started_from,
+        date_to=started_to,
+    )
+    if entity_type != "workorder" and (
+        view != "history" or filters != ExecutionQueryFilters()
+    ):
+        raise ApiError(
+            422,
+            "workorder_selection_not_supported",
+            "Seleção de versões, organização e período nesta busca são exclusivos de Workorders",
+        )
     items, total = repository.search_operational(
         entity_type=entity_type,
         query=query,
@@ -1287,6 +1374,8 @@ def search_operational(
         page_size=page_size,
         sort=sort,
         organization_ids=actor.scope_filter("business.read"),
+        view=view,
+        execution_filters=filters if entity_type == "workorder" else None,
     )
     return OperationalSearchPage(
         items=[OperationalSearchItem.model_validate(item) for item in items],
@@ -1294,6 +1383,7 @@ def search_operational(
         sort=sort,
         entity_type=entity_type,
         query=query,
+        view=view,
         generated_at=datetime.now(UTC),
     )
 
@@ -1327,10 +1417,27 @@ def get_workorder(
     execution_id: str | None = Query(
         default=None, description="Restringe a consulta a uma execução"
     ),
+    organization_id: UUID | None = Query(
+        default=None, description="Organização IAM da Workorder"
+    ),
+    started_from: datetime | None = Query(
+        default=None, description="Início inclusivo da execução, com fuso horário"
+    ),
+    started_to: datetime | None = Query(
+        default=None,
+        description="Fim inclusivo do recorte de início das execuções, com fuso horário",
+    ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> WorkorderResponse:
     item = repository.get_workorder(
-        workorder_number, execution_id, actor.scope_filter("business.read")
+        workorder_number,
+        execution_id,
+        actor.scope_filter("business.read"),
+        execution_filters=ExecutionQueryFilters(
+            organization_id=organization_id,
+            date_from=started_from,
+            date_to=started_to,
+        ),
     )
     if item is None:
         raise _not_found("workorder", workorder_number)
@@ -1505,10 +1612,27 @@ def get_consolidated_result(
     execution_id: str | None = Query(
         default=None, description="Mantém o detalhe na execução localizada"
     ),
+    organization_id: UUID | None = Query(
+        default=None, description="Organização IAM da Workorder"
+    ),
+    started_from: datetime | None = Query(
+        default=None, description="Início inclusivo da execução, com fuso horário"
+    ),
+    started_to: datetime | None = Query(
+        default=None,
+        description="Fim inclusivo do recorte de início das execuções, com fuso horário",
+    ),
     repository: QueryRepository = Depends(get_query_repository),
 ) -> ConsolidatedResultResponse:
     item = repository.get_consolidated(
-        workorder_number, execution_id, actor.scope_filter("business.read")
+        workorder_number,
+        execution_id,
+        actor.scope_filter("business.read"),
+        execution_filters=ExecutionQueryFilters(
+            organization_id=organization_id,
+            date_from=started_from,
+            date_to=started_to,
+        ),
     )
     if item is None:
         raise _not_found("consolidated_result", workorder_number)
