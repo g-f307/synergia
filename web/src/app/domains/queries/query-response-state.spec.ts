@@ -28,7 +28,7 @@ function searchPage(): OperationalSearchPage {
 }
 
 function consolidatedWorkorder(): ConsolidatedWorkorder {
-  return { workorder: { execution_id: 'exec-1', workorder_number: 'WO-001', organization_code: 'ORG', processing_status: 'completed', planned_quantity: 1, produced_quantity: 1, received_quantity: 1, released_quantity: 1, pending_quantity: 0, retained_quantity: 0, partially_released: false, lots: [], serials: [], updated_at: '2026-09-04T12:00:00Z' }, classifications: [{ classification_id: 'c-1', rule_id: 'r-1', state: 'active', entity_type: 'workorder', entity_id: 'WO-001', justification: 'Synthetic', reason: null, data_quality: 'complete' }], pending_items: [], provenance: [] };
+  return { workorder: { organization_id: '19500000-0000-4000-8000-000000000001', organization_name: 'Synthetic A', snapshot_id: 17, execution_id: 'exec-1', workorder_number: 'WO-001', organization_code: 'ORG', processing_status: 'completed', planned_quantity: 1, produced_quantity: 1, received_quantity: 1, released_quantity: 1, pending_quantity: 0, retained_quantity: 0, partially_released: false, lots: [], serials: [], updated_at: '2026-09-04T12:00:00Z' }, classifications: [{ classification_id: 'c-1', rule_id: 'r-1', state: 'active', entity_type: 'workorder', entity_id: 'WO-001', justification: 'Synthetic', reason: null, data_quality: 'complete' }], pending_items: [], provenance: [] };
 }
 
 function lot(): Lot { return { execution_id: 'exec-1', workorder_number: 'WO-001', lot_number: 'LOT-001', serials: [], updated_at: '2026-09-04T12:00:00Z' }; }

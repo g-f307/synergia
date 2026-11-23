@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { DashboardRelatedComponent } from './dashboard-related.component';
 import { DashboardService } from './dashboard.service';
 
 describe('DashboardRelatedComponent', () => {
   it('uses organization and period received from the card URL', async () => {
-    const getRelated = jasmine.createSpy('getRelated').and.returnValue(of({ items: [{ identifier: 'WO-1', status: 'consolidated', occurred_at: '2026-08-10T12:00:00Z' }], pagination: { page: 1, pages: 1, total: 1 }, entity: 'workorders' }));
+    const getRelated = jasmine.createSpy('getRelated').and.returnValue(of({ items: [{ identifier: 'WO-1', execution_id: 'execution-old', organization_id: 'org-1', snapshot_id: 17, status: 'consolidated', occurred_at: '2026-08-10T12:00:00Z' }], pagination: { page: 1, pages: 1, total: 1 }, entity: 'workorders' }));
     await TestBed.configureTestingModule({
       imports: [DashboardRelatedComponent],
       providers: [
@@ -15,6 +15,8 @@ describe('DashboardRelatedComponent', () => {
         { provide: DashboardService, useValue: { getRelated } }
       ]
     }).compileComponents();
+    const sourceUrl = '/dashboard/related/workorders?organization=org-1&dateFrom=2026-08-01&page=1';
+    spyOnProperty(TestBed.inject(Router), 'url', 'get').and.returnValue(sourceUrl);
     const fixture = TestBed.createComponent(DashboardRelatedComponent);
     fixture.detectChanges();
 
@@ -24,6 +26,10 @@ describe('DashboardRelatedComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('01/08/2026');
     const row = fixture.nativeElement.querySelector('.workorder-row') as HTMLAnchorElement;
     expect(row.getAttribute('href')).toContain('/workorders/WO-1');
+    const target = new URL(row.href);
+    expect(target.searchParams.get('execution_id')).toBe('execution-old');
+    expect(target.searchParams.get('organization_id')).toBe('org-1');
+    expect(target.searchParams.get('from')).toBe(sourceUrl);
     expect(row.querySelector('.status-pill')?.textContent).toContain('Consolidada');
     expect(row.querySelector('.row-chevron')).not.toBeNull();
   });

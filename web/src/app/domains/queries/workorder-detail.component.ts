@@ -1,10 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, combineLatest, EMPTY, map, of, switchMap } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { StateComponent, UiState } from '../../shared/ui/ui-kit';
 import { ConsolidatedWorkorder, Workorder } from './query.models';
+import { workorderSelectionFromParams } from './workorder-selection';
 import { QueryService } from './query.service';
 
 @Component({
@@ -29,7 +32,8 @@ import { QueryService } from './query.service';
               <div><small>{{ i18n.t('queries.status') }}</small><strong class="status-pill" [attr.data-state]="statusKind(current.workorder.processing_status)">{{ statusLabel(current.workorder.processing_status) }}</strong></div>
             </div>
             <dl class="metadata">
-              <div><dt>{{ i18n.t('queries.organization') }}</dt><dd>{{ current.workorder.organization_code || i18n.t('common.notAvailable') }}</dd></div>
+              <div><dt>{{ i18n.t('queries.organization') }}</dt><dd>{{ current.workorder.organization_name || current.workorder.organization_id }}</dd></div>
+              <div><dt>{{ i18n.t('queries.organizationCode') }}</dt><dd>{{ current.workorder.organization_code || i18n.t('common.notAvailable') }}</dd></div>
               <div><dt>{{ i18n.t('queries.execution') }}</dt><dd><a class="technical" [routerLink]="['/executions',current.workorder.execution_id]" [queryParams]="{from:returnUrl()}">{{ current.workorder.execution_id }}</a></dd></div>
               <div><dt>{{ i18n.t('queries.updatedAt') }}</dt><dd><time [attr.datetime]="current.workorder.updated_at">{{ i18n.formatDate(current.workorder.updated_at,{dateStyle:'medium',timeStyle:'short'}) }}</time></dd></div>
             </dl>
@@ -57,7 +61,7 @@ import { QueryService } from './query.service';
               <div>
                 <h3>{{ i18n.t('queries.serials') }} <span>{{ current.workorder.serials.length }}</span></h3>
                 @if(!current.workorder.serials.length){<p class="empty-copy">{{ i18n.t('queries.none') }}</p>}
-                <div class="link-list">@for(serial of current.workorder.serials;track serial){<a class="entity-link technical" [routerLink]="['/serials',serial]" [queryParams]="{from:returnUrl(),execution_id:current.workorder.execution_id}">{{ serial }}<span aria-hidden="true">›</span></a>}</div>
+                <div class="link-list">@for(serial of current.workorder.serials;track serial){<a class="entity-link technical" [routerLink]="['/serials',serial]" [queryParams]="{from:currentUrl(),execution_id:current.workorder.execution_id}">{{ serial }}<span aria-hidden="true">›</span></a>}</div>
               </div>
             </div>
           </section>
@@ -85,7 +89,7 @@ import { QueryService } from './query.service';
   `,
   styleUrl: './workorder-detail.component.css'
 })
-export class WorkorderDetailComponent implements OnInit {
+export class WorkorderDetailComponent {
   readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -94,21 +98,41 @@ export class WorkorderDetailComponent implements OnInit {
   readonly result = signal<ConsolidatedWorkorder | null>(null);
   readonly failure = signal<ApiFailure | null>(null);
   readonly failureState = computed<UiState | null>(() => this.toState(this.failure()));
-  readonly workorderNumber = this.route.snapshot.paramMap.get('workorderNumber') ?? '';
+  readonly workorderNumber = signal('');
+  private readonly origin = signal('/search');
 
-  ngOnInit(): void {
-    const executionId = this.route.snapshot.queryParamMap.get('execution_id') ?? undefined;
-    this.api.workorder(this.workorderNumber, executionId).subscribe({
-      next: value => { this.result.set(value); this.loading.set(false); },
-      error: (failure: ApiFailure) => { this.failure.set(failure); this.loading.set(false); }
+  constructor() {
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(
+      switchMap(([path, params]) => {
+        this.workorderNumber.set(path.get('workorderNumber') ?? '');
+        this.origin.set(this.safeReturnUrl(params.get('from')));
+        this.result.set(null);
+        this.failure.set(null);
+        this.loading.set(true);
+        try {
+          const selection = workorderSelectionFromParams(params, this.i18n.timezone());
+          return this.api.workorder(this.workorderNumber(), selection.executionId, selection).pipe(
+            map(value => ({ value, failure: null })),
+            catchError((failure: ApiFailure) => of({ value: null, failure }))
+          );
+        } catch {
+          this.failure.set({ kind: 'validation', status: 422, code: 'invalid_period', message: '', correlationId: null, fields: [] });
+          this.loading.set(false);
+          return EMPTY;
+        }
+      }),
+      takeUntilDestroyed()
+    ).subscribe(({ value, failure }) => {
+      this.result.set(value); this.failure.set(failure); this.loading.set(false);
     });
   }
   back(): void { void this.router.navigateByUrl(this.returnUrl()); }
   currentUrl(): string { return this.router.url; }
-  returnUrl(): string {
-    const from = this.route.snapshot.queryParamMap.get('from');
+  returnUrl(): string { return this.origin(); }
+  private safeReturnUrl(from: string | null): string {
     const allowed = ['/search', '/dashboard/related/workorders'];
-    return from && allowed.some(path => from === path || from.startsWith(`${path}?`)) ? from : '/search';
+    if (from && allowed.some(path => from === path || from.startsWith(`${path}?`))) return from;
+    return from && /^\/reports\/[A-Za-z0-9-]+(?:\?[^#]*)?$/.test(from) ? from : '/search';
   }
   quantities(item: Workorder) { return [
     { key:'planned', label:'queries.quantity.planned' as const, value:item.planned_quantity },
@@ -136,8 +160,13 @@ export class WorkorderDetailComponent implements OnInit {
     if (value === null || value === undefined) return this.i18n.t('common.notAvailable');
     return typeof value === 'string' ? value : JSON.stringify(value);
   }
-  failureTitle(): string { return this.i18n.t(this.failure()?.kind === 'not-found' ? 'queries.notFoundTitle' : this.failure()?.kind === 'forbidden' ? 'queries.forbiddenTitle' : 'queries.errorTitle'); }
-  failureMessage(): string { return this.i18n.t(this.failure()?.kind === 'not-found' ? 'queries.notFound' : this.failure()?.kind === 'forbidden' ? 'queries.forbidden' : 'queries.error'); }
+  failureTitle(): string {
+    if (this.failure()?.code === 'ambiguous_workorder') return this.i18n.t('queries.ambiguousTitle');
+    return this.i18n.t(this.failure()?.kind === 'not-found' ? 'queries.notFoundTitle' : this.failure()?.kind === 'forbidden' ? 'queries.forbiddenTitle' : this.failure()?.kind === 'unavailable' ? 'queries.unavailableTitle' : 'queries.errorTitle'); }
+  failureMessage(): string {
+    if (this.failure()?.code === 'ambiguous_workorder') return this.i18n.t('queries.ambiguous');
+    if (this.failure()?.code === 'invalid_period') return this.i18n.t('executions.invalidPeriod');
+    return this.i18n.t(this.failure()?.kind === 'not-found' ? 'queries.notFound' : this.failure()?.kind === 'forbidden' ? 'queries.forbidden' : this.failure()?.kind === 'unavailable' ? 'queries.unavailable' : 'queries.error'); }
   private toState(failure: ApiFailure | null): UiState | null {
     if (!failure || failure.kind === 'unauthorized') return null;
     if (failure.kind === 'not-found') return 'empty';

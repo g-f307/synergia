@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 import { ConsolidatedWorkorder } from './query.models';
 import { QueryService } from './query.service';
@@ -10,12 +10,19 @@ describe('WorkorderDetailComponent', () => {
   let fixture: ComponentFixture<WorkorderDetailComponent>;
   let response: Subject<ConsolidatedWorkorder>;
   let router: jasmine.SpyObj<Router>;
+  let path: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let api: jasmine.SpyObj<QueryService>;
 
   beforeEach(async () => {
     response = new Subject<ConsolidatedWorkorder>();
+    path = new BehaviorSubject(convertToParamMap({ workorderNumber: 'WO-001' }));
+    params = new BehaviorSubject(convertToParamMap({ execution_id: 'exec-001', organization_id: '19500000-0000-4000-8000-000000000001', from: '/dashboard/related/workorders?page=2' }));
+    api = jasmine.createSpyObj<QueryService>('QueryService', ['workorder']);
+    api.workorder.and.callFake(() => response.asObservable());
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl','createUrlTree','serializeUrl'], { events: new Subject(), url: '/workorders/WO-001?execution_id=exec-001&from=%2Fdashboard%2Frelated%2Fworkorders%3Fpage%3D2' });
     router.createUrlTree.and.returnValue({} as UrlTree); router.serializeUrl.and.returnValue('/synthetic-link');
-    await TestBed.configureTestingModule({ imports:[WorkorderDetailComponent],providers:[provideRouter([]),{provide:Router,useValue:router},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:convertToParamMap({workorderNumber:'WO-001'}),queryParamMap:convertToParamMap({from:'/dashboard/related/workorders?page=2'})}}},{provide:QueryService,useValue:{workorder:()=>response.asObservable()}}] }).compileComponents();
+    await TestBed.configureTestingModule({ imports:[WorkorderDetailComponent],providers:[provideRouter([]),{provide:Router,useValue:router},{provide:ActivatedRoute,useValue:{paramMap:path.asObservable(),queryParamMap:params.asObservable()}},{provide:QueryService,useValue:api}] }).compileComponents();
     fixture=TestBed.createComponent(WorkorderDetailComponent);fixture.detectChanges();
   });
 
@@ -61,7 +68,68 @@ describe('WorkorderDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('.status-icon')).toBeNull();
   });
 
+  it('loads the exact execution and IAM organization, with its period', () => {
+    params.next(convertToParamMap({ execution_id: 'exec-old', organization_id: '19500000-0000-4000-8000-000000000001', started_from: '2026-10-01T00:00:00Z', started_to: '2026-10-05T23:59:59.999999Z' }));
+    expect(api.workorder).toHaveBeenCalledWith('WO-001', 'exec-old', jasmine.objectContaining({ organizationId: '19500000-0000-4000-8000-000000000001', startedTo: '2026-10-05T23:59:59.999999Z' }));
+  });
+
+  it('cancels the previous request and clears all protected sections when selection changes', () => {
+    response.next(result()); fixture.detectChanges();
+    const old = response;
+    response = new Subject<ConsolidatedWorkorder>();
+    params.next(convertToParamMap({ execution_id: 'exec-new' }));
+    fixture.detectChanges();
+    expect(old.observers.length).toBe(0);
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.metrics')).toBeNull();
+    old.next(result());
+    response.error({ kind: 'forbidden', status: 403, code: 'access_denied', message: '', correlationId: null, fields: [] });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-state="forbidden"]')).not.toBeNull();
+  });
+
+  it('reacts to Workorder route changes and releases the request on destruction', () => {
+    const old = response;
+    response = new Subject<ConsolidatedWorkorder>();
+    path.next(convertToParamMap({ workorderNumber: '000002' }));
+    expect(old.observers.length).toBe(0);
+    expect(api.workorder).toHaveBeenCalledWith('000002', 'exec-001', jasmine.any(Object));
+    fixture.destroy();
+    expect(response.observers.length).toBe(0);
+  });
+
+  it('explains ambiguity without choosing an organization or retrying', () => {
+    const calls = api.workorder.calls.count();
+    response.error({ kind: 'conflict', status: 409, code: 'ambiguous_workorder', message: '', correlationId: null, fields: [] });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Selecione a organização');
+    expect(api.workorder.calls.count()).toBe(calls);
+    expect(fixture.componentInstance.result()).toBeNull();
+  });
+
+  it('rejects invalid periods locally and does not retain the previous result', () => {
+    response.next(result());
+    const calls = api.workorder.calls.count();
+    params.next(convertToParamMap({ started_from: '2026-10-05T00:00:00Z', started_to: '2026-10-01T00:00:00Z' }));
+    expect(api.workorder.calls.count()).toBe(calls);
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(response.observers.length).toBe(0);
+  });
+
+  it('preserves search history and report URLs but rejects external return targets', () => {
+    for (const from of ['/search?view=history&organization_id=org-a&page=3&query=000123', '/reports/11111111-1111-4111-8111-111111111111?version=2&tab=data&page=3']) {
+      params.next(convertToParamMap({ from }));
+      fixture.componentInstance.back();
+      expect(router.navigateByUrl).toHaveBeenCalledWith(from);
+    }
+    for (const from of ['https://example.invalid', '//example.invalid', '/search-evil', '/reports/../admin']) {
+      params.next(convertToParamMap({ from }));
+      expect(fixture.componentInstance.returnUrl()).toBe('/search');
+    }
+  });
+
   it('returns to the exact originating Workorders URL',()=>{fixture.componentInstance.back();expect(router.navigateByUrl).toHaveBeenCalledWith('/dashboard/related/workorders?page=2')});
 });
 
-function result():ConsolidatedWorkorder{return{workorder:{execution_id:'exec-001',workorder_number:'WO-001',organization_code:'ORG-1',processing_status:'consolidated',planned_quantity:null,produced_quantity:0,received_quantity:8,released_quantity:6,pending_quantity:2,retained_quantity:1,partially_released:true,lots:['LOT-001'],serials:['SER-001'],updated_at:'2026-09-04T12:00:00Z'},classifications:[{classification_id:'c-1',rule_id:'partial_release',state:'active',entity_type:'workorder',entity_id:'WO-001',justification:'Synthetic',reason:null,data_quality:'partial'}],pending_items:[{id:7,execution_id:'exec-001',workorder_number:'WO-001',lot_number:'LOT-001',serial_number:'SER-001',category:'oqc_pending',reason:'Synthetic',status:'open',priority:'high',updated_at:'2026-09-04T12:00:00Z'}],provenance:[{field_name:'received_quantity',source:'OWM',observed_value:8,created_at:'2026-09-04T12:00:00Z'}]}}
+function result():ConsolidatedWorkorder{return{workorder:{organization_id:'19500000-0000-4000-8000-000000000001',organization_name:'Synthetic A',snapshot_id:17,execution_id:'exec-001',workorder_number:'WO-001',organization_code:'ORG-1',processing_status:'consolidated',planned_quantity:null,produced_quantity:0,received_quantity:8,released_quantity:6,pending_quantity:2,retained_quantity:1,partially_released:true,lots:['LOT-001'],serials:['SER-001'],updated_at:'2026-09-04T12:00:00Z'},classifications:[{classification_id:'c-1',rule_id:'partial_release',state:'active',entity_type:'workorder',entity_id:'WO-001',justification:'Synthetic',reason:null,data_quality:'partial'}],pending_items:[{id:7,execution_id:'exec-001',workorder_number:'WO-001',lot_number:'LOT-001',serial_number:'SER-001',category:'oqc_pending',reason:'Synthetic',status:'open',priority:'high',updated_at:'2026-09-04T12:00:00Z'}],provenance:[{field_name:'received_quantity',source:'OWM',observed_value:8,created_at:'2026-09-04T12:00:00Z'}]}}

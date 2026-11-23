@@ -1,4 +1,13 @@
 export type OperationalEntityType = 'workorder' | 'lot' | 'serial';
+export type WorkorderView = 'current' | 'history';
+export interface WorkorderSelection {
+  view?: WorkorderView;
+  organizationId?: string;
+  executionId?: string;
+  startedFrom?: string;
+  startedTo?: string;
+}
+
 export type OperationalSort = 'updated_desc' | 'identifier_asc';
 
 export interface Pagination {
@@ -15,12 +24,16 @@ export interface OperationalSearchItem {
   workorder_number: string;
   lot_number: string | null;
   serial_number: string | null;
+  organization_id?: string;
+  organization_name?: string | null;
+  snapshot_id?: number;
   organization_code: string | null;
   processing_status: string | null;
   updated_at: string;
 }
 
 export interface OperationalSearchPage {
+  view?: WorkorderView;
   items: OperationalSearchItem[];
   pagination: Pagination;
   sort: OperationalSort;
@@ -31,6 +44,9 @@ export interface OperationalSearchPage {
 }
 
 export interface Workorder {
+  organization_id: string;
+  organization_name: string | null;
+  snapshot_id: number;
   execution_id: string;
   workorder_number: string;
   organization_code: string | null;

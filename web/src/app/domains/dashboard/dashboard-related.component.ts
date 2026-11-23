@@ -12,6 +12,10 @@ interface RelatedWorkorder {
   identifier: string;
   status: string;
   occurred_at: string;
+  execution_id?: string;
+  organization_id?: string;
+  snapshot_id?: number;
+  updated_at?: string;
 }
 
 @Component({
@@ -62,8 +66,8 @@ interface RelatedWorkorder {
           <syn-state state="success" [title]="i18n.t('dashboard.emptyTitle')" [message]="i18n.t('dashboard.empty')" />
         } @else {
           <div class="workorder-list">
-            @for (item of items(); track item.identifier) {
-              <a class="workorder-row" [routerLink]="['/workorders', item.identifier]" [queryParams]="{ from: currentUrl() }">
+            @for (item of items(); track item.snapshot_id ?? item.identifier) {
+              <a class="workorder-row" [routerLink]="['/workorders', item.identifier]" [queryParams]="{ from: currentUrl(), execution_id: item.execution_id, organization_id: item.organization_id }">
                 <span class="workorder-identity">
                   <span class="workorder-icon" aria-hidden="true"><img src="/assets/icons/production.svg" alt=""></span>
                   <span><strong class="technical">{{ item.identifier }}</strong><small>Workorder</small></span>

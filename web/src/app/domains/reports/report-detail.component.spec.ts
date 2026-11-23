@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
+import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 
 import { SessionService } from '../../core/session.service';
@@ -23,6 +24,25 @@ describe('ReportDetailComponent', () => {
     fixture = TestBed.createComponent(ReportDetailComponent); fixture.detectChanges();
   });
   it('renders exact snapshot values and related scoped navigation', () => { const text = fixture.nativeElement.textContent as string; const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[]; expect(text).toContain('WO-001'); expect(text).toContain('LOT-001'); expect(text).toContain('0'); expect(text).toContain('Não informado'); expect(links.some((link) => link.textContent?.includes('WO-001'))).toBeTrue(); expect(links.some((link) => link.textContent?.includes('LOT-001'))).toBeTrue(); });
+  it('pins Workorder links to the report execution and IAM organization in both report types', () => {
+    const reports = [
+      reportDetail(),
+      reportDetail({ report_type: 'oqc_summary', data: { kind: 'oqc_summary', count: 1, distinct_lots: 1, by_reason: {}, by_priority: {}, by_organization: {}, items: [{ workorder_number: 'WO-002', lot_number: null, organization_code: 'ORG', decision_state: 'pending', reason: null, pending_item_id: null, priority: null, priority_score: null, pending_reason: null, pending_status: null }] } })
+    ];
+    for (const report of reports) {
+      api.get.and.returnValue(of(report));
+      params.next(convertToParamMap({ version: '1', tab: 'data' }));
+      fixture.detectChanges();
+      const link = fixture.debugElement.queryAll(By.directive(RouterLink))
+        .find((element) => element.nativeElement.textContent.includes('WO-00'));
+      expect(link).toBeDefined();
+      expect(link!.injector.get(RouterLink).queryParams).toEqual({
+        from: fixture.componentInstance.currentUrl(),
+        execution_id: report.execution_id,
+        organization_id: report.organization_id
+      });
+    }
+  });
   it('preserves the exact catalog URL when returning', () => { fixture.componentInstance.back(); expect(router.navigateByUrl).toHaveBeenCalledWith('/reports?state=succeeded&page=2'); });
   it('keeps the report viewer inside one fixed frame with a single internal scroll surface', () => {
     const frame = fixture.nativeElement.querySelector('.report-detail') as HTMLElement;
