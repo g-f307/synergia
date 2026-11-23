@@ -1,0 +1,359 @@
+{
+  "issue": 195,
+  "base_commit": "239a44e2fbd776a8c2e55373c3c1581343a8bc9c",
+  "revision": "Versioned source at implementation_commit; source_sha256 identifies the validated files",
+  "browser_start_epoch_ms": 1795467750891,
+  "browser_duration_ms": 43198.589,
+  "browser_stats": {
+    "total": 13,
+    "expected": 13,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "ok": true
+  },
+  "source_sha256": {
+    "backend/app/main.py": "6fda6c99fcf33f22aeb38ac22cf4387eb4bc487b9ff73166abb2d1585d7430bf",
+    "backend/app/queries.py": "7c13bcb9c9642cf603b3150575681787047dcf50a44895420a51ddcaa1d115b2",
+    "backend/app/workorder_snapshots.py": "238b28a647f0f16ba2b5f6d471922034e1aed4d814f47baf1e47bb848c1fcfc8",
+    "backend/tests/test_execution_lifecycle.py": "ed163222a269a2a0f7f3ffd6ab154854260ab184900215da121393603b3f439a",
+    "backend/tests/test_execution_summary.py": "89b24be935eec742b85ee404bf151bb2ec06c45ed99083ee6a73a1fe7dd798ac",
+    "backend/tests/test_import_result_summary.py": "34fd0e44fd255f0ce274d33ceb8dd4b3964610cc181a7b3d3cd6fd01a43d6d83",
+    "backend/tests/test_processing_persistence.py": "64728918130fd14c9bdd740d17a1ac37adae9d5570bf22368e44df5323f52dfc",
+    "backend/tests/test_queries.py": "ab9b521d50226aaa1c6da4ca2ad7dabda6ca37bcfaa2380d113e372b6e1c2060",
+    "backend/tests/test_workorder_queries_persistence.py": "c3ddbccb178569244bdfd46ef060bf973e4ce8394f0508cb6c021193b3eae472",
+    "backend/tests/test_workorder_snapshots_persistence.py": "c978e2161ae65cfce65af29313a5609e90092b9122b16c6bf3b62b00092e54b0",
+    "backend/tests/test_workorder_validation_fixture.py": "2cee4640ca7ba7da453a15eec9cedcf42e969d0ac0febcd6cefacd2ace6900c5",
+    "scripts/bootstrap_workorder_versions_e2e.py": "c6e2b6c9b0ea822073b83e532c8b08a01be16999f157bd71f780e276278e44b2",
+    "scripts/measure_workorder_queries.py": "564fcbe58d14076170577815ba1bb9131d57cf4c2c22c7640c7d4dc209298151",
+    "web/e2e/workorder-versions-integrated.spec.ts": "3ba63835a94035538cf4044ef4bcd7ec041ebaee345e81086b02c92957947756",
+    "web/e2e/workorder-versions.spec.ts": "6a6a9ba608bd4ae429b0b1c17689aa50b9ead2b87b24a3aa9cb50f2e5b5dccb0",
+    "web/playwright.workorder-versions.config.ts": "9d69bb4726744b5ab7bb0dc28ffa3e3e855d54f9dda150dede5ab1d51769bd86",
+    "web/src/app/domains/dashboard/dashboard-related.component.spec.ts": "ae2fc3dc7abf57420da6b4d66509d8eaa5798b35b845f13b80c4af3e708e942c",
+    "web/src/app/domains/dashboard/dashboard-related.component.ts": "7122c08a0a684d991d117f7e8fbd3c2da9d68d13aa14f2eba8c6785350c30d16",
+    "web/src/app/domains/dashboard/dashboard.service.ts": "a7ae21a67b1c23b6af5e5d763157a5eed88d3cfaac5c8b5d7cb576099aaf36a3",
+    "web/src/app/domains/queries/operational-search.component.spec.ts": "4a9284421e34d93ff5927a52be27ee8dbbeb6467e281f28fa4c51a417156f010",
+    "web/src/app/domains/queries/operational-search.component.ts": "ffc37f93b4a6602322e0910b4af72215d48bf8dee2376f27285a863813b950dc",
+    "web/src/app/domains/queries/query-response-state.spec.ts": "15ae74701fbea92e39b950890d040304c125a09ebec7a24872d7b8c81ee3988b",
+    "web/src/app/domains/queries/query.models.ts": "6a2f4df20948069bb8b72f64628b427335448fd34a3c4a5c18f615586da61b1a",
+    "web/src/app/domains/queries/query.service.spec.ts": "3d4db235bb39d646467862d24fba3353801bda08df75364d7704bfd81a21b60d",
+    "web/src/app/domains/queries/query.service.ts": "da4fff40fb43d4bf8a80cf7197a0f3ded1c105bf33187d684bb6be99e292ad8e",
+    "web/src/app/domains/queries/workorder-detail.component.css": "c11a549c39a39727765e98d697c6086f1c8be57b650bfc0895eac02f998193c3",
+    "web/src/app/domains/queries/workorder-detail.component.spec.ts": "9c6413a2fb7b5a6c3cd88f77b3a346f03e310938b9e1c6acf991d5395af2cab5",
+    "web/src/app/domains/queries/workorder-detail.component.ts": "2e28fda97b4d38dca98008b226bf0a4e9b6f5654c16432fc3a14402a7661294b",
+    "web/src/app/domains/queries/workorder-selection.ts": "fbcf1f7d87c44b550dc849fcb2aa5ec50cd0ad685f333cd1aa7600b03d2cb23c",
+    "web/src/app/domains/reports/report-detail.component.html": "0f38208590b62344779cb808e63cd4e64d6e6d563414c8382a45f5c1119c03d3",
+    "web/src/app/domains/reports/report-detail.component.spec.ts": "f08fc1c25ebfb130fc88c7ae620de235e655595f1147287d0f97bee8f90c94bc",
+    "web/src/app/shared/i18n/catalogs/en-US.json": "62ac22e21835cec8815b17b44543e30c0a2c1736af0eaeea6a1c47462aa92bfa",
+    "web/src/app/shared/i18n/catalogs/pt-BR.json": "3919ab0aac5c7cc08f7a7509e78aea389aefb8546ceac52eeb4a1c3fdf6082e9"
+  },
+  "screenshots": [
+    {
+      "scenario": "current/history and pinned detail at 390px, light (synthetic HTTP)",
+      "name": "current-390-light",
+      "path": "docs/evidence/issue-195/current-390-light.png",
+      "sha256": "c7d86d4faedc8b1f291b00773b00a0fab44ba5d0e172eaddccd9901c2e795dcc"
+    },
+    {
+      "scenario": "current/history and pinned detail at 390px, light (synthetic HTTP)",
+      "name": "history-390-light",
+      "path": "docs/evidence/issue-195/history-390-light.png",
+      "sha256": "591682cd82689589951c39ab07368e07d8389a62d3b1975cd208035c6748a2c2"
+    },
+    {
+      "scenario": "current/history and pinned detail at 390px, light (synthetic HTTP)",
+      "name": "detail-390-light",
+      "path": "docs/evidence/issue-195/detail-390-light.png",
+      "sha256": "b6351eb4ea4a722c4ba8b6d1b85327d1b1f121f1e76955dd270e1c299037360b"
+    },
+    {
+      "scenario": "current/history and pinned detail at 390px, dark (synthetic HTTP)",
+      "name": "current-390-dark",
+      "path": "docs/evidence/issue-195/current-390-dark.png",
+      "sha256": "4e81e574673e31cbb809960d96f2ccbbe4920b044203b24b6654f3f985f3ff25"
+    },
+    {
+      "scenario": "current/history and pinned detail at 390px, dark (synthetic HTTP)",
+      "name": "history-390-dark",
+      "path": "docs/evidence/issue-195/history-390-dark.png",
+      "sha256": "acb6b07a19914b91b70caaafdd609972cd64d1a8d51d8329e81455ef8de2102b"
+    },
+    {
+      "scenario": "current/history and pinned detail at 390px, dark (synthetic HTTP)",
+      "name": "detail-390-dark",
+      "path": "docs/evidence/issue-195/detail-390-dark.png",
+      "sha256": "6d198964ddcc4f22bca2e9312425fe21ef2424de9a1283bd798c1bd755701d34"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, light (synthetic HTTP)",
+      "name": "current-768-light",
+      "path": "docs/evidence/issue-195/current-768-light.png",
+      "sha256": "1c6f1777f679d1bca72a6942de6c40a9554b10e027fa386672a8ab824e70531a"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, light (synthetic HTTP)",
+      "name": "history-768-light",
+      "path": "docs/evidence/issue-195/history-768-light.png",
+      "sha256": "4d287986aed2dea0dc19bdae94f1702f1abb8a0230661c47411c4e7a99537f6d"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, light (synthetic HTTP)",
+      "name": "detail-768-light",
+      "path": "docs/evidence/issue-195/detail-768-light.png",
+      "sha256": "ca20f11ff0b9260ec2697ed04d655be235d406a8b2fa884e3588de83924a47fc"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, dark (synthetic HTTP)",
+      "name": "current-768-dark",
+      "path": "docs/evidence/issue-195/current-768-dark.png",
+      "sha256": "1828f558aa6d5fa10fe785ae2fa8eae88e108f9dfd94a699c97aba585fb63770"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, dark (synthetic HTTP)",
+      "name": "history-768-dark",
+      "path": "docs/evidence/issue-195/history-768-dark.png",
+      "sha256": "a44f15f543f4c7753159c949068d262b0c1a424dec9c7dd44f13bba0e1d1e77d"
+    },
+    {
+      "scenario": "current/history and pinned detail at 768px, dark (synthetic HTTP)",
+      "name": "detail-768-dark",
+      "path": "docs/evidence/issue-195/detail-768-dark.png",
+      "sha256": "5e4c9d9f718cf3872e5f7192749449f54b1b28bb68f7667ac9d6415203084f09"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, light (synthetic HTTP)",
+      "name": "current-1440-light",
+      "path": "docs/evidence/issue-195/current-1440-light.png",
+      "sha256": "c3768992b8eea3acd1d20de637e7379f87d83166f9427bfe303aa602a747cc31"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, light (synthetic HTTP)",
+      "name": "history-1440-light",
+      "path": "docs/evidence/issue-195/history-1440-light.png",
+      "sha256": "fd5f34e809ab51696ebd92858459626306c9da08e1705afb3043ac308ca6cb12"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, light (synthetic HTTP)",
+      "name": "detail-1440-light",
+      "path": "docs/evidence/issue-195/detail-1440-light.png",
+      "sha256": "f8222d49ce15ebb324140f88cf319c8d24e36848ff95a1b50e8ca41be0c62b12"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, dark (synthetic HTTP)",
+      "name": "current-1440-dark",
+      "path": "docs/evidence/issue-195/current-1440-dark.png",
+      "sha256": "1902cd04dd717da66785f8247941411187f4ae4d8dd093e20ed31124ca4a104d"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, dark (synthetic HTTP)",
+      "name": "history-1440-dark",
+      "path": "docs/evidence/issue-195/history-1440-dark.png",
+      "sha256": "568227a52f94dd68f198a6d2486943839776f008e9545b3f723fc6deab421d55"
+    },
+    {
+      "scenario": "current/history and pinned detail at 1440px, dark (synthetic HTTP)",
+      "name": "detail-1440-dark",
+      "path": "docs/evidence/issue-195/detail-1440-dark.png",
+      "sha256": "2bcac05dbbd84df00937832069636984bf077482fb5ca74001896086255492a3"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "current-zoom250-light",
+      "path": "docs/evidence/issue-195/current-zoom250-light.png",
+      "sha256": "5dcf85c026c8c85265075982708b9383ee912ed55a7b24bac788036259e5ffee"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "history-zoom250-light",
+      "path": "docs/evidence/issue-195/history-zoom250-light.png",
+      "sha256": "b2bbfa674de344dd488182e178dc17d5bd46c4028795ff4fe05a8a0810d131dc"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "detail-zoom250-light",
+      "path": "docs/evidence/issue-195/detail-zoom250-light.png",
+      "sha256": "edb6f0e2feb6d1c8b9841140e271afd9f6d06f11218f696292dc8127d9c0f722"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "current-zoom250-dark",
+      "path": "docs/evidence/issue-195/current-zoom250-dark.png",
+      "sha256": "b602b973dfd7dacef85f058aa7e00efaede5850c84430cde132df5f61cf1044e"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "history-zoom250-dark",
+      "path": "docs/evidence/issue-195/history-zoom250-dark.png",
+      "sha256": "4b3b0950b38085e9cdb818eb1b5c2907a9a937eddf752c9d5d6a29aff40e77b4"
+    },
+    {
+      "scenario": "native zoom 250% keeps search, history and pinned detail usable in both themes",
+      "name": "detail-zoom250-dark",
+      "path": "docs/evidence/issue-195/detail-zoom250-dark.png",
+      "sha256": "d755675deecc941021ef120432c507254eff335b5b1fd9ea0c94315ea874fcee"
+    }
+  ],
+  "axe_audits": [
+    {
+      "scenario": "axe-current-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-390-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-390-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-768-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-768-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-1440-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-1440-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-zoom250-light",
+      "violations": []
+    },
+    {
+      "scenario": "axe-current-zoom250-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-history-zoom250-dark",
+      "violations": []
+    },
+    {
+      "scenario": "axe-detail-zoom250-dark",
+      "violations": []
+    }
+  ],
+  "native_zoom": {
+    "factor": 2.5,
+    "innerWidth": 576,
+    "devicePixelRatio": 2.5
+  },
+  "query_plans": "docs/evidence/issue-195-query-plans.json",
+  "operational_regression": {
+    "start_epoch_ms": 1795468074383,
+    "duration_ms": 53541.125,
+    "stats": {
+      "total": 14,
+      "expected": 14,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "ok": true
+    },
+    "tests": [
+      "revokes another browser session and blocks its next authenticated request",
+      "login, upload and execution use the real API and homologated fixture",
+      "imports the real workbook families and keeps duplicate uploads idempotent",
+      "shows internal notifications and persists individual and batch reads",
+      "generates, views and safely exports a persisted report",
+      "consults the resulting Workorder and expected pending queue",
+      "assigns, returns, resubmits and approves with segregation of duties",
+      "covers rejected upload and temporary API recovery",
+      "expires a persisted session and redirects without leaking the resource",
+      "does not render public login inside an authenticated shell",
+      "enforces role and organization scope",
+      "completes the administrative lifecycle with scoped associations",
+      "supports English, keyboard navigation and a mobile viewport",
+      "governs notification templates without changing historical occurrences"
+    ]
+  },
+  "local_checks": {
+    "backend_unit": {
+      "passed": 2391,
+      "subtests_passed": 16
+    },
+    "postgresql": {
+      "passed": 1001,
+      "fresh_database": true
+    },
+    "angular": {
+      "passed": 490
+    },
+    "browser_issue": {
+      "passed": 13
+    },
+    "browser_operational_regression": {
+      "passed": 14
+    },
+    "axe": {
+      "audits": 24,
+      "violations": 0
+    },
+    "migrations": 41,
+    "synthetic_files": 218,
+    "ruff": "passed",
+    "eslint": "passed",
+    "production_build": "passed with CSS budget warnings",
+    "diff_check": "passed",
+    "remote_ci": "Not executed during the local campaign; consult PR checks"
+  },
+  "implementation_commit": "1450aad11bbd49896f269ff3f1c0aad79443bd1f"
+}
