@@ -20,6 +20,15 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.19.0` acrescenta `workorders_current` e `quantities_coverage` a
+`GET /indicators` (#196), usando snapshots atuais sem misturar versões.
+Os campos legados `workorders` e `quantities` permanecem históricos e inalterados.
+`GET /indicators/workorders?view=current` usa a mesma seleção, com paginação
+posterior; o default `history` preserva clientes antigos. As listagens retornam
+`view` e `scope`, explicitando a interseção de permissões. Cobertura significa
+presença de quantidades informadas, não aplicabilidade ou garantia de fontes.
+Exemplos e regras em [indicator-coverage.md](indicator-coverage.md).
+
 A API `0.18.0` acrescenta a seleção `view=current|history` à busca de Workorders
 (#195), preservando `history` como default. A versão atual é selecionada por
 organização IAM e número, após autorização e recorte, antes de contar/paginar.
@@ -110,7 +119,7 @@ alterar `GET /history`. Filtros, limites, formatos e erros estão em
 | `GET /history` | eventos auditáveis | `200` |
 | `GET /workorders/{workorder_number}/consolidated-result` | consolidado | `200` |
 | `POST /executions/{execution_id}/reprocess` | cria nova tentativa | `202` |
-| `GET /indicators` | totais operacionais básicos; aceita `organization_id`, `date_from` e `date_to` | `200` |
+| `GET /indicators` | totais legados e cobertura de Workorders atuais; aceita os filtros documentados do painel | `200` |
 | `GET /indicators/{entity}` | registros paginados do indicador; exige `dashboard.read` e permissão específica da entidade | `200` |
 | `GET /indicators/{entity}` | registros paginados relacionados aos indicadores com o mesmo escopo e período | `200` |
 | `GET /admin/access/permissions` | catálogo versionado de permissões | `200` |

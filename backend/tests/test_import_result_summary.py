@@ -212,7 +212,7 @@ def test_legacy_artifact_get_does_not_create_storage(api, artifact):
 
 def test_openapi_result_summary_documents_availability_and_nullable_counts():
     schema = create_app().openapi()
-    assert schema["info"]["version"] == "0.18.0"
+    assert schema["info"]["version"] == "0.19.0"
     operation = schema["paths"]["/imports/{execution_id}/result-summary"]["get"]
     assert {"200", "401", "403", "404", "503"} <= set(operation["responses"])
     model = schema["components"]["schemas"]["ImportResultSummary"]

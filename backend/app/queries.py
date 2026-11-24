@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Generator
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID, uuid4
@@ -14,7 +14,7 @@ import psycopg
 from fastapi import APIRouter, Depends, Query, Request, status
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.authorization import (
     ActorContext,
@@ -40,6 +40,7 @@ from app.execution_summary import (
     start_execution_snapshot,
 )
 from app.observability.telemetry import bind_execution_id
+from app.workorder_indicators import CoverageState, read_current_workorder_indicators
 from app.workorder_snapshots import WorkorderView, workorder_snapshot_query
 
 router = APIRouter(tags=["queries"])
@@ -301,6 +302,68 @@ class ReprocessResponse(BaseModel):
     idempotent_replay: bool
 
 
+class QuantityCoverageResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "known_sum": 4,
+                    "known_count": 2,
+                    "total_count": 3,
+                    "coverage_percent": 200 / 3,
+                    "state": "partial",
+                },
+                {
+                    "known_sum": 0,
+                    "known_count": 3,
+                    "total_count": 3,
+                    "coverage_percent": 100,
+                    "state": "complete",
+                },
+                {
+                    "known_sum": None,
+                    "known_count": 0,
+                    "total_count": 3,
+                    "coverage_percent": 0,
+                    "state": "missing",
+                },
+                {
+                    "known_sum": None,
+                    "known_count": 0,
+                    "total_count": 0,
+                    "coverage_percent": None,
+                    "state": "empty",
+                },
+            ]
+        }
+    )
+    known_sum: int | None = Field(
+        ge=0, description="Soma dos valores conhecidos; null se nenhum informado."
+    )
+    known_count: int = Field(ge=0)
+    total_count: int = Field(
+        ge=0, description="Workorders atuais no recorte, sem inferir aplicabilidade."
+    )
+    coverage_percent: float | None = Field(
+        ge=0,
+        le=100,
+        description="100*known_count/total_count, sem arredondar; null se vazio.",
+    )
+    state: CoverageState
+
+
+class QuantitiesCoverageResponse(BaseModel):
+    planned: QuantityCoverageResponse
+    produced: QuantityCoverageResponse
+    received: QuantityCoverageResponse
+    released: QuantityCoverageResponse
+
+
+class CurrentWorkordersResponse(BaseModel):
+    total: int = Field(ge=0)
+    partially_released: int = Field(ge=0)
+
+
 class IndicatorsResponse(BaseModel):
     generated_at: datetime
     source: str
@@ -308,15 +371,30 @@ class IndicatorsResponse(BaseModel):
     filters: dict[str, str | None]
     executions: dict[str, int]
     execution_summary: ExecutionSummary
-    workorders: dict[str, int]
+    workorders: dict[str, int] = Field(
+        description="Contagens históricas legadas, antes da seleção atual."
+    )
+    workorders_current: CurrentWorkordersResponse
     pending_items: dict[str, int]
-    quantities: dict[str, int | None]
+    quantities: dict[str, int | None] = Field(
+        description="Totais históricos legados all-or-nothing; não são subtotais."
+    )
+    quantities_coverage: QuantitiesCoverageResponse
+
+
+class IndicatorRelatedScope(BaseModel):
+    permissions: list[
+        Literal["dashboard.read", "execution.read", "business.read", "pending.read"]
+    ]
+    organization_ids: list[UUID] | None = Field(description="Escopo efetivo após interseção das permissões e organização solicitada; null = global IAM conhecido.")
 
 
 class IndicatorRelatedPage(BaseModel):
     items: list[dict[str, Any]]
     pagination: Pagination
     entity: Literal["executions", "workorders", "pending-items"]
+    view: WorkorderView = "history"
+    scope: IndicatorRelatedScope
 
 
 class QueryRepository(Protocol):
@@ -418,7 +496,8 @@ class QueryRepository(Protocol):
         organization_ids: frozenset | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
-        *, execution_filters: ExecutionQueryFilters | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict: ...
 
     def indicator_related(
@@ -429,7 +508,9 @@ class QueryRepository(Protocol):
         date_to: date | None,
         page: int,
         page_size: int,
-        *, execution_filters: ExecutionQueryFilters | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
+        view: WorkorderView = "history",
     ) -> tuple[list[dict], int]: ...
 
 
@@ -1196,19 +1277,29 @@ class PostgresQueryRepository:
         organization_ids: frozenset | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
-        *, execution_filters: ExecutionQueryFilters | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
     ) -> dict:
         with self._connect() as connection:
             start_execution_snapshot(connection)
             filters = resolve_indicator_period(
-                connection, execution_filters or ExecutionQueryFilters(), date_from, date_to
+                connection,
+                execution_filters or ExecutionQueryFilters(),
+                date_from,
+                date_to,
             )
-            predicate = build_execution_predicate(filters, organization_scopes=organization_ids)
+            predicate = build_execution_predicate(
+                filters, organization_scopes=organization_ids
+            )
             aggregation = read_execution_aggregation(
-                connection, filters, organization_scopes=organization_ids,
+                connection,
+                filters,
+                organization_scopes=organization_ids,
                 permission="dashboard.read",
             )
-            published_where = f" WHERE ({predicate.where}) AND {self.PUBLISHED_EXECUTION_FILTER}"
+            published_where = (
+                f" WHERE ({predicate.where}) AND {self.PUBLISHED_EXECUTION_FILTER}"
+            )
             sql_parameters = predicate.parameters
             workorder = connection.execute(
                 f"""
@@ -1228,6 +1319,9 @@ class PostgresQueryRepository:
                 """,
                 sql_parameters,
             ).fetchone()
+            current = read_current_workorder_indicators(
+                connection, organization_scopes=organization_ids, filters=filters
+            )
             pending_rows = connection.execute(
                 "SELECT p.status, count(*) AS total "
                 "FROM synergia.pending_items p JOIN synergia.executions e ON e.id = p.execution_id "
@@ -1240,6 +1334,13 @@ class PostgresQueryRepository:
             "workorders": {
                 "total": workorder["total"],
                 "partially_released": workorder["partial"],
+            },
+            "workorders_current": {
+                "total": current.total,
+                "partially_released": current.partially_released,
+            },
+            "quantities_coverage": {
+                key: asdict(value) for key, value in current.quantities_coverage.items()
             },
             "pending_items": {row["status"]: row["total"] for row in pending_rows},
             "quantities": {
@@ -1258,8 +1359,14 @@ class PostgresQueryRepository:
         date_to: date | None,
         page: int,
         page_size: int,
-        *, execution_filters: ExecutionQueryFilters | None = None,
+        *,
+        execution_filters: ExecutionQueryFilters | None = None,
+        view: WorkorderView = "history",
     ) -> tuple[list[dict], int]:
+        if view not in {"current", "history"} or (
+            entity != "workorders" and view != "history"
+        ):
+            raise ValueError("snapshot selection applies only to Workorders")
         definitions = {
             "executions": (
                 "synergia.executions e",
@@ -1279,9 +1386,34 @@ class PostgresQueryRepository:
         with self._connect() as connection:
             start_execution_snapshot(connection)
             filters = resolve_indicator_period(
-                connection, execution_filters or ExecutionQueryFilters(), date_from, date_to
+                connection,
+                execution_filters or ExecutionQueryFilters(),
+                date_from,
+                date_to,
             )
-            predicate = build_execution_predicate(filters, organization_scopes=organization_ids)
+            if entity == "workorders" and view == "current":
+                selected = workorder_snapshot_query(
+                    organization_scopes=organization_ids,
+                    filters=filters,
+                    view="current",
+                )
+                total = connection.execute(
+                    selected.cte + " SELECT count(*) AS total FROM workorder_snapshots",
+                    selected.parameters,
+                ).fetchone()["total"]
+                rows = connection.execute(
+                    selected.cte
+                    + " SELECT s.workorder_number AS identifier, s.processing_status AS status, "
+                    "e.started_at AS occurred_at, s.snapshot_id, s.execution_id, "
+                    "s.organization_id, s.organization_name, s.organization_code, s.updated_at "
+                    "FROM workorder_snapshots s JOIN synergia.executions e ON e.id=s.execution_id "
+                    "ORDER BY s.updated_at DESC, s.snapshot_id DESC LIMIT %s OFFSET %s",
+                    (*selected.parameters, page_size, (page - 1) * page_size),
+                ).fetchall()
+                return [dict(row) for row in rows], total
+            predicate = build_execution_predicate(
+                filters, organization_scopes=organization_ids
+            )
             where = f" WHERE ({predicate.where})"
             if entity != "executions":
                 where += f" AND {self.PUBLISHED_EXECUTION_FILTER}"
@@ -1767,11 +1899,24 @@ def get_indicator_related(
     file_type: str | None = None,
     status: ExecutionState | None = None,
     outcome: ExecutionOutcome | None = None,
-    lifecycle: Annotated[Literal["active", "completed", "partial", "failed"] | None, Query(deprecated=True)] = None,
+    lifecycle: Annotated[
+        Literal["active", "completed", "partial", "failed"] | None,
+        Query(deprecated=True),
+    ] = None,
     execution_id: str | None = None,
+    view: WorkorderView = Query(
+        default="history",
+        description="Workorders: current seleciona a versão atual por IAM/número; history preserva a listagem legada.",
+    ),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100),
 ) -> IndicatorRelatedPage:
+    if entity != "workorders" and view != "history":
+        raise ApiError(
+            422,
+            "workorder_selection_not_supported",
+            "Seleção de versões nesta listagem é exclusiva de Workorders",
+        )
     entity_permission = {
         "executions": "execution.read",
         "workorders": "business.read",
@@ -1792,11 +1937,17 @@ def get_indicator_related(
         authorization_repository.audit_denial(actor, entity_permission, request)
         raise ApiError(403, "access_denied", "Acao nao autorizada")
     filters = indicator_execution_filters(
-        organization_id=organization_id, source=source, file_type=file_type,
-        date_from=date_from, date_to=date_to,
-        started_from=started_from, started_to=started_to,
-        status=status.value if status else None, outcome=outcome,
-        lifecycle=lifecycle, execution_id=execution_id,
+        organization_id=organization_id,
+        source=source,
+        file_type=file_type,
+        date_from=date_from,
+        date_to=date_to,
+        started_from=started_from,
+        started_to=started_to,
+        status=status.value if status else None,
+        outcome=outcome,
+        lifecycle=lifecycle,
+        execution_id=execution_id,
     )
     if organization_id is not None:
         visible = authorization_repository.list_active_organizations(effective_scopes)
@@ -1808,8 +1959,22 @@ def get_indicator_related(
     else:
         scope = None if None in effective_scopes else frozenset(effective_scopes)
     items, total = repository.indicator_related(
-        entity, scope, date_from, date_to, page, page_size, execution_filters=filters
+        entity,
+        scope,
+        date_from,
+        date_to,
+        page,
+        page_size,
+        execution_filters=filters,
+        view=view,
     )
     return IndicatorRelatedPage(
-        items=items, pagination=_pagination(page, page_size, total), entity=entity
+        items=items,
+        pagination=_pagination(page, page_size, total),
+        entity=entity,
+        view=view,
+        scope=IndicatorRelatedScope(
+            permissions=["dashboard.read", entity_permission],
+            organization_ids=sorted(scope, key=str) if scope is not None else None,
+        ),
     )

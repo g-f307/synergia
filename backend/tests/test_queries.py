@@ -490,8 +490,12 @@ class MemoryQueryRepository:
         return result
 
     def indicators(
-        self, organization_ids=None, date_from=None, date_to=None,
-        *, execution_filters=None,
+        self,
+        organization_ids=None,
+        date_from=None,
+        date_to=None,
+        *,
+        execution_filters=None,
     ) -> dict:
         self.indicator_filters = (organization_ids, date_from, date_to)
         self.execution_filters = execution_filters
@@ -504,7 +508,8 @@ class MemoryQueryRepository:
                         "permission": "dashboard.read",
                         "organization_ids": (
                             sorted(organization_ids, key=str)
-                            if organization_ids is not None else None
+                            if organization_ids is not None
+                            else None
                         ),
                     },
                     "filters": asdict(execution_filters or ExecutionQueryFilters()),
@@ -514,6 +519,22 @@ class MemoryQueryRepository:
                 }
             ),
             "workorders": {"total": 1, "partially_released": 1},
+            "workorders_current": {"total": 1, "partially_released": 1},
+            "quantities_coverage": {
+                key: {
+                    "known_sum": value,
+                    "known_count": 1,
+                    "total_count": 1,
+                    "coverage_percent": 100,
+                    "state": "complete",
+                }
+                for key, value in {
+                    "planned": 10,
+                    "produced": 8,
+                    "received": 8,
+                    "released": 6,
+                }.items()
+            },
             "pending_items": {"open": 2, "resolved": 1},
             "quantities": {
                 "planned": 10,
@@ -524,9 +545,19 @@ class MemoryQueryRepository:
         }
 
     def indicator_related(
-        self, entity, organization_ids, date_from, date_to, page, page_size,
-        *, execution_filters=None,
+        self,
+        entity,
+        organization_ids,
+        date_from,
+        date_to,
+        page,
+        page_size,
+        *,
+        execution_filters=None,
+        view="history",
     ):
+        self.related_view = view
+        self.related_execution_filters = execution_filters
         self.related_filters = (
             entity,
             organization_ids,
@@ -1017,3 +1048,29 @@ def test_openapi_documents_all_public_contracts(api) -> None:
     assert "ErrorResponse" in schema["components"]["schemas"]
     assert "HoldResponse" in schema["components"]["schemas"]
     assert "OqcDecisionResponse" in schema["components"]["schemas"]
+
+
+def test_current_indicator_list_forwards_snapshot_selection_and_scope(api):
+    client, repository = api
+    response = client.get(
+        "/indicators/workorders",
+        params={
+            "view": "current",
+            "page": 2,
+            "page_size": 10,
+            "started_from": "2026-10-01T04:00:00Z",
+            "started_to": "2026-10-02T03:59:59.999999Z",
+        },
+    )
+    assert response.status_code == 200
+    assert repository.related_view == "current"
+    assert repository.related_execution_filters.date_to.microsecond == 999999
+    assert response.json()["view"] == "current"
+    assert response.json()["scope"]["permissions"] == ["dashboard.read","business.read"]
+
+
+def test_related_selection_default_remains_history(api):
+    client, repository = api
+    response = client.get("/indicators/workorders")
+    assert response.status_code == 200
+    assert repository.related_view == response.json()["view"] == "history"
