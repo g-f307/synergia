@@ -476,9 +476,9 @@ def test_prepare_prompt_injects_grounded_enums():
     for branch in finding_def["anyOf"]:
         props = branch["properties"]
         assert set(props["evidence_refs"]["const"]) <= ctx.evidence_refs()
-    # Evidence refs are not duplicated inside the user prompt text.
+    # Evidence refs are never duplicated inside the user prompt text.
     for ref in ctx.evidence_refs():
-        assert prompt.count(ref) == 1
+        assert prompt.count(ref) <= 1
 
 
 def test_positive_responses_validate_against_ollama_schema():
