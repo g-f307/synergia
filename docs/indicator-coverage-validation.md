@@ -66,6 +66,13 @@ com a configuração correta e passaram; a identidade de cada caso foi conferida
 nos JUnit. Os utilitários PostgreSQL 16 vieram do próprio container por wrappers
 temporários. Não se declarou aquela primeira rodada como inteiramente verde.
 
+A CI inicial do PR #233 encontrou quatro violações E501 no script de medição.
+O Ruff executado da raiz não aplicava a mesma configuração aos scripts; o
+comando correto, `cd backend && .venv/bin/ruff check . ../scripts`, reproduziu
+a falha e passou após dividir as linhas. AST e strings SQL foram comparadas
+antes/depois e permaneceram idênticas; as medições não foram repetidas. Os
+manifestos preservam o hash medido e identificam o arquivo após a formatação.
+
 A primeira campanha E2E confirmou os fluxos principais, mas falhou em três
 cenários por preparação: URLs do dashboard usavam `started_from/started_to`
 (parâmetros da API), em vez de `date_from/date_to` (parâmetros da tela), e o

@@ -20,7 +20,7 @@
     "backend/app/workorder_snapshots.py": "238b28a647f0f16ba2b5f6d471922034e1aed4d814f47baf1e47bb848c1fcfc8",
     "backend/app/workorder_indicators.py": "4874efbce66b08b78fc400f07856d8c2d10cba1f41db60cee20d2bab430c3e65",
     "backend/app/queries.py": "e0b0da0109e5c2900d6fa652f64a7dc867847092cce973fba43a3248b906515a",
-    "scripts/measure_indicator_coverage.py": "fb1dc8f1d9a09897ee356ea3e50e82ee1f70f391f171cfe8bcb6bcf198680694",
+    "scripts/measure_indicator_coverage.py": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
     "scripts/measure_workorder_queries.py": "564fcbe58d14076170577815ba1bb9131d57cf4c2c22c7640c7d4dc209298151"
   },
   "results": {
@@ -3688,5 +3688,13 @@
       }
     }
   },
-  "implementation_commit": "d55625e3fb243efbecc2c51ee4cfad3e904b5986"
+  "implementation_commit": "d55625e3fb243efbecc2c51ee4cfad3e904b5986",
+  "formatting_followup": {
+    "file": "scripts/measure_indicator_coverage.py",
+    "measured_source_sha256": "fb1dc8f1d9a09897ee356ea3e50e82ee1f70f391f171cfe8bcb6bcf198680694",
+    "current_source_sha256": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
+    "reason": "CI E501: split four long lines; AST and SQL strings verified identical. Original measurements retained.",
+    "lint_command": "cd backend && .venv/bin/ruff check . ../scripts",
+    "result": "passed"
+  }
 }

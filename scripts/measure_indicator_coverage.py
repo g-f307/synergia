@@ -91,9 +91,12 @@ def main():
                 "list_page": measure(
                     c,
                     selected,
-                    " SELECT s.workorder_number AS identifier,s.processing_status AS status,"
-                    "e.started_at AS occurred_at,s.snapshot_id,s.execution_id,s.organization_id,"
-                    "s.organization_name,s.organization_code,s.updated_at FROM workorder_snapshots s "
+                    " SELECT s.workorder_number AS identifier,"
+                    "s.processing_status AS status,"
+                    "e.started_at AS occurred_at,s.snapshot_id,"
+                    "s.execution_id,s.organization_id,"
+                    "s.organization_name,s.organization_code,s.updated_at "
+                    "FROM workorder_snapshots s "
                     "JOIN synergia.executions e ON e.id=s.execution_id "
                     "ORDER BY s.updated_at DESC,s.snapshot_id DESC LIMIT 25 OFFSET 0",
                 ),
@@ -127,7 +130,11 @@ def main():
             "planned_released": "70% informed, including known released zero",
             "received": "complete known zero",
         },
-        "method": "one warmup + five warm samples; SQL EXPLAIN ANALYZE BUFFERS; repository wall time includes connection, legacy and current reads; no concurrent load",
+        "method": (
+            "one warmup + five warm samples; SQL EXPLAIN ANALYZE BUFFERS; "
+            "repository wall time includes connection, legacy and current reads; "
+            "no concurrent load"
+        ),
         "source_sha256": {
             name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
             for name in (

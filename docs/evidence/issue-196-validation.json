@@ -16,7 +16,7 @@
     "backend/tests/test_workorder_indicators_persistence.py": "831b6a49605b5a16ed240ac7929dec0ebeb3beca73d66195fb059e14909fe69e",
     "backend/tests/test_workorder_queries_persistence.py": "d0cb107831b55d281b10cf1fef46094e3b4becd58c5d6ff1a13220b6ffc73580",
     "scripts/bootstrap_indicator_coverage_e2e.py": "8acc581b06d8c9dc142b89535af63c4d26f9a39f69d81ace6ffe7f35378df602",
-    "scripts/measure_indicator_coverage.py": "fb1dc8f1d9a09897ee356ea3e50e82ee1f70f391f171cfe8bcb6bcf198680694",
+    "scripts/measure_indicator_coverage.py": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
     "web/e2e/indicator-coverage-integrated.spec.ts": "b14bab19b4312428be59939fb14b980b35f2d74ed6ee338909f8895c12f4d0fa",
     "web/e2e/indicator-coverage.spec.ts": "57dce9e1becd639146fac704b89176160a45ff9a91763f1501ba14f0824a55cc",
     "web/playwright.indicator-coverage.config.ts": "bcef597d00789196f2823aa55e07bc9fb6849c8035a3a122e8567534857dd1af",
@@ -346,5 +346,13 @@
   },
   "validation": "Local checks approved; remote CI and review are tracked in the PR.",
   "isolation": "Only synthetic data; separate PostgreSQL databases for regression, browser, benchmark and assets in a disposable container. No operational service, real spreadsheet or model used.",
-  "implementation_commit": "d55625e3fb243efbecc2c51ee4cfad3e904b5986"
+  "implementation_commit": "d55625e3fb243efbecc2c51ee4cfad3e904b5986",
+  "formatting_followup": {
+    "file": "scripts/measure_indicator_coverage.py",
+    "measured_source_sha256": "fb1dc8f1d9a09897ee356ea3e50e82ee1f70f391f171cfe8bcb6bcf198680694",
+    "current_source_sha256": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
+    "reason": "CI E501: split four long lines; AST and SQL strings verified identical. Original measurements retained.",
+    "lint_command": "cd backend && .venv/bin/ruff check . ../scripts",
+    "result": "passed"
+  }
 }
