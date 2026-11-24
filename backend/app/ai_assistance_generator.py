@@ -212,6 +212,7 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
         deterministic_triage_findings(context) if all_refs else []
     )
     if triage_preview:
+        request_schema["properties"]["findings"]["minItems"] = 1
         request_schema["$defs"]["Finding"] = {
             "title": "Finding",
             "anyOf": [
