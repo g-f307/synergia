@@ -58,7 +58,7 @@
       "follow_redirects": false
     },
     "assets_sha256": {
-      "backend/app/ai_assistance_assets/system.txt": "5da90e6744911a8e7c260e1d3e6b33bb9ce495d1cdea71dae2cd99f5597bfc63",
+      "backend/app/ai_assistance_assets/system.txt": "cb334f7de305dd79c1d62acccf7a3a9a5f33f8f85e3af7a9e106c05d9f3d93ed",
       "backend/app/ai_assistance_assets/template.txt": "c5bf4cf4423aa0617f934b77928399af6abaf47481f3e22bea5be17c6f59037e",
       "backend/app/ai_assistance_assets/output.schema.json": "161cd39811ca63ff76e4a431221e38282f25ea8dd2259275cdc8a9531152ccac",
       "backend/app/ai_assistance_context.py": "efac54cec87116434b9165a2fee5a47c63f2f5b68f72400766d6fe0dfee7d844",
@@ -67,9 +67,9 @@
       "backend/app/ai_assistance_context_reader.py": "b231571f36bb1241c552232e18890bff4e6cc5cf7f1160fa4d5a15fb0009b261",
       "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
       "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
-      "backend/app/ai_assistance_fallback.py": "cec7fba1a74fc231f63d0f715fb9975b4f14bc58c4347e478159b224ed4aa20a",
-      "backend/app/ai_assistance_generator.py": "5b5abc28642e738b0ea2be03c07300a5ad7c07acfac98ef5fe3b20b2b4ad9275",
-      "backend/app/ai_assistance_provider.py": "4603751179ddaeb95da5a34efed681cb78366b6fb5fb95e835db19b0684ed624",
+      "backend/app/ai_assistance_fallback.py": "d3b303a1158052874c38e0ccea02b97b7f5bb3e6134986c752639d949123be60",
+      "backend/app/ai_assistance_generator.py": "5ef6d480d949c16d700a1315cab5bff27e25614c83a695181fc0a2f72a2581d4",
+      "backend/app/ai_assistance_provider.py": "a636f92330e3be5482ef427c9a9db29bc19fbc0e3f599543a59647501e1e673f",
       "scripts/generate_ai_assistance_corpus.py": "b937fae95117d66f00fc638e3339a38b29a9fa4fa79b1ebb97d7fd44e15e2ef0",
       "scripts/run_ai_assistance_campaign.py": "c4a3eb41b57c90143106e1fdcf651dcd182a4237b47e9454baa0625f320ac6e4"
     }

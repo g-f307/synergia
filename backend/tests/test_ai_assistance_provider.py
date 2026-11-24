@@ -63,7 +63,12 @@ def test_single_generation_and_fixed_settings():
     assert len(calls) == 5
     payload = json.loads(calls[2].args[0].data)
     assert payload["think"] is False
-    assert payload["options"] == {"temperature": 0, "seed": 42, "num_predict": 768}
+    assert payload["options"] == {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 8192,
+        "num_predict": 1536,
+    }
     assert payload["model"] == "sha256-" + "a" * 64
     assert "tools" not in payload
 

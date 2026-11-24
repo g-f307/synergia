@@ -409,13 +409,17 @@ def test_grounded_triage_findings_accepted_and_mismatched_attributes_rejected():
 
 def test_prepare_prompt_injects_grounded_enums():
     ctx = context()
-    _, schema, _, _ = prepare_prompt(ctx)
+    prompt, schema, _, _ = prepare_prompt(ctx)
     assert "enum" in schema["properties"]["summary"]
     assert "enum" in schema["properties"]["human_checks"]["items"]
     finding_props = schema["$defs"]["Finding"]["properties"]
     assert "enum" in finding_props["title"]
     assert "enum" in finding_props["explanation"]
     assert set(finding_props["evidence_refs"]["items"]["enum"]) == ctx.evidence_refs()
+    # Large dynamic Finding enums stay in the structured output schema (format),
+    # not duplicated inside the user prompt text.
+    for ref in ctx.evidence_refs():
+        assert prompt.count(ref) == 1
 
 
 def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
