@@ -177,12 +177,30 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
         HUMAN_CHECK_OPTIONS
     )
     all_refs = sorted(context.evidence_refs())
+    triage_preview: list[dict] = []
     if all_refs:
+        from app.ai_assistance_fallback import deterministic_triage_findings
+
         allowed_titles, allowed_explanations = context_finding_enums(context)
         finding_props = request_schema["$defs"]["Finding"]["properties"]
         finding_props["title"]["enum"] = allowed_titles
         finding_props["explanation"]["enum"] = allowed_explanations
         finding_props["evidence_refs"]["items"]["enum"] = all_refs
+        triage_preview = deterministic_triage_findings(context)
+        if triage_preview:
+            request_schema["$defs"]["Finding"]["anyOf"] = [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "title": {"const": item["title"]},
+                        "explanation": {"const": item["explanation"]},
+                        "evidence_refs": {"const": item["evidence_refs"]},
+                    },
+                    "required": ["title", "explanation", "evidence_refs"],
+                }
+                for item in triage_preview
+            ]
     else:
         request_schema["properties"]["findings"]["maxItems"] = 0
     limitations = required_limitations(context)
@@ -199,11 +217,34 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
             ensure_ascii=False,
         ).encode("utf-8")
     ).hexdigest()
+    prompt_schema = copy.deepcopy(SCHEMA)
+    prompt_schema["properties"]["summary"]["enum"] = request_schema["properties"][
+        "summary"
+    ]["enum"]
+    prompt_schema["properties"]["human_checks"]["items"]["enum"] = request_schema[
+        "properties"
+    ]["human_checks"]["items"]["enum"]
+    prompt_schema["properties"]["limitations"] = request_schema["properties"][
+        "limitations"
+    ]
+    if triage_preview:
+        p_finding = prompt_schema["$defs"]["Finding"]["properties"]
+        p_finding["title"]["enum"] = sorted({f["title"] for f in triage_preview})
+        p_finding["explanation"]["enum"] = sorted(
+            {f["explanation"] for f in triage_preview}
+        )
+    elif not all_refs:
+        prompt_schema["properties"]["findings"]["maxItems"] = 0
+    compact_prompt_schema = json.dumps(
+        prompt_schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     prompt = TEMPLATE.format(
-        schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
+        schema=compact_prompt_schema,
         data=snapshot.decode(),
     )
-    prompt_hash = hashlib.sha256((SYSTEM + "\n" + prompt).encode()).hexdigest()
+    prompt_hash = hashlib.sha256(
+        (SYSTEM + "\n" + prompt + "\n" + schema_sha256).encode()
+    ).hexdigest()
     return prompt, request_schema, prompt_hash, schema_sha256
 
 
