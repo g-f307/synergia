@@ -551,6 +551,8 @@ def deterministic_triage_findings(context: ExecutionAssistanceContext) -> list[d
 
 def context_finding_enums(
     context: ExecutionAssistanceContext,
+    *,
+    max_single_refs: int = 10,
 ) -> tuple[list[str], list[str]]:
     """Collect the finite grounded title and explanation enums for prompt schema."""
     titles: set[str] = {"Registros disponíveis", "Registros para conferência"}
@@ -561,7 +563,7 @@ def context_finding_enums(
         t, e = describe_finding_items(context, finding["evidence_refs"])
         titles.update(t)
         explanations.update(e)
-    for ref in context.evidence_refs():
+    for ref in prioritized_reference_ids(context)[:max_single_refs]:
         t, e = describe_finding_items(context, [ref])
         titles.update(t)
         explanations.update(e)

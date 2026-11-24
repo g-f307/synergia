@@ -32,12 +32,16 @@ sanitizados (`workorder_number`, `responsible_area`, `priority`, `age_days`
 derivado de `classifications.occurred_at`/`classified_at` e `has_container`
 derivado de `serials.container_number`/`rule_id='container_impact'`), mantendo
 o contrato `1.0.0`, o orçamento de 8 KiB e a estabilidade de `ref_id`. O schema
-enviado ao runtime (`format`) restringe `summary`, `findings` (`title`,
-`explanation`, `evidence_refs`), `human_checks` e `limitations` ao catálogo
+enviado ao runtime (`format`) restringe `summary`, `findings` (via `anyOf`
+vinculando `title`, `explanation` e `evidence_refs` de cada achado priorizado,
+sem duplicar enums planos), `human_checks` e `limitations` ao catálogo
 fundamentado do contexto, omitindo da redação qualquer identificador incompatível
-com a política lexical ou com a guarda de persistência do banco. Resultados
-equivalentes são reutilizados. Saídas rejeitadas após a chamada são substituídas
-por um resultado determinístico priorizado e persistido.
+com a política lexical ou com a guarda de persistência do banco. Na #231, o
+provider local passou a enviar `num_ctx=8192` e `num_predict=1536` com prompt
+compacto em linha única (evidências e resultados reais em
+[issue-231-ai-assistance-runtime-budget.md](evidence/issue-231-ai-assistance-runtime-budget.md)).
+Resultados equivalentes são reutilizados. Saídas rejeitadas após a chamada são
+substituídas por um resultado determinístico priorizado e persistido.
 
 `GET /executions/{execution_id}/ai-assistance/latest` exige `execution.read` e
 `ai.assistance.read` na mesma organização. Retorna apenas um resultado cujo hash

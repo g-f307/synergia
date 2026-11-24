@@ -156,7 +156,12 @@ class LocalAiModelProvider:
                 "stream": False,
                 "think": False,
                 "format": schema,
-                "options": {"temperature": 0, "seed": 42, "num_predict": 768},
+                "options": {
+                    "temperature": 0,
+                    "seed": 42,
+                    "num_ctx": 8192,
+                    "num_predict": 1536,
+                },
             },
         )
         # Refuse output when the advertised or loaded model has changed.

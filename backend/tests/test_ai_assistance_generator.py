@@ -1,3 +1,4 @@
+import copy
 import json
 from datetime import timedelta
 from pathlib import Path
@@ -407,15 +408,128 @@ def test_grounded_triage_findings_accepted_and_mismatched_attributes_rejected():
     assert f"Referências disponíveis: {ctx.pending_items[0].ref_id}" in fb_summary
 
 
+def _validate_against_request_schema(
+    instance, schema: dict, *, root: dict | None = None
+) -> None:
+    """Validate an instance against the exact JSON Schema subset sent to Ollama."""
+    root = root or schema
+    if "$ref" in schema:
+        ref = schema["$ref"]
+        assert ref.startswith("#/$defs/")
+        target = root["$defs"][ref.removeprefix("#/$defs/")]
+        _validate_against_request_schema(instance, target, root=root)
+        return
+    if "anyOf" in schema:
+        errors = []
+        for branch in schema["anyOf"]:
+            try:
+                _validate_against_request_schema(instance, branch, root=root)
+                return
+            except AssertionError as exc:
+                errors.append(str(exc))
+        raise AssertionError(f"Value did not match anyOf branches: {errors}")
+    if "const" in schema:
+        assert instance == schema["const"], f"{instance!r} != {schema['const']!r}"
+    if "enum" in schema:
+        assert instance in schema["enum"], f"{instance!r} not in {schema['enum']!r}"
+    schema_type = schema.get("type")
+    if schema_type == "object":
+        assert isinstance(instance, dict), f"expected dict, got {type(instance)}"
+        props = schema.get("properties", {})
+        for req_key in schema.get("required", []):
+            assert req_key in instance, f"missing required key {req_key!r}"
+        if schema.get("additionalProperties") is False:
+            extra = set(instance) - set(props)
+            assert not extra, f"unexpected keys {extra!r}"
+        for key, value in instance.items():
+            if key in props:
+                _validate_against_request_schema(value, props[key], root=root)
+    elif schema_type == "array":
+        assert isinstance(instance, list), f"expected list, got {type(instance)}"
+        if "minItems" in schema:
+            assert len(instance) >= schema["minItems"]
+        if "maxItems" in schema:
+            assert len(instance) <= schema["maxItems"]
+        if schema.get("uniqueItems"):
+            encoded = [json.dumps(item, sort_keys=True) for item in instance]
+            assert len(encoded) == len(set(encoded)), "duplicate items in array"
+        if "items" in schema:
+            for item in instance:
+                _validate_against_request_schema(item, schema["items"], root=root)
+    elif schema_type == "string":
+        assert isinstance(instance, str), f"expected str, got {type(instance)}"
+        if "minLength" in schema:
+            assert len(instance) >= schema["minLength"]
+        if "maxLength" in schema:
+            assert len(instance) <= schema["maxLength"]
+
+
 def test_prepare_prompt_injects_grounded_enums():
     ctx = context()
-    _, schema, _, _ = prepare_prompt(ctx)
+    prompt, schema, _, _ = prepare_prompt(ctx)
     assert "enum" in schema["properties"]["summary"]
     assert "enum" in schema["properties"]["human_checks"]["items"]
-    finding_props = schema["$defs"]["Finding"]["properties"]
-    assert "enum" in finding_props["title"]
-    assert "enum" in finding_props["explanation"]
-    assert set(finding_props["evidence_refs"]["items"]["enum"]) == ctx.evidence_refs()
+    finding_def = schema["$defs"]["Finding"]
+    # Finding uses deduplicated anyOf branches (no redundant flat properties/enums).
+    assert "anyOf" in finding_def and "properties" not in finding_def
+    assert finding_def["anyOf"]
+    for branch in finding_def["anyOf"]:
+        props = branch["properties"]
+        assert set(props["evidence_refs"]["const"]) <= ctx.evidence_refs()
+    # Evidence refs are never duplicated inside the user prompt text.
+    for ref in ctx.evidence_refs():
+        assert prompt.count(ref) <= 1
+
+
+def test_positive_responses_validate_against_ollama_schema():
+    from app.ai_assistance_fallback import deterministic_triage_findings
+    from tests.test_ai_assistance_context import Reader, build
+
+    # 1. Small context (1 record per section)
+    small_ctx = build(Reader(1))
+    # 2. Grouped context (multiple items sharing rule/area -> 2-3 refs/finding)
+    grouped_reader = Reader(4)
+    for item in grouped_reader.collections["pending_items"]:
+        item.update(
+            rule_id="oqc_hold",
+            status="open",
+            priority_score=85,
+            responsible_area="Qualidade",
+            priority="high",
+            age_days=15,
+            has_container=True,
+        )
+    grouped_ctx = build(grouped_reader)
+    # 3. Truncated context (exceeds section/byte budget -> truncated_sections non-empty)
+    truncated_ctx = build(Reader(30))
+    assert truncated_ctx.truncated_sections
+
+    for ctx in (small_ctx, grouped_ctx, truncated_ctx):
+        _, request_schema, _, _ = prepare_prompt(ctx)
+        findings = deterministic_triage_findings(ctx)[:2]
+        assert findings
+        payload = {
+            "summary": valid(ctx)["summary"],
+            "findings": findings,
+            "human_checks": ["Conferência humana das referências disponíveis."],
+            "limitations": required_limitations(ctx),
+        }
+        # Validate against the EXACT schema sent to Ollama in `format`...
+        _validate_against_request_schema(payload, request_schema)
+        # ...and against the generator `_decode` pipeline.
+        result = AiAssistanceGenerator(
+            Fake(json.dumps(payload, ensure_ascii=False).encode())
+        ).generate(ctx)
+        assert result.state == "ready"
+        assert result.origin == "model"
+        assert result.findings == findings
+
+        # Mismatched title/evidence_refs must fail the Ollama schema itself.
+        if len(findings) >= 2 and findings[0]["title"] != findings[1]["title"]:
+            mismatched = copy.deepcopy(payload)
+            mismatched["findings"][0]["title"] = findings[1]["title"]
+            with pytest.raises(AssertionError):
+                _validate_against_request_schema(mismatched, request_schema)
 
 
 def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
@@ -450,18 +564,25 @@ def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
         ctx = build(reader)
 
         _, schema, _, _ = prepare_prompt(ctx)
-        finding_props = schema["$defs"]["Finding"]["properties"]
+        finding_branches = schema["$defs"]["Finding"]["anyOf"]
+        branch_texts = [
+            text
+            for branch in finding_branches
+            for text in (
+                branch["properties"]["title"]["const"],
+                branch["properties"]["explanation"]["const"],
+            )
+        ]
         for text in (
             *schema["properties"]["summary"]["enum"],
             *schema["properties"]["human_checks"]["items"]["enum"],
             *schema["properties"]["limitations"]["items"]["enum"],
-            *finding_props["title"]["enum"],
-            *finding_props["explanation"]["enum"],
+            *branch_texts,
         ):
             validate_language(text)
             assert not _PERSISTENCE_SECRET_PATTERN.search(text)
 
-        findings = deterministic_triage_findings(ctx)
+        findings = deterministic_triage_findings(ctx)[:2]
         assert findings
         assert all(prohibited_wo not in f["explanation"] for f in findings)
 
@@ -471,6 +592,7 @@ def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
             "human_checks": ["Conferência humana das referências disponíveis."],
             "limitations": required_limitations(ctx),
         }
+        _validate_against_request_schema(payload, schema)
         result = AiAssistanceGenerator(
             Fake(json.dumps(payload, ensure_ascii=False).encode())
         ).generate(ctx)
