@@ -19,9 +19,9 @@ from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_contract import StrictContract, plain_text
 from app.ai_assistance_fallback import (
     HUMAN_CHECK_OPTIONS,
-    context_finding_enums,
     describe_finding_items,
     deterministic_fallback,
+    deterministic_triage_findings,
     required_limitations,
     valid_summaries,
     validate_language,
@@ -166,23 +166,70 @@ def _decode(raw: bytes, context: ExecutionAssistanceContext) -> ModelOutput:
     return output
 
 
+def _compact_prompt_data(
+    context: ExecutionAssistanceContext, triage_preview: list[dict]
+) -> bytes:
+    """Project prioritized items into the model prompt while keeping full counts."""
+    keep_refs = {ref for item in triage_preview for ref in item["evidence_refs"]}
+    payload = json.loads(canonical_bytes(context))
+    for section in (
+        "divergences",
+        "pending_items",
+        "classifications",
+        "evidences",
+        "state_history",
+    ):
+        items = payload.get(section, [])
+        if not items:
+            continue
+        selected = [item for item in items if item.get("ref_id") in keep_refs]
+        if not selected:
+            selected = items[:1]
+        if section == "evidences" and any(not item.get("available") for item in items):
+            if not any(not item.get("available") for item in selected):
+                unavailable = next(
+                    item for item in items if not item.get("available")
+                )
+                selected.append(unavailable)
+        payload[section] = selected
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+
+
 def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str, str]:
     # Verify the complete snapshot, but omit its volatile assembly timestamp
     # from model input so equivalent contexts have the same idempotency key.
     serialize_snapshot(context)
-    snapshot = canonical_bytes(context)
+    canonical_bytes(context)
     request_schema = copy.deepcopy(SCHEMA)
     request_schema["properties"]["summary"]["enum"] = list(valid_summaries(context))
     request_schema["properties"]["human_checks"]["items"]["enum"] = list(
         HUMAN_CHECK_OPTIONS
     )
     all_refs = sorted(context.evidence_refs())
-    if all_refs:
-        allowed_titles, allowed_explanations = context_finding_enums(context)
-        finding_props = request_schema["$defs"]["Finding"]["properties"]
-        finding_props["title"]["enum"] = allowed_titles
-        finding_props["explanation"]["enum"] = allowed_explanations
-        finding_props["evidence_refs"]["items"]["enum"] = all_refs
+    triage_preview: list[dict] = (
+        deterministic_triage_findings(context)[:2] if all_refs else []
+    )
+    if triage_preview:
+        request_schema["properties"]["findings"]["minItems"] = 1
+        request_schema["properties"]["findings"]["maxItems"] = len(triage_preview)
+        request_schema["$defs"]["Finding"] = {
+            "title": "Finding",
+            "anyOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "title": {"const": item["title"]},
+                        "explanation": {"const": item["explanation"]},
+                        "evidence_refs": {"const": item["evidence_refs"]},
+                    },
+                    "required": ["title", "explanation", "evidence_refs"],
+                }
+                for item in triage_preview
+            ],
+        }
     else:
         request_schema["properties"]["findings"]["maxItems"] = 0
     limitations = required_limitations(context)
@@ -199,11 +246,23 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
             ensure_ascii=False,
         ).encode("utf-8")
     ).hexdigest()
-    prompt = TEMPLATE.format(
-        schema=json.dumps(request_schema, ensure_ascii=False, sort_keys=True),
-        data=snapshot.decode(),
+    prompt_hint = {
+        "summary": request_schema["properties"]["summary"]["enum"],
+        "human_checks": request_schema["properties"]["human_checks"]["items"]["enum"],
+        "limitations": limitations,
+        "findings_max": len(triage_preview),
+    }
+    compact_prompt_schema = json.dumps(
+        prompt_hint, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     )
-    prompt_hash = hashlib.sha256((SYSTEM + "\n" + prompt).encode()).hexdigest()
+    prompt_data = _compact_prompt_data(context, triage_preview)
+    prompt = TEMPLATE.format(
+        schema=compact_prompt_schema,
+        data=prompt_data.decode(),
+    )
+    prompt_hash = hashlib.sha256(
+        (SYSTEM + "\n" + prompt + "\n" + schema_sha256).encode()
+    ).hexdigest()
     return prompt, request_schema, prompt_hash, schema_sha256
 
 

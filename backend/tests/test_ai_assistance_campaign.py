@@ -42,6 +42,7 @@ def test_ci_fake_campaign_runner_preserves_runs_and_raw_bytes(tmp_path):
     for item in sufficient:
         assert item["provider_calls"] == 1
         assert item["raw_response_bytes"] is not None
+        assert item["raw_matches_request_schema"] is True
         assert (Path(report1["run_dir"]) / "raw" / f"{item['case_id']}.bin").is_file()
 
     p95 = report1["microbenchmark_non_inference_p95"]
@@ -55,6 +56,8 @@ def test_ci_fake_campaign_runner_preserves_runs_and_raw_bytes(tmp_path):
     assert gates["no_external_facts"]["passed"] is True
     assert gates["no_unavailable_on_sufficient"]["passed"] is True
     assert gates["inference_completed"]["passed"] is True
+    assert gates["raw_matches_request_schema"]["passed"] is True
+    assert gates["raw_matches_request_schema"]["numerator"] == len(sufficient)
     assert gates["freeze_unchanged"]["passed"] is True
 
     run_dir = Path(report1["run_dir"])
