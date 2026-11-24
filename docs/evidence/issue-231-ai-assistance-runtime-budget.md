@@ -27,8 +27,8 @@
 ## Validação automatizada (commit `84a86c4`)
 
 - **Testes unitários de IA** (`test_ai_assistance_generator.py`, `provider`, `service`, `context`, `campaign`): **111/111 aprovados**, incluindo validação positiva e negativa contra o próprio `request_schema` enviado ao Ollama para contextos pequeno, agrupado e truncado.
-- **Corpus congelado**: `python scripts/generate_ai_assistance_corpus.py --verify` aprovado (`manifest_sha256: 5e775bb47ae5d63a5f5e30730b85f94690f1d23e85738567f034a3db656a0bf0`).
-- **Campanha controlada (`ci-fake`)**: **30/30 aprovados** (`27 ready` com `origin=model`, `3 insufficient_evidence` determinísticos, `0 rejected`, `0 unavailable`, microbenchmark `prepare_prompt` p95 = `1,570 ms`).
+- **Corpus congelado**: `python scripts/generate_ai_assistance_corpus.py --verify` aprovado (`manifest_sha256: f6787f950d011605d1f93c8728ee0b328499489e8ebb0aaf975daf7e53753b56`).
+- **Campanha controlada (`ci-fake`)**: **30/30 aprovados** (`27 ready` com `origin=model`, `3 insufficient_evidence` determinísticos, `0 rejected`, `0 unavailable`, gate `raw_matches_request_schema`: **27/27**, microbenchmark `prepare_prompt` p95 = `1,533 ms`).
 - **Lint e higiene**: `ruff check` e `git diff --check` aprovados.
 
 ## Matriz de validação real a frio no endpoint HTTP (`http://127.0.0.1:18001`, timeout real de 30 s)
@@ -52,4 +52,4 @@ Execução sequencial a frio (sem cache prévio para o novo `prompt_hash` do com
 
 - **Orçamento de contexto (`num_ctx=8192`) e compactação**: nenhuma falha de estouro de `4096` tokens (`HTTP 503`) ocorreu nos 4 cenários; os prompts ficaram entre `2.485 B` e `3.041 B`.
 - **Integridade do JSON (`num_predict=1536`)**: não foi observado truncamento de JSON (`invalid_json`) em nenhuma das 4 respostas concluídas nesta matriz.
-- **Margem na GTX 1650 (4 GB VRAM)**: o cenário mais denso (`wo-composite.xlsx`) concluiu a frio em `27,9 s` operando em `79% GPU / 21% CPU` (margem estreita de ~2 s frente ao limite de `30 s` nesse hardware específico); em GPUs com ≥ 6–8 GB de VRAM (100% offload), a margem tende a ser substancialmente maior.
+- **Margem na GTX 1650 (4 GB VRAM)**: o cenário mais denso (`wo-composite.xlsx`) concluiu a frio em `27,9 s` operando em `79% GPU / 21% CPU` (margem estreita de ~2 s frente ao limite de `30 s` nesse hardware específico). Esses resultados demonstram viabilidade nos quatro cenários avaliados, não garantia de desempenho para qualquer carga; em GPUs com ≥ 6–8 GB de VRAM (100% offload), a margem tende a ser substancialmente maior.

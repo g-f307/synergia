@@ -68,6 +68,69 @@ UUID_PATTERN = re.compile(
 )
 
 
+def validate_against_request_schema(
+    instance, schema: dict, *, root: dict | None = None
+) -> None:
+    """Validate raw model JSON against the exact request_schema sent to the runtime."""
+    root = root or schema
+    if "$ref" in schema:
+        ref = schema["$ref"]
+        if not ref.startswith("#/$defs/"):
+            raise ValueError(f"unsupported $ref: {ref}")
+        target = root["$defs"][ref.removeprefix("#/$defs/")]
+        validate_against_request_schema(instance, target, root=root)
+        return
+    if "anyOf" in schema:
+        errors = []
+        for branch in schema["anyOf"]:
+            try:
+                validate_against_request_schema(instance, branch, root=root)
+                return
+            except ValueError as exc:
+                errors.append(str(exc))
+        raise ValueError(f"anyOf mismatch: {errors}")
+    if "const" in schema and instance != schema["const"]:
+        raise ValueError(f"{instance!r} != {schema['const']!r}")
+    if "enum" in schema and instance not in schema["enum"]:
+        raise ValueError(f"{instance!r} not in enum")
+    schema_type = schema.get("type")
+    if schema_type == "object":
+        if not isinstance(instance, dict):
+            raise ValueError(f"expected object, got {type(instance).__name__}")
+        props = schema.get("properties", {})
+        for req_key in schema.get("required", []):
+            if req_key not in instance:
+                raise ValueError(f"missing required key {req_key!r}")
+        if schema.get("additionalProperties") is False:
+            extra = set(instance) - set(props)
+            if extra:
+                raise ValueError(f"unexpected keys {sorted(extra)!r}")
+        for key, value in instance.items():
+            if key in props:
+                validate_against_request_schema(value, props[key], root=root)
+    elif schema_type == "array":
+        if not isinstance(instance, list):
+            raise ValueError(f"expected array, got {type(instance).__name__}")
+        if "minItems" in schema and len(instance) < schema["minItems"]:
+            raise ValueError("array shorter than minItems")
+        if "maxItems" in schema and len(instance) > schema["maxItems"]:
+            raise ValueError("array longer than maxItems")
+        if schema.get("uniqueItems"):
+            encoded = [json.dumps(item, sort_keys=True) for item in instance]
+            if len(encoded) != len(set(encoded)):
+                raise ValueError("duplicate items in array")
+        if "items" in schema:
+            for item in instance:
+                validate_against_request_schema(item, schema["items"], root=root)
+    elif schema_type == "string":
+        if not isinstance(instance, str):
+            raise ValueError(f"expected string, got {type(instance).__name__}")
+        if "minLength" in schema and len(instance) < schema["minLength"]:
+            raise ValueError("string shorter than minLength")
+        if "maxLength" in schema and len(instance) > schema["maxLength"]:
+            raise ValueError("string longer than maxLength")
+
+
 class ControlledCampaignProvider:
     model = "controlled-ci-fake"
     digest = "sha256:" + "1" * 64
@@ -80,18 +143,51 @@ class ControlledCampaignProvider:
         )
         data.update(generated_at=datetime.now(UTC).isoformat(), context_sha256="0" * 64)
         context = ExecutionAssistanceContext.model_validate_json(json.dumps(data))
+        props = schema.get("properties", {})
+        summary_enum = props.get("summary", {}).get("enum") or []
+        summary = (
+            summary_enum[0]
+            if summary_enum
+            else (
+                f"A execução registra {context.counts.errors} erros, "
+                f"{context.counts.warnings} avisos e "
+                f"{context.counts.pending_items} pendências."
+            )
+        )
+        findings_schema = props.get("findings", {})
+        max_findings = findings_schema.get("maxItems", 5)
+        finding_def = schema.get("$defs", {}).get("Finding", {})
+        if max_findings == 0:
+            findings: list[dict] = []
+        elif "anyOf" in finding_def:
+            findings = [
+                {
+                    "title": branch["properties"]["title"]["const"],
+                    "explanation": branch["properties"]["explanation"]["const"],
+                    "evidence_refs": list(
+                        branch["properties"]["evidence_refs"]["const"]
+                    ),
+                }
+                for branch in finding_def["anyOf"][:max_findings]
+            ]
+        else:
+            findings = deterministic_triage_findings(context)[:max_findings]
+        checks_enum = props.get("human_checks", {}).get("items", {}).get("enum") or [
+            "Conferência humana das referências disponíveis."
+        ]
+        limits_enum = props.get("limitations", {}).get("items", {}).get("enum")
+        limitations = (
+            list(limits_enum) if limits_enum else required_limitations(context)
+        )
         return json.dumps(
             {
-                "summary": (
-                    f"A execução registra {context.counts.errors} erros, "
-                    f"{context.counts.warnings} avisos e "
-                    f"{context.counts.pending_items} pendências."
-                ),
-                "findings": deterministic_triage_findings(context),
-                "human_checks": ["Conferência humana das referências disponíveis."],
-                "limitations": required_limitations(context),
+                "summary": summary,
+                "findings": findings,
+                "human_checks": [checks_enum[0]],
+                "limitations": limitations,
             },
             ensure_ascii=False,
+            separators=(",", ":"),
         ).encode("utf-8")
 
 
@@ -105,6 +201,8 @@ class RecordingProvider:
         self.calls = 0
         self.current_case_id = "unknown"
         self.last_raw_bytes: int | None = None
+        self.last_raw: bytes | None = None
+        self.last_schema: dict | None = None
         self.last_transport_error: str | None = None
 
     @property
@@ -118,16 +216,20 @@ class RecordingProvider:
     def begin_case(self, case_id: str) -> None:
         self.current_case_id = case_id
         self.last_raw_bytes = None
+        self.last_raw = None
+        self.last_schema = None
         self.last_transport_error = None
 
     def generate(self, system: str, prompt: str, schema: dict) -> bytes:
         self.calls += 1
+        self.last_schema = schema
         try:
             raw = self.inner.generate(system, prompt, schema)
         except ProviderError as exc:
             self.last_transport_error = exc.code
             raise
         if isinstance(raw, bytes):
+            self.last_raw = raw
             self.last_raw_bytes = len(raw)
             (self.raw_dir / f"{self.current_case_id}.bin").write_bytes(raw)
         return raw
@@ -374,6 +476,7 @@ def run_campaign(
     insufficient_calls = 0
     unavailable_on_sufficient = 0
     model_ready_on_sufficient = 0
+    schema_valid_on_sufficient = 0
     valid_refs_passed = 0
     no_external_passed = 0
     within_time_budget = 0
@@ -425,6 +528,23 @@ def run_campaign(
         )
         raw_bytes = provider.last_raw_bytes
         transport_error = provider.last_transport_error
+        raw_schema_valid: bool | None = None
+        raw_schema_error: str | None = None
+        if inference_applicable:
+            if provider.last_raw is not None and provider.last_schema is not None:
+                try:
+                    validate_against_request_schema(
+                        json.loads(provider.last_raw.decode("utf-8")),
+                        provider.last_schema,
+                    )
+                    raw_schema_valid = True
+                    schema_valid_on_sufficient += 1
+                except (UnicodeError, ValueError) as exc:
+                    raw_schema_valid = False
+                    raw_schema_error = str(exc)
+            else:
+                raw_schema_valid = False
+                raw_schema_error = "missing_raw_or_schema"
 
         forbidden_orgs = all_orgs - {str(ctx.subject.organization_id)}
         refs_valid, no_external, validation_reason = validate_delivered_output(
@@ -474,6 +594,8 @@ def run_campaign(
                 "rejection_code": result.rejection_code,
                 "refs_valid": refs_valid,
                 "no_external_facts": no_external,
+                "raw_matches_request_schema": raw_schema_valid,
+                "raw_schema_error": raw_schema_error,
                 "validation_reason": validation_reason,
             }
         )
@@ -512,6 +634,11 @@ def run_campaign(
                 and model_ready_on_sufficient == sufficient_count
             ),
             "model_ready": model_ready_on_sufficient,
+            "denominator": sufficient_count,
+        },
+        "raw_matches_request_schema": {
+            "passed": schema_valid_on_sufficient == sufficient_count,
+            "numerator": schema_valid_on_sufficient,
             "denominator": sufficient_count,
         },
         "insufficient_no_inference": {
