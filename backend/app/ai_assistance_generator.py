@@ -19,9 +19,9 @@ from app.ai_assistance_context_models import ExecutionAssistanceContext
 from app.ai_assistance_contract import StrictContract, plain_text
 from app.ai_assistance_fallback import (
     HUMAN_CHECK_OPTIONS,
-    context_finding_enums,
     describe_finding_items,
     deterministic_fallback,
+    deterministic_triage_findings,
     required_limitations,
     valid_summaries,
     validate_language,
@@ -177,18 +177,13 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
         HUMAN_CHECK_OPTIONS
     )
     all_refs = sorted(context.evidence_refs())
-    triage_preview: list[dict] = []
-    if all_refs:
-        from app.ai_assistance_fallback import deterministic_triage_findings
-
-        allowed_titles, allowed_explanations = context_finding_enums(context)
-        finding_props = request_schema["$defs"]["Finding"]["properties"]
-        finding_props["title"]["enum"] = allowed_titles
-        finding_props["explanation"]["enum"] = allowed_explanations
-        finding_props["evidence_refs"]["items"]["enum"] = all_refs
-        triage_preview = deterministic_triage_findings(context)
-        if triage_preview:
-            request_schema["$defs"]["Finding"]["anyOf"] = [
+    triage_preview: list[dict] = (
+        deterministic_triage_findings(context) if all_refs else []
+    )
+    if triage_preview:
+        request_schema["$defs"]["Finding"] = {
+            "title": "Finding",
+            "anyOf": [
                 {
                     "type": "object",
                     "additionalProperties": False,
@@ -200,7 +195,8 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
                     "required": ["title", "explanation", "evidence_refs"],
                 }
                 for item in triage_preview
-            ]
+            ],
+        }
     else:
         request_schema["properties"]["findings"]["maxItems"] = 0
     limitations = required_limitations(context)
@@ -233,7 +229,7 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
         p_finding["explanation"]["enum"] = sorted(
             {f["explanation"] for f in triage_preview}
         )
-    elif not all_refs:
+    else:
         prompt_schema["properties"]["findings"]["maxItems"] = 0
     compact_prompt_schema = json.dumps(
         prompt_schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
