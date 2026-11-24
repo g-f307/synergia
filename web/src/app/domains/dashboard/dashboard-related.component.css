@@ -39,3 +39,5 @@
 .row-chevron{color:var(--syn-text-secondary);font-size:1.5rem;text-align:right}
 syn-pagination{justify-self:end}
 @media(max-width:760px){.workorders-page{border-radius:20px;padding:18px}.back-link{font-size:0;gap:0;padding:8px 13px}.back-link span{font-size:1.2rem}.workorder-row{gap:11px 14px;grid-template-areas:"identity chevron" "status chevron" "date chevron";grid-template-columns:minmax(0,1fr) auto;padding:16px}.workorder-identity{grid-area:identity}.status-column{grid-area:status}.date-column{grid-area:date}.row-chevron{align-self:center;grid-area:chevron}.workorder-row strong{white-space:normal}}
+
+.scope-note{color:var(--syn-text-secondary);font-size:.78rem;line-height:1.5;margin:6px 0 0;overflow-wrap:anywhere}
