@@ -209,10 +209,11 @@ def prepare_prompt(context: ExecutionAssistanceContext) -> tuple[str, dict, str,
     )
     all_refs = sorted(context.evidence_refs())
     triage_preview: list[dict] = (
-        deterministic_triage_findings(context) if all_refs else []
+        deterministic_triage_findings(context)[:3] if all_refs else []
     )
     if triage_preview:
         request_schema["properties"]["findings"]["minItems"] = 1
+        request_schema["properties"]["findings"]["maxItems"] = len(triage_preview)
         request_schema["$defs"]["Finding"] = {
             "title": "Finding",
             "anyOf": [

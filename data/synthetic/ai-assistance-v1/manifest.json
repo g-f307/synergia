@@ -68,7 +68,7 @@
       "backend/app/ai_assistance_contract.py": "24a3f0686da6b3af2c0143cdc031dde82130a59732b763ceb8ddb9e25a810d35",
       "backend/app/ai_assistance_config.py": "784d21d91f97fdb1ca5c45d9487ef67512decb537513b763a2f2f30db22041a4",
       "backend/app/ai_assistance_fallback.py": "d3b303a1158052874c38e0ccea02b97b7f5bb3e6134986c752639d949123be60",
-      "backend/app/ai_assistance_generator.py": "0472a0685572d18c1e8bd50bd1e2779e69ebcbecbc44936b2cbd9fd142347b1d",
+      "backend/app/ai_assistance_generator.py": "55b85c066ddba90a0f8b41c14380c2422d3b4eb72bec7cee4cca6f9eabb55a1d",
       "backend/app/ai_assistance_provider.py": "a636f92330e3be5482ef427c9a9db29bc19fbc0e3f599543a59647501e1e673f",
       "scripts/generate_ai_assistance_corpus.py": "b937fae95117d66f00fc638e3339a38b29a9fa4fa79b1ebb97d7fd44e15e2ef0",
       "scripts/run_ai_assistance_campaign.py": "c4a3eb41b57c90143106e1fdcf651dcd182a4237b47e9454baa0625f320ac6e4"

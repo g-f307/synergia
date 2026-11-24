@@ -506,7 +506,7 @@ def test_positive_responses_validate_against_ollama_schema():
 
     for ctx in (small_ctx, grouped_ctx, truncated_ctx):
         _, request_schema, _, _ = prepare_prompt(ctx)
-        findings = deterministic_triage_findings(ctx)
+        findings = deterministic_triage_findings(ctx)[:3]
         assert findings
         payload = {
             "summary": valid(ctx)["summary"],
@@ -582,7 +582,7 @@ def test_catalog_omits_prohibited_workorder_tokens_from_schema_and_findings():
             validate_language(text)
             assert not _PERSISTENCE_SECRET_PATTERN.search(text)
 
-        findings = deterministic_triage_findings(ctx)
+        findings = deterministic_triage_findings(ctx)[:3]
         assert findings
         assert all(prohibited_wo not in f["explanation"] for f in findings)
 
