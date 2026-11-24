@@ -16,8 +16,8 @@ export class DashboardService {
     return this.api.get<Indicators>('indicators', { filters: this.scopeParams(filters) });
   }
 
-  getRelated(entity: 'executions' | 'workorders' | 'pending-items', filters: ExecutionScopeFilters & { page?: number }): Observable<{ items: Array<{ identifier: string; status: string; occurred_at: string; workorder_number?: string }>; pagination: { page: number; pages: number; total: number }; entity: string }> {
-    return this.api.get<{ items: Array<{ identifier: string; status: string; occurred_at: string; workorder_number?: string }>; pagination: { page: number; pages: number; total: number }; entity: string }>(`indicators/${entity}`, { page: filters.page, pageSize: 25, filters: this.scopeParams(filters) });
+  getRelated(entity: 'executions' | 'workorders' | 'pending-items', filters: ExecutionScopeFilters & { page?: number }): Observable<{ items: Array<{ identifier: string; status: string; occurred_at: string; workorder_number?: string; execution_id?: string; organization_id?: string; snapshot_id?: number; updated_at?: string }>; pagination: { page: number; pages: number; total: number }; entity: string }> {
+    return this.api.get<{ items: Array<{ identifier: string; status: string; occurred_at: string; workorder_number?: string; execution_id?: string; organization_id?: string; snapshot_id?: number; updated_at?: string }>; pagination: { page: number; pages: number; total: number }; entity: string }>(`indicators/${entity}`, { page: filters.page, pageSize: 25, filters: this.scopeParams(filters) });
   }
   private scopeParams(value: ExecutionScopeFilters): Record<string, string | undefined> {
     const filters = normalizedExecutionFilters(value, this.i18n.timezone());

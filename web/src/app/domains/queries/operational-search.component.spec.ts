@@ -11,10 +11,13 @@ describe('OperationalSearchComponent', () => {
   let response: Subject<OperationalSearchPage>;
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let router: jasmine.SpyObj<Router>;
+  let api: jasmine.SpyObj<QueryService>;
 
   beforeEach(async () => {
     localStorage.removeItem('synergia.operational-search.recent');
     response = new Subject<OperationalSearchPage>();
+    api = jasmine.createSpyObj<QueryService>('QueryService', ['search']);
+    api.search.and.callFake(() => response.asObservable());
     params = new BehaviorSubject(convertToParamMap({ type: 'workorder', query: '000123', page: '1', pageSize: '10', sort: 'updated_desc' }));
     router = jasmine.createSpyObj<Router>('Router', ['navigate', 'navigateByUrl', 'createUrlTree', 'serializeUrl'], { url: '/search?type=workorder&query=000123&page=1&pageSize=10&sort=updated_desc', events: new Subject() });
     router.navigate.and.resolveTo(true);
@@ -26,7 +29,7 @@ describe('OperationalSearchComponent', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { queryParamMap: params.asObservable() } },
         { provide: Router, useValue: router },
-        { provide: QueryService, useValue: { search: () => response.asObservable() } }
+        { provide: QueryService, useValue: api }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(OperationalSearchComponent);
@@ -62,8 +65,8 @@ describe('OperationalSearchComponent', () => {
     const controls = [...element.querySelectorAll('.search-filters input, .search-filters select')] as Array<HTMLInputElement | HTMLSelectElement>;
 
     expect(form).not.toBeNull();
-    expect(element.querySelector('details')).toBeNull();
-    expect(controls.length).toBe(4);
+    expect(element.querySelector('details.scope-filters')).not.toBeNull();
+    expect(controls.length).toBe(9);
     expect(controls.every((control) => !!control.id && !!control.getAttribute('name'))).toBeTrue();
     expect(controls.every((control) => element.querySelector(`label[for="${control.id}"]`))).toBeTrue();
   });
@@ -83,7 +86,7 @@ describe('OperationalSearchComponent', () => {
   it('preserves all filters when changing page', () => {
     response.next(page()); fixture.detectChanges();
     fixture.componentInstance.changePage(2);
-    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { type: 'workorder', query: '000123', page: 2, pageSize: 10, sort: 'updated_desc' } }));
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { type: 'workorder', query: '000123', page: 2, pageSize: 10, sort: 'updated_desc', view: 'current', organization_id: undefined, execution_id: undefined, started_from: undefined, started_to: undefined } }));
   });
 
   it('distinguishes an existing empty response from an error', () => {
@@ -99,6 +102,69 @@ describe('OperationalSearchComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-state="partial"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[data-state="stale"]')).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('000123');
+  });
+
+  it('explicitly requests current versions by default and preserves snapshot identity in links', () => {
+    expect(api.search).toHaveBeenCalledWith('workorder', '000123', 1, 10, 'updated_desc', jasmine.objectContaining({ view: 'current' }));
+    const item = { ...page().items[0], organization_id: 'org-a', organization_name: 'Synthetic A', snapshot_id: 42 };
+    response.next({ ...page(), view: 'current', items: [item] }); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Workorders atuais no recorte');
+    expect(fixture.nativeElement.textContent).toContain('Synthetic A');
+    expect(fixture.componentInstance.detailParams(item)).toEqual({ from: router.url, execution_id: 'exec-001', organization_id: 'org-a' });
+  });
+
+  it('restores history, scope, precision and pagination from the URL', () => {
+    const selection = { view: 'history', organization_id: '19500000-0000-4000-8000-000000000001', execution_id: 'exec-old', started_from: '2026-10-01T04:00:00Z', started_to: '2026-10-05T03:59:59.999999Z' };
+    params.next(convertToParamMap({ type: 'workorder', query: '000123', page: '2', pageSize: '10', sort: 'identifier_asc', ...selection }));
+    expect(api.search).toHaveBeenCalledWith('workorder', '000123', 2, 10, 'identifier_asc', jasmine.objectContaining({ view: 'history', startedTo: selection.started_to }));
+    response.next({ ...page(), view: 'history' }); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Histórico de Workorders no recorte');
+    expect(fixture.nativeElement.querySelector('.history-link')).toBeNull();
+    fixture.componentInstance.changePage(3);
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { type: 'workorder', query: '000123', page: 3, pageSize: 10, sort: 'identifier_asc', ...selection } }));
+    fixture.componentInstance.submit(new Event('submit'));
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: jasmine.objectContaining({ ...selection, page: 1 }) }));
+  });
+
+  it('opens scoped history from a current row without losing the applied period', () => {
+    params.next(convertToParamMap({ type: 'workorder', query: '000123', started_from: '2026-10-01T00:00:00Z', started_to: '2026-10-05T23:59:59.999999Z' }));
+    const item = { ...page().items[0], organization_id: 'org-a', snapshot_id: 42 };
+    response.next({ ...page(), view: 'current', items: [item] }); fixture.detectChanges();
+    expect(fixture.componentInstance.historyParams(item)).toEqual(jasmine.objectContaining({ view: 'history', organization_id: 'org-a', started_from: '2026-10-01T00:00:00Z', started_to: '2026-10-05T23:59:59.999999Z', page: 1 }));
+  });
+
+  it('converts civil dates with the profile timezone and prevents inverted periods', () => {
+    fixture.componentInstance.startedFrom.set('2026-10-01T00:00:00');
+    fixture.componentInstance.startedTo.set('2026-10-02T00:00:00');
+    fixture.componentInstance.submit(new Event('submit'));
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: jasmine.objectContaining({ started_from: '2026-10-01T04:00:00Z', started_to: '2026-10-02T04:00:00Z' }) }));
+    router.navigate.calls.reset();
+    fixture.componentInstance.startedTo.set('2026-09-30T00:00:00');
+    fixture.componentInstance.submit(new Event('submit')); fixture.detectChanges();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#query-period-error')).not.toBeNull();
+  });
+
+  it('clears results and cancels the request for an invalid period in the URL', () => {
+    response.next(page());
+    const calls = api.search.calls.count();
+    params.next(convertToParamMap({ query: '000123', started_from: 'bad-date' }));
+    expect(api.search.calls.count()).toBe(calls);
+    expect(response.observers.length).toBe(0);
+    expect(fixture.componentInstance.result()).toBeNull();
+    expect(fixture.componentInstance.loading()).toBeFalse();
+  });
+
+  it('does not apply Workorder selection parameters to lots or serials', () => {
+    fixture.componentInstance.changeType('lot');
+    fixture.componentInstance.submit(new Event('submit'));
+    const parameters = router.navigate.calls.mostRecent().args[1]?.queryParams;
+    expect(parameters?.['view']).toBeUndefined();
+    expect(parameters?.['organization_id']).toBeUndefined();
+    params.next(convertToParamMap({ type: 'lot', query: '000123', view: 'current', organization_id: 'org-a' }));
+    expect(api.search).toHaveBeenCalledWith('lot', '000123', 1, 25, 'updated_desc', {});
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#query-view')).toBeNull();
   });
 
   it('ignores a stale response after the URL starts a newer search', () => {

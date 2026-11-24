@@ -45,6 +45,13 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.18.0` acrescenta `view=current|history` para a busca de Workorders,
+identidade IAM/snapshot e restrições explícitas de organização, execução e
+período (#195). `history` permanece o default da API; o detalhe continua
+singular e recusa ambiguidade entre organizações com `409 ambiguous_workorder`.
+Nenhuma quantidade ou snapshot de relatório é reescrito. Ver o
+[contrato de seleção](workorder-snapshots.md).
+
 A API `0.17.0` acrescenta o campo aditivo `ref_id` aos itens de
 `GET /executions/{execution_id}` (`state_history`), `/divergences`,
 `/classifications`, `/pending-items` e `/evidences`, além do parâmetro opcional

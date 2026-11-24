@@ -27,6 +27,39 @@ describe('QueryService', () => {
     request.flush({ items: [], pagination: { page: 2, page_size: 10, total: 0, pages: 0 }, sort: 'identifier_asc', entity_type: 'serial', query: '000-A/7', source: 'synergia.operational', generated_at: '2026-09-04T12:00:00Z' });
   });
 
+  it('sends current/history and scope only for Workorders, preserving period precision', () => {
+    for (const view of ['current', 'history'] as const) {
+      service.search('workorder', '000123', 2, 10, 'updated_desc', { view, organizationId: 'org-a', executionId: 'exec-old', startedFrom: '2026-10-01T00:00:00Z', startedTo: '2026-10-05T23:59:59.999999Z' }).subscribe();
+      const request = http.expectOne(candidate => candidate.url === `${environment.apiUrl}/search`);
+      expect(request.request.params.get('view')).toBe(view);
+      expect(request.request.params.get('organization_id')).toBe('org-a');
+      expect(request.request.params.get('execution_id')).toBe('exec-old');
+      expect(request.request.params.get('started_to')).toBe('2026-10-05T23:59:59.999999Z');
+      request.flush({ items: [] });
+    }
+    service.search('lot', '000123', 1, 10, 'updated_desc', { view: 'current', organizationId: 'org-a' }).subscribe();
+    const lot = http.expectOne(candidate => candidate.url === `${environment.apiUrl}/search`);
+    expect(lot.request.params.has('view')).toBeFalse();
+    expect(lot.request.params.has('organization_id')).toBeFalse();
+    lot.flush({ items: [] });
+  });
+
+  it('preserves the legacy history default when the caller omits selection', () => {
+    service.search('workorder', '000123', 1, 10, 'updated_desc').subscribe();
+    const request = http.expectOne(candidate => candidate.url === `${environment.apiUrl}/search`);
+    expect(request.request.params.has('view')).toBeFalse();
+    request.flush({ items: [] });
+  });
+
+  it('pins consolidated results to the selected organization, execution and period', () => {
+    service.workorder('000123', 'exec-old', { organizationId: 'org-a', startedFrom: '2026-10-01T00:00:00Z', startedTo: '2026-10-05T23:59:59.999999Z' }).subscribe();
+    const request = http.expectOne(candidate => candidate.url.endsWith('/workorders/000123/consolidated-result'));
+    expect(request.request.params.get('organization_id')).toBe('org-a');
+    expect(request.request.params.get('execution_id')).toBe('exec-old');
+    expect(request.request.params.get('started_to')).toBe('2026-10-05T23:59:59.999999Z');
+    request.flush({ workorder: {}, classifications: [], pending_items: [], provenance: [] });
+  });
+
   it('loads the consolidated Workorder instead of any local source', () => {
     service.workorder('WO-001', 'exec-001').subscribe();
     const request = http.expectOne(candidate => candidate.url === `${environment.apiUrl}/workorders/WO-001/consolidated-result`);

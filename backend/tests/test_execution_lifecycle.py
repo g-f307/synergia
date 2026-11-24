@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor
+from uuid import UUID
 
 import psycopg
 import pytest
@@ -13,10 +14,19 @@ from app.queries import PostgresQueryRepository, ReprocessingConflict
 
 pytestmark = pytest.mark.integration
 EXECUTION_PREFIX = "exec-lifecycle-"
+IAM = UUID("19500000-0000-4000-8000-000000000202")
 
 
 @pytest.fixture(autouse=True)
 def cleanup_lifecycle_data():
+    with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
+        connection.execute(
+            "INSERT INTO synergia.iam_organizations "
+            "(id,organization_code,display_name) "
+            "VALUES (%s,'syn195-lifecycle','Synthetic lifecycle') "
+            "ON CONFLICT DO NOTHING",
+            (IAM,),
+        )
     yield
     with psycopg.connect(os.environ["DATABASE_URL"]) as connection:
         for table, column in (
@@ -54,12 +64,12 @@ def _seed_completed(execution_id: str) -> int:
         connection.execute(
             """
             INSERT INTO synergia.executions (
-                id, status, source, actor_type, actor_identifier,
+                id, organization_id, status, source, actor_type, actor_identifier,
                 state_changed_by_type, state_changed_by, state_change_reason
-            ) VALUES (%s, 'completed', 'N-FP', 'technical', 'integration-test',
+            ) VALUES (%s, %s, 'completed', 'N-FP', 'technical', 'integration-test',
                       'technical', 'integration-test', 'seed_completed')
             """,
-            (execution_id,),
+            (execution_id, IAM),
         )
         source_file_id = connection.execute(
             """
@@ -128,7 +138,9 @@ def test_records_complete_state_flow_with_actor_reason_and_versions() -> None:
 def test_real_pipeline_advances_and_persists_complete_execution() -> None:
     execution_id = f"{EXECUTION_PREFIX}pipeline"
     repository = PostgresImportRepository(os.environ["DATABASE_URL"])
-    repository.start(execution_id, "N-FP", "technical", "pipeline-test")
+    repository.start(
+        execution_id, "N-FP", "technical", "pipeline-test", organization_id=IAM
+    )
     source_file_id, duplicate = repository.claim_file(
         execution_id,
         source="N-FP",

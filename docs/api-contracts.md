@@ -20,6 +20,14 @@ escopo organizacional a todas as operações existentes será incremental.
 
 ## Recursos e códigos HTTP
 
+A API `0.18.0` acrescenta a seleção `view=current|history` à busca de Workorders
+(#195), preservando `history` como default. A versão atual é selecionada por
+organização IAM e número, após autorização e recorte, antes de contar/paginar.
+Busca e detalhe expõem a identidade do snapshot e permitem organização,
+execução e período explícitos. Detalhe sem contexto suficiente para distinguir
+organizações autorizadas retorna `409 ambiguous_workorder`; acesso fora de
+escopo continua 404. Veja o [contrato de snapshots](workorder-snapshots.md).
+
 A API `0.17.0` acrescenta o campo aditivo `ref_id` aos itens de `state_history`
 em `GET /executions/{execution_id}` e às coleções paginadas
 `GET /executions/{execution_id}/divergences`, `classifications`, `pending` e
@@ -215,9 +223,10 @@ regra, a área responsável e a evidência persistida como objeto JSON. O histó
 `execution_id`, `entity_type`, `entity_id` e `event_type`, com ordem `newest`
 ou `oldest`. Critérios de desempate por ID deixam os resultados determinísticos.
 
-Consultas de Workorder aceitam `execution_id`; consultas de lote aceitam
-`workorder_number`. Sem esses filtros, a versão mais recentemente atualizada é
-retornada quando o identificador aparece em mais de uma execução.
+Consultas de Workorder aceitam `execution_id` e organização IAM explícitos;
+sem execução, selecionam a versão mais recente dentro da organização e recorte
+autorizados, recusando ambiguidade entre organizações. Consultas de lote aceitam
+`workorder_number`; seu comportamento de seleção permanece inalterado.
 
 ## Reprocessamento
 
