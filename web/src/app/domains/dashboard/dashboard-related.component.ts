@@ -1,22 +1,15 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, catchError, map, of, switchMap } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { IndicatorRelatedItem, IndicatorScope } from '../../shared/api/operational.models';
 import { ApiFailure } from '../../shared/api/api-error';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { PaginationComponent, StateComponent } from '../../shared/ui/ui-kit';
 import { DashboardService } from './dashboard.service';
 import { ExecutionScopeFilters } from '../executions/execution.models';
 import { executionUrlParams, filtersFromParams } from '../executions/execution-presentation';
-
-interface RelatedWorkorder {
-  identifier: string;
-  status: string;
-  occurred_at: string;
-  execution_id?: string;
-  organization_id?: string;
-  snapshot_id?: number;
-  updated_at?: string;
-}
 
 @Component({
   imports: [RouterLink, PaginationComponent, StateComponent],
@@ -29,8 +22,9 @@ interface RelatedWorkorder {
           <span aria-hidden="true">←</span>{{ i18n.t('dashboard.back') }}
         </a>
         <div>
-          <h2>{{ i18n.t('dashboard.relatedRecords') }}</h2>
+          <h2>{{ i18n.t(view()==='current'?'dashboard.currentWorkorders':'queries.historyResults') }}</h2>
           <p>{{ i18n.t('dashboard.relatedTotal', { count: i18n.formatNumber(total()) }) }}</p>
+          @if(scope(); as currentScope){<p class="scope-note">{{ currentScope.organization_ids === null ? i18n.t('dashboard.detailScopeGlobal') : i18n.t('dashboard.detailScopeCount', { count: i18n.formatNumber(currentScope.organization_ids.length) }) }}</p>}
         </div>
       </header>
 
@@ -70,10 +64,10 @@ interface RelatedWorkorder {
               <a class="workorder-row" [routerLink]="['/workorders', item.identifier]" [queryParams]="{ from: currentUrl(), execution_id: item.execution_id, organization_id: item.organization_id }">
                 <span class="workorder-identity">
                   <span class="workorder-icon" aria-hidden="true"><img src="/assets/icons/production.svg" alt=""></span>
-                  <span><strong class="technical">{{ item.identifier }}</strong><small>Workorder</small></span>
+                  <span><strong class="technical">{{ item.identifier }}</strong><small>{{ item.organization_name || item.organization_id || i18n.t('common.notAvailable') }}</small></span>
                 </span>
                 <span class="status-column"><strong class="status-pill" [attr.data-state]="statusKind(item.status)">{{ statusLabel(item.status) }}</strong><small>{{ item.status }}</small></span>
-                <span class="date-column"><strong>{{ i18n.t('dashboard.occurredAt') }}</strong><time [attr.datetime]="item.occurred_at">{{ i18n.formatDate(item.occurred_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</time></span>
+                <span class="date-column"><strong>{{ i18n.t(item.updated_at?'queries.updatedAt':'dashboard.occurredAt') }}</strong><time [attr.datetime]="item.updated_at || item.occurred_at">{{ i18n.formatDate(item.updated_at || item.occurred_at, { dateStyle: 'medium', timeStyle: 'short' }) }}</time></span>
                 <span class="row-chevron" aria-hidden="true">›</span>
               </a>
             }
@@ -87,24 +81,48 @@ interface RelatedWorkorder {
   `,
   styleUrl: './dashboard-related.component.css'
 })
-export class DashboardRelatedComponent implements OnInit {
+export class DashboardRelatedComponent {
   readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(DashboardService);
-  readonly items = signal<RelatedWorkorder[]>([]);
+  readonly items = signal<IndicatorRelatedItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal<ApiFailure['kind'] | null>(null);
-  readonly page = signal(this.positivePage(this.route.snapshot.queryParamMap.get('page')));
+  readonly page = signal(1);
+  readonly view = signal<'current' | 'history'>('current');
+  readonly scope = signal<IndicatorScope | null>(null);
   readonly pages = signal(0);
   readonly total = signal(0);
   readonly entity = 'workorders' as const;
-  readonly filters: ExecutionScopeFilters = {};
+  filters: ExecutionScopeFilters = {};
   get context(): Record<string, string | null> { return executionUrlParams(this.filters); }
 
-  ngOnInit(): void {
-    try { Object.assign(this.filters, filtersFromParams(this.route.snapshot.queryParamMap, this.i18n.timezone())); this.load(); }
-    catch { this.error.set('validation'); this.loading.set(false); }
+  constructor() {
+    this.route.queryParamMap.pipe(
+      switchMap(params => {
+        this.loading.set(true); this.error.set(null); this.items.set([]);
+        this.scope.set(null); this.total.set(0); this.pages.set(0);
+        this.page.set(this.positivePage(params.get('page')));
+        this.view.set(params.get('view') === 'history' ? 'history' : 'current');
+        try { this.filters = filtersFromParams(params, this.i18n.timezone()); }
+        catch { this.filters = {}; this.error.set('validation'); this.loading.set(false); return EMPTY; }
+        return this.service.getRelated(this.entity, { ...this.filters, page: this.page(), view: this.view() }).pipe(
+          map(value => {
+            if (value.view !== this.view() || !value.scope) throw { kind: 'unavailable' };
+            return { value, failure: null };
+          }),
+          catchError((failure: ApiFailure) => of({ value: null, failure }))
+        );
+      }),
+      takeUntilDestroyed()
+    ).subscribe(({ value, failure }) => {
+      if (value) {
+        this.items.set(value.items); this.scope.set(value.scope);
+        this.page.set(value.pagination.page); this.pages.set(value.pagination.pages); this.total.set(value.pagination.total);
+      }
+      this.error.set(failure?.kind ?? null); this.loading.set(false);
+    });
   }
   hasContext(): boolean { return Object.values(this.filters).some(Boolean); }
   currentUrl(): string { return this.router.url; }
@@ -126,27 +144,9 @@ export class DashboardRelatedComponent implements OnInit {
     return labels[status] ? this.i18n.t(labels[status]) : status;
   }
   changePage(page: number): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { page }, queryParamsHandling: 'merge' })
-      .then(() => { this.page.set(page); this.load(); });
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { view: this.view(), page }, queryParamsHandling: 'merge' });
   }
 
-  private load(): void {
-    this.loading.set(true);
-    this.error.set(null);
-    this.service.getRelated(this.entity, {
-      ...this.filters,
-      page: this.page()
-    }).subscribe({
-      next: (value) => {
-        this.items.set(value.items);
-        this.page.set(value.pagination.page);
-        this.pages.set(value.pagination.pages);
-        this.total.set(value.pagination.total);
-        this.loading.set(false);
-      },
-      error: (failure: ApiFailure) => { this.error.set(failure.kind); this.loading.set(false); }
-    });
-  }
   private positivePage(value: string | null): number {
     const page = Number(value ?? 1);
     return Number.isInteger(page) && page > 0 ? page : 1;

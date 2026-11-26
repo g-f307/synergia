@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { ApiFailure } from '../../shared/api/api-error';
-import { Indicators } from '../../shared/api/operational.models';
+import { Indicators, QuantityCoverage, QuantityKey } from '../../shared/api/operational.models';
 import { I18nService } from '../../shared/i18n/i18n.service';
 import { StateComponent } from '../../shared/ui/ui-kit';
 import { SessionService } from '../../core/session.service';
@@ -14,7 +14,6 @@ import { executionUrlParams, filtersFromAggregate, filtersFromParams, hasExecuti
 import { profileInput } from '../../shared/i18n/profile-time';
 
 type DashboardState = 'loading' | 'ready' | 'partial' | 'stale' | 'forbidden' | 'unavailable' | 'error';
-type QuantityKey = keyof Indicators['quantities'];
 
 @Component({
   selector: 'syn-dashboard',
@@ -64,18 +63,36 @@ type QuantityKey = keyof Indicators['quantities'];
 
           <div class="metric-grid" aria-label="Indicadores operacionais">
             <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/run.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.executions') }}</span></div><strong class="indicator-value">{{ display(totalExecutions()) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.completedCount') }}: {{ display(completedExecutions()) }}</small><a routerLink="/executions" [queryParams]="executionNavigationContext()">{{ i18n.t('dashboard.viewExecutions') }}</a></article>
-            <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/production.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.workorders') }}</span></div><strong class="indicator-value">{{ display(data()?.workorders?.total) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.partialReleases') }}: {{ display(data()?.workorders?.partially_released) }}</small><a routerLink="/dashboard/related/workorders" [queryParams]="navigationContext()">{{ i18n.t('dashboard.viewWorkorders') }}</a></article>
+            <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/production.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.currentWorkorders') }}</span></div><strong class="indicator-value">{{ display(data()?.workorders_current?.total) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.partialReleases') }}: {{ display(data()?.workorders_current?.partially_released) }}</small>@if (workorderAccess() !== 'forbidden') {<a routerLink="/dashboard/related/workorders" [queryParams]="workorderNavigationContext()">{{ i18n.t(workorderAccess()==='restricted' ? 'dashboard.viewAuthorizedWorkorders' : 'dashboard.viewWorkorders') }}</a>@if(workorderAccess()==='restricted'){<small class="detail-scope-note">{{ i18n.t('dashboard.detailScopeRestricted') }}</small>}}@else{<small class="detail-scope-note">{{ i18n.t('dashboard.detailAccessUnavailable') }}</small>}</article>
             <article class="metric"><div class="metric-heading"><span class="metric-badge"><img src="/assets/icons/queue.svg" alt="" aria-hidden="true"></span><span>{{ i18n.t('dashboard.pending') }}</span></div><strong class="indicator-value">{{ display(totalPending()) }}</strong><small class="indicator-detail">{{ i18n.t('dashboard.openCount') }}: {{ display(openPending()) }}</small><a routerLink="/pending-items" [queryParams]="{ status: 'open' }">{{ i18n.t('dashboard.viewPending') }}</a></article>
           </div>
 
           <div class="chart-grid">
             <section class="chart-card quantities-chart" aria-labelledby="quantities-title">
-              <header><h2 id="quantities-title">{{ i18n.t('dashboard.quantities') }}</h2></header>
-              <div class="quantity-bars">
+              <header><h2 id="quantities-title">{{ i18n.t('dashboard.quantities') }}</h2><p class="coverage-help">{{ i18n.t('dashboard.coverageHelp') }}</p></header>
+              @if(data()?.workorders_current?.total === 0){<p class="coverage-empty">{{ i18n.t('dashboard.coverageEmpty') }}</p>}
+              @else {<div class="quantity-bars">
                 @for (item of quantityItems; track item.key) {
-                  <div class="quantity-bar"><div class="bar-label"><span>{{ i18n.t(item.label) }}</span><strong>{{ display(data()?.quantities?.[item.key]) }}</strong></div><div class="bar-track"><span [style.width.%]="quantityWidth(data()?.quantities?.[item.key])" [style.background-color]="item.color"></span></div></div>
+                  <div class="quantity-bar" [attr.data-quantity]="item.key">
+                    <div class="bar-label"><span>{{ i18n.t(item.label) }}</span>
+                      @if(coverage(item.key); as value){
+                        @if((value.state==='complete'||value.state==='partial') && value.known_sum !== null){
+                          <div class="quantity-value"><strong class="known-quantity">{{ i18n.formatNumber(value.known_sum!) }}</strong><small>{{ i18n.t(value.state==='partial'?'dashboard.knownSubtotal':'dashboard.knownTotal') }}</small></div>
+                        }@else{<span class="quantity-status">{{ i18n.t(value.state==='empty'?'dashboard.coverageEmpty':'common.notAvailable') }}</span>}
+                      }@else{<span class="quantity-status">{{ i18n.t('dashboard.coverageUnavailable') }}</span>}
+                    </div>
+                    @if(coverage(item.key); as value){
+                      @if(value.state!=='empty'){
+                        <p class="coverage-detail">{{ coverageDescription(value) }} · {{ coveragePercent(value) }}</p>
+                        @if(value.state!=='missing'){
+                          <div class="bar-track coverage-track" role="meter" [attr.aria-label]="i18n.t(item.label) + ' — ' + i18n.t('dashboard.coverageLabel')" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="value.coverage_percent" [attr.aria-valuetext]="coverageDescription(value) + ' · ' + coveragePercent(value)"><span [style.width.%]="value.coverage_percent" [style.background-color]="item.color"></span></div>
+                        }
+                      }
+                    }
+                  </div>
                 }
-              </div>
+              </div>}
+
             </section>
 
             <section class="chart-card execution-chart" aria-labelledby="execution-chart-title">
@@ -97,6 +114,8 @@ type QuantityKey = keyof Indicators['quantities'];
     .page-header{align-items:flex-start}.refresh{min-height:42px}
     .page-header>div{display:grid;gap:8px;min-width:min(100%,380px)}.dashboard-search{align-items:center;background:var(--syn-bg);border:1px solid transparent;border-radius:999px;display:grid;grid-template-columns:20px minmax(0,1fr) auto;max-width:380px;min-height:42px;padding:4px 8px 4px 14px;transition:border-color var(--syn-transition),box-shadow var(--syn-transition)}.dashboard-search:focus-within{border-color:color-mix(in srgb,var(--syn-primary) 38%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--syn-primary) 10%,transparent)}.dashboard-search>img{height:17px;width:17px}.dashboard-search input,.dashboard-search select{background:transparent;border:0;color:var(--syn-text);min-height:32px;outline:0}.dashboard-search input{min-width:0;padding:0 6px}.dashboard-search input::-webkit-search-cancel-button{cursor:pointer}.dashboard-search select{border-left:1px solid var(--line);border-radius:0;font-size:.72rem;padding:0 5px 0 9px}.dashboard-search input::placeholder{color:var(--syn-text-secondary)}
     .dashboard-surface{align-content:start;grid-auto-rows:max-content}
+    .coverage-help,.coverage-detail,.coverage-empty,.detail-scope-note{color:var(--syn-text-secondary);font-size:.78rem;line-height:1.5;margin:6px 0 0;overflow-wrap:anywhere}.quantity-value{display:grid;gap:2px;text-align:end;min-width:0}.quantity-value strong{overflow-wrap:anywhere}.quantity-value small{color:var(--syn-text-secondary);font-size:.72rem}.bar-label{align-items:start;gap:12px}.quantity-status{color:var(--syn-text-secondary);font-size:.8rem;text-align:end}.coverage-track span{min-width:0}.coverage-detail{margin:0}.quantities-chart header{margin-bottom:18px}
+
     @media(max-width:900px){.dashboard-filters form{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}}
     @media(max-width:440px){.status-chart-layout{grid-template-columns:1fr}.status-donut{margin-inline:auto}}
     @media(max-width:600px){.dashboard{border-radius:20px;padding:18px}.page-header{align-items:stretch}.page-header button{width:100%}.metric-grid{grid-template-columns:1fr}.metric+.metric{border-left:0;border-top:1px solid var(--line)}.dashboard-filters form{grid-template-columns:1fr}.filter-actions{display:grid;grid-template-columns:1fr 1fr}.chart-card{padding:18px}}
@@ -129,6 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly outcomes: ExecutionOutcome[] = ['active', 'completed', 'partial', 'skipped_duplicate', 'failed', 'cancelled', 'unknown'];
   private readonly successfulFilters = signal<ExecutionScopeFilters>({});
   readonly navigationContext = computed(() => executionUrlParams(this.successfulFilters()));
+  readonly workorderNavigationContext = computed(() => ({ ...this.navigationContext(), view: 'current', page: 1 }));
   readonly executionNavigationContext = computed(() => ({ ...this.navigationContext(), page: 1, sort: 'newest' }));
   readonly quantityItems: Array<{ key: QuantityKey; label: 'dashboard.planned' | 'dashboard.produced' | 'dashboard.received' | 'dashboard.released'; color: string }> = [
     { key: 'planned', label: 'dashboard.planned', color: '#5577b8' }, { key: 'produced', label: 'dashboard.produced', color: '#567f9f' },
@@ -158,7 +178,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
     return `conic-gradient(${segments.join(', ')})`;
   });
-  readonly isEmpty = computed(() => this.state() === 'ready' && [this.totalExecutions(), this.totalPending(), this.data()?.workorders?.total].every((value) => value === 0));
+  readonly isEmpty = computed(() => this.state() === 'ready' && [this.totalExecutions(), this.totalPending(), this.data()?.workorders_current?.total].every((value) => value === 0));
+  readonly workorderAccess = computed<'same' | 'restricted' | 'forbidden'>(() => {
+    const current = this.data();
+    const permission = this.session.profile()?.permissions.find(item => item.key === 'business.read');
+    if (!current || !hasExecutionAggregate(current.execution_summary) || !permission) return 'forbidden';
+    const business = permission.organizations;
+    if (business === null) return 'same';
+    const selected = this.successfulFilters().organizationId;
+    if (selected) return business.includes(selected) ? 'same' : 'forbidden';
+    const dashboard = current.execution_summary.scope.organization_ids;
+    if (dashboard === null) return business.length ? 'restricted' : 'forbidden';
+    const permitted = dashboard.filter(id => business.includes(id));
+    if (!permitted.length) return 'forbidden';
+    return permitted.length === dashboard.length ? 'same' : 'restricted';
+  });
   readonly scopeDescription = computed(() => {
     const permission = this.session.profile()?.permissions.find((item) => item.key === 'dashboard.read');
     if (permission?.organizations === null) return this.i18n.t('dashboard.scopeGlobal');
@@ -208,11 +242,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.organizationId.set(''); this.dateFrom.set(''); this.dateTo.set(''); this.filterError.set('');
     this.invalidRoute = false; this.source.set(''); this.fileType.set(''); this.outcome.set(''); this.load({});
   }
-  quantityWidth(value: number | null | undefined): number {
-    if (value === null || value === undefined) return 0;
-    const values = Object.values(this.data()?.quantities ?? {}).filter((item): item is number => typeof item === 'number');
-    const maximum = Math.max(...values, 0);
-    return maximum > 0 ? (value / maximum) * 100 : 0;
+  coverage(key: QuantityKey): QuantityCoverage | null { return this.data()?.quantities_coverage?.[key] ?? null; }
+  coverageDescription(value: QuantityCoverage): string {
+    return this.i18n.t('dashboard.coverageCount', { known: this.i18n.formatNumber(value.known_count), total: this.i18n.formatNumber(value.total_count) });
+  }
+  coveragePercent(value: QuantityCoverage): string {
+    return value.coverage_percent === null ? '' : this.i18n.formatNumber(value.coverage_percent / 100, { style: 'percent', maximumFractionDigits: 1 });
   }
   distributionWidth(value: number, entries: Array<[string, number]>): number {
     const maximum = Math.max(...entries.map((entry) => entry[1]), 0);
@@ -251,6 +286,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   display(value: number | null | undefined): string { return value == null ? this.i18n.t('dashboard.absent') : this.i18n.formatNumber(value); }
   private sum(group: Record<string, number> | null | undefined): number | undefined { return group ? Object.values(group).reduce((total, value) => total + value, 0) : undefined; }
   private isPartial(data: Indicators): boolean {
-    return !hasExecutionAggregate(data.execution_summary) || data.workorders?.total == null || data.workorders?.partially_released == null || this.quantityItems.some((item) => data.quantities?.[item.key] == null);
+    return !hasExecutionAggregate(data.execution_summary) || data.workorders_current?.total == null || data.workorders_current?.partially_released == null || this.quantityItems.some((item) => data.quantities_coverage?.[item.key] == null);
   }
 }

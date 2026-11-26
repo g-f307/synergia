@@ -419,7 +419,7 @@ def test_consolidated_children_stay_on_the_explicitly_selected_execution(api, da
 def test_openapi_publishes_additive_version_defaults_and_snapshot_identity(api):
     client, _ = api
     schema = client.get("/openapi.json").json()
-    assert schema["info"]["version"] == "0.18.0"
+    assert schema["info"]["version"] == "0.19.0"
     params = {
         item["name"]: item["schema"]
         for item in schema["paths"]["/search"]["get"]["parameters"]

@@ -73,3 +73,16 @@ pelos testes e pelas capturas versionadas acima.
 | `/reports` e `/reports/:id` | catálogo, geração, snapshot, histórico e exportação | filtros e metadados empilhados | relatório e CSV persistidos no fluxo Playwright |
 | `/notifications` | caixa interna, filtros e leitura auditável | lista em coluna única | preferências e leituras recarregadas do servidor |
 | `/pending-items/:id` | pendência e decisão humana no mesmo contexto | formulários e histórico empilhados | atribuição, devolução, reenvio e aprovação reais |
+
+## Indicadores atuais e cobertura — #196
+
+O painel mantém shell, moldura e scroll interno, com cartão de Workorders atuais,
+subtotal/total conhecido, X/Y e barras que representam cobertura. A lista preserva
+organização, período e versão selecionada. Diferenças de acesso aos detalhes ficam
+explícitas. Não há meta inventada ou zero usado como ausência.
+
+A [matriz e o roteiro](indicator-coverage-validation.md) documentam 13 E2E,
+16 auditorias Axe sem violações, teclado e zoom nativo 250%. As
+[capturas](evidence/issue-196/) cobrem 390/768/1440 px nos temas claro/escuro;
+cenários, instante, base Git e hashes estão no
+[manifesto](evidence/issue-196-validation.json). Dados e identidades são sintéticos.

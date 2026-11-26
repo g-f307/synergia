@@ -1,0 +1,358 @@
+{
+  "issue": 196,
+  "api_version": "0.19.0",
+  "observed_at_utc": "2026-11-24T20:33:06.850558+00:00",
+  "base_commit": "d87248d3103b273b78aed3c94c425ad82bd3948a",
+  "revision": "Measurements captured before commits; source_sha256 identifies the exact validated files included in this PR. Backend/frontend implementation is versioned through implementation_commit; validation sources and evidence accompany the report.",
+  "source_sha256": {
+    "backend/app/main.py": "238aed45f2e4c01a004dab1be0e5c4c93cc723eb37972b0fe5c987e02b3b4cd5",
+    "backend/app/queries.py": "e0b0da0109e5c2900d6fa652f64a7dc867847092cce973fba43a3248b906515a",
+    "backend/app/workorder_indicators.py": "4874efbce66b08b78fc400f07856d8c2d10cba1f41db60cee20d2bab430c3e65",
+    "backend/tests/test_execution_summary.py": "3f55b9d4725dff88db7d9ef215138c1bb37546ab06ea366d0c768a7ff12d1955",
+    "backend/tests/test_import_result_summary.py": "fa7efae23ac289a628eae57032922b7d59b9c415c27a89793647d18e1a87c8f7",
+    "backend/tests/test_indicator_coverage_api_persistence.py": "1054895c34dbdc0b1a84d035de4a1b46ff60787a7d84e16cabfab3848a6d4bbe",
+    "backend/tests/test_indicator_validation_fixture.py": "e7af7d069758873026b55db57a410d01e1011e660326f66ac89f19a3dc3bb53f",
+    "backend/tests/test_queries.py": "2a889c2fa17429d2ea8539deee8c852a0fce39bbb6df5898afcbf5026285633e",
+    "backend/tests/test_workorder_indicators_persistence.py": "831b6a49605b5a16ed240ac7929dec0ebeb3beca73d66195fb059e14909fe69e",
+    "backend/tests/test_workorder_queries_persistence.py": "d0cb107831b55d281b10cf1fef46094e3b4becd58c5d6ff1a13220b6ffc73580",
+    "scripts/bootstrap_indicator_coverage_e2e.py": "8acc581b06d8c9dc142b89535af63c4d26f9a39f69d81ace6ffe7f35378df602",
+    "scripts/measure_indicator_coverage.py": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
+    "web/e2e/indicator-coverage-integrated.spec.ts": "b14bab19b4312428be59939fb14b980b35f2d74ed6ee338909f8895c12f4d0fa",
+    "web/e2e/indicator-coverage.spec.ts": "57dce9e1becd639146fac704b89176160a45ff9a91763f1501ba14f0824a55cc",
+    "web/playwright.indicator-coverage.config.ts": "bcef597d00789196f2823aa55e07bc9fb6849c8035a3a122e8567534857dd1af",
+    "web/src/app/domains/dashboard/dashboard-related.component.css": "312c76bef4a6141e5a32ee769d6b4c733ce5c17d32e0d4f414425af6a73d5550",
+    "web/src/app/domains/dashboard/dashboard-related.component.spec.ts": "a08f7d07e2b3f2330711922ed4e92bfd654635de488b682d6fec4d108ebb5e56",
+    "web/src/app/domains/dashboard/dashboard-related.component.ts": "facd935b69957ff293e1dd501f5f24468e86849ff2bc6e6ed5ecb5ec8fdf9bb7",
+    "web/src/app/domains/dashboard/dashboard.component.spec.ts": "e163c8180e3415dc5d2c52a194331ead6eb0a468cd69cfe4dba7e611ecfc9609",
+    "web/src/app/domains/dashboard/dashboard.component.ts": "12e6ed0d63edec5597ddf186b7237291a3d026974620de17442c59a8ea39ae83",
+    "web/src/app/domains/dashboard/dashboard.service.spec.ts": "93b1c02b8557d0148eab048b5b0a5002084d7d024284c21e658b4d5a8fe85c71",
+    "web/src/app/domains/dashboard/dashboard.service.ts": "8979d046db15feb80436a9afe56cdc767807305299966d03e52614352337c979",
+    "web/src/app/shared/api/operational.models.ts": "3488b83aa52dabe6bff2c238cb20e695c9356be9c17fc6d0181a0a1bc4e8e4a3",
+    "web/src/app/shared/i18n/catalogs/en-US.json": "c003baf42b88bf83fa55a631b4054bdabdf83a394e8a5461ccb3da7843749780",
+    "web/src/app/shared/i18n/catalogs/pt-BR.json": "4f1786c16aad27be553678743c0ecd8ffdb5a39890b6de6606e95ab30caf4145",
+    "web/src/testing/indicator-fixtures.ts": "4508c58b391fc19b108552b05b6a9322feb35528a93ce98435e2f8ab34ddbf3d"
+  },
+  "backend": {
+    "unit_cases": 2394,
+    "unit_subtests": 16,
+    "fixture_guard_cases": 7,
+    "postgres_unique_passed": 1030,
+    "postgres_batches": [
+      {
+        "passed": 941,
+        "setup_errors": 89
+      },
+      {
+        "passed": 89,
+        "setup_errors": 0,
+        "note": "Exactly the original 89 setup errors, verified by JUnit testcase identity."
+      }
+    ],
+    "setup_correction": "Explicit PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE for migration and SMTP fixtures; PostgreSQL 16 tools via isolated container wrappers."
+  },
+  "frontend": {
+    "angular_passed": 506,
+    "coverage": {
+      "statements_percent": 81.45,
+      "branches_percent": 69.77,
+      "functions_percent": 73.58,
+      "lines_percent": 86.73
+    },
+    "lint": "passed",
+    "build": "passed with CSS budget warnings; dashboard 5.88 kB / warning 4 kB / error 8 kB",
+    "catalogs": {
+      "languages": [
+        "pt-BR",
+        "en-US"
+      ],
+      "keys_each": 1127,
+      "missing": 0,
+      "orphan": 0
+    }
+  },
+  "browser": {
+    "stats": {
+      "startTime": "2026-11-24T20:29:49.004Z",
+      "duration": 37201.434,
+      "expected": 13,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "scenarios": [
+      {
+        "scenario": "real PostgreSQL: 4/null/0 reconciles current card, list, exact detail and older period",
+        "status": "passed",
+        "duration_ms": 2971
+      },
+      {
+        "scenario": "real PostgreSQL: A/B aggregate and narrower detail permissions stay explicit",
+        "status": "passed",
+        "duration_ms": 2991
+      },
+      {
+        "scenario": "real PostgreSQL: empty period and dashboard-only permission do not invent quantity or detail access",
+        "status": "passed",
+        "duration_ms": 1698
+      },
+      {
+        "scenario": "real PostgreSQL: appended version replaces 4 by 7 without increasing denominator",
+        "status": "passed",
+        "duration_ms": 1926
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px light",
+        "status": "passed",
+        "duration_ms": 1960
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px dark",
+        "status": "passed",
+        "duration_ms": 2063
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px light",
+        "status": "passed",
+        "duration_ms": 2046
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px dark",
+        "status": "passed",
+        "duration_ms": 2294
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px light",
+        "status": "passed",
+        "duration_ms": 2301
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px dark",
+        "status": "passed",
+        "duration_ms": 2332
+      },
+      {
+        "scenario": "empty and narrower detail scope remain explicit",
+        "status": "passed",
+        "duration_ms": 946
+      },
+      {
+        "scenario": "English coverage labels and decimal separator",
+        "status": "passed",
+        "duration_ms": 565
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "status": "passed",
+        "duration_ms": 4782
+      }
+    ],
+    "synthetic_contract_cases": 9,
+    "real_postgres_cases": 4,
+    "axe_audits": [
+      {
+        "scenario": "coverage and reconciled current list at 390px light",
+        "name": "axe-coverage-390-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px light",
+        "name": "axe-current-list-390-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px dark",
+        "name": "axe-coverage-390-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px dark",
+        "name": "axe-current-list-390-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px light",
+        "name": "axe-coverage-768-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px light",
+        "name": "axe-current-list-768-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px dark",
+        "name": "axe-coverage-768-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px dark",
+        "name": "axe-current-list-768-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px light",
+        "name": "axe-coverage-1440-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px light",
+        "name": "axe-current-list-1440-light",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px dark",
+        "name": "axe-coverage-1440-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px dark",
+        "name": "axe-current-list-1440-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "axe-coverage-zoom250-light",
+        "violations": 0
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "axe-current-list-zoom250-light",
+        "violations": 0
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "axe-coverage-zoom250-dark",
+        "violations": 0
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "axe-current-list-zoom250-dark",
+        "violations": 0
+      }
+    ],
+    "native_zoom": {
+      "factor": 2.5,
+      "innerWidth": 576,
+      "devicePixelRatio": 2.5
+    },
+    "screenshots": [
+      {
+        "scenario": "coverage and reconciled current list at 390px light",
+        "name": "coverage-390-light",
+        "path": "docs/evidence/issue-196/coverage-390-light.png",
+        "sha256": "a9d76a04a11510acf3128a901167171d59a66cc931ded8fcb7fddc99da870915"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px light",
+        "name": "current-list-390-light",
+        "path": "docs/evidence/issue-196/current-list-390-light.png",
+        "sha256": "9186addc31b3770e688687d9ff2c6dcfe18fe4f6c85c2f9f70931594cfa3d028"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px dark",
+        "name": "coverage-390-dark",
+        "path": "docs/evidence/issue-196/coverage-390-dark.png",
+        "sha256": "2a8bced0bbea4cb38a531caa7296025cf9d96935f93a83ac9a1802eb1406e9d5"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 390px dark",
+        "name": "current-list-390-dark",
+        "path": "docs/evidence/issue-196/current-list-390-dark.png",
+        "sha256": "500c07abe70db5ac99b5462cdbc27ec2509573a30a54ce3bccffcebbac621145"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px light",
+        "name": "coverage-768-light",
+        "path": "docs/evidence/issue-196/coverage-768-light.png",
+        "sha256": "68af542d4197680bf00412c0bf125e17fcb199f6be22ca7aeadf3e14ac064d71"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px light",
+        "name": "current-list-768-light",
+        "path": "docs/evidence/issue-196/current-list-768-light.png",
+        "sha256": "36af563388d80f9155cefaded6a6dafe2bc0370aac1680cb5febf770df852b5b"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px dark",
+        "name": "coverage-768-dark",
+        "path": "docs/evidence/issue-196/coverage-768-dark.png",
+        "sha256": "e7ab4f2a64b58e99e2865e87d33720df87a5bcb78e497e1b478d4620bbe7d4d1"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 768px dark",
+        "name": "current-list-768-dark",
+        "path": "docs/evidence/issue-196/current-list-768-dark.png",
+        "sha256": "fddbf32f7c10e424bd813b22174efe05f5a68b51f5b3508f0595d16896512b88"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px light",
+        "name": "coverage-1440-light",
+        "path": "docs/evidence/issue-196/coverage-1440-light.png",
+        "sha256": "52bba355a8c82ff814c71af24c72948c53d538fa9ab552c1d99875b70253753b"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px light",
+        "name": "current-list-1440-light",
+        "path": "docs/evidence/issue-196/current-list-1440-light.png",
+        "sha256": "c052b915a15d4213a2dd5184b9f5be3e43f5230e66ae8718bd19f7d89e795cc1"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px dark",
+        "name": "coverage-1440-dark",
+        "path": "docs/evidence/issue-196/coverage-1440-dark.png",
+        "sha256": "18753868f9faf55fac78781ffacd4570468042ef64bb1dd34d9a92be505211f0"
+      },
+      {
+        "scenario": "coverage and reconciled current list at 1440px dark",
+        "name": "current-list-1440-dark",
+        "path": "docs/evidence/issue-196/current-list-1440-dark.png",
+        "sha256": "36e2a51924f6baf59d8b4660762d40b72520020a552acd9ca5909657ec559cc3"
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "coverage-zoom250-light",
+        "path": "docs/evidence/issue-196/coverage-zoom250-light.png",
+        "sha256": "4f87a48aa6d638c4363aa6d49b08c607c539147fb2118be6d7538989c1342a5c"
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "current-list-zoom250-light",
+        "path": "docs/evidence/issue-196/current-list-zoom250-light.png",
+        "sha256": "17884afec3ccf80c5ec462a8c26ec8c43a7f7f1e181eceb089397f133ae26e9d"
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "coverage-zoom250-dark",
+        "path": "docs/evidence/issue-196/coverage-zoom250-dark.png",
+        "sha256": "7ecec92f52ceb8f098d152ee1845b1a258b36b01573731c9c86a23a89de0cc86"
+      },
+      {
+        "scenario": "native zoom 250% preserves coverage and current list in both themes",
+        "name": "current-list-zoom250-dark",
+        "path": "docs/evidence/issue-196/current-list-zoom250-dark.png",
+        "sha256": "25a188561bc86aea00a43852d1fc330428aacefcafd67c35e58508775e20da63"
+      }
+    ],
+    "initial_preparation_corrections": [
+      "Use dashboard date_from/date_to URLs; service sends API started_from/started_to.",
+      "Synthetic users need session.revoke.own to test logout and change profiles.",
+      "Move raw JSON report into the ignored e2e output directory."
+    ]
+  },
+  "data_assets": {
+    "migrations_validated": 41,
+    "synthetic_files_validated": 218,
+    "new_migrations": 0
+  },
+  "validation": "Local checks approved; remote CI and review are tracked in the PR.",
+  "isolation": "Only synthetic data; separate PostgreSQL databases for regression, browser, benchmark and assets in a disposable container. No operational service, real spreadsheet or model used.",
+  "implementation_commit": "d55625e3fb243efbecc2c51ee4cfad3e904b5986",
+  "formatting_followup": {
+    "file": "scripts/measure_indicator_coverage.py",
+    "measured_source_sha256": "fb1dc8f1d9a09897ee356ea3e50e82ee1f70f391f171cfe8bcb6bcf198680694",
+    "current_source_sha256": "32f66a7becd751d342bff94ddb899a8d5c95ba27db4b97acac5edd8aad8c1c7e",
+    "reason": "CI E501: split four long lines; AST and SQL strings verified identical. Original measurements retained.",
+    "lint_command": "cd backend && .venv/bin/ruff check . ../scripts",
+    "result": "passed"
+  }
+}

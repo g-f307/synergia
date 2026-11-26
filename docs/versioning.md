@@ -45,6 +45,16 @@ checkout, e conferência dos hashes dos insumos. A referência
 
 ## API e OpenAPI
 
+A API `0.19.0` acrescenta `workorders_current` e `quantities_coverage` aos
+indicadores (#196). A cobertura usa a seleção atual por IAM/número da #195;
+`workorders` e `quantities` continuam históricos e preservam suas semânticas
+legadas, inclusive o total all-or-nothing. A listagem relacionada aceita
+`view=current|history`, com default histórico, e informa o escopo efetivo após
+interseção de permissões. A consulta do painel continua exigindo `dashboard.read`;
+a listagem exige também a permissão da entidade. Nenhum snapshot, quantidade
+persistida ou relatório emitido é alterado. Ver o
+[contrato de cobertura](indicator-coverage.md).
+
 A API `0.18.0` acrescenta `view=current|history` para a busca de Workorders,
 identidade IAM/snapshot e restrições explícitas de organização, execução e
 período (#195). `history` permanece o default da API; o detalhe continua
