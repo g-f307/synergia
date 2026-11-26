@@ -1,0 +1,15 @@
+# Referências e dados locais da PoC
+/Template-SCM/
+/*.html
+/NFP/downloads/
+/NFP/diagnostic*.json
+/NFP/.venv*/
+/NFP/README.md
+/NFP/linux.cjs
+/NFP/linux.test.cjs
+/NFP/ocr.*
+/NFP/requirements-ocr.txt
+*.env
+*.xlsx
+*.xls
+*.log
